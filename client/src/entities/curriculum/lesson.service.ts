@@ -27,7 +27,8 @@ export class LessonService {
             competency_name,
             competency_name_ar,
             section_type,
-            certification_type
+            certification_type,
+            exam_language
           ),
           quiz:lesson_quiz_id (
             id,
@@ -56,6 +57,10 @@ export class LessonService {
         } else {
           query = query.is('lesson_quiz_id', null);
         }
+      }
+
+      if (filters?.exam_language) {
+        query = query.eq('exam_language', filters.exam_language);
       }
 
       // Filter by module's section_type (requires join)
@@ -97,7 +102,8 @@ export class LessonService {
             competency_name_ar,
             section_type,
             certification_type,
-            order_index
+            order_index,
+            exam_language
           ),
           quiz:lesson_quiz_id (
             id,
@@ -157,6 +163,7 @@ export class LessonService {
           quiz_required: lesson.quiz_required ?? true,
           quiz_passing_score: lesson.quiz_passing_score || 70,
           is_published: lesson.is_published ?? false,
+          exam_language: lesson.exam_language || 'en',
         })
         .select()
         .single();

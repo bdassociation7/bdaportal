@@ -34,13 +34,26 @@ export default function IndividualDashboard() {
   const { data: pdcEntriesResult } = usePdcEntries({ userId: user?.id });
   const pdcEntries = pdcEntriesResult?.data || [];
 
-  // Calculate user-specific PDC stats
+  // Determine active certification level for PDC tracking
+  // If user has both CP and SCP, SCP is the active level (higher certification)
+  // PDCs should only count toward the active certification
+  const activeCerts = certsResult?.data || [];
+  const hasSCP = activeCerts.some(cert => cert.certification_type === 'SCP');
+  const hasCP = activeCerts.some(cert => cert.certification_type === 'CP');
+  const activeCertificationType = hasSCP ? 'SCP' : 'CP';
+
+  // Calculate user-specific PDC stats - ONLY for active certification level
+  // If user has both CP and SCP, only count SCP entries
+  const activePdcEntries = pdcEntries.filter(
+    (e) => e.certification_type === activeCertificationType
+  );
+
   const pdcStats = {
-    total_approved: pdcEntries
+    total_approved: activePdcEntries
       .filter((e) => e.status === 'approved')
       .reduce((sum, e) => sum + (e.credits_approved || 0), 0),
-    total_pending: pdcEntries.filter((e) => e.status === 'pending').length,
-    total_submissions: pdcEntries.length,
+    total_pending: activePdcEntries.filter((e) => e.status === 'pending').length,
+    total_submissions: activePdcEntries.length,
   };
 
   // Fetch books count
@@ -77,7 +90,6 @@ export default function IndividualDashboard() {
   });
 
   const certStats = certStatsResult?.data;
-  const activeCerts = certsResult?.data || [];
 
   // Calculate PDC progress (assuming 60 credits over 3 years)
   const pdcProgress = pdcStats ? Math.min(100, (pdcStats.total_approved / 60) * 100) : 0;
@@ -98,7 +110,7 @@ export default function IndividualDashboard() {
       icon: Award,
       color: "text-royal-600",
       bgColor: "bg-royal-100",
-      subtitle: `${certStats?.cp_certifications || 0} CP™, ${certStats?.scp_certifications || 0} SCP™`,
+      subtitle: `${certStats?.cp_certifications || 0} BDA-CP™, ${certStats?.scp_certifications || 0} BDA-SCP™`,
       onClick: () => navigate('/my-certifications')
     },
     {
@@ -252,7 +264,7 @@ export default function IndividualDashboard() {
                       <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-orange-900">
-                          {cert.certification_type}™ {t('dashboard.individual.expiringSoon')}
+                          BDA-{cert.certification_type}™ {t('dashboard.individual.expiringSoon')}
                         </p>
                         <p className="text-xs text-orange-700 mt-1">
                           {daysUntilExpiry} {t('dashboard.individual.daysRemaining')}
@@ -275,8 +287,25 @@ export default function IndividualDashboard() {
                 </div>
               )}
 
-              {/* PDC Progress Alert */}
-              {pdcStats && pdcStats.total_approved < 60 && (
+              {/* PDC Status Alerts */}
+              {pdcStats && pdcStats.total_approved >= 60 && activeCerts.length > 0 ? (
+                // PDC Requirement Complete
+                <div
+                  className="flex items-start gap-3 p-3 bg-green-50 border-2 border-green-300 rounded-lg cursor-pointer hover:bg-green-100"
+                  onClick={() => navigate('/pdcs')}
+                >
+                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-green-900">
+                      {t('dashboard.individual.pdcRequirementComplete')}
+                    </p>
+                    <p className="text-xs text-green-700 mt-1">
+                      {t('dashboard.individual.autoRenewalReady')}
+                    </p>
+                  </div>
+                </div>
+              ) : pdcStats && pdcStats.total_approved < 60 ? (
+                // PDC Credits Still Needed
                 <div
                   className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100"
                   onClick={() => navigate('/pdcs')}
@@ -291,7 +320,7 @@ export default function IndividualDashboard() {
                     </p>
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* Mock Exams Available */}
               <div

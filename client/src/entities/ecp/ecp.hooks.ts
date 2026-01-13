@@ -20,6 +20,8 @@ import type {
   CreateVoucherRequestDTO,
   AssignVoucherDTO,
   ECPToolkitCategory,
+  CreateECPToolkitItemDTO,
+  UpdateECPToolkitItemDTO,
 } from './ecp.types';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -42,6 +44,7 @@ export const ecpKeys = {
   complianceRequirements: () => [...ecpKeys.all, 'complianceRequirements'] as const,
   licenseRequests: () => [...ecpKeys.all, 'licenseRequests'] as const,
   toolkit: (category?: ECPToolkitCategory) => [...ecpKeys.all, 'toolkit', category] as const,
+  allToolkit: () => [...ecpKeys.all, 'toolkit', 'all'] as const,
 };
 
 // =============================================================================
@@ -526,6 +529,7 @@ export function useLicense() {
       if (result.error) throw result.error;
       return result.data;
     },
+    retry: false, // Don't retry - no license is a valid state
   });
 }
 
@@ -540,6 +544,7 @@ export function useLicenseDocuments() {
       if (result.error) throw result.error;
       return result.data;
     },
+    retry: false,
   });
 }
 
@@ -554,6 +559,7 @@ export function useLicenseTerms() {
       if (result.error) throw result.error;
       return result.data;
     },
+    retry: false,
   });
 }
 
@@ -568,6 +574,7 @@ export function useComplianceRequirements() {
       if (result.error) throw result.error;
       return result.data;
     },
+    retry: false,
   });
 }
 
@@ -582,6 +589,7 @@ export function useLicenseRequests() {
       if (result.error) throw result.error;
       return result.data;
     },
+    retry: false,
   });
 }
 
@@ -859,6 +867,145 @@ export function useECPToolkit(category?: ECPToolkitCategory) {
       const result = await ECPService.getToolkitItems(category);
       if (result.error) throw result.error;
       return result.data;
+    },
+  });
+}
+
+/**
+ * Admin: Get all toolkit items (including inactive)
+ */
+export function useAllECPToolkitItems() {
+  return useQuery({
+    queryKey: ecpKeys.allToolkit(),
+    queryFn: async () => {
+      const result = await ECPService.getAllToolkitItems();
+      if (result.error) throw result.error;
+      return result.data;
+    },
+  });
+}
+
+/**
+ * Admin: Create toolkit item
+ */
+export function useCreateECPToolkitItem() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (dto: CreateECPToolkitItemDTO) => ECPService.createToolkitItem(dto),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ecpKeys.allToolkit() });
+      queryClient.invalidateQueries({ queryKey: ecpKeys.toolkit() });
+      toast({
+        title: 'Success',
+        description: 'Toolkit item created successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+/**
+ * Admin: Update toolkit item
+ */
+export function useUpdateECPToolkitItem() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateECPToolkitItemDTO }) =>
+      ECPService.updateToolkitItem(id, dto),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ecpKeys.allToolkit() });
+      queryClient.invalidateQueries({ queryKey: ecpKeys.toolkit() });
+      toast({
+        title: 'Success',
+        description: 'Toolkit item updated successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+/**
+ * Admin: Delete toolkit item
+ */
+export function useDeleteECPToolkitItem() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => ECPService.deleteToolkitItem(id),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ecpKeys.allToolkit() });
+      queryClient.invalidateQueries({ queryKey: ecpKeys.toolkit() });
+      toast({
+        title: 'Success',
+        description: 'Toolkit item deleted successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+/**
+ * Admin: Upload toolkit file
+ */
+export function useUploadECPToolkitFile() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ file, category }: { file: File; category: ECPToolkitCategory }) =>
+      ECPService.uploadToolkitFile(file, category),
+    onError: (error: Error) => {
+      toast({
+        title: 'Upload Error',
+        description: error.message,
+        variant: 'destructive',
+      });
     },
   });
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Download, Clock, FileText, Search, Filter } from 'lucide-react';
+import { BookOpen, Download, Clock, FileText, Search, Filter, Gift, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,9 +13,10 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { useUserBooks, useBookDownload } from '@/entities/books';
-import type { BookFilters } from '@/entities/books';
+import { useUserBooks, useBookDownload, useUserBookCredits } from '@/entities/books';
+import type { BookFilters, BookCredit } from '@/entities/books';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { BookCreditRedemptionDialog } from '@/components/BookCreditRedemptionDialog';
 
 /**
  * My Books Page
@@ -35,6 +36,12 @@ export default function MyBooks() {
       // Info Card
       digitalLibrary: 'Digital Library',
       digitalLibraryDesc: 'All books purchased from the BDA Store are available for download here. Most books have a 12-month access period from purchase date.',
+      // Book Credits
+      bookCredits: 'Book Credits',
+      bookCreditsDesc: 'You have book credits available! Choose which language version you would like to access.',
+      creditsAvailable: (count: number) => `${count} Credit${count !== 1 ? 's' : ''} Available`,
+      chooseLanguage: 'Choose Language',
+      from: 'from',
       // Filters
       searchPlaceholder: 'Search books...',
       allFormats: 'All Formats',
@@ -59,6 +66,8 @@ export default function MyBooks() {
       downloadingBook: 'Downloading',
       downloadFailed: 'Download Failed',
       downloadFailedDesc: 'Failed to download book',
+      membershipBenefit: 'Included with Professional Membership',
+      adminGranted: 'Granted by Admin',
     },
     ar: {
       // Header
@@ -67,6 +76,12 @@ export default function MyBooks() {
       // Info Card
       digitalLibrary: 'المكتبة الرقمية',
       digitalLibraryDesc: 'جميع الكتب المشتراة من متجر BDA متاحة للتحميل هنا. معظم الكتب لها فترة وصول 12 شهراً من تاريخ الشراء.',
+      // Book Credits
+      bookCredits: 'أرصدة الكتب',
+      bookCreditsDesc: 'لديك أرصدة كتب متاحة! اختر إصدار اللغة الذي ترغب في الوصول إليه.',
+      creditsAvailable: (count: number) => `${count} رصيد متاح`,
+      chooseLanguage: 'اختر اللغة',
+      from: 'من',
       // Filters
       searchPlaceholder: 'البحث في الكتب...',
       allFormats: 'جميع الصيغ',
@@ -91,6 +106,8 @@ export default function MyBooks() {
       downloadingBook: 'جارٍ تحميل',
       downloadFailed: 'فشل التحميل',
       downloadFailedDesc: 'فشل في تحميل الكتاب',
+      membershipBenefit: 'مضمنة مع العضوية المهنية',
+      adminGranted: 'ممنوح من قبل المسؤول',
     }
   };
 
@@ -104,6 +121,22 @@ export default function MyBooks() {
   // Track which book is currently downloading
   const [downloadingBookId, setDownloadingBookId] = useState<string | null>(null);
 
+  // Book credit redemption dialog
+  const [selectedCredit, setSelectedCredit] = useState<BookCredit | null>(null);
+  const [isRedemptionDialogOpen, setIsRedemptionDialogOpen] = useState(false);
+
+  // Fetch book credits
+  const { data: bookCredits, refetch: refetchCredits } = useUserBookCredits(user?.email || '');
+
+  const handleOpenRedemption = (credit: BookCredit) => {
+    setSelectedCredit(credit);
+    setIsRedemptionDialogOpen(true);
+  };
+
+  const handleRedemptionSuccess = () => {
+    refetchCredits();
+  };
+
   // Build filters
   const filters: BookFilters = {
     search: searchQuery || undefined,
@@ -115,16 +148,29 @@ export default function MyBooks() {
   const { data: books, isLoading } = useUserBooks(user?.email || '', filters);
   const downloadMutation = useBookDownload();
 
-  const handleDownload = async (productId: number, orderId: number, bookName: string, bookId: string) => {
-    setDownloadingBookId(bookId);
+  const handleDownload = async (book: any) => {
+    setDownloadingBookId(book.id);
     try {
-      const downloadUrl = await downloadMutation.mutateAsync({ productId, orderId });
-      // Open download in new tab
-      window.open(downloadUrl, '_blank');
-      toast({
-        title: texts.downloadStarted,
-        description: `${texts.downloadingBook} "${bookName}"...`,
-      });
+      // For membership benefit books with direct download URL, use it
+      if (book.access_type === 'membership_benefit' && book.download_url) {
+        window.open(book.download_url, '_blank');
+        toast({
+          title: texts.downloadStarted,
+          description: `${texts.downloadingBook} "${book.product_name}"...`,
+        });
+      } else {
+        // For purchased books and admin-granted books, fetch download URL from WooCommerce
+        const downloadUrl = await downloadMutation.mutateAsync({
+          productId: book.product_id,
+          orderId: book.order_id,
+          userEmail: user?.email
+        });
+        window.open(downloadUrl, '_blank');
+        toast({
+          title: texts.downloadStarted,
+          description: `${texts.downloadingBook} "${book.product_name}"...`,
+        });
+      }
     } catch (error: any) {
       toast({
         title: texts.downloadFailed,
@@ -147,6 +193,13 @@ export default function MyBooks() {
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  // Helper to strip HTML tags from description
+  const stripHtmlTags = (html: string) => {
+    const tmp = document.createElement('DIV');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
   };
 
   return (
@@ -176,6 +229,65 @@ export default function MyBooks() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Book Credits Section */}
+      {bookCredits && bookCredits.length > 0 && (
+        <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
+          <CardContent className="p-4">
+            <div className={`flex items-start gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+              <div className="relative">
+                <Gift className="h-6 w-6 text-green-600" />
+                <Sparkles className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1" />
+              </div>
+              <div className={`flex-1 ${language === 'ar' ? 'text-right' : ''}`}>
+                <h3 className="font-semibold text-green-900 mb-1 flex items-center gap-2">
+                  {texts.bookCredits}
+                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                    {texts.creditsAvailable(bookCredits.length)}
+                  </Badge>
+                </h3>
+                <p className="text-sm text-green-800 mb-3">
+                  {texts.bookCreditsDesc}
+                </p>
+
+                {/* Credits List */}
+                <div className="space-y-2">
+                  {bookCredits.map((credit) => (
+                    <div
+                      key={credit.id}
+                      className={`flex items-center justify-between p-3 bg-white rounded-lg border border-green-200 ${language === 'ar' ? 'flex-row-reverse' : ''}`}
+                    >
+                      <div className={`flex-1 ${language === 'ar' ? 'text-right' : ''}`}>
+                        <p className="font-medium text-gray-900">{credit.book_product_group_name}</p>
+                        <p className="text-sm text-gray-600">
+                          {texts.from}: {credit.source_type === 'membership' ? 'Membership' : credit.source_type}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleOpenRedemption(credit)}
+                      >
+                        {texts.chooseLanguage}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Redemption Dialog */}
+      {selectedCredit && (
+        <BookCreditRedemptionDialog
+          credit={selectedCredit}
+          open={isRedemptionDialogOpen}
+          onOpenChange={setIsRedemptionDialogOpen}
+          onSuccess={handleRedemptionSuccess}
+        />
+      )}
 
       {/* Filters */}
       <Card>
@@ -312,7 +424,7 @@ export default function MyBooks() {
                   {/* Description */}
                   {book.description && (
                     <p className="text-sm text-gray-600 line-clamp-2">
-                      {book.description}
+                      {stripHtmlTags(book.description)}
                     </p>
                   )}
 
@@ -326,13 +438,24 @@ export default function MyBooks() {
                   <Button
                     className="w-full"
                     disabled={isExpired(book.expires_at) || downloadingBookId === book.id}
-                    onClick={() =>
-                      handleDownload(book.product_id, book.order_id, book.product_name, book.id)
-                    }
+                    onClick={() => handleDownload(book)}
                   >
                     <Download className="h-4 w-4 mr-2" />
                     {downloadingBookId === book.id ? texts.downloading : texts.download}
                   </Button>
+
+                  {/* Access Type Badge */}
+                  {book.access_type === 'membership_benefit' && (
+                    <div className="mt-2 text-xs text-center text-blue-600 font-medium">
+                      {texts.membershipBenefit}
+                    </div>
+                  )}
+                  {book.access_type === 'admin_grant' && (
+                    <div className="mt-2 text-xs text-center text-purple-600 font-medium flex items-center justify-center gap-1">
+                      <Gift className="h-3 w-3" />
+                      {texts.adminGranted}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -939,7 +939,7 @@ export default function ECPTrainees() {
                             : 'bg-purple-50 text-purple-700'
                         }
                       >
-                        {trainee.certification_type}
+                        BDA-{trainee.certification_type}™
                       </Badge>
                     </TableCell>
                     <TableCell>

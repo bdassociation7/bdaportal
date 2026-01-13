@@ -97,8 +97,8 @@ export default function CertificationProductsUnified() {
       saveFailed: 'Failed to save product link',
       refreshed: 'Refreshed',
       productsSynced: 'Products synced from WooCommerce',
-      cpLabel: 'CP™ - Certified Professional',
-      scpLabel: 'SCP™ - Senior Certified Professional',
+      cpLabel: 'BDA-CP™ - BDA Certified Professional',
+      scpLabel: 'BDA-SCP™ - BDA Senior Certified Professional',
     },
     ar: {
       title: 'منتجات الشهادات',
@@ -142,8 +142,8 @@ export default function CertificationProductsUnified() {
       saveFailed: 'فشل في حفظ ربط المنتج',
       refreshed: 'تم التحديث',
       productsSynced: 'تمت مزامنة المنتجات من WooCommerce',
-      cpLabel: 'CP™ - محترف معتمد',
-      scpLabel: 'SCP™ - محترف معتمد أول',
+      cpLabel: 'BDA-CP™ - محترف معتمد',
+      scpLabel: 'BDA-SCP™ - محترف معتمد أول',
     }
   };
 
@@ -403,7 +403,7 @@ export default function CertificationProductsUnified() {
                 {product.isLinked && product.certProduct && (
                   <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg space-y-1">
                     <div className="text-xs text-green-700 font-semibold">
-                      {product.certProduct.certification_type === 'CP' ? 'CP™' : 'SCP™'}
+                      {product.certProduct.certification_type === 'CP' ? 'BDA-CP™' : 'BDA-SCP™'}
                     </div>
                     <div className="text-xs text-green-600">
                       {product.certProduct.vouchers_per_purchase} {texts.vouchersPerPurchase}

@@ -34,8 +34,8 @@ export const questionBankKeys = {
   sets: () => [...questionBankKeys.all, 'sets'] as const,
   setsList: (filters?: QuestionSetFilters) =>
     [...questionBankKeys.sets(), { filters }] as const,
-  setsWithProgress: (userId: string, certType: CertificationType) =>
-    [...questionBankKeys.sets(), 'progress', userId, certType] as const,
+  setsWithProgress: (userId: string, certType: CertificationType, examLanguage?: 'EN' | 'AR') =>
+    [...questionBankKeys.sets(), 'progress', userId, certType, examLanguage] as const,
   setsWithCompetency: (filters?: QuestionSetFilters) =>
     [...questionBankKeys.sets(), 'competency', { filters }] as const,
   set: (id: string) => [...questionBankKeys.sets(), id] as const,
@@ -55,8 +55,8 @@ export const questionBankKeys = {
     [...questionBankKeys.progress(userId), setId] as const,
 
   // Stats
-  stats: (userId: string, certType?: CertificationType) =>
-    [...questionBankKeys.all, 'stats', userId, certType] as const,
+  stats: (userId: string, certType?: CertificationType, examLanguage?: 'en' | 'ar') =>
+    [...questionBankKeys.all, 'stats', userId, certType, examLanguage] as const,
   adminStats: (certType?: CertificationType) =>
     [...questionBankKeys.all, 'admin-stats', certType] as const,
 
@@ -88,15 +88,17 @@ export function useQuestionSets(filters?: QuestionSetFilters) {
  */
 export function useQuestionSetsWithProgress(
   userId: string | undefined,
-  certificationType: CertificationType
+  certificationType: CertificationType,
+  examLanguage?: 'EN' | 'AR'
 ) {
   return useQuery({
-    queryKey: questionBankKeys.setsWithProgress(userId || '', certificationType),
+    queryKey: questionBankKeys.setsWithProgress(userId || '', certificationType, examLanguage),
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
       const result = await QuestionBankService.getQuestionSetsWithProgress(
         userId,
-        certificationType
+        certificationType,
+        examLanguage
       );
       if (result.error) throw result.error;
       return result.data!;
@@ -223,16 +225,18 @@ export function useSetProgress(
 
 /**
  * Get user's question bank stats
+ * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
  */
 export function useQuestionBankStats(
   userId: string | undefined,
-  certificationType?: CertificationType
+  certificationType?: CertificationType,
+  examLanguage?: 'en' | 'ar'
 ) {
   return useQuery({
-    queryKey: questionBankKeys.stats(userId || '', certificationType),
+    queryKey: questionBankKeys.stats(userId || '', certificationType, examLanguage),
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
-      const result = await QuestionBankService.getUserStats(userId, certificationType);
+      const result = await QuestionBankService.getUserStats(userId, certificationType, examLanguage);
       if (result.error) throw result.error;
       return result.data!;
     },

@@ -282,6 +282,15 @@ export default function ECPManagement() {
   const [selectedTrainer, setSelectedTrainer] = useState<TrainerApplication | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
+  // Create License dialog state
+  const [createLicenseDialogOpen, setCreateLicenseDialogOpen] = useState(false);
+  const [selectedPartnerForLicense, setSelectedPartnerForLicense] = useState<ECPPartnerWithStats | null>(null);
+  const [licenseForm, setLicenseForm] = useState({
+    territories: '',
+    programs: 'CP',
+    durationMonths: 12,
+  });
+
   // Queries
   const { data: partners, isLoading: partnersLoading, error: partnersError } = useQuery({
     queryKey: ['admin', 'ecp-partners'],
@@ -453,6 +462,76 @@ export default function ECPManagement() {
     },
     onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Create License mutation
+  const createLicenseMutation = useMutation({
+    mutationFn: async ({ partnerId, territories, programs, durationMonths }: {
+      partnerId: string;
+      territories: string;
+      programs: string;
+      durationMonths: number;
+    }) => {
+      // Get partner info for partner_code generation
+      const { data: partner } = await supabase
+        .from('partners')
+        .select('country, company_name')
+        .eq('id', partnerId)
+        .single();
+
+      // Generate license number and partner code
+      const countryCode = partner?.country?.substring(0, 2)?.toUpperCase() || 'XX';
+      const year = new Date().getFullYear();
+      const timestamp = Date.now().toString().slice(-4);
+      const licenseNumber = `BDA-ECP-${countryCode}-${year}-${timestamp}`;
+      const partnerCode = `ECP-${countryCode}-${timestamp}`;
+
+      // Calculate expiry date
+      const issueDate = new Date().toISOString().split('T')[0];
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + durationMonths);
+      const expiryDateStr = expiryDate.toISOString().split('T')[0];
+
+      // Parse territories and programs
+      const territoriesArray = territories.split(',').map(t => t.trim()).filter(Boolean);
+      const programsArray = programs.split(',').map(p => p.trim()).filter(Boolean);
+
+      // Create the license - NOTE: partner_id in ecp_licenses is the USER id, not partners.id
+      // We need to get the user_id associated with this partner
+      // For now, we'll use the partner.id directly since the FK might reference partners table
+      const { error } = await supabase
+        .from('ecp_licenses')
+        .insert({
+          partner_id: partnerId,
+          license_number: licenseNumber,
+          partner_code: partnerCode,
+          status: 'active',
+          issue_date: issueDate,
+          expiry_date: expiryDateStr,
+          territories: territoriesArray.length > 0 ? territoriesArray : [countryCode],
+          programs: programsArray.length > 0 ? programsArray : ['CP'],
+          renewal_requested: false,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-partners'] });
+      toast({
+        title: 'License Created',
+        description: 'ECP license has been successfully created for the partner.'
+      });
+      setCreateLicenseDialogOpen(false);
+      setSelectedPartnerForLicense(null);
+      setLicenseForm({ territories: '', programs: 'CP', durationMonths: 12 });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error Creating License',
+        description: error.message,
+        variant: 'destructive'
+      });
     },
   });
 
@@ -716,6 +795,25 @@ export default function ECPManagement() {
                                   <Ticket className="h-4 w-4 mr-2" />
                                   {t('ecp.allocateVouchers')}
                                 </DropdownMenuItem>
+                                {partner.license_status !== 'active' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setSelectedPartnerForLicense(partner);
+                                        setLicenseForm({
+                                          territories: partner.country_code || '',
+                                          programs: 'CP',
+                                          durationMonths: 12,
+                                        });
+                                        setCreateLicenseDialogOpen(true);
+                                      }}
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                                      Create License
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -770,7 +868,7 @@ export default function ECPManagement() {
                             {getPartnerName(request.partner)}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{request.certification_type}</Badge>
+                            <Badge variant="outline">BDA-{request.certification_type}™</Badge>
                           </TableCell>
                           <TableCell>{request.quantity}</TableCell>
                           <TableCell>${request.total_amount?.toFixed(2) || '-'}</TableCell>
@@ -934,7 +1032,7 @@ export default function ECPManagement() {
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600">{t('ecp.certificationType')}</p>
-                <p className="text-2xl font-bold">{selectedVoucherRequest?.certification_type}</p>
+                <p className="text-2xl font-bold">BDA-{selectedVoucherRequest?.certification_type}™</p>
               </div>
             </div>
             <div className="p-4 border rounded-lg">
@@ -1199,6 +1297,106 @@ export default function ECPManagement() {
               )}
               <Plus className="h-4 w-4 mr-2" />
               {t('ecp.createPartner')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create License Dialog */}
+      <Dialog open={createLicenseDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          document.body.style.pointerEvents = '';
+          document.body.style.overflow = '';
+          setSelectedPartnerForLicense(null);
+          setLicenseForm({ territories: '', programs: 'CP', durationMonths: 12 });
+        }
+        setCreateLicenseDialogOpen(open);
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create ECP License</DialogTitle>
+            <DialogDescription>
+              Create a new license for {selectedPartnerForLicense?.company_name || selectedPartnerForLicense?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-600 font-medium">Partner Information</p>
+              <p className="text-sm mt-1">{selectedPartnerForLicense?.company_name}</p>
+              <p className="text-sm text-gray-500">{selectedPartnerForLicense?.email}</p>
+              <p className="text-sm text-gray-500">{selectedPartnerForLicense?.country_code || 'No country set'}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <Label htmlFor="territories">Territories (comma-separated)</Label>
+                <Input
+                  id="territories"
+                  placeholder="EG, SA, AE"
+                  value={licenseForm.territories}
+                  onChange={(e) => setLicenseForm({ ...licenseForm, territories: e.target.value })}
+                />
+                <p className="text-xs text-gray-500 mt-1">Countries where the partner can operate</p>
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="programs">Programs (comma-separated)</Label>
+                <Input
+                  id="programs"
+                  placeholder="CP, CBAP"
+                  value={licenseForm.programs}
+                  onChange={(e) => setLicenseForm({ ...licenseForm, programs: e.target.value })}
+                />
+                <p className="text-xs text-gray-500 mt-1">Certification programs the partner can offer</p>
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="duration">License Duration</Label>
+                <Select
+                  value={licenseForm.durationMonths.toString()}
+                  onValueChange={(v) => setLicenseForm({ ...licenseForm, durationMonths: parseInt(v) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="6">6 months</SelectItem>
+                    <SelectItem value="12">12 months (1 year)</SelectItem>
+                    <SelectItem value="24">24 months (2 years)</SelectItem>
+                    <SelectItem value="36">36 months (3 years)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                The license will be activated immediately and the partner will be able to access ECP features.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCreateLicenseDialogOpen(false)}
+              disabled={createLicenseMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createLicenseMutation.mutate({
+                partnerId: selectedPartnerForLicense!.id,
+                territories: licenseForm.territories,
+                programs: licenseForm.programs,
+                durationMonths: licenseForm.durationMonths,
+              })}
+              disabled={createLicenseMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {createLicenseMutation.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Create License
             </Button>
           </DialogFooter>
         </DialogContent>

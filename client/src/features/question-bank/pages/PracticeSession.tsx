@@ -3,8 +3,8 @@
  * Interactive question practice with immediate feedback
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useQuestionSet,
@@ -187,7 +187,17 @@ function QuestionView({
 export function PracticeSession() {
   const { setId } = useParams<{ setId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+
+  // Detect base path for navigation (ECP vs Individual learning system)
+  const basePath = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith('/ecp/learning-system')) {
+      return '/ecp/learning-system';
+    }
+    return '/learning-system';
+  }, [location.pathname]);
 
   // State
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -348,7 +358,7 @@ export function PracticeSession() {
           <p className="text-gray-600 mb-6">
             This question set doesn't have any published questions yet.
           </p>
-          <Button onClick={() => navigate('/learning-system/question-bank')}>
+          <Button onClick={() => navigate(`${basePath}/question-bank`)}>
             Back to Question Bank
           </Button>
         </div>
@@ -408,7 +418,7 @@ export function PracticeSession() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => navigate('/learning-system/question-bank')}
+                onClick={() => navigate(`${basePath}/question-bank`)}
               >
                 Back to Question Bank
               </Button>
@@ -442,7 +452,7 @@ export function PracticeSession() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/learning-system/question-bank')}
+                onClick={() => navigate(`${basePath}/question-bank`)}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Exit

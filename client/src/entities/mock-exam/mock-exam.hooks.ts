@@ -25,6 +25,7 @@ export const mockExamKeys = {
   detail: (id: string) => [...mockExamKeys.details(), id] as const,
   stats: (id: string) => [...mockExamKeys.all, 'stats', id] as const,
   premiumAccess: () => [...mockExamKeys.all, 'premium-access'] as const,
+  examPremiumAccess: (examId: string) => [...mockExamKeys.all, 'exam-premium-access', examId] as const,
   attempts: () => [...mockExamKeys.all, 'attempts'] as const,
   myAttempts: (filters?: AttemptFilters) =>
     [...mockExamKeys.attempts(), 'my', filters] as const,
@@ -88,6 +89,21 @@ export function useUserPremiumAccess() {
 }
 
 /**
+ * Get all users with premium access to a specific exam (admin only)
+ */
+export function useExamPremiumAccess(examId: string, enabled = true) {
+  return useQuery({
+    queryKey: mockExamKeys.examPremiumAccess(examId),
+    queryFn: async () => {
+      const { data, error } = await MockExamService.getExamPremiumAccess(examId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: enabled && !!examId,
+  });
+}
+
+/**
  * Grant premium access mutation (admin only)
  */
 export function useGrantPremiumAccess() {
@@ -103,8 +119,9 @@ export function useGrantPremiumAccess() {
       examId: string;
       expiresAt?: string;
     }) => MockExamService.grantPremiumAccess(userId, examId, expiresAt),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: mockExamKeys.premiumAccess() });
+      queryClient.invalidateQueries({ queryKey: mockExamKeys.examPremiumAccess(variables.examId) });
       queryClient.invalidateQueries({ queryKey: mockExamKeys.lists() });
       queryClient.invalidateQueries({ queryKey: mockExamKeys.catalog() });
     },
@@ -120,8 +137,9 @@ export function useRevokePremiumAccess() {
   return useMutation({
     mutationFn: ({ userId, examId }: { userId: string; examId: string }) =>
       MockExamService.revokePremiumAccess(userId, examId),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: mockExamKeys.premiumAccess() });
+      queryClient.invalidateQueries({ queryKey: mockExamKeys.examPremiumAccess(variables.examId) });
       queryClient.invalidateQueries({ queryKey: mockExamKeys.lists() });
       queryClient.invalidateQueries({ queryKey: mockExamKeys.catalog() });
     },
@@ -526,6 +544,126 @@ export function useDeleteAnswer() {
       queryClient.invalidateQueries({
         queryKey: mockExamKeys.adminDetail(variables.examId),
       });
+    },
+  });
+}
+
+// =============================================================================
+// MOCK EXAM PRODUCTS HOOKS (Admin)
+// =============================================================================
+
+export const mockExamProductKeys = {
+  all: ['mock-exam-products'] as const,
+  list: () => [...mockExamProductKeys.all, 'list'] as const,
+  grants: (userId?: string) => [...mockExamProductKeys.all, 'grants', userId] as const,
+  credits: (userId: string) => [...mockExamProductKeys.all, 'credits', userId] as const,
+};
+
+/**
+ * Get all mock exam products (admin only)
+ */
+export function useMockExamProducts() {
+  return useQuery({
+    queryKey: mockExamProductKeys.list(),
+    queryFn: async () => {
+      const { data, error } = await MockExamService.getAllMockExamProducts();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/**
+ * Create mock exam product mutation (admin only)
+ */
+export function useCreateMockExamProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dto: import('./mock-exam.types').CreateMockExamProductDTO) =>
+      MockExamService.createMockExamProduct(dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: mockExamProductKeys.list() });
+    },
+  });
+}
+
+/**
+ * Update mock exam product mutation (admin only)
+ */
+export function useUpdateMockExamProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      dto,
+    }: {
+      id: string;
+      dto: import('./mock-exam.types').UpdateMockExamProductDTO;
+    }) => MockExamService.updateMockExamProduct(id, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: mockExamProductKeys.list() });
+    },
+  });
+}
+
+/**
+ * Delete mock exam product mutation (admin only)
+ */
+export function useDeleteMockExamProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => MockExamService.deleteMockExamProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: mockExamProductKeys.list() });
+    },
+  });
+}
+
+/**
+ * Get user's mock exam credits
+ */
+export function useUserMockExamCredits(userId: string, enabled = true) {
+  return useQuery({
+    queryKey: mockExamProductKeys.credits(userId),
+    queryFn: async () => {
+      const { data, error } = await MockExamService.getUserMockExamCredits(userId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: enabled && !!userId,
+  });
+}
+
+/**
+ * Use mock exam credit to unlock an exam
+ */
+export function useUseMockExamCredit() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, examId }: { userId: string; examId: string }) =>
+      MockExamService.useMockExamCredit(userId, examId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: mockExamProductKeys.credits(variables.userId) });
+      queryClient.invalidateQueries({ queryKey: mockExamKeys.premiumAccess() });
+      queryClient.invalidateQueries({ queryKey: mockExamKeys.catalog() });
+    },
+  });
+}
+
+/**
+ * Get mock exam access grants (admin only)
+ */
+export function useMockExamAccessGrants(userId?: string) {
+  return useQuery({
+    queryKey: mockExamProductKeys.grants(userId),
+    queryFn: async () => {
+      const { data, error } = await MockExamService.getUserAccessGrants(userId);
+      if (error) throw error;
+      return data;
     },
   });
 }

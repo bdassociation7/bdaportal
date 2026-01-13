@@ -78,7 +78,8 @@ export default function CertificationExamQuestionManager() {
   // State for adding/editing question
   const [isAddingQuestion, setIsAddingQuestion] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
-  const [formLanguage, setFormLanguage] = useState<'en' | 'ar'>('en'); // Language toggle for form
+  // Use exam's language - no more toggle, each exam is language-specific
+  const examLanguage = (exam?.exam_language || 'en') as 'en' | 'ar';
   const [questionForm, setQuestionForm] = useState<{
     question_text: string;
     question_text_ar: string;
@@ -109,7 +110,6 @@ export default function CertificationExamQuestionManager() {
   const handleAddQuestion = () => {
     setIsAddingQuestion(true);
     setEditingQuestionId(null);
-    setFormLanguage('en'); // Reset to English tab
     setQuestionForm({
       question_text: '',
       question_text_ar: '',
@@ -132,7 +132,6 @@ export default function CertificationExamQuestionManager() {
   const handleEditQuestion = (question: QuestionWithAnswers, questionIndex: number) => {
     setIsAddingQuestion(false);
     setEditingQuestionId(question.id);
-    setFormLanguage('en'); // Reset to English tab
     // Get explanation from correct answer (legacy) or from question level
     const correctAnswer = (question.answers || []).find((a: QuizAnswer) => a.is_correct);
     setQuestionForm({
@@ -161,11 +160,12 @@ export default function CertificationExamQuestionManager() {
   };
 
   const handleSaveQuestion = async () => {
-    // Validation
-    if (!questionForm.question_text.trim()) {
+    // Validation - check the appropriate language field based on exam language
+    const questionText = examLanguage === 'ar' ? questionForm.question_text_ar : questionForm.question_text;
+    if (!questionText.trim()) {
       toast({
         title: 'Validation Error',
-        description: 'Question text is required',
+        description: examLanguage === 'ar' ? 'نص السؤال مطلوب' : 'Question text is required',
         variant: 'destructive',
       });
       return;
@@ -190,12 +190,15 @@ export default function CertificationExamQuestionManager() {
       return;
     }
 
-    // Validate answer text
-    const hasEmptyAnswers = questionForm.answers.some((a) => !a.answer_text.trim());
+    // Validate answer text based on exam language
+    const hasEmptyAnswers = questionForm.answers.some((a) => {
+      const answerText = examLanguage === 'ar' ? a.answer_text_ar : a.answer_text;
+      return !answerText?.trim();
+    });
     if (hasEmptyAnswers) {
       toast({
         title: 'Validation Error',
-        description: 'All answers must have text',
+        description: examLanguage === 'ar' ? 'جميع الإجابات يجب أن تحتوي على نص' : 'All answers must have text',
         variant: 'destructive',
       });
       return;
@@ -407,7 +410,10 @@ export default function CertificationExamQuestionManager() {
                 Question Manager
               </h1>
               <Badge variant="outline" className="border-white/30 text-white bg-white/10">
-                {exam.certification_type}™ Certification
+                BDA-{exam.certification_type}™ Certification
+              </Badge>
+              <Badge variant="outline" className={examLanguage === 'ar' ? 'border-emerald-300 text-emerald-100 bg-emerald-500/20' : 'border-blue-300 text-blue-100 bg-blue-500/20'}>
+                {examLanguage === 'ar' ? '🇸🇦 Arabic Exam' : '🇬🇧 English Exam'}
               </Badge>
             </div>
             <p className="mt-2 opacity-90">{exam.title}</p>
@@ -453,41 +459,35 @@ export default function CertificationExamQuestionManager() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Language Tabs - EN/AR completely separate sections */}
-            <div className="border-b border-gray-200">
-              <div className="flex gap-0">
-                <button
-                  type="button"
-                  onClick={() => setFormLanguage('en')}
-                  className={cn(
-                    'px-6 py-3 text-sm font-semibold border-b-2 transition-colors',
-                    formLanguage === 'en'
-                      ? 'border-royal-600 text-royal-600 bg-royal-50'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  )}
-                >
-                  🇬🇧 English Version
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormLanguage('ar')}
-                  className={cn(
-                    'px-6 py-3 text-sm font-semibold border-b-2 transition-colors',
-                    formLanguage === 'ar'
-                      ? 'border-royal-600 text-royal-600 bg-royal-50'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  )}
-                >
-                  🇸🇦 النسخة العربية
-                </button>
+            {/* Language Indicator - Shows exam language */}
+            <div className={cn(
+              "p-3 rounded-lg border-2 flex items-center gap-3",
+              examLanguage === 'ar'
+                ? "bg-emerald-50 border-emerald-200"
+                : "bg-blue-50 border-blue-200"
+            )}>
+              <span className="text-2xl">{examLanguage === 'ar' ? '🇸🇦' : '🇬🇧'}</span>
+              <div>
+                <p className={cn(
+                  "font-semibold",
+                  examLanguage === 'ar' ? "text-emerald-800" : "text-blue-800"
+                )}>
+                  {examLanguage === 'ar' ? 'امتحان عربي' : 'English Exam'}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {examLanguage === 'ar'
+                    ? 'جميع الأسئلة والإجابات بالعربية فقط'
+                    : 'All questions and answers in English only'
+                  }
+                </p>
               </div>
             </div>
 
-            {/* ENGLISH SECTION */}
-            {formLanguage === 'en' && (
+            {/* Question Text - Based on exam language */}
+            {examLanguage === 'en' ? (
               <div className="space-y-2 p-4 bg-blue-50/50 rounded-lg border border-blue-100">
                 <Label className="text-blue-800 font-semibold">
-                  Question Text (English) <span className="text-red-500">*</span>
+                  Question Text <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   value={questionForm.question_text}
@@ -499,12 +499,11 @@ export default function CertificationExamQuestionManager() {
                   className="bg-white"
                 />
               </div>
-            )}
-
-            {/* ARABIC SECTION */}
-            {formLanguage === 'ar' && (
+            ) : (
               <div className="space-y-2 p-4 bg-emerald-50/50 rounded-lg border border-emerald-100">
-                <Label className="text-emerald-800 font-semibold">نص السؤال (عربي)</Label>
+                <Label className="text-emerald-800 font-semibold">
+                  نص السؤال <span className="text-red-500">*</span>
+                </Label>
                 <Textarea
                   value={questionForm.question_text_ar}
                   onChange={(e) =>
@@ -800,24 +799,23 @@ export default function CertificationExamQuestionManager() {
                                 : `Answer ${index + 1}`}
                               {answer.is_correct && <span className="ml-2 text-green-600 text-xs">✓ Correct</span>}
                             </Label>
-                            {formLanguage === 'en' && (
+                            {examLanguage === 'en' ? (
                               <Input
                                 value={answer.answer_text}
                                 onChange={(e) =>
                                   handleUpdateAnswer(answer.tempId, 'answer_text', e.target.value)
                                 }
-                                placeholder={`Answer ${index + 1} (English)`}
+                                placeholder={`Answer ${index + 1}`}
                                 className={answer.is_correct ? 'border-green-500' : ''}
                                 disabled={questionForm.question_type === 'true_false'}
                               />
-                            )}
-                            {formLanguage === 'ar' && (
+                            ) : (
                               <Input
                                 value={answer.answer_text_ar}
                                 onChange={(e) =>
                                   handleUpdateAnswer(answer.tempId, 'answer_text_ar', e.target.value)
                                 }
-                                placeholder={`الإجابة ${index + 1} (عربي)`}
+                                placeholder={`الإجابة ${index + 1}`}
                                 dir="rtl"
                                 className={answer.is_correct ? 'border-green-500' : ''}
                                 disabled={questionForm.question_type === 'true_false'}
@@ -874,23 +872,22 @@ export default function CertificationExamQuestionManager() {
                               Answer {index + 1}
                               {answer.is_correct && <span className="ml-2 text-blue-600 text-xs">✓ Correct</span>}
                             </Label>
-                            {formLanguage === 'en' && (
+                            {examLanguage === 'en' ? (
                               <Input
                                 value={answer.answer_text}
                                 onChange={(e) =>
                                   handleUpdateAnswer(answer.tempId, 'answer_text', e.target.value)
                                 }
-                                placeholder={`Answer ${index + 1} (English)`}
+                                placeholder={`Answer ${index + 1}`}
                                 className={answer.is_correct ? 'border-blue-500' : ''}
                               />
-                            )}
-                            {formLanguage === 'ar' && (
+                            ) : (
                               <Input
                                 value={answer.answer_text_ar}
                                 onChange={(e) =>
                                   handleUpdateAnswer(answer.tempId, 'answer_text_ar', e.target.value)
                                 }
-                                placeholder={`الإجابة ${index + 1} (عربي)`}
+                                placeholder={`الإجابة ${index + 1}`}
                                 dir="rtl"
                                 className={answer.is_correct ? 'border-blue-500' : ''}
                               />
@@ -924,14 +921,21 @@ export default function CertificationExamQuestionManager() {
                   <span className="text-amber-600">💡</span>
                 </div>
                 <div>
-                  <Label className="text-base font-semibold">Answer Explanation</Label>
-                  <p className="text-xs text-gray-500">Explain why the correct answer(s) is/are correct (shown after question is answered)</p>
+                  <Label className="text-base font-semibold">
+                    {examLanguage === 'ar' ? 'توضيح الإجابة' : 'Answer Explanation'}
+                  </Label>
+                  <p className="text-xs text-gray-500">
+                    {examLanguage === 'ar'
+                      ? 'اشرح لماذا الإجابة الصحيحة صحيحة (يظهر بعد الإجابة على السؤال)'
+                      : 'Explain why the correct answer(s) is/are correct (shown after question is answered)'
+                    }
+                  </p>
                 </div>
               </div>
 
-              {formLanguage === 'en' && (
+              {examLanguage === 'en' ? (
                 <div className="space-y-2 p-4 bg-amber-50/50 rounded-lg border border-amber-100">
-                  <Label className="text-amber-800 font-medium">Explanation (English)</Label>
+                  <Label className="text-amber-800 font-medium">Explanation</Label>
                   <Textarea
                     value={questionForm.explanation}
                     onChange={(e) =>
@@ -942,11 +946,9 @@ export default function CertificationExamQuestionManager() {
                     className="bg-white"
                   />
                 </div>
-              )}
-
-              {formLanguage === 'ar' && (
+              ) : (
                 <div className="space-y-2 p-4 bg-amber-50/50 rounded-lg border border-amber-100">
-                  <Label className="text-amber-800 font-medium">التوضيح (عربي)</Label>
+                  <Label className="text-amber-800 font-medium">التوضيح</Label>
                   <Textarea
                     value={questionForm.explanation_ar}
                     onChange={(e) =>
@@ -1037,7 +1039,14 @@ export default function CertificationExamQuestionManager() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-gray-900 font-medium mb-3">{question.question_text}</p>
+                      <p className={cn(
+                        "text-gray-900 font-medium mb-3",
+                        examLanguage === 'ar' && "text-right"
+                      )} dir={examLanguage === 'ar' ? 'rtl' : 'ltr'}>
+                        {examLanguage === 'ar' && question.question_text_ar
+                          ? question.question_text_ar
+                          : question.question_text}
+                      </p>
                       <div className="space-y-2">
                         {(question.answers || []).map((answer: QuizAnswer, answerIndex: number) => (
                           <div
@@ -1071,11 +1080,17 @@ export default function CertificationExamQuestionManager() {
                               <div className="flex-1">
                                 <span className={cn(
                                   "text-sm",
-                                  answer.is_correct ? "font-medium" : ""
-                                )}>
-                                  {answer.answer_text}
+                                  answer.is_correct ? "font-medium" : "",
+                                  examLanguage === 'ar' && "block text-right"
+                                )} dir={examLanguage === 'ar' ? 'rtl' : 'ltr'}>
+                                  {examLanguage === 'ar' && answer.answer_text_ar
+                                    ? answer.answer_text_ar
+                                    : answer.answer_text}
                                   {answer.is_correct && (
-                                    <span className="ml-2 text-xs font-semibold text-green-700">✓ Correct</span>
+                                    <span className={cn(
+                                      "text-xs font-semibold text-green-700",
+                                      examLanguage === 'ar' ? "mr-2" : "ml-2"
+                                    )}>✓ {examLanguage === 'ar' ? 'صحيح' : 'Correct'}</span>
                                   )}
                                 </span>
                               </div>
@@ -1085,12 +1100,17 @@ export default function CertificationExamQuestionManager() {
                       </div>
                       {/* Explanation Section - After all answers */}
                       {(() => {
-                        const explanation = (question as any).explanation ||
-                          (question.answers || []).find((a: QuizAnswer) => a.is_correct)?.explanation;
+                        const correctAnswer = (question.answers || []).find((a: QuizAnswer) => a.is_correct);
+                        const explanation = examLanguage === 'ar'
+                          ? ((question as any).explanation_ar || correctAnswer?.explanation_ar || (question as any).explanation || correctAnswer?.explanation)
+                          : ((question as any).explanation || correctAnswer?.explanation);
                         return explanation ? (
-                          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <div className={cn(
+                            "mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg",
+                            examLanguage === 'ar' && "text-right"
+                          )} dir={examLanguage === 'ar' ? 'rtl' : 'ltr'}>
                             <p className="text-sm text-amber-800">
-                              <span className="font-semibold">💡 Explanation:</span>{' '}
+                              <span className="font-semibold">💡 {examLanguage === 'ar' ? 'التوضيح:' : 'Explanation:'}</span>{' '}
                               <span className="italic">{explanation}</span>
                             </p>
                           </div>

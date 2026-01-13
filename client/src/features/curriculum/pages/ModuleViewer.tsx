@@ -1,11 +1,11 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useModuleDetail,
   useUpdateProgress,
   useIncrementTimeSpent,
 } from '@/entities/curriculum';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { ArrowLeft, Clock, CheckCircle, Lock, BookOpen } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ContentRenderer } from '../components/ContentRenderer';
@@ -20,11 +20,34 @@ import { ModuleLessons } from '../components/ModuleLessons';
 export function ModuleViewer() {
   const { moduleId } = useParams<{ moduleId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [readingProgress, setReadingProgress] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
   const timeTrackerRef = useRef<NodeJS.Timeout>();
+
+  // Detect base path from current location (ECP vs individual learning system)
+  const basePath = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith('/ecp/learning-system')) {
+      return '/ecp/learning-system/training-kits';
+    }
+    return '/learning-system/training-kits';
+  }, [location.pathname]);
+
+  // Get language from URL params for back navigation
+  const searchParams = new URLSearchParams(location.search);
+  const urlLang = searchParams.get('lang');
+
+  // Helper to get back URL with language preserved
+  const getBackUrl = (moduleLang?: string) => {
+    const lang = urlLang || moduleLang;
+    if (lang) {
+      return `${basePath}?lang=${lang}`;
+    }
+    return basePath;
+  };
 
   // Fetch module detail
   const { data: moduleDetail, isLoading, isError } = useModuleDetail(
@@ -107,7 +130,7 @@ export function ModuleViewer() {
         <div className="text-center">
           <p className="text-red-600 mb-4">Failed to load module</p>
           <button
-            onClick={() => navigate('/learning-system')}
+            onClick={() => navigate(getBackUrl())}
             className="text-blue-600 hover:underline"
           >
             Return to Curriculum
@@ -126,7 +149,7 @@ export function ModuleViewer() {
       <ModuleLocked
         module={module}
         prerequisiteModule={prerequisiteModule}
-        onBack={() => navigate('/learning-system')}
+        onBack={() => navigate(getBackUrl(module.exam_language))}
       />
     );
   }
@@ -140,13 +163,33 @@ export function ModuleViewer() {
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate('/learning-system')}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to Curriculum</span>
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate(getBackUrl(module.exam_language))}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+
+              {/* Module Title in Header */}
+              <div className="border-l pl-4">
+                <div className="flex items-center gap-2 text-xs text-gray-500 mb-0.5">
+                  <span>Module {module.order_index}</span>
+                  <span>•</span>
+                  <span>
+                    {module.section_type === 'knowledge_based' ? 'Knowledge-Based' : 'Behavioral'}
+                  </span>
+                </div>
+                <h1
+                  className="text-lg font-semibold text-gray-900 line-clamp-1"
+                  dir={module.exam_language === 'ar' ? 'rtl' : 'ltr'}
+                >
+                  {module.exam_language === 'ar' && module.competency_name_ar
+                    ? module.competency_name_ar
+                    : module.competency_name || 'Untitled Module'}
+                </h1>
+              </div>
+            </div>
 
             <div className="flex items-center gap-4">
               {/* Time Spent */}
@@ -207,12 +250,24 @@ export function ModuleViewer() {
             </span>
           </div>
 
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            {module.competency_name}
+          <h1
+            className="text-4xl font-bold text-gray-900 mb-4"
+            dir={module.exam_language === 'ar' ? 'rtl' : 'ltr'}
+          >
+            {module.exam_language === 'ar' && module.competency_name_ar
+              ? module.competency_name_ar
+              : module.competency_name || 'Untitled Module'}
           </h1>
 
-          {module.description && (
-            <p className="text-lg text-gray-600 mb-6">{module.description}</p>
+          {(module.description || module.description_ar) && (
+            <p
+              className="text-lg text-gray-600 mb-6"
+              dir={module.exam_language === 'ar' ? 'rtl' : 'ltr'}
+            >
+              {module.exam_language === 'ar' && module.description_ar
+                ? module.description_ar
+                : module.description}
+            </p>
           )}
 
           {/* Learning Objectives */}
@@ -252,13 +307,54 @@ export function ModuleViewer() {
 
           {/* Lessons Tab */}
           <TabsContent value="lessons">
-            <ModuleLessons moduleId={moduleId!} userId={user?.id} />
+            <ModuleLessons moduleId={moduleId!} userId={user?.id} basePath={basePath} />
           </TabsContent>
 
           {/* Module Overview Tab */}
           <TabsContent value="overview">
             <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
-              <ContentRenderer content={module.content} />
+              {/* Check if module has actual content */}
+              {module.content && module.content.content && module.content.content.length > 0 ? (
+                <ContentRenderer content={module.content} />
+              ) : (
+                <div className="text-center py-8" dir={module.exam_language === 'ar' ? 'rtl' : 'ltr'}>
+                  <BookOpen className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {module.exam_language === 'ar' ? 'نظرة عامة على الوحدة' : 'Module Overview'}
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    {module.exam_language === 'ar' ? (
+                      <>تغطي هذه الوحدة <strong>{module.competency_name_ar || module.competency_name}</strong>.</>
+                    ) : (
+                      <>This module covers <strong>{module.competency_name || module.competency_name_ar}</strong>.</>
+                    )}
+                  </p>
+                  <p className="text-gray-500 text-sm mb-6">
+                    {module.exam_language === 'ar'
+                      ? 'ابدأ التعلم بإكمال الدروس الثلاثة في علامة التبويب "الدروس الثلاثة". كل درس يبني على الدرس السابق لمساعدتك على إتقان هذه الكفاءة.'
+                      : 'Start learning by completing the 3 lessons in the "The 3 Lessons" tab. Each lesson builds on the previous one to help you master this competency.'}
+                  </p>
+                  {((module.exam_language === 'ar' && module.learning_objectives_ar && module.learning_objectives_ar.length > 0) ||
+                    (module.learning_objectives && module.learning_objectives.length > 0)) && (
+                    <div className={`${module.exam_language === 'ar' ? 'text-right' : 'text-left'} bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto`}>
+                      <h4 className="font-medium text-gray-900 mb-2">
+                        {module.exam_language === 'ar' ? 'ما ستتعلمه:' : "What you'll learn:"}
+                      </h4>
+                      <ul className="space-y-1 text-sm text-gray-700">
+                        {(module.exam_language === 'ar' && module.learning_objectives_ar
+                          ? module.learning_objectives_ar
+                          : module.learning_objectives || []
+                        ).slice(0, 3).map((obj, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                            <span>{obj}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Quiz Gate */}
@@ -269,12 +365,17 @@ export function ModuleViewer() {
                 isCompleted={isCompleted}
                 nextModule={nextModule}
                 onNextModule={() =>
-                  nextModule && navigate(`/learning-system/module/${nextModule.id}`)
+                  nextModule && navigate(`${basePath}/module/${nextModule.id}`)
                 }
               />
             ) : (
-              <div className="text-center text-gray-500 py-8">
-                Continue reading to unlock the quiz
+              <div className="text-center py-8">
+                <p className="text-gray-600 mb-2">
+                  Complete the 3 lessons to unlock the module quiz.
+                </p>
+                <p className="text-sm text-gray-500">
+                  Go to the "The 3 Lessons" tab to start learning.
+                </p>
               </div>
             )}
           </TabsContent>

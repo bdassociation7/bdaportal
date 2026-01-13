@@ -63,6 +63,7 @@
     "jspdf-autotable": "^5.0.2",
     "nodemailer": "^7.0.10",
     "papaparse": "^5.5.3",
+    "pg": "^8.16.3",
     "puppeteer": "^24.31.0",
     "xlsx": "^0.18.5",
     "zod": "^3.23.8"
@@ -113,7 +114,9 @@
     "@types/three": "^0.176.0",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "@vitest/coverage-v8": "^4.0.15",
+    "ag-psd": "^29.0.0",
     "autoprefixer": "^10.4.21",
+    "canvas": "^3.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",

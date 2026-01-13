@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -49,6 +50,7 @@ import {
   useUserPdcSummary,
   ACTIVITY_TYPE_LABELS,
   STATUS_LABELS,
+  PdcsService,
 } from '@/entities/pdcs';
 import type {
   CreatePdcEntryDTO,
@@ -105,16 +107,22 @@ const translations = {
     pdcsCompleted: (current: number, total: number) => `${current} / ${total} PDCs completed`,
     pdcsRequirement: 'You need 60 approved PDC credits for recertification',
     // Recertification CTA
-    readyForRecertification: 'Ready for Recertification!',
-    recertificationCongrats: 'Congratulations! You have completed the 60 PDCs required for recertification. Click below to finalize your renewal process.',
-    purchaseRecertification: 'Purchase Recertification',
+    readyForRecertification: 'PDC Requirement Complete!',
+    recertificationPaymentRequired: 'Congratulations! You have completed the 60 PDC credits required for recertification. To complete the recertification process, you must purchase the renewal and pay the recertification fee.',
+    yourCertificationExpires: 'Your certification expires on',
+    purchaseRenewal: 'Purchase Recertification',
+    renewalFeeRequired: 'Renewal fee payment required to complete recertification',
+    viewCertification: 'View My Certification',
     // Summary cards
-    cpCredits: 'CP™ Credits',
-    scpCredits: 'SCP™ Credits',
+    cpCredits: 'BDA-CP™ Credits',
+    scpCredits: 'BDA-SCP™ Credits',
     last3Years: 'Last 3 years',
     approvedCredits: 'Approved Credits',
     pendingCredits: 'Pending Credits',
     totalEntries: 'Total Entries',
+    activeForPdc: 'Active for PDC Tracking',
+    inactiveForPdc: 'Inactive',
+    pdcNotCountedTowardThis: 'PDCs are counted toward BDA-SCP™ only',
     // Table
     myPdcEntries: 'My PDC Entries',
     myPdcEntriesDesc: 'Track your submitted professional development activities',
@@ -132,6 +140,21 @@ const translations = {
     // Toast
     downloadFailed: 'Failed to download certificate',
     generateUrlFailed: 'Failed to generate download URL',
+    // Program validation
+    validatingProgram: 'Validating Program ID...',
+    programValid: 'Valid program found',
+    programInvalid: 'Invalid Program ID',
+    programAutoFill: 'Credits auto-filled from program',
+    autoApproved: 'PDC entry auto-approved!',
+    pendingReview: 'PDC entry submitted for review',
+    creditsFromProgram: 'Credits (from program)',
+    programAlreadyUsed: 'You have already used this Program ID',
+    duplicateProgram: 'This program has already been submitted. Each program can only be used once.',
+    // Carry-over credits
+    reservedForNextCycle: 'Reserved for Next Cycle',
+    creditsReservedDesc: (credits: number) => `${credits} PDCs reserved for your next recertification cycle`,
+    carryOverExplanation: 'You have exceeded the 60-credit limit for this cycle. Excess credits will be automatically applied when your certification renews.',
+    carryOverActive: 'These credits will become active after certification renewal',
   },
   ar: {
     // Header
@@ -177,16 +200,22 @@ const translations = {
     pdcsCompleted: (current: number, total: number) => `${current} / ${total} PDCs مكتملة`,
     pdcsRequirement: 'تحتاج إلى 60 نقطة PDC معتمدة لإعادة الاعتماد',
     // Recertification CTA
-    readyForRecertification: 'جاهز لإعادة الاعتماد!',
-    recertificationCongrats: 'تهانينا! لقد أكملت 60 PDC المطلوبة لإعادة الاعتماد. انقر أدناه لإنهاء عملية التجديد.',
-    purchaseRecertification: 'شراء إعادة الاعتماد',
+    readyForRecertification: 'اكتمال متطلبات PDC!',
+    recertificationPaymentRequired: 'تهانينا! لقد أكملت 60 نقطة PDC المطلوبة لإعادة الاعتماد. لإكمال عملية إعادة الاعتماد، يجب عليك شراء التجديد ودفع رسوم إعادة الاعتماد.',
+    yourCertificationExpires: 'تنتهي صلاحية شهادتك في',
+    purchaseRenewal: 'شراء إعادة الاعتماد',
+    renewalFeeRequired: 'مطلوب دفع رسوم التجديد لإكمال إعادة الاعتماد',
+    viewCertification: 'عرض شهادتي',
     // Summary cards
-    cpCredits: 'نقاط CP™',
-    scpCredits: 'نقاط SCP™',
+    cpCredits: 'نقاط BDA-CP™',
+    scpCredits: 'نقاط BDA-SCP™',
     last3Years: 'آخر 3 سنوات',
     approvedCredits: 'النقاط المعتمدة',
     pendingCredits: 'النقاط المعلقة',
     totalEntries: 'إجمالي الإدخالات',
+    activeForPdc: 'نشط لتتبع PDC',
+    inactiveForPdc: 'غير نشط',
+    pdcNotCountedTowardThis: 'يتم احتساب نقاط PDC نحو BDA-SCP™ فقط',
     // Table
     myPdcEntries: 'إدخالات PDC الخاصة بي',
     myPdcEntriesDesc: 'تتبع أنشطة التطوير المهني المقدمة',
@@ -204,7 +233,28 @@ const translations = {
     // Toast
     downloadFailed: 'فشل في تحميل الشهادة',
     generateUrlFailed: 'فشل في إنشاء رابط التحميل',
+    // Program validation
+    validatingProgram: 'جاري التحقق من معرف البرنامج...',
+    programValid: 'تم العثور على برنامج صالح',
+    programInvalid: 'معرف البرنامج غير صالح',
+    programAutoFill: 'تم ملء النقاط تلقائياً من البرنامج',
+    autoApproved: 'تمت الموافقة التلقائية على إدخال PDC!',
+    pendingReview: 'تم تقديم إدخال PDC للمراجعة',
+    creditsFromProgram: 'النقاط (من البرنامج)',
+    programAlreadyUsed: 'لقد استخدمت بالفعل معرف البرنامج هذا',
+    duplicateProgram: 'تم تقديم هذا البرنامج بالفعل. يمكن استخدام كل برنامج مرة واحدة فقط.',
+    // Carry-over credits
+    reservedForNextCycle: 'محجوز للدورة القادمة',
+    creditsReservedDesc: (credits: number) => `${credits} PDCs محجوزة لدورة إعادة الاعتماد القادمة`,
+    carryOverExplanation: 'لقد تجاوزت حد 60 نقطة لهذه الدورة. سيتم تطبيق النقاط الزائدة تلقائياً عند تجديد شهادتك.',
+    carryOverActive: 'ستصبح هذه النقاط نشطة بعد تجديد الشهادة',
   }
+};
+
+// Recertification product URLs by certification type
+const RECERTIFICATION_URLS: Record<CertificationType, string> = {
+  'CP': 'https://bda-global.org/en/product/bda-cp-recertification/',
+  'SCP': 'https://bda-global.org/en/product/bda-scp-recertification/',
 };
 
 export default function PDCs() {
@@ -212,27 +262,86 @@ export default function PDCs() {
   const { language } = useLanguage();
   const texts = translations[language];
   const [isSubmitOpen, setIsSubmitOpen] = useState(false);
+  const [isValidatingProgram, setIsValidatingProgram] = useState(false);
+  const [programDetails, setProgramDetails] = useState<{
+    is_valid: boolean;
+    program_name: string | null;
+    max_pdc_credits: number | null;
+    provider_name: string | null;
+    already_used?: boolean;
+  } | null>(null);
 
   // US1: Check certification eligibility
   const { data: certificationsResult } = useUserCertifications(user?.id || '', { status: 'active' });
   const activeCertifications = certificationsResult?.data || [];
   const hasActiveCertification = activeCertifications.length > 0;
-  const primaryCertification = activeCertifications[0]; // Get first active certification
+
+  // Determine active certification level for PDC tracking
+  // If user has both CP and SCP, SCP is the active level (higher certification)
+  // PDCs should only count toward the active certification
+  const hasSCP = activeCertifications.some(cert => cert.certification_type === 'SCP');
+  const hasCP = activeCertifications.some(cert => cert.certification_type === 'CP');
+
+  // Active certification is SCP if user has it, otherwise CP
+  const activeCertificationType: CertificationType = hasSCP ? 'SCP' : 'CP';
+  const primaryCertification = activeCertifications.find(
+    cert => cert.certification_type === activeCertificationType
+  ) || activeCertifications[0];
 
   // Fetch data
   const { data: entries, isLoading } = usePdcEntries(user?.id ? { user_id: user.id } : {});
   const { data: cpSummary } = useUserPdcSummary(user?.id || '', 'CP');
   const { data: scpSummary } = useUserPdcSummary(user?.id || '', 'SCP');
 
+  // Fetch cycle totals for active certification
+  const [cycleTotals, setCycleTotals] = useState<{
+    current_cycle_credits: number;
+    reserved_next_cycle_credits: number;
+    total_entries: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (primaryCertification?.id) {
+      PdcsService.getCycleTotals(primaryCertification.id).then((result) => {
+        if (result.data) {
+          setCycleTotals(result.data);
+        }
+      });
+    }
+  }, [primaryCertification?.id, entries]);
+
   // US4: Calculate total approved PDCs for progress
-  const totalApprovedPDCs = (cpSummary?.data?.approved_credits || 0) + (scpSummary?.data?.approved_credits || 0);
+  // IMPORTANT: Use cycle totals which enforce the 60-PDC limit per cycle
+  // Current cycle credits are capped at 60, excess carries over to next cycle
+  const totalApprovedPDCs = cycleTotals?.current_cycle_credits || 0;
+  const reservedNextCycle = cycleTotals?.reserved_next_cycle_credits || 0;
   const progressPercentage = Math.min((totalApprovedPDCs / 60) * 100, 100);
   const needsRecertification = totalApprovedPDCs >= 60;
 
   const createMutation = useCreatePdcEntry();
 
+  // Show celebration toast when user completes 60 PDC requirement
+  useEffect(() => {
+    if (needsRecertification && primaryCertification && user?.id) {
+      const storageKey = `pdc_completion_toast_${user.id}_${primaryCertification.id}`;
+      const hasShownToast = localStorage.getItem(storageKey);
+
+      if (!hasShownToast) {
+        // Show success toast with celebration
+        toast.success(texts.readyForRecertification, {
+          description: texts.recertificationPaymentRequired,
+          duration: 8000, // Show for 8 seconds
+          icon: '🎉',
+        });
+
+        // Mark as shown so it doesn't repeat
+        localStorage.setItem(storageKey, 'true');
+      }
+    }
+  }, [needsRecertification, primaryCertification, user?.id, language, texts]);
+
   // US2: Auto-detect certification type from user's active certification
-  const autoDetectedCertType: CertificationType = primaryCertification?.certification_type || 'CP';
+  const autoDetectedCertType: CertificationType = activeCertificationType;
 
   const [submitForm, setSubmitForm] = useState<{
     activity_type: PdcActivityType;
@@ -256,6 +365,53 @@ export default function PDCs() {
     notes: '',
   });
 
+  // Validate program ID and auto-fill credits
+  const handleProgramIdValidation = async (programId: string) => {
+    if (!programId || programId.trim().length < 3 || !user?.id) {
+      setProgramDetails(null);
+      return;
+    }
+
+    setIsValidatingProgram(true);
+    try {
+      // Check program details
+      const result = await PdcsService.getProgramDetails(programId.trim());
+
+      // Check if already used
+      const usageCheck = await PdcsService.checkProgramAlreadyUsed(user.id, programId.trim());
+      const alreadyUsed = usageCheck.data === true;
+
+      if (result.data) {
+        setProgramDetails({
+          is_valid: result.data.is_valid && !alreadyUsed, // Invalid if already used
+          program_name: result.data.program_name,
+          max_pdc_credits: result.data.max_pdc_credits,
+          provider_name: result.data.provider_name,
+          already_used: alreadyUsed,
+        });
+
+        // Show appropriate message
+        if (alreadyUsed) {
+          toast.error(`${texts.programAlreadyUsed}: ${result.data.program_name}`);
+        } else if (result.data.is_valid && result.data.max_pdc_credits) {
+          // Auto-fill credits if valid program
+          setSubmitForm((prev) => ({
+            ...prev,
+            credits_claimed: result.data!.max_pdc_credits!,
+          }));
+          toast.success(`${texts.programValid}: ${result.data.program_name}`);
+        } else {
+          toast.warning(texts.programInvalid);
+        }
+      }
+    } catch (error) {
+      console.error('Error validating program:', error);
+      setProgramDetails(null);
+    } finally {
+      setIsValidatingProgram(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user?.id) return;
 
@@ -278,9 +434,25 @@ export default function PDCs() {
       notes: submitForm.notes || undefined,
     };
 
-    await createMutation.mutateAsync({ userId: user.id, dto });
+    // Use auto-approve flow
+    const result = await PdcsService.createPdcEntryWithAutoApprove(user.id, dto);
+
+    if (result.error) {
+      toast.error(result.error.message);
+      return;
+    }
+
+    if (result.data?.auto_approved) {
+      toast.success(`${texts.autoApproved} (${result.data.credits_approved} credits)`);
+    } else {
+      toast.info(texts.pendingReview);
+    }
+
     setIsSubmitOpen(false);
     resetForm();
+
+    // Trigger refetch of entries
+    window.location.reload();
   };
 
   const resetForm = () => {
@@ -295,6 +467,7 @@ export default function PDCs() {
       certificate_file: null,
       notes: '',
     });
+    setProgramDetails(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -469,16 +642,25 @@ export default function PDCs() {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <Label>{texts.creditsClaimed} *</Label>
+                    <Label>
+                      {programDetails?.is_valid ? texts.creditsFromProgram : texts.creditsClaimed} *
+                    </Label>
                     <Input
                       type="number"
                       min={1}
-                      max={100}
+                      max={programDetails?.max_pdc_credits || 100}
                       value={submitForm.credits_claimed}
                       onChange={(e) =>
                         setSubmitForm({ ...submitForm, credits_claimed: parseInt(e.target.value) || 1 })
                       }
+                      readOnly={programDetails?.is_valid}
+                      className={programDetails?.is_valid ? 'bg-green-50 border-green-300' : ''}
                     />
+                    {programDetails?.is_valid && (
+                      <p className="text-xs text-green-600 mt-1">
+                        {texts.programAutoFill}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -495,18 +677,57 @@ export default function PDCs() {
 
                   <div>
                     <Label>{texts.programId} *</Label>
-                    <Input
-                      value={submitForm.program_id}
-                      onChange={(e) =>
-                        setSubmitForm({ ...submitForm, program_id: e.target.value })
-                      }
-                      placeholder={texts.programIdPlaceholder}
-                      required
-                      minLength={3}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {texts.programIdRequired}
-                    </p>
+                    <div className="relative">
+                      <Input
+                        value={submitForm.program_id}
+                        onChange={(e) => {
+                          setSubmitForm({ ...submitForm, program_id: e.target.value });
+                          setProgramDetails(null);
+                        }}
+                        onBlur={(e) => handleProgramIdValidation(e.target.value)}
+                        placeholder={texts.programIdPlaceholder}
+                        required
+                        minLength={3}
+                        className={
+                          programDetails?.is_valid && !programDetails.already_used
+                            ? 'border-green-500 pr-10'
+                            : programDetails === null
+                            ? ''
+                            : 'border-red-500 pr-10'
+                        }
+                      />
+                      {isValidatingProgram && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
+                      )}
+                      {programDetails?.is_valid && !programDetails.already_used && !isValidatingProgram && (
+                        <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                      )}
+                      {programDetails?.already_used && !isValidatingProgram && (
+                        <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                      )}
+                    </div>
+                    {programDetails?.is_valid && !programDetails.already_used && (
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                        <p className="font-medium text-green-800">{programDetails.program_name}</p>
+                        <p className="text-green-700 text-xs">
+                          Provider: {programDetails.provider_name} | Max Credits: {programDetails.max_pdc_credits}
+                        </p>
+                      </div>
+                    )}
+                    {programDetails?.already_used && (
+                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm">
+                        <p className="font-medium text-red-800">{programDetails.program_name}</p>
+                        <p className="text-red-700 text-xs">
+                          {texts.programAlreadyUsed}
+                        </p>
+                      </div>
+                    )}
+                    {programDetails && !programDetails.is_valid && !programDetails.already_used && (
+                      <p className="text-xs text-red-500 mt-1">{texts.programInvalid}</p>
+                    )}
+                    {!programDetails && (
+                      <p className="text-xs text-gray-500 mt-1">{texts.programIdRequired}</p>
+                    )}
                   </div>
                 </div>
 
@@ -549,7 +770,8 @@ export default function PDCs() {
                   disabled={
                     createMutation.isPending ||
                     !submitForm.activity_title ||
-                    !submitForm.certificate_file
+                    !submitForm.certificate_file ||
+                    programDetails?.already_used
                   }
                 >
                   {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -563,43 +785,116 @@ export default function PDCs() {
       </div>
 
       {/* US4: PDC Progress Bar */}
-      <Card>
+      <Card className={needsRecertification ? 'border-2 border-green-500' : ''}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-lg font-semibold">{texts.recertificationProgress}</h3>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold">{texts.recertificationProgress}</h3>
+                {needsRecertification && (
+                  <Badge className="bg-green-600 text-white">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Complete
+                  </Badge>
+                )}
+              </div>
               <p className="text-sm text-gray-500">
-                {texts.pdcsCompleted(totalApprovedPDCs, 60)}
+                {texts.pdcsCompleted(totalApprovedPDCs, 60)} - BDA-{activeCertificationType}™
               </p>
             </div>
-            <div className="text-2xl font-bold text-royal-600">
+            <div className={`text-2xl font-bold ${needsRecertification ? 'text-green-600' : 'text-royal-600'}`}>
               {Math.round(progressPercentage)}%
             </div>
           </div>
-          <Progress value={progressPercentage} className="h-3" />
+          <Progress
+            value={progressPercentage}
+            className={`h-3 ${needsRecertification ? '[&>div]:bg-green-600' : ''}`}
+          />
           <p className="text-xs text-gray-500 mt-2">
-            {texts.pdcsRequirement}
+            {needsRecertification ? (
+              <span className="text-green-700 font-medium flex items-center gap-1">
+                <CheckCircle className="h-3 w-3" />
+                {texts.renewalFeeRequired}
+              </span>
+            ) : (
+              texts.pdcsRequirement
+            )}
           </p>
         </CardContent>
       </Card>
 
-      {/* US5: Recertification CTA */}
-      {needsRecertification && (
+      {/* Reserved/Carry-over Credits Display */}
+      {reservedNextCycle > 0 && (
+        <Alert className="bg-amber-50 border-amber-200">
+          <Info className="h-5 w-5 text-amber-600" />
+          <AlertTitle className="text-amber-900 font-semibold">{texts.reservedForNextCycle}</AlertTitle>
+          <AlertDescription className="text-amber-800">
+            <div className="space-y-2">
+              <p className="text-base font-medium">
+                {texts.creditsReservedDesc(reservedNextCycle)}
+              </p>
+              <div className="p-3 bg-white rounded-md border border-amber-300">
+                <p className="text-sm text-amber-900">
+                  <Info className="h-4 w-4 inline mr-2" />
+                  {texts.carryOverExplanation}
+                </p>
+              </div>
+              <p className="text-sm text-amber-700">
+                {texts.carryOverActive}
+              </p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* US5: Recertification Status with Purchase CTA */}
+      {needsRecertification && primaryCertification && (
         <Alert className="bg-green-50 border-green-200">
           <CheckCircle className="h-5 w-5 text-green-600" />
-          <AlertTitle className="text-green-900">{texts.readyForRecertification}</AlertTitle>
-          <AlertDescription className="flex items-center justify-between text-green-800">
-            <span>
-              {texts.recertificationCongrats}
-            </span>
-            <Button
-              variant="default"
-              className="bg-green-600 hover:bg-green-700 ml-4"
-              onClick={() => window.open('https://bda-global.org/en/store/bda-recertification/', '_blank')}
-            >
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              {texts.purchaseRecertification}
-            </Button>
+          <AlertTitle className="text-green-900 text-lg font-bold">{texts.readyForRecertification}</AlertTitle>
+          <AlertDescription className="text-green-800">
+            <div className="space-y-4">
+              <p className="text-base">
+                {texts.recertificationPaymentRequired}
+              </p>
+              <div className="p-3 bg-white rounded-md border border-green-300">
+                <p className="text-sm text-green-900 flex items-center gap-2">
+                  <Award className="h-4 w-4" />
+                  {texts.yourCertificationExpires}{' '}
+                  <strong className="font-semibold">
+                    {new Date(primaryCertification.expiry_date).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </strong>
+                </p>
+              </div>
+              <div className="p-3 bg-amber-50 rounded-md border border-amber-300">
+                <p className="text-sm text-amber-900 flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  {texts.renewalFeeRequired}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => window.open(RECERTIFICATION_URLS[activeCertificationType], '_blank')}
+                >
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  {texts.purchaseRenewal} - BDA-{activeCertificationType}™
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-green-600 text-green-700 hover:bg-green-100"
+                  onClick={() => window.location.href = '/my-certifications'}
+                >
+                  <Award className="h-4 w-4 mr-2" />
+                  {texts.viewCertification}
+                </Button>
+              </div>
+            </div>
           </AlertDescription>
         </Alert>
       )}
@@ -607,13 +902,31 @@ export default function PDCs() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {cpSummary && (
-          <Card>
+          <Card className={activeCertificationType === 'CP' ? 'border-2 border-royal-600' : 'opacity-75'}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-blue-600" />
-                {texts.cpCredits}
-              </CardTitle>
-              <CardDescription>{texts.last3Years}</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-blue-600" />
+                  {texts.cpCredits}
+                </CardTitle>
+                {activeCertificationType === 'CP' ? (
+                  <Badge className="bg-royal-600 text-white">
+                    {texts.activeForPdc}
+                  </Badge>
+                ) : hasSCP && (
+                  <Badge variant="outline" className="text-gray-500 border-gray-300">
+                    {texts.inactiveForPdc}
+                  </Badge>
+                )}
+              </div>
+              <CardDescription>
+                {texts.last3Years}
+                {activeCertificationType !== 'CP' && hasSCP && (
+                  <span className="block text-xs text-gray-500 mt-1">
+                    {texts.pdcNotCountedTowardThis}
+                  </span>
+                )}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -639,12 +952,19 @@ export default function PDCs() {
         )}
 
         {scpSummary && (
-          <Card>
+          <Card className={activeCertificationType === 'SCP' ? 'border-2 border-royal-600' : ''}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-royal-600" />
-                {texts.scpCredits}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-royal-600" />
+                  {texts.scpCredits}
+                </CardTitle>
+                {activeCertificationType === 'SCP' && (
+                  <Badge className="bg-royal-600 text-white">
+                    {texts.activeForPdc}
+                  </Badge>
+                )}
+              </div>
               <CardDescription>{texts.last3Years}</CardDescription>
             </CardHeader>
             <CardContent>
@@ -710,7 +1030,7 @@ export default function PDCs() {
                         {ACTIVITY_TYPE_LABELS[entry.activity_type]}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{entry.certification_type}™</Badge>
+                        <Badge variant="outline">BDA-{entry.certification_type}™</Badge>
                       </TableCell>
                       <TableCell className="text-sm">{formatDate(entry.activity_date)}</TableCell>
                       <TableCell>

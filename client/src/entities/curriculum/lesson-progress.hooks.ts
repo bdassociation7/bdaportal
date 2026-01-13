@@ -34,8 +34,11 @@ export const lessonProgressKeys = {
  * Fetch lesson progress for a user with optional filters
  */
 export function useLessonProgress(userId: string | undefined, filters?: LessonProgressFilters) {
+  // Create a stable string key for filters to avoid reference issues
+  const filterKey = filters ? JSON.stringify(filters) : undefined;
+
   return useQuery({
-    queryKey: lessonProgressKeys.list(userId!, filters),
+    queryKey: ['lesson-progress', 'list', userId, filterKey],
     queryFn: async () => {
       const { data, error } = await LessonProgressService.getLessonProgress(userId!, filters);
       if (error) throw error;
@@ -251,6 +254,9 @@ export function useInitializeLessonProgress() {
       queryClient.invalidateQueries({
         queryKey: lessonProgressKeys.summary(variables.userId),
       });
+
+      // Note: Unlock checks will auto-refresh when progress queries refetch
+      // No need to manually invalidate to prevent cascading refetches
     },
   });
 }

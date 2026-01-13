@@ -4,10 +4,12 @@
  */
 
 import { useState } from 'react';
-import { Plus, BookOpen, Filter, Search, CheckCircle, FileText, HelpCircle } from 'lucide-react';
+import { Plus, BookOpen, Filter, Search, CheckCircle, FileText, HelpCircle, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
+type ExamLanguage = 'en' | 'ar';
 import {
   Card,
   CardContent,
@@ -37,11 +39,14 @@ export function LessonManager() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingLessonId, setEditingLessonId] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState<'all' | 'published' | 'draft'>('all');
+  const [filterLanguage, setFilterLanguage] = useState<ExamLanguage>('en');
+  const [createLanguage, setCreateLanguage] = useState<ExamLanguage>('en');
 
-  // Build filters based on active tab
+  // Build filters based on active tab and language
   const activeFilters: LessonFilters = {
     ...filters,
     is_published: activeTab === 'published' ? true : activeTab === 'draft' ? false : undefined,
+    exam_language: filterLanguage,
   };
 
   // Queries
@@ -62,7 +67,8 @@ export function LessonManager() {
   });
 
   // Handlers
-  const handleCreateLesson = () => {
+  const handleCreateLesson = (language: ExamLanguage = 'en') => {
+    setCreateLanguage(language);
     setEditingLessonId(undefined);
     setIsEditorOpen(true);
   };
@@ -114,12 +120,40 @@ export function LessonManager() {
         description={t('lessons.subtitle')}
         icon={BookOpen}
         action={
-          <Button onClick={handleCreateLesson} size="lg" className="bg-white text-blue-600 hover:bg-blue-50">
-            <Plus className="mr-2 h-4 w-4" />
-            {t('lessons.newLesson')}
-          </Button>
+          <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
+            <Button onClick={() => handleCreateLesson('en')} size="lg" className="bg-white text-blue-600 hover:bg-blue-50">
+              <Plus className="mr-2 h-4 w-4" />
+              🇬🇧 English Lesson
+            </Button>
+            <Button onClick={() => handleCreateLesson('ar')} size="lg" className="bg-white text-emerald-600 hover:bg-emerald-50">
+              <Plus className="mr-2 h-4 w-4" />
+              🇸🇦 درس عربي
+            </Button>
+          </div>
         }
       />
+
+      {/* Language Filter */}
+      <div className="flex items-center gap-4 bg-white rounded-lg shadow-sm p-4">
+        <Globe className="h-5 w-5 text-gray-500" />
+        <span className="font-medium text-gray-700">{t('curriculum.selectLanguage')}:</span>
+        <div className="flex gap-2">
+          <Button
+            variant={filterLanguage === 'en' ? 'default' : 'outline'}
+            onClick={() => setFilterLanguage('en')}
+            className={filterLanguage === 'en' ? 'bg-blue-600' : ''}
+          >
+            🇬🇧 English Lessons
+          </Button>
+          <Button
+            variant={filterLanguage === 'ar' ? 'default' : 'outline'}
+            onClick={() => setFilterLanguage('ar')}
+            className={filterLanguage === 'ar' ? 'bg-emerald-600' : ''}
+          >
+            🇸🇦 الدروس العربية
+          </Button>
+        </div>
+      </div>
 
       {/* Statistics */}
       {summary && (
@@ -235,6 +269,7 @@ export function LessonManager() {
           setIsEditorOpen(false);
           setEditingLessonId(undefined);
         }}
+        defaultLanguage={editingLessonId ? undefined : createLanguage}
       />
     </div>
   );

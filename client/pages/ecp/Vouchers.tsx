@@ -524,7 +524,7 @@ export default function ECPVouchers() {
                             : "bg-purple-50 text-purple-700"
                         }
                       >
-                        {voucher.certification_type}
+                        BDA-{voucher.certification_type}™
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -632,7 +632,7 @@ export default function ECPVouchers() {
                       : "bg-purple-100 text-purple-700 mt-2"
                   }
                 >
-                  {selectedVoucher.certification_type} {texts.certification}
+                  BDA-{selectedVoucher.certification_type}™ {texts.certification}
                 </Badge>
               </div>
 
@@ -719,16 +719,6 @@ export default function ECPVouchers() {
                 {texts.quantityNote}
               </p>
             </div>
-
-            <Alert>
-              <ShoppingCart className="h-4 w-4" />
-              <AlertTitle>{texts.pricing}</AlertTitle>
-              <AlertDescription>
-                {texts.examVoucherPrice(requestType)}
-                <br />
-                {texts.estimatedTotal(requestQuantity * 150)}
-              </AlertDescription>
-            </Alert>
           </div>
 
           <DialogFooter className={language === 'ar' ? 'flex-row-reverse' : ''}>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Search, UserPlus, Calendar, CheckCircle, XCircle, RefreshCw, UserCog, Users, Clock } from 'lucide-react';
+import { Search, UserPlus, Calendar, CheckCircle, XCircle, RefreshCw, UserCog, Users, Clock, Pencil, X, User, Loader2 } from 'lucide-react';
 import { CurriculumAccessService } from '@/entities/curriculum';
 import type { CertificationType } from '@/entities/curriculum';
 import { StatCard } from '../components/shared';
@@ -23,8 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+
+// Type for selected user
+interface SelectedUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+}
 
 /**
  * Access Management Page (Admin)
@@ -37,8 +44,24 @@ export function AccessManagement() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'expired'>('all');
   const [filterCertType, setFilterCertType] = useState<'all' | CertificationType>('all');
   const [showGrantModal, setShowGrantModal] = useState(false);
+  const [showEditExpirationModal, setShowEditExpirationModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<{
+    userId: string;
+    certType: CertificationType;
+    examLanguage: 'en' | 'ar';
+    userName: string;
+    currentExpiry: string;
+  } | null>(null);
+  const [newExpirationDate, setNewExpirationDate] = useState('');
+
+  // User search state
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<SelectedUser[]>([]);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const [grantFormData, setGrantFormData] = useState({
-    emails: '',
     certificationType: 'CP' as CertificationType,
     examLanguage: 'en' as 'en' | 'ar',
     durationMonths: 12,
@@ -76,10 +99,15 @@ export function AccessManagement() {
       noRecords: 'No access records found',
       noRecordsDescription: 'Access is automatically granted when users purchase certifications',
       grantAccessTitle: 'Grant Curriculum Access',
-      grantAccessDescription: 'Grant access to the curriculum for one or more users by email address.',
-      userEmails: 'User Email(s)',
-      emailPlaceholder: 'Enter email addresses (comma or newline separated)\nexample@domain.com, user2@domain.com',
-      emailHelp: 'Enter one or more email addresses, separated by commas or newlines',
+      grantAccessDescription: 'Search and select users to grant access to the curriculum.',
+      searchUsersLabel: 'Search Users',
+      userSearchPlaceholder: 'Search by name or email...',
+      selectedUsers: 'Selected Users',
+      noUsersSelected: 'No users selected. Search and add users above.',
+      removeUser: 'Remove',
+      searching: 'Searching...',
+      noResultsFound: 'No users found',
+      typeToSearch: 'Type to search users...',
       durationMonths: 'Duration (months)',
       examLanguage: 'Exam Language',
       languageEnglish: 'English',
@@ -94,6 +122,15 @@ export function AccessManagement() {
       accessGrantedError: 'Failed to grant access',
       enterValidEmail: 'Please enter at least one valid email address',
       noUsersFound: 'No users found with the provided email addresses',
+      editExpiration: 'Edit',
+      editExpirationTitle: 'Edit Access Expiration',
+      editExpirationDescription: 'Set a new expiration date for this user\'s access.',
+      newExpirationDate: 'New Expiration Date',
+      currentExpiration: 'Current Expiration',
+      saveChanges: 'Save Changes',
+      saving: 'Saving...',
+      expirationUpdated: 'Expiration date updated successfully',
+      expirationUpdateError: 'Failed to update expiration date',
     },
     ar: {
       title: 'إدارة الوصول للمنهج',
@@ -126,10 +163,15 @@ export function AccessManagement() {
       noRecords: 'لم يتم العثور على سجلات وصول',
       noRecordsDescription: 'يتم منح الوصول تلقائياً عند شراء المستخدمين للشهادات',
       grantAccessTitle: 'منح الوصول للمنهج',
-      grantAccessDescription: 'منح الوصول للمنهج لمستخدم واحد أو أكثر عبر عنوان البريد الإلكتروني.',
-      userEmails: 'البريد الإلكتروني للمستخدم(ين)',
-      emailPlaceholder: 'أدخل عناوين البريد الإلكتروني (مفصولة بفواصل أو أسطر جديدة)\nexample@domain.com, user2@domain.com',
-      emailHelp: 'أدخل عنوان بريد إلكتروني واحد أو أكثر، مفصولة بفواصل أو أسطر جديدة',
+      grantAccessDescription: 'ابحث واختر المستخدمين لمنحهم الوصول إلى المنهج.',
+      searchUsersLabel: 'البحث عن المستخدمين',
+      userSearchPlaceholder: 'البحث بالاسم أو البريد الإلكتروني...',
+      selectedUsers: 'المستخدمون المحددون',
+      noUsersSelected: 'لم يتم تحديد مستخدمين. ابحث وأضف مستخدمين أعلاه.',
+      removeUser: 'إزالة',
+      searching: 'جارٍ البحث...',
+      noResultsFound: 'لم يتم العثور على مستخدمين',
+      typeToSearch: 'اكتب للبحث عن المستخدمين...',
       durationMonths: 'المدة (بالأشهر)',
       examLanguage: 'لغة الامتحان',
       languageEnglish: 'الإنجليزية',
@@ -144,6 +186,15 @@ export function AccessManagement() {
       accessGrantedError: 'فشل في منح الوصول',
       enterValidEmail: 'يرجى إدخال عنوان بريد إلكتروني صالح واحد على الأقل',
       noUsersFound: 'لم يتم العثور على مستخدمين بعناوين البريد الإلكتروني المقدمة',
+      editExpiration: 'تعديل',
+      editExpirationTitle: 'تعديل تاريخ انتهاء الوصول',
+      editExpirationDescription: 'تعيين تاريخ انتهاء جديد لوصول هذا المستخدم.',
+      newExpirationDate: 'تاريخ الانتهاء الجديد',
+      currentExpiration: 'تاريخ الانتهاء الحالي',
+      saveChanges: 'حفظ التغييرات',
+      saving: 'جارٍ الحفظ...',
+      expirationUpdated: 'تم تحديث تاريخ الانتهاء بنجاح',
+      expirationUpdateError: 'فشل في تحديث تاريخ الانتهاء',
     }
   };
 
@@ -184,6 +235,65 @@ export function AccessManagement() {
       return data || [];
     },
   });
+
+  // Search users for grant access
+  const { data: searchResults, isLoading: isSearching } = useQuery({
+    queryKey: ['users-search', userSearchQuery],
+    queryFn: async () => {
+      if (!userSearchQuery || userSearchQuery.length < 2) return [];
+
+      const { supabase } = await import('@/lib/supabase');
+      const searchLower = userSearchQuery.toLowerCase();
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name')
+        .or(`email.ilike.%${searchLower}%,first_name.ilike.%${searchLower}%,last_name.ilike.%${searchLower}%`)
+        .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: userSearchQuery.length >= 2 && showGrantModal,
+    staleTime: 30000,
+  });
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowUserDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Add user to selection
+  const addUser = useCallback((user: { id: string; email: string; first_name: string | null; last_name: string | null }) => {
+    if (!selectedUsers.find(u => u.id === user.id)) {
+      setSelectedUsers(prev => [...prev, {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+      }]);
+    }
+    setUserSearchQuery('');
+    setShowUserDropdown(false);
+    searchInputRef.current?.focus();
+  }, [selectedUsers]);
+
+  // Remove user from selection
+  const removeUser = useCallback((userId: string) => {
+    setSelectedUsers(prev => prev.filter(u => u.id !== userId));
+  }, []);
 
   // Toggle access active status
   const toggleActiveMutation = useMutation({
@@ -254,55 +364,80 @@ export function AccessManagement() {
     },
   });
 
+  // Set specific expiration date
+  const setExpirationMutation = useMutation({
+    mutationFn: async ({ userId, certType, examLanguage, newExpiry }: {
+      userId: string;
+      certType: CertificationType;
+      examLanguage: 'en' | 'ar';
+      newExpiry: string;
+    }) => {
+      const { supabase } = await import('@/lib/supabase');
+
+      // Update expiration to specific date
+      const { error } = await supabase
+        .from('user_curriculum_access')
+        .update({
+          expires_at: new Date(newExpiry).toISOString(),
+          is_active: new Date(newExpiry) > new Date(),
+        })
+        .eq('user_id', userId)
+        .eq('certification_type', certType)
+        .eq('exam_language', examLanguage);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['curriculum-access'] });
+      setShowEditExpirationModal(false);
+      setEditingRecord(null);
+      setNewExpirationDate('');
+      toast.success(texts.expirationUpdated);
+    },
+    onError: () => {
+      toast.error(texts.expirationUpdateError);
+    },
+  });
+
   // Grant access mutation
   const grantAccessMutation = useMutation({
     mutationFn: async () => {
       const { supabase } = await import('@/lib/supabase');
 
-      // Parse emails (comma or newline separated)
-      const emailList = grantFormData.emails
-        .split(/[,\n]/)
-        .map((e) => e.trim().toLowerCase())
-        .filter((e) => e && e.includes('@'));
-
-      if (emailList.length === 0) {
-        throw new Error(texts.enterValidEmail);
+      if (selectedUsers.length === 0) {
+        throw new Error(texts.noUsersSelected);
       }
 
-      // Grant access to each email using the admin RPC function
+      // Grant access to each selected user using the admin RPC function
       const results = await Promise.all(
-        emailList.map(async (email) => {
+        selectedUsers.map(async (user) => {
           const { data, error } = await supabase.rpc('admin_grant_curriculum_access', {
-            p_user_email: email,
+            p_user_email: user.email,
             p_certification_type: grantFormData.certificationType.toLowerCase(),
             p_exam_language: grantFormData.examLanguage,
             p_duration_months: grantFormData.durationMonths,
           });
 
           if (error) {
-            console.error(`Error granting access to ${email}:`, error);
-            return { email, success: false, error: error.message };
+            console.error(`Error granting access to ${user.email}:`, error);
+            return { email: user.email, success: false, error: error.message };
           }
 
           // The RPC returns a JSONB object with success status
           if (data && typeof data === 'object' && 'success' in data) {
-            return { email, success: data.success, error: data.error || null };
+            return { email: user.email, success: data.success, error: data.error || null };
           }
 
-          return { email, success: true, error: null };
+          return { email: user.email, success: true, error: null };
         })
       );
 
       const successCount = results.filter((r) => r.success).length;
       const failedEmails = results.filter((r) => !r.success).map((r) => r.email);
 
-      if (successCount === 0) {
-        throw new Error(texts.noUsersFound);
-      }
-
       return {
         grantedCount: successCount,
-        totalEmails: emailList.length,
+        totalUsers: selectedUsers.length,
         failedEmails,
       };
     },
@@ -312,7 +447,7 @@ export function AccessManagement() {
         toast.warning(
           texts.accessGrantedPartial
             .replace('{count}', String(result.grantedCount))
-            .replace('{total}', String(result.totalEmails))
+            .replace('{total}', String(result.totalUsers))
             .replace('{failed}', result.failedEmails.join(', '))
         );
       } else {
@@ -325,8 +460,9 @@ export function AccessManagement() {
       }
       queryClient.invalidateQueries({ queryKey: ['curriculum-access'] });
       setShowGrantModal(false);
+      setSelectedUsers([]);
+      setUserSearchQuery('');
       setGrantFormData({
-        emails: '',
         certificationType: 'CP',
         examLanguage: 'en',
         durationMonths: 12,
@@ -587,6 +723,27 @@ export function AccessManagement() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
+                          onClick={() => {
+                            const userName = user?.first_name && user?.last_name
+                              ? `${user.first_name} ${user.last_name}`
+                              : user?.email || 'Unknown';
+                            setEditingRecord({
+                              userId: record.user_id,
+                              certType: record.certification_type,
+                              examLanguage: record.exam_language || 'en',
+                              userName,
+                              currentExpiry: record.expires_at,
+                            });
+                            setNewExpirationDate(record.expires_at.split('T')[0]);
+                            setShowEditExpirationModal(true);
+                          }}
+                          className="px-3 py-1 text-xs border border-blue-300 text-blue-700 rounded hover:bg-blue-50 transition flex items-center gap-1"
+                          title={texts.editExpiration}
+                        >
+                          <Pencil className="w-3 h-3" />
+                          {texts.editExpiration}
+                        </button>
+                        <button
                           onClick={() =>
                             toggleActiveMutation.mutate({
                               userId: record.user_id,
@@ -633,32 +790,135 @@ export function AccessManagement() {
       </div>
 
       {/* Grant Access Modal */}
-      <Dialog open={showGrantModal} onOpenChange={setShowGrantModal}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={showGrantModal} onOpenChange={(open) => {
+        setShowGrantModal(open);
+        if (!open) {
+          setSelectedUsers([]);
+          setUserSearchQuery('');
+        }
+      }}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{texts.grantAccessTitle}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              {texts.grantAccessTitle}
+            </DialogTitle>
             <DialogDescription>
               {texts.grantAccessDescription}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* User Search Section */}
             <div>
-              <Label>{texts.userEmails} *</Label>
-              <Textarea
-                value={grantFormData.emails}
-                onChange={(e) =>
-                  setGrantFormData({ ...grantFormData, emails: e.target.value })
-                }
-                placeholder={texts.emailPlaceholder}
-                rows={4}
-                className="font-mono text-sm"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                {texts.emailHelp}
-              </p>
+              <Label>{texts.searchUsersLabel}</Label>
+              <div className="relative mt-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    ref={searchInputRef}
+                    type="text"
+                    value={userSearchQuery}
+                    onChange={(e) => {
+                      setUserSearchQuery(e.target.value);
+                      setShowUserDropdown(true);
+                    }}
+                    onFocus={() => setShowUserDropdown(true)}
+                    placeholder={texts.userSearchPlaceholder}
+                    className="pl-10"
+                  />
+                  {isSearching && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                  )}
+                </div>
+
+                {/* Search Results Dropdown */}
+                {showUserDropdown && userSearchQuery.length >= 2 && (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto"
+                  >
+                    {isSearching ? (
+                      <div className="p-3 text-center text-gray-500 text-sm">
+                        {texts.searching}
+                      </div>
+                    ) : searchResults && searchResults.length > 0 ? (
+                      searchResults
+                        .filter(user => !selectedUsers.find(u => u.id === user.id))
+                        .map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => addUser(user)}
+                            className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-gray-100 last:border-0"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                              <User className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {user.first_name && user.last_name
+                                  ? `${user.first_name} ${user.last_name}`
+                                  : user.first_name || user.last_name || 'Unknown'}
+                              </p>
+                              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                            </div>
+                          </button>
+                        ))
+                    ) : (
+                      <div className="p-3 text-center text-gray-500 text-sm">
+                        {texts.noResultsFound}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {showUserDropdown && userSearchQuery.length < 2 && userSearchQuery.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-center text-gray-500 text-sm">
+                    {texts.typeToSearch}
+                  </div>
+                )}
+              </div>
             </div>
 
+            {/* Selected Users Chips */}
+            <div>
+              <Label className="text-gray-600">{texts.selectedUsers}</Label>
+              <div className="mt-2 min-h-[60px] max-h-[200px] overflow-y-auto p-3 bg-gray-50 rounded-lg border border-gray-200">
+                {selectedUsers.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {selectedUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between gap-3 px-3 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 flex-shrink-0" />
+                          <span>
+                            {user.firstName && user.lastName
+                              ? `${user.firstName} ${user.lastName} (${user.email})`
+                              : user.email}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeUser(user.id)}
+                          className="hover:bg-blue-200 rounded-full p-1 transition-colors flex-shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 text-center">
+                    {texts.noUsersSelected}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Access Settings */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>{texts.certificationType} *</Label>
@@ -723,16 +983,99 @@ export function AccessManagement() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowGrantModal(false)}
+              onClick={() => {
+                setShowGrantModal(false);
+                setSelectedUsers([]);
+                setUserSearchQuery('');
+              }}
               disabled={grantAccessMutation.isPending}
             >
               {texts.cancel}
             </Button>
             <Button
               onClick={() => grantAccessMutation.mutate()}
-              disabled={grantAccessMutation.isPending || !grantFormData.emails.trim()}
+              disabled={grantAccessMutation.isPending || selectedUsers.length === 0}
             >
               {grantAccessMutation.isPending ? texts.granting : texts.grantAccess}
+              {selectedUsers.length > 0 && ` (${selectedUsers.length})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Expiration Modal */}
+      <Dialog open={showEditExpirationModal} onOpenChange={(open) => {
+        setShowEditExpirationModal(open);
+        if (!open) {
+          setEditingRecord(null);
+          setNewExpirationDate('');
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              {texts.editExpirationTitle}
+            </DialogTitle>
+            <DialogDescription>
+              {texts.editExpirationDescription}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingRecord && (
+            <div className="space-y-4 py-4">
+              <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                <p className="font-medium text-gray-900">{editingRecord.userName}</p>
+                <p className="text-gray-500 text-xs mt-1">
+                  {editingRecord.certType} • {editingRecord.examLanguage.toUpperCase()}
+                </p>
+              </div>
+
+              <div>
+                <Label className="text-gray-600 text-sm">{texts.currentExpiration}</Label>
+                <p className="text-gray-900 font-medium">
+                  {formatDate(editingRecord.currentExpiry)}
+                </p>
+              </div>
+
+              <div>
+                <Label>{texts.newExpirationDate} *</Label>
+                <Input
+                  type="date"
+                  value={newExpirationDate}
+                  onChange={(e) => setNewExpirationDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditExpirationModal(false);
+                setEditingRecord(null);
+                setNewExpirationDate('');
+              }}
+              disabled={setExpirationMutation.isPending}
+            >
+              {texts.cancel}
+            </Button>
+            <Button
+              onClick={() => {
+                if (editingRecord && newExpirationDate) {
+                  setExpirationMutation.mutate({
+                    userId: editingRecord.userId,
+                    certType: editingRecord.certType,
+                    examLanguage: editingRecord.examLanguage,
+                    newExpiry: newExpirationDate,
+                  });
+                }
+              }}
+              disabled={setExpirationMutation.isPending || !newExpirationDate}
+            >
+              {setExpirationMutation.isPending ? texts.saving : texts.saveChanges}
             </Button>
           </DialogFooter>
         </DialogContent>

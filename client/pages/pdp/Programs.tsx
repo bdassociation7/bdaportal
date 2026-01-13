@@ -120,14 +120,14 @@ const translations = {
     // Actions
     viewDetails: "View Details",
     edit: "Edit",
-    submitForReview: "Submit for Review",
+    activateProgram: "Activate Program",
     delete: "Delete",
     reviseResubmit: "Revise & Resubmit",
 
     // Confirm dialogs
-    confirmSubmitTitle: "Submit Program for Review",
-    confirmSubmitDesc: (name: string) => `Are you sure you want to submit "${name}" for accreditation review? Once submitted, you won't be able to edit it until the review is complete.`,
-    confirmSubmit: "Submit for Review",
+    confirmActivateTitle: "Activate Program",
+    confirmActivateDesc: (name: string) => `Are you sure you want to activate "${name}"? The program will be immediately available in the Accredited Programs directory.`,
+    confirmActivate: "Activate",
     cancel: "Cancel",
 
     // Empty state
@@ -190,14 +190,14 @@ const translations = {
     // Actions
     viewDetails: "عرض التفاصيل",
     edit: "تعديل",
-    submitForReview: "تقديم للمراجعة",
+    activateProgram: "تفعيل البرنامج",
     delete: "حذف",
     reviseResubmit: "مراجعة وإعادة التقديم",
 
     // Confirm dialogs
-    confirmSubmitTitle: "تقديم البرنامج للمراجعة",
-    confirmSubmitDesc: (name: string) => `هل أنت متأكد من تقديم "${name}" لمراجعة الاعتماد؟ بعد التقديم، لن تتمكن من تعديله حتى تكتمل المراجعة.`,
-    confirmSubmit: "تقديم للمراجعة",
+    confirmActivateTitle: "تفعيل البرنامج",
+    confirmActivateDesc: (name: string) => `هل أنت متأكد من تفعيل "${name}"؟ سيكون البرنامج متاحاً فوراً في دليل البرامج المعتمدة.`,
+    confirmActivate: "تفعيل",
     cancel: "إلغاء",
 
     // Empty state
@@ -286,11 +286,11 @@ export default function PDPPrograms() {
     return true;
   });
 
-  const handleSubmitProgram = async (program: PDPProgram) => {
+  const handleActivateProgram = async (program: PDPProgram) => {
     const confirmed = await confirm({
-      title: texts.confirmSubmitTitle,
-      description: texts.confirmSubmitDesc(program.program_name),
-      confirmText: texts.confirmSubmit,
+      title: texts.confirmActivateTitle,
+      description: texts.confirmActivateDesc(program.program_name),
+      confirmText: texts.confirmActivate,
       cancelText: texts.cancel,
     });
     if (!confirmed) return;
@@ -570,16 +570,16 @@ export default function PDPPrograms() {
                                   {texts.edit}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => handleSubmitProgram(program)}
+                                  onClick={() => handleActivateProgram(program)}
                                   disabled={submitProgram.isPending}
                                   className={language === 'ar' ? 'flex-row-reverse' : ''}
                                 >
                                   {submitProgram.isPending ? (
                                     <Loader2 className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'} animate-spin`} />
                                   ) : (
-                                    <Send className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                                    <CheckCircle className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
                                   )}
-                                  {texts.submitForReview}
+                                  {texts.activateProgram}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -605,6 +605,17 @@ export default function PDPPrograms() {
                               >
                                 <Edit className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
                                 {texts.reviseResubmit}
+                              </DropdownMenuItem>
+                            )}
+                            {program.status === "approved" && (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  navigate(`/pdp/programs/${program.id}/edit`)
+                                }
+                                className={language === 'ar' ? 'flex-row-reverse' : ''}
+                              >
+                                <Edit className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                                {texts.edit}
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>

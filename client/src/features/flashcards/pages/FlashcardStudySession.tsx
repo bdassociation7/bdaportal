@@ -3,8 +3,8 @@
  * Interactive flashcard study with spaced repetition
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useFlashcardDeck,
@@ -208,7 +208,17 @@ function RatingButton({
 export function FlashcardStudySession() {
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+
+  // Detect base path for navigation (ECP vs Individual learning system)
+  const basePath = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith('/ecp/learning-system')) {
+      return '/ecp/learning-system';
+    }
+    return '/learning-system';
+  }, [location.pathname]);
 
   // State
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -351,7 +361,7 @@ export function FlashcardStudySession() {
           <p className="text-gray-600 mb-6">
             This deck doesn't have any published flashcards yet.
           </p>
-          <Button onClick={() => navigate('/learning-system/flashcards')}>
+          <Button onClick={() => navigate(`${basePath}/flashcards`)}>
             Back to Flashcards
           </Button>
         </div>
@@ -401,7 +411,7 @@ export function FlashcardStudySession() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => navigate('/learning-system/flashcards')}
+                onClick={() => navigate(`${basePath}/flashcards`)}
               >
                 Back to Flashcards
               </Button>
@@ -437,7 +447,7 @@ export function FlashcardStudySession() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/learning-system/flashcards')}
+                onClick={() => navigate(`${basePath}/flashcards`)}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Exit

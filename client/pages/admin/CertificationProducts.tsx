@@ -53,8 +53,8 @@ import { cn } from '@/shared/utils/cn';
  */
 
 const CERTIFICATION_LABELS: Record<CertificationType, string> = {
-  CP: 'CP™ - Certified Professional',
-  SCP: 'SCP™ - Senior Certified Professional',
+  CP: 'BDA-CP™ - BDA Certified Professional',
+  SCP: 'BDA-SCP™ - BDA Senior Certified Professional',
 };
 
 type FormMode = 'create' | 'edit' | null;
@@ -149,8 +149,8 @@ export default function CertificationProducts() {
       deleteConfirmTitle: 'Delete Certification Product',
       deleteConfirmDescription: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
       confirmDelete: 'Delete',
-      cpLabel: 'CP™ - Certified Professional',
-      scpLabel: 'SCP™ - Senior Certified Professional',
+      cpLabel: 'BDA-CP™ - BDA Certified Professional',
+      scpLabel: 'BDA-SCP™ - BDA Senior Certified Professional',
     },
     ar: {
       title: 'منتجات الشهادات',
@@ -215,8 +215,8 @@ export default function CertificationProducts() {
       deleteConfirmTitle: 'حذف منتج الشهادة',
       deleteConfirmDescription: 'هل أنت متأكد من حذف "{name}"؟ لا يمكن التراجع عن هذا الإجراء.',
       confirmDelete: 'حذف',
-      cpLabel: 'CP™ - محترف معتمد',
-      scpLabel: 'SCP™ - محترف معتمد أول',
+      cpLabel: 'BDA-CP™ - محترف معتمد',
+      scpLabel: 'BDA-SCP™ - محترف معتمد أول',
     }
   };
 
@@ -448,8 +448,8 @@ export default function CertificationProducts() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{texts.allTypes}</SelectItem>
-                  <SelectItem value="CP">CP™</SelectItem>
-                  <SelectItem value="SCP">SCP™</SelectItem>
+                  <SelectItem value="CP">BDA-CP™</SelectItem>
+                  <SelectItem value="SCP">BDA-SCP™</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -656,7 +656,7 @@ export default function CertificationProducts() {
               </Label>
               <Input
                 id="product-name"
-                placeholder="BDA Certification CP™ Book"
+                placeholder="BDA Certification BDA-CP™ Book"
                 value={formData.woocommerce_product_name}
                 onChange={(e) => setFormData({ ...formData, woocommerce_product_name: e.target.value })}
                 required

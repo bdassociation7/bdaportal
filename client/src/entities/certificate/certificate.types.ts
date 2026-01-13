@@ -150,3 +150,25 @@ export interface CertificatePDFResult {
   public_url?: string;
   error?: string;
 }
+
+// ============================================================================
+// Certificate Search Types
+// ============================================================================
+
+export interface CertificateSearchResult {
+  credential_id: string;
+  holder_name: string;
+  certification_type: string;
+  issued_date: string;
+  expiry_date: string;
+  status: string;
+  is_valid: boolean;
+}
+
+export interface CertificateSearchResponse {
+  data: CertificateSearchResult[] | null;
+  error: {
+    message: string;
+    code?: string;
+  } | null;
+}

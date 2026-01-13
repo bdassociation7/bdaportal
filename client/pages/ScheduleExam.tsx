@@ -30,6 +30,7 @@ import {
   MapPin,
   ArrowLeft,
   CalendarCheck,
+  CalendarX,
   RefreshCw,
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
@@ -57,7 +58,8 @@ const TIME_SLOTS = [
 ];
 
 // DEV MODE: Set to true to disable date restrictions for testing
-const DEV_MODE_SKIP_DATE_VALIDATION = true;
+// NOTE: This should be FALSE in production to enforce 2-day minimum scheduling requirement
+const DEV_MODE_SKIP_DATE_VALIDATION = false;
 
 interface ExistingBooking {
   id: string;
@@ -67,6 +69,17 @@ interface ExistingBooking {
   status: string;
   confirmation_code: string;
   created_at: string;
+}
+
+interface ExamWindowStatus {
+  is_open: boolean;
+  current_window_id: string | null;
+  current_window_name: string | null;
+  current_window_start: string | null;  // Window start date
+  current_window_end: string | null;    // Window end date
+  next_window_date: string | null;
+  next_window_name: string | null;
+  message: string;
 }
 
 export default function ScheduleExam() {
@@ -83,6 +96,7 @@ export default function ScheduleExam() {
   const [examInfo, setExamInfo] = useState<any>(null);
   const [voucherInfo, setVoucherInfo] = useState<any>(null);
   const [existingBooking, setExistingBooking] = useState<ExistingBooking | null>(null);
+  const [examWindowStatus, setExamWindowStatus] = useState<ExamWindowStatus | null>(null);
 
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
@@ -91,17 +105,46 @@ export default function ScheduleExam() {
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingDetails, setBookingDetails] = useState<any>(null);
 
-  // Calculate minimum date (2 days from now, or today in DEV_MODE)
-  const minDate = new Date();
-  if (!DEV_MODE_SKIP_DATE_VALIDATION) {
-    minDate.setDate(minDate.getDate() + 2);
-  }
-  const minDateStr = minDate.toISOString().split('T')[0];
+  // Calculate date constraints based on exam window
+  const getDateConstraints = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  // Calculate max date (6 months from now)
-  const maxDate = new Date();
-  maxDate.setMonth(maxDate.getMonth() + 6);
-  const maxDateStr = maxDate.toISOString().split('T')[0];
+    // Default min: 2 days from now (or today in DEV_MODE)
+    let minDate = new Date(today);
+    if (!DEV_MODE_SKIP_DATE_VALIDATION) {
+      minDate.setDate(minDate.getDate() + 2);
+    }
+
+    // Default max: 6 months from now (fallback if no window)
+    let maxDate = new Date(today);
+    maxDate.setMonth(maxDate.getMonth() + 6);
+
+    // If exam window is open, constrain to window dates
+    if (examWindowStatus?.is_open) {
+      // Window start: use the later of (window start) or (today + 2 days)
+      if (examWindowStatus.current_window_start) {
+        const windowStart = new Date(examWindowStatus.current_window_start);
+        if (windowStart > minDate) {
+          minDate = windowStart;
+        }
+      }
+
+      // Window end: use the window end date as max
+      if (examWindowStatus.current_window_end) {
+        maxDate = new Date(examWindowStatus.current_window_end);
+      }
+    }
+
+    return {
+      minDate,
+      maxDate,
+      minDateStr: minDate.toISOString().split('T')[0],
+      maxDateStr: maxDate.toISOString().split('T')[0],
+    };
+  };
+
+  const { minDate, maxDate, minDateStr, maxDateStr } = getDateConstraints();
 
   // Detect user's timezone
   useEffect(() => {
@@ -139,6 +182,16 @@ export default function ScheduleExam() {
       if (examError) throw examError;
       setExamInfo(exam);
 
+      // Check exam window status
+      const { data: windowStatus, error: windowError } = await supabase.rpc('check_exam_window_open', {
+        p_certification_type: exam?.certification_type || null,
+      });
+      if (!windowError && windowStatus) {
+        // RPC returns TABLE (array), extract first element
+        const result = Array.isArray(windowStatus) ? windowStatus[0] : windowStatus;
+        setExamWindowStatus(result as ExamWindowStatus);
+      }
+
       // Check for existing scheduled booking for this quiz/voucher
       let bookingQuery = supabase
         .from('exam_bookings')
@@ -156,15 +209,37 @@ export default function ScheduleExam() {
         setExistingBooking(existingBookings[0]);
       }
 
-      // Load voucher info if provided
+      // Load voucher info if provided (check both exam_vouchers and ecp_vouchers)
       if (voucherId) {
-        const { data: voucher, error: voucherError } = await supabase
+        // Try exam_vouchers first
+        let { data: voucher, error: voucherError } = await supabase
           .from('exam_vouchers')
           .select('id, code, certification_type, expires_at, status')
           .eq('id', voucherId)
           .single();
 
-        if (voucherError) {
+        // If not found in exam_vouchers, try ecp_vouchers
+        if (voucherError || !voucher) {
+          const { data: ecpVoucher } = await supabase
+            .from('ecp_vouchers')
+            .select('id, code, certification_type, valid_until, status')
+            .eq('id', voucherId)
+            .single();
+
+          if (ecpVoucher) {
+            // Normalize ECP voucher to match exam_vouchers structure
+            voucher = {
+              id: ecpVoucher.id,
+              code: ecpVoucher.code,
+              certification_type: ecpVoucher.certification_type,
+              expires_at: ecpVoucher.valid_until,
+              status: ecpVoucher.status === 'assigned' ? 'available' : ecpVoucher.status,
+            };
+            voucherError = null;
+          }
+        }
+
+        if (voucherError || !voucher) {
           toast({
             title: 'Invalid Voucher',
             description: 'The voucher ID provided is invalid.',
@@ -172,7 +247,7 @@ export default function ScheduleExam() {
           });
         } else if (voucher) {
           // Validate voucher status
-          if (voucher.status !== 'available') {
+          if (voucher.status !== 'available' && voucher.status !== 'assigned') {
             toast({
               title: 'Voucher Not Available',
               description: `This voucher is ${voucher.status}. Only available vouchers can be used.`,
@@ -180,7 +255,7 @@ export default function ScheduleExam() {
             });
           }
           // Validate voucher expiration
-          else if (new Date(voucher.expires_at) < new Date()) {
+          else if (voucher.expires_at && new Date(voucher.expires_at) < new Date()) {
             toast({
               title: 'Voucher Expired',
               description: 'This voucher has expired and cannot be used.',
@@ -282,16 +357,25 @@ export default function ScheduleExam() {
 
       if (bookingError) throw bookingError;
 
-      // Update voucher status to 'assigned' when scheduling
+      // Update voucher status to 'assigned' when scheduling (try both tables)
       if (voucherId && voucherInfo) {
+        // Try exam_vouchers first
         const { error: voucherUpdateError } = await supabase
           .from('exam_vouchers')
           .update({ status: 'assigned' })
           .eq('id', voucherId);
 
+        // If not found in exam_vouchers, try ecp_vouchers
         if (voucherUpdateError) {
-          console.error('Error updating voucher status:', voucherUpdateError);
-          // Don't fail the booking if voucher update fails, just log it
+          const { error: ecpUpdateError } = await supabase
+            .from('ecp_vouchers')
+            .update({ status: 'assigned' })
+            .eq('id', voucherId);
+
+          if (ecpUpdateError) {
+            console.error('Error updating voucher status:', ecpUpdateError);
+            // Don't fail the booking if voucher update fails, just log it
+          }
         }
       }
 
@@ -610,7 +694,34 @@ export default function ScheduleExam() {
           </Alert>
         )}
 
-        {/* Scheduling Form */}
+        {/* Exam Window Closed Warning */}
+        {examWindowStatus && !examWindowStatus.is_open && (
+          <Alert variant="destructive" className="mb-6 border-red-200 bg-red-50">
+            <CalendarX className="h-4 w-4 text-red-600" />
+            <AlertTitle className="text-red-800">Exam Registration Closed</AlertTitle>
+            <AlertDescription className="text-red-700">
+              <p>Exam scheduling is currently not available. The registration window is closed.</p>
+              {examWindowStatus.next_window_date ? (
+                <p className="mt-2 font-medium">
+                  Next registration window opens:{' '}
+                  {new Date(examWindowStatus.next_window_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                  {examWindowStatus.next_window_name && (
+                    <span className="font-normal"> ({examWindowStatus.next_window_name})</span>
+                  )}
+                </p>
+              ) : (
+                <p className="mt-2">Please check back later for exam scheduling availability.</p>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Scheduling Form - Only show if window is open */}
+        {(!examWindowStatus || examWindowStatus.is_open) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -618,7 +729,17 @@ export default function ScheduleExam() {
               Select Date & Time
             </CardTitle>
             <CardDescription>
-              Exams must be scheduled at least 2 days in advance
+              {examWindowStatus?.current_window_name ? (
+                <>
+                  <span className="font-medium text-blue-600">{examWindowStatus.current_window_name}</span>
+                  {' • '}
+                  Available: {new Date(examWindowStatus.current_window_start || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {' - '}
+                  {new Date(examWindowStatus.current_window_end || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </>
+              ) : (
+                'Exams must be scheduled at least 2 days in advance'
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -657,7 +778,10 @@ export default function ScheduleExam() {
                 className="w-full"
               />
               <p className="text-xs text-gray-500">
-                Earliest available: {minDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                Available dates: {minDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {maxDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                {examWindowStatus?.current_window_name && (
+                  <span className="ml-1 text-blue-600">({examWindowStatus.current_window_name})</span>
+                )}
               </p>
             </div>
 
@@ -720,6 +844,7 @@ export default function ScheduleExam() {
             </Button>
           </CardContent>
         </Card>
+        )}
 
         {/* Back Button */}
         <div className="mt-6 text-center">

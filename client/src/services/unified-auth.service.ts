@@ -6,6 +6,7 @@
 
 import { AuthService } from '@/entities/auth/auth.service';
 import { WordPressAPIService } from './wordpress-api.service';
+import { RoleMappingService } from './role-mapping.service';
 import { supabase } from '@/shared/config/supabase.config';
 import type { AuthError } from '@/shared/types/auth.types';
 import type { User } from '@supabase/supabase-js';
@@ -50,22 +51,35 @@ export class UnifiedAuthService {
     console.log('🔐 [UnifiedAuthService] Starting login process:', { email });
 
     try {
-      // 1. Essayer login Portal d'abord (Cas 6 & 8)
+      // 1. Try Portal login first (Case 6 & 8)
       console.log('🚪 [UnifiedAuthService] Attempting Portal login...');
       const portalResult = await AuthService.signIn(email, password);
 
-      // Cas 6 & 8: Login Portal réussi (avec ou sans liaison Store)
+      // Case 6 & 8: Portal login successful (with or without Store link)
       if (portalResult.user && !portalResult.error) {
         console.log('✅ [UnifiedAuthService] Portal login successful');
 
-        // Récupérer le profil complet
+        // Get full profile
         const profile = await AuthService.loadUserProfile(portalResult.user.id);
         const unifiedUser = await this.buildUnifiedUser(portalResult.user, profile.profile);
 
-        // Synchroniser session Store si compte lié (wp_user_id présent)
+        // Sync Store session if account is linked (wp_user_id present)
         if (unifiedUser.wp_user_id) {
           console.log('🔄 [UnifiedAuthService] Syncing Store session for wp_user_id:', unifiedUser.wp_user_id);
           await this.syncStoreSession(unifiedUser.wp_user_id);
+        }
+
+        // Sync book credits (auto-heal missing credits)
+        try {
+          console.log('📚 [UnifiedAuthService] Syncing book credits...');
+          const { supabase } = await import('@/shared/config/supabase.config');
+          const { data: creditSync } = await supabase.rpc('sync_user_book_credits');
+          if (creditSync?.granted > 0) {
+            console.log(`✅ [UnifiedAuthService] Granted ${creditSync.granted} book credits`);
+          }
+        } catch (error) {
+          // Don't fail login if credit sync fails
+          console.warn('⚠️ [UnifiedAuthService] Book credit sync failed (non-critical):', error);
         }
 
         return {
@@ -75,14 +89,15 @@ export class UnifiedAuthService {
         };
       }
 
-      // 2. Login Portal échoué - Vérifier si c'est une erreur credentials ou autre
+      // 2. Login Portal failed - Check if it's a credentials error or something else
       if (portalResult.error) {
-        const errorMessage = portalResult.error.message || portalResult.error.code;
+        const errorCode = portalResult.error.code || '';
 
-        // Si ce n'est PAS une erreur de credentials invalides, c'est une vraie erreur
-        if (!errorMessage.includes('Invalid login credentials') &&
-            !errorMessage.includes('Invalid email or password')) {
-          console.error('❌ [UnifiedAuthService] Portal error (not credentials):', errorMessage);
+        // If it's NOT an invalid credentials error, it's a real error
+        if (!errorCode.includes('Invalid login credentials') &&
+            !errorCode.includes('Invalid email or password') &&
+            !errorCode.includes('User not found')) {
+          console.error('❌ [UnifiedAuthService] Portal error (not credentials):', errorCode);
           return {
             success: false,
             error: {
@@ -93,14 +108,14 @@ export class UnifiedAuthService {
         }
       }
 
-      // 3. Credentials invalides Portal - Vérifier si compte Store existe (Cas 7)
+      // 3. Invalid Portal credentials - Check if Store account exists (Case 7)
       console.log('🔍 [UnifiedAuthService] Portal login failed, checking Store account...');
 
       let storeCheckResult: Awaited<ReturnType<typeof WordPressAPIService.checkUserExists>>;
       try {
         storeCheckResult = await WordPressAPIService.checkUserExists(email);
       } catch (storeError) {
-        // Cas 15: WordPress API down - Mode dégradé
+        // Case 15: WordPress API down - Degraded mode
         console.warn('⚠️ [UnifiedAuthService] WordPress API unavailable during login, fallback to Portal-only');
         return {
           success: false,
@@ -112,7 +127,7 @@ export class UnifiedAuthService {
       }
 
       if (!storeCheckResult.success || !storeCheckResult.data) {
-        // Cas 9: Email n'existe ni dans Portal ni dans Store
+        // Case 9: Email doesn't exist in Portal or Store
         console.log('❌ [UnifiedAuthService] Email not found in any system');
         return {
           success: false,
@@ -123,14 +138,14 @@ export class UnifiedAuthService {
         };
       }
 
-      // 4. Compte Store existe - Vérifier credentials Store (Cas 7)
+      // 4. Store account exists - Verify Store credentials (Case 7)
       console.log('🔐 [UnifiedAuthService] Store account found, verifying credentials...');
 
       let storeAuthResult: Awaited<ReturnType<typeof WordPressAPIService.verifyCredentials>>;
       try {
         storeAuthResult = await WordPressAPIService.verifyCredentials(email, password);
       } catch (storeError) {
-        // WordPress API down pendant vérification credentials
+        // WordPress API down during credential verification
         console.warn('⚠️ [UnifiedAuthService] WordPress API unavailable during credential verification');
         return {
           success: false,
@@ -142,7 +157,7 @@ export class UnifiedAuthService {
       }
 
       if (!storeAuthResult.success) {
-        // Cas 10: Mauvais mot de passe Store
+        // Case 10: Invalid Store password
         console.log('❌ [UnifiedAuthService] Invalid Store credentials');
         return {
           success: false,
@@ -153,8 +168,8 @@ export class UnifiedAuthService {
         };
       }
 
-      // Cas 7: Credentials Store valides - Créer compte Portal et lier automatiquement
-      console.log('🎯 [UnifiedAuthService] Cas 7 detected: Store-only user, migrating to Portal...');
+      // Case 7: Valid Store credentials - Create Portal account and link automatically
+      console.log('🎯 [UnifiedAuthService] Case 7 detected: Store-only user, migrating to Portal...');
       const migrationResult = await this.createPortalFromStore(
         email,
         password,
@@ -162,7 +177,7 @@ export class UnifiedAuthService {
       );
 
       if (migrationResult.success && migrationResult.user) {
-        // Synchroniser session Store après migration
+        // Sync Store session after migration
         if (migrationResult.user.wp_user_id) {
           await this.syncStoreSession(migrationResult.user.wp_user_id);
         }
@@ -197,14 +212,14 @@ export class UnifiedAuthService {
   }
 
   /**
-   * Synchroniser la session WordPress après login Portal
-   * Crée les cookies nécessaires pour accès seamless au Store
+   * Sync WordPress session after Portal login
+   * Creates necessary cookies for seamless Store access
    */
   private static async syncStoreSession(wpUserId: number): Promise<void> {
     try {
       console.log('🔄 [UnifiedAuthService] Syncing Store session for wp_user_id:', wpUserId);
 
-      // Créer session WordPress via API
+      // Create WordPress session via API
       const sessionResult = await WordPressAPIService.createSession(wpUserId);
 
       if (sessionResult.success) {
@@ -214,7 +229,7 @@ export class UnifiedAuthService {
       }
 
     } catch (error) {
-      // Erreur non-bloquante - l'utilisateur peut toujours utiliser le Portal
+      // Non-blocking error - user can still use the Portal
       console.warn('⚠️ [UnifiedAuthService] Store session sync error (non-blocking):', error);
     }
   }
@@ -278,7 +293,7 @@ export class UnifiedAuthService {
         supabaseUser = supabaseResult.data.user;
       }
 
-      // Create in WordPress if needed (Cas 15: mode dégradé si WordPress down)
+      // Create in WordPress if needed (Case 15: degraded mode if WordPress down)
       if (['store-only', 'both'].includes(signupType)) {
         try {
           const wpResult = await WordPressAPIService.createUser({
@@ -289,18 +304,18 @@ export class UnifiedAuthService {
           });
 
           if (!wpResult.success) {
-            // Vérifier si c'est une erreur réseau ou business logic
-            const isNetworkIssue = wpResult.error?.includes('connexion') ||
-                                   wpResult.error?.includes('serveur');
+            // Check if it's a network error or business logic error
+            const isNetworkIssue = wpResult.error?.includes('connection') ||
+                                   wpResult.error?.includes('server');
 
             if (isNetworkIssue && supabaseUser && signupType === 'both') {
-              // Mode dégradé: Portal créé, Store échoué (non-bloquant)
+              // Degraded mode: Portal created, Store failed (non-blocking)
               console.warn('⚠️ [UnifiedAuthService] WordPress unavailable, Portal-only account created');
-              wpUserId = null; // Pas de liaison Store pour le moment
+              wpUserId = null; // No Store linking for now
 
-              // On continue quand même avec Portal-only
+              // Continue with Portal-only
             } else {
-              // Erreur business logic (ex: email déjà utilisé)
+              // Business logic error (e.g., email already used)
               if (supabaseUser) {
                 await this.rollbackSupabaseUser(supabaseUser.id);
               }
@@ -317,11 +332,11 @@ export class UnifiedAuthService {
             wpUserId = wpResult.data?.wp_user_id || null;
           }
         } catch (wpError) {
-          // WordPress complètement inaccessible
+          // WordPress completely inaccessible
           console.warn('⚠️ [UnifiedAuthService] WordPress API unavailable during signup');
 
           if (signupType === 'store-only') {
-            // Store-only requis mais WordPress down
+            // Store-only required but WordPress down
             return {
               success: false,
               error: {
@@ -331,7 +346,7 @@ export class UnifiedAuthService {
             };
           }
 
-          // Mode 'both': continuer avec Portal-only
+          // Mode 'both': continue with Portal-only
           console.log('✅ [UnifiedAuthService] Fallback to Portal-only account (Store unavailable)');
           wpUserId = null;
         }
@@ -386,6 +401,26 @@ export class UnifiedAuthService {
     wpUserData: any
   ): Promise<AuthResult> {
     try {
+      // Get mapped Portal role from WordPress role
+      let portalRole = 'individual'; // Default fallback
+
+      if (wpUserData.wordpress_role) {
+        console.log('🔄 [UnifiedAuthService] Querying role mapping for WordPress role:', wpUserData.wordpress_role);
+
+        const { role: mappedRole } = await RoleMappingService.getSupabaseRole(wpUserData.wordpress_role);
+
+        if (mappedRole) {
+          portalRole = mappedRole;
+          console.log('✅ [UnifiedAuthService] Found role mapping:', wpUserData.wordpress_role, '→', portalRole);
+        } else {
+          console.log('⚠️ [UnifiedAuthService] No mapping found, using default:', portalRole);
+        }
+      } else {
+        // Fallback to bda_role if wordpress_role not provided (backward compatibility)
+        portalRole = wpUserData.bda_role || 'individual';
+        console.log('⚠️ [UnifiedAuthService] No WordPress role provided, using bda_role:', portalRole);
+      }
+
       // Create Supabase account
       const supabaseResult = await supabase.auth.signUp({
         email,
@@ -395,7 +430,7 @@ export class UnifiedAuthService {
             wp_user_id: wpUserData.wp_user_id,
             first_name: wpUserData.first_name,
             last_name: wpUserData.last_name,
-            bda_role: wpUserData.bda_role || 'individual',
+            bda_role: portalRole,
             organization: wpUserData.bda_organization,
             created_from: 'store'
           }
@@ -541,19 +576,19 @@ export class UnifiedAuthService {
   }
 
   /**
-   * Sign out from both systems (Cas 12)
+   * Sign out from both systems (Case 12)
    */
   static async signOut(): Promise<{ error: AuthError | null }> {
     try {
       console.log('🚪 [UnifiedAuthService] Starting logout process...');
 
-      // Récupérer l'utilisateur actuel avant de se déconnecter
+      // Get current user before signing out
       const { user } = await this.getCurrentUser();
 
       // Sign out from Supabase (Portal)
       const result = await AuthService.signOut();
 
-      // Logout explicite WordPress Store si utilisateur lié
+      // Explicit WordPress Store logout if user is linked
       if (user?.wp_user_id) {
         console.log('🔄 [UnifiedAuthService] Logging out from Store (wp_user_id:', user.wp_user_id, ')');
         const wpLogoutResult = await WordPressAPIService.logout(user.wp_user_id);

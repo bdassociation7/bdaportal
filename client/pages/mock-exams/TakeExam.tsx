@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Clock,
   ChevronLeft,
@@ -70,9 +70,13 @@ const translations = {
 export default function TakeExam() {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { language } = useLanguage();
   const texts = translations[language];
+
+  // Determine base path for navigation (ECP vs non-ECP routes)
+  const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : '/mock-exams';
 
   const [session, setSession] = useState<ExamSession | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -96,7 +100,7 @@ export default function TakeExam() {
           description: texts.failedToStart,
           variant: 'destructive',
         });
-        navigate('/mock-exams');
+        navigate(basePath);
         return;
       }
 
@@ -126,7 +130,39 @@ export default function TakeExam() {
     return () => clearInterval(timer);
   }, [session, timeRemaining]);
 
+  // Warn before leaving/refreshing page during exam
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Only warn if exam is in progress (has session and not submitting)
+      if (session && !isSubmitting) {
+        e.preventDefault();
+        e.returnValue = ''; // Required for Chrome
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [session, isSubmitting]);
+
   const currentQuestion = session?.questions[currentQuestionIndex];
+
+  // Get localized text based on exam language
+  const getQuestionText = (question: QuestionWithAnswers) => {
+    // Use exam language, not UI language, for question content
+    const examLanguage = session?.exam?.language || 'en';
+    if (examLanguage === 'ar' && question.question_text_ar) {
+      return question.question_text_ar;
+    }
+    return question.question_text;
+  };
+
+  const getAnswerText = (answer: { answer_text: string; answer_text_ar?: string | null }) => {
+    const examLanguage = session?.exam?.language || 'en';
+    if (examLanguage === 'ar' && answer.answer_text_ar) {
+      return answer.answer_text_ar;
+    }
+    return answer.answer_text;
+  };
 
   // Handle answer selection
   const handleAnswerSelect = (answerId: string) => {
@@ -194,7 +230,7 @@ export default function TakeExam() {
       }
 
       // Navigate to results
-      navigate(`/mock-exams/results/${session.attempt_id}`);
+      navigate(`${basePath}/results/${session.attempt_id}`);
     } catch (error) {
       console.error('Error completing exam:', error);
       toast({
@@ -285,7 +321,7 @@ export default function TakeExam() {
                 </span>
                 <div className="flex-1">
                   <p className="text-lg font-medium text-gray-900 leading-relaxed">
-                    {currentQuestion.question_text}
+                    {getQuestionText(currentQuestion)}
                   </p>
                   {currentQuestion.question_type === 'multiple_choice' && (
                     <p className="mt-2 text-sm text-blue-600 flex items-center gap-1">
@@ -327,7 +363,7 @@ export default function TakeExam() {
                             <CheckCircle2 className="h-full w-full text-white" />
                           )}
                         </div>
-                        <span className="text-gray-900">{answer.answer_text}</span>
+                        <span className="text-gray-900">{getAnswerText(answer)}</span>
                       </div>
                     </button>
                   );

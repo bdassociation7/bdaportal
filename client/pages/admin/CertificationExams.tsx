@@ -3,18 +3,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { CertificationExamService, type CertificationExam } from '@/entities/certification-exam';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Edit, Trash2, Eye, EyeOff, BarChart3, ListChecks } from 'lucide-react';
+import { useConfirm } from '@/contexts/ConfirmDialogContext';
+import { Plus, Edit, Trash2, Eye, EyeOff, BarChart3, ListChecks, Globe } from 'lucide-react';
+import type { ExamLanguage } from '@/entities/certification-exam';
 import CertificationExamForm from './components/CertificationExamForm';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function CertificationExamsAdmin() {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const { confirm } = useConfirm();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [selectedExam, setSelectedExam] = useState<CertificationExam | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'CP' | 'SCP'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'CP' | 'SCP'>('all');
+  const [langFilter, setLangFilter] = useState<'all' | ExamLanguage>('all');
 
   // Fetch exams
   const { data: exams, isLoading, refetch } = useQuery({
@@ -46,28 +50,73 @@ export default function CertificationExamsAdmin() {
     },
   });
 
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => CertificationExamService.deleteCertificationExam(id),
-    onSuccess: () => {
+  // Handle delete with force option
+  const handleDelete = async (exam: CertificationExam) => {
+    // First confirmation
+    const confirmed = await confirm({
+      title: t('certificationExams.deleteExamTitle'),
+      description: t('certificationExams.deleteConfirm'),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
+      variant: 'destructive',
+    });
+
+    if (!confirmed) return;
+
+    // Try to delete
+    const result = await CertificationExamService.deleteCertificationExam(exam.id);
+
+    if (result.error) {
+      // Check if error is due to existing attempts
+      if (result.error.type === 'HAS_ATTEMPTS') {
+        const attemptCount = result.error.attemptCount;
+
+        // Show force delete confirmation with appropriate message
+        const forceMessage = exam.is_active
+          ? t('certificationExams.forceDeleteActiveWarning').replace('{{count}}', String(attemptCount))
+          : t('certificationExams.forceDeleteInactiveWarning').replace('{{count}}', String(attemptCount));
+
+        const forceConfirmed = await confirm({
+          title: t('certificationExams.forceDeleteTitle'),
+          description: forceMessage,
+          confirmText: t('certificationExams.forceDeleteConfirm'),
+          cancelText: t('common.cancel'),
+          variant: 'destructive',
+        });
+
+        if (forceConfirmed) {
+          // Force delete
+          const forceResult = await CertificationExamService.deleteCertificationExam(exam.id, true);
+
+          if (forceResult.error) {
+            toast({
+              title: t('common.error'),
+              description: forceResult.error.message || t('certificationExams.deleteError'),
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: t('certificationExams.examDeleted'),
+              description: t('certificationExams.examDeletedDesc'),
+            });
+            queryClient.invalidateQueries({ queryKey: ['certification-exams'] });
+          }
+        }
+      } else {
+        // Other error
+        toast({
+          title: t('common.error'),
+          description: result.error.message || t('certificationExams.deleteError'),
+          variant: 'destructive',
+        });
+      }
+    } else {
+      // Success
       toast({
         title: t('certificationExams.examDeleted'),
         description: t('certificationExams.examDeletedDesc'),
       });
       queryClient.invalidateQueries({ queryKey: ['certification-exams'] });
-    },
-    onError: () => {
-      toast({
-        title: t('common.error'),
-        description: t('certificationExams.deleteError'),
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const handleDelete = (id: string) => {
-    if (confirm(t('certificationExams.deleteConfirm'))) {
-      deleteMutation.mutate(id);
     }
   };
 
@@ -76,8 +125,9 @@ export default function CertificationExamsAdmin() {
   };
 
   const filteredExams = exams?.filter((exam) => {
-    if (filter === 'all') return true;
-    return exam.certification_type === filter;
+    const typeMatch = typeFilter === 'all' || exam.certification_type === typeFilter;
+    const langMatch = langFilter === 'all' || exam.exam_language === langFilter;
+    return typeMatch && langMatch;
   });
 
   if (isLoading) {
@@ -114,37 +164,75 @@ export default function CertificationExamsAdmin() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg font-medium transition ${
-            filter === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          {t('certificationExams.allExams')} ({exams?.length || 0})
-        </button>
-        <button
-          onClick={() => setFilter('CP')}
-          className={`px-4 py-2 rounded-lg font-medium transition ${
-            filter === 'CP'
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          CP™ ({exams?.filter(e => e.certification_type === 'CP').length || 0})
-        </button>
-        <button
-          onClick={() => setFilter('SCP')}
-          className={`px-4 py-2 rounded-lg font-medium transition ${
-            filter === 'SCP'
-              ? 'bg-purple-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          SCP™ ({exams?.filter(e => e.certification_type === 'SCP').length || 0})
-        </button>
+      <div className="flex flex-wrap gap-4 mb-6">
+        {/* Type Filters */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setTypeFilter('all')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              typeFilter === 'all'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {t('certificationExams.allExams')} ({exams?.length || 0})
+          </button>
+          <button
+            onClick={() => setTypeFilter('CP')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              typeFilter === 'CP'
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            CP™ ({exams?.filter(e => e.certification_type === 'CP').length || 0})
+          </button>
+          <button
+            onClick={() => setTypeFilter('SCP')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              typeFilter === 'SCP'
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            SCP™ ({exams?.filter(e => e.certification_type === 'SCP').length || 0})
+          </button>
+        </div>
+
+        {/* Language Filters */}
+        <div className="flex gap-2 items-center">
+          <Globe className="h-4 w-4 text-gray-500" />
+          <button
+            onClick={() => setLangFilter('all')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+              langFilter === 'all'
+                ? 'bg-slate-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            All Languages
+          </button>
+          <button
+            onClick={() => setLangFilter('en')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+              langFilter === 'en'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            🇬🇧 English ({exams?.filter(e => e.exam_language === 'en').length || 0})
+          </button>
+          <button
+            onClick={() => setLangFilter('ar')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+              langFilter === 'ar'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            🇸🇦 العربية ({exams?.filter(e => e.exam_language === 'ar').length || 0})
+          </button>
+        </div>
       </div>
 
       {/* Exams List */}
@@ -161,7 +249,7 @@ export default function CertificationExamsAdmin() {
             {/* Header */}
             <div className="flex justify-between items-start mb-4">
               <div>
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span
                     className={`px-2 py-1 text-xs font-semibold rounded ${
                       exam.certification_type === 'CP'
@@ -169,7 +257,17 @@ export default function CertificationExamsAdmin() {
                         : 'bg-purple-100 text-purple-800'
                     }`}
                   >
-                    {exam.certification_type}™
+                    BDA-{exam.certification_type}™
+                  </span>
+                  {/* Language Badge */}
+                  <span
+                    className={`px-2 py-1 text-xs font-semibold rounded ${
+                      exam.exam_language === 'ar'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}
+                  >
+                    {exam.exam_language === 'ar' ? '🇸🇦 AR' : '🇬🇧 EN'}
                   </span>
                   <span
                     className={`px-2 py-1 text-xs font-semibold rounded ${
@@ -181,14 +279,19 @@ export default function CertificationExamsAdmin() {
                     {exam.is_active ? t('common.active') : t('common.inactive')}
                   </span>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">{exam.title}</h3>
+                <h3 className={`text-lg font-bold text-gray-900 ${exam.exam_language === 'ar' ? 'text-right' : ''}`} dir={exam.exam_language === 'ar' ? 'rtl' : 'ltr'}>
+                  {exam.exam_language === 'ar' && exam.title_ar ? exam.title_ar : exam.title}
+                </h3>
               </div>
             </div>
 
             {/* Description */}
-            {exam.description && (
-              <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                {exam.description}
+            {(exam.description || exam.description_ar) && (
+              <p
+                className={`text-sm text-gray-600 mb-4 line-clamp-2 ${exam.exam_language === 'ar' ? 'text-right' : ''}`}
+                dir={exam.exam_language === 'ar' ? 'rtl' : 'ltr'}
+              >
+                {exam.exam_language === 'ar' && exam.description_ar ? exam.description_ar : exam.description}
               </p>
             )}
 
@@ -255,7 +358,7 @@ export default function CertificationExamsAdmin() {
                 <Edit size={16} />
               </button>
               <button
-                onClick={() => handleDelete(exam.id)}
+                onClick={() => handleDelete(exam)}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm font-medium transition"
                 title={t('common.delete')}
               >

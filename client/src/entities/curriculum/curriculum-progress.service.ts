@@ -205,7 +205,7 @@ export class CurriculumProgressService {
       // Get module to check passing score
       const { data: module, error: moduleError } = await supabase
         .from('curriculum_modules')
-        .select('quiz_passing_score, order_index, certification_type')
+        .select('quiz_passing_score, order_index, certification_type, section_type')
         .eq('id', moduleId)
         .maybeSingle();
 
@@ -238,20 +238,37 @@ export class CurriculumProgressService {
 
       if (updateError) throw updateError;
 
-      // If passed, unlock next module
+      // If passed, unlock next module (following Behavioral -> Knowledge order)
       let nextModuleId: string | undefined;
       if (passed) {
-        const { data: nextModule } = await supabase
+        // First try to get next module in same section
+        const { data: nextInSection } = await supabase
           .from('curriculum_modules')
           .select('id')
           .eq('certification_type', module.certification_type)
+          .eq('section_type', module.section_type)
           .eq('is_published', true)
           .gt('order_index', module.order_index)
           .order('order_index', { ascending: true })
           .limit(1)
           .maybeSingle();
 
-        nextModuleId = nextModule?.id;
+        if (nextInSection) {
+          nextModuleId = nextInSection.id;
+        } else if (module.section_type === 'behavioral') {
+          // At end of behavioral section, get first knowledge_based module
+          const { data: firstKnowledge } = await supabase
+            .from('curriculum_modules')
+            .select('id')
+            .eq('certification_type', module.certification_type)
+            .eq('section_type', 'knowledge_based')
+            .eq('is_published', true)
+            .order('order_index', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          nextModuleId = firstKnowledge?.id;
+        }
 
         // Update next module status to 'in_progress' if exists
         if (nextModuleId) {
@@ -286,10 +303,12 @@ export class CurriculumProgressService {
 
   /**
    * Get overall progress statistics for a user
+   * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
    */
   static async getOverallProgress(
     userId: string,
-    certificationType: string
+    certificationType: string,
+    examLanguage?: 'en' | 'ar'
   ): Promise<
     ServiceResponse<{
       total: number;
@@ -302,25 +321,44 @@ export class CurriculumProgressService {
   > {
     try {
       // Get all modules for certification
-      const { data: modules, error: modulesError } = await supabase
+      let modulesQuery = supabase
         .from('curriculum_modules')
         .select('id')
         .eq('certification_type', certificationType)
         .eq('is_published', true);
 
+      // Filter by exam_language if provided
+      if (examLanguage) {
+        modulesQuery = modulesQuery.eq('exam_language', examLanguage);
+      }
+
+      const { data: modules, error: modulesError } = await modulesQuery;
+
       if (modulesError) throw modulesError;
 
-      const total = modules?.length || 0;
+      const moduleIds = modules?.map((m) => m.id) || [];
+      const total = moduleIds.length;
+
+      // If no modules found, return empty stats
+      if (total === 0) {
+        return {
+          data: {
+            total: 0,
+            completed: 0,
+            in_progress: 0,
+            locked: 0,
+            percentage: 0,
+            totalTimeSpent: 0,
+          },
+        };
+      }
 
       // Get progress
       const { data: progress, error: progressError } = await supabase
         .from('user_curriculum_progress')
         .select('status, time_spent_minutes')
         .eq('user_id', userId)
-        .in(
-          'module_id',
-          modules?.map((m) => m.id) || []
-        );
+        .in('module_id', moduleIds);
 
       if (progressError) throw progressError;
 

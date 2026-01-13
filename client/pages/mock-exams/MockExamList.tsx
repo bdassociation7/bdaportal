@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   BookOpen,
   Clock,
@@ -13,6 +13,7 @@ import {
   Crown,
   Globe,
   ExternalLink,
+  RotateCcw,
 } from 'lucide-react';
 import { useActiveExams } from '@/entities/mock-exam';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -81,6 +82,7 @@ const translations = {
     notPassedYet: 'Not passed yet',
     readyToStart: 'Ready to Start',
     takeFirstAttempt: 'Take your first attempt and track your progress',
+    retakeAvailable: 'Retake Available',
     // Premium CTA
     getAccessTitle: 'Get Access to Premium Mock Exams',
     getAccessDesc: 'Purchase from our online store to unlock full practice experience',
@@ -132,6 +134,7 @@ const translations = {
     notPassedYet: 'لم ينجح بعد',
     readyToStart: 'جاهز للبدء',
     takeFirstAttempt: 'ابدأ محاولتك الأولى وتتبع تقدمك',
+    retakeAvailable: 'إعادة الامتحان متاحة',
     // Premium CTA
     getAccessTitle: 'احصل على وصول للامتحانات التجريبية المميزة',
     getAccessDesc: 'اشترِ من متجرنا الإلكتروني لفتح تجربة التدريب الكاملة',
@@ -282,10 +285,16 @@ function ExamCard({
                 </div>
               )}
               {exam.user_has_passed && (
-                <div className="flex items-center gap-1 text-sm text-green-600 pt-2 border-t">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span className="font-medium">{texts.passed}</span>
-                </div>
+                <>
+                  <div className="flex items-center gap-1 text-sm text-green-600 pt-2 border-t">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span className="font-medium">{texts.passed}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-blue-600 pt-2 border-t">
+                    <RotateCcw className="h-4 w-4" />
+                    <span className="font-medium">{texts.retakeAvailable}</span>
+                  </div>
+                </>
               )}
               {!exam.user_has_passed &&
                 exam.attempt_count > 0 &&
@@ -349,11 +358,15 @@ function SectionHeader({
 
 export default function MockExamList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { language } = useLanguage();
   const texts = translations[language];
   const [categoryFilter, setCategoryFilter] = useState<ExamCategory | 'all'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<ExamDifficulty | 'all'>('all');
   const [languageFilter, setLanguageFilter] = useState<MockExamLanguage | 'all'>('all');
+
+  // Determine base path for navigation (ECP vs non-ECP routes)
+  const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : '/mock-exams';
 
   const { data: exams, isLoading, error } = useActiveExams({
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
@@ -499,7 +512,7 @@ export default function MockExamList() {
                       key={exam.id}
                       exam={exam}
                       texts={texts}
-                      onClick={() => navigate(`/mock-exams/${exam.id}`)}
+                      onClick={() => navigate(`${basePath}/${exam.id}`)}
                     />
                   ))}
                 </div>
@@ -522,7 +535,7 @@ export default function MockExamList() {
                       key={exam.id}
                       exam={exam}
                       texts={texts}
-                      onClick={() => navigate(`/mock-exams/${exam.id}`)}
+                      onClick={() => navigate(`${basePath}/${exam.id}`)}
                     />
                   ))}
                 </div>

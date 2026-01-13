@@ -6,12 +6,12 @@
  * - Rich content display (TipTap/Lexical JSON)
  * - Reading progress tracking
  * - Time spent tracking
- * - End-of-lesson quiz
+ * - Auto-completion upon reading
  * - Navigation to next lesson
  * - Sequential unlocking system
  */
 
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useLessonProgressById,
@@ -19,8 +19,8 @@ import {
   useLesson,
   useUpdateLessonProgress,
 } from '@/entities/curriculum';
-import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Lock, Clock, CheckCircle, BookOpen } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { ArrowLeft, Lock, Clock, CheckCircle, BookOpen, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LessonContent } from '../components/LessonContent';
 import { LessonProgressTracker } from '../components/LessonProgressTracker';
@@ -30,11 +30,50 @@ import { LessonQuizGate } from '../components/LessonQuizGate';
 export function LessonViewer() {
   const { lessonId, moduleId } = useParams<{ lessonId: string; moduleId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [readingProgress, setReadingProgress] = useState(0);
+  const [showOptionalQuiz, setShowOptionalQuiz] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const timeTrackerRef = useRef<NodeJS.Timeout>();
+  const progressUpdateTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Use refs to store values needed in scroll handler without causing re-renders
+  const progressPercentageRef = useRef<number>(0);
+  const hasScrollListenerRef = useRef(false);
+  const saveProgressRef = useRef<((scrollProgress: number) => void) | null>(null);
+
+  // Detect base path from current location (ECP vs individual learning system)
+  const basePath = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith('/ecp/learning-system')) {
+      return '/ecp/learning-system/training-kits';
+    }
+    return '/learning-system/training-kits';
+  }, [location.pathname]);
+
+  // Get language from URL params for back navigation
+  const searchParams = new URLSearchParams(location.search);
+  const urlLang = searchParams.get('lang');
+
+  // Helper to get back URL with language preserved (uses lesson's module language)
+  const getBackUrl = (moduleLang?: string) => {
+    const lang = urlLang || moduleLang;
+    if (lang) {
+      return `${basePath}?lang=${lang}`;
+    }
+    return basePath;
+  };
+
+  // Helper to get module URL with language preserved
+  const getModuleUrl = (modId: string, moduleLang?: string) => {
+    const lang = urlLang || moduleLang;
+    if (lang) {
+      return `${basePath}/module/${modId}?lang=${lang}`;
+    }
+    return `${basePath}/module/${modId}`;
+  };
 
   // Fetch lesson data
   const { data: lesson, isLoading: isLoadingLesson } = useLesson(lessonId);
@@ -46,7 +85,7 @@ export function LessonViewer() {
   );
 
   // Check if lesson is unlocked
-  const { data: isUnlocked, isLoading: isCheckingUnlock } = useIsLessonUnlocked(
+  const { data: isUnlocked, isLoading: isCheckingUnlock, error: unlockError } = useIsLessonUnlocked(
     user?.id,
     lessonId
   );
@@ -54,42 +93,132 @@ export function LessonViewer() {
   // Mutation to update progress
   const updateProgress = useUpdateLessonProgress();
 
-  // Track reading progress on scroll
+  // Determine if lesson is accessible - memoized to prevent re-renders
+  // Lesson is accessible if: RPC returns true OR progress exists with non-locked status
+  // Also treat first lesson (order_index === 1) as always accessible
+  const canAccessLesson = useMemo(() => {
+    // If RPC explicitly returns true, lesson is unlocked
+    if (isUnlocked === true) {
+      return true;
+    }
+
+    // If progress record exists with a non-locked status, lesson is accessible
+    if (progress && progress.status && progress.status !== 'locked') {
+      return true;
+    }
+
+    // First lesson of a module is always accessible (even without progress record)
+    if (lesson && lesson.order_index === 1) {
+      return true;
+    }
+
+    return false;
+  }, [isUnlocked, progress, lesson]);
+
+  // Keep progress percentage ref in sync (doesn't cause re-renders)
   useEffect(() => {
-    if (!contentRef.current || !progress || !isUnlocked) return;
+    progressPercentageRef.current = progress?.progress_percentage || 0;
+  }, [progress?.progress_percentage]);
 
-    const handleScroll = () => {
-      const element = contentRef.current;
-      if (!element) return;
+  // Keep save progress function in ref (updated via effect, called via ref to avoid dependency issues)
+  useEffect(() => {
+    saveProgressRef.current = (scrollProgress: number) => {
+      if (!user?.id || !lessonId) return;
 
-      const scrollTop = element.scrollTop;
-      const scrollHeight = element.scrollHeight - element.clientHeight;
-      const scrollProgress = Math.round((scrollTop / scrollHeight) * 100);
+      updateProgress.mutate({
+        userId: user.id,
+        lessonId: lessonId,
+        updates: {
+          progress_percentage: scrollProgress,
+          status: scrollProgress === 100 ? 'completed' : 'in_progress',
+          completed_at: scrollProgress === 100 ? new Date().toISOString() : undefined,
+        },
+      });
+    };
+  }, [user?.id, lessonId, updateProgress]);
 
-      setReadingProgress(Math.min(scrollProgress, 100));
+  // Ref to track if auto-complete has been attempted for this lesson
+  const autoCompleteAttemptedRef = useRef<string | null>(null);
 
-      // Update progress in database if increased
-      if (scrollProgress > (progress.progress_percentage || 0)) {
+  // Auto-complete for short content that doesn't need scrolling
+  useEffect(() => {
+    if (!canAccessLesson || !contentRef.current || !user?.id || !lessonId) return;
+    if (progress?.status === 'completed') return; // Already completed
+    if (autoCompleteAttemptedRef.current === lessonId) return; // Already attempted for this lesson
+
+    const element = contentRef.current;
+
+    const checkAndAutoComplete = () => {
+      const scrollableHeight = element.scrollHeight - element.clientHeight;
+      // If content fits without scrolling (less than 10px to scroll)
+      if (scrollableHeight <= 10) {
+        autoCompleteAttemptedRef.current = lessonId; // Mark as attempted
+        setReadingProgress(100);
         updateProgress.mutate({
-          userId: user!.id,
-          lessonId: lessonId!,
+          userId: user.id,
+          lessonId: lessonId,
           updates: {
-            progress_percentage: scrollProgress,
-            status: scrollProgress === 100 ? 'quiz_pending' : 'in_progress',
+            progress_percentage: 100,
+            status: 'completed',
+            completed_at: new Date().toISOString(),
           },
         });
       }
     };
 
-    const element = contentRef.current;
-    element.addEventListener('scroll', handleScroll);
+    // Check after content renders
+    const timeout = setTimeout(checkAndAutoComplete, 1000);
+    return () => clearTimeout(timeout);
+  }, [canAccessLesson, user?.id, lessonId, progress?.status]);
 
-    return () => element.removeEventListener('scroll', handleScroll);
-  }, [progress, user, lessonId, updateProgress, isUnlocked]);
+  // Track reading progress on scroll - only set up listener once when canAccessLesson becomes true
+  useEffect(() => {
+    // Only set up the listener once canAccessLesson is true
+    if (!canAccessLesson) return;
+    if (!contentRef.current) return;
+    if (hasScrollListenerRef.current) return;
+
+    const element = contentRef.current;
+
+    const handleScroll = () => {
+      if (!element) return;
+
+      const scrollTop = element.scrollTop;
+      const scrollHeight = element.scrollHeight - element.clientHeight;
+      const scrollProgress = scrollHeight > 0 ? Math.round((scrollTop / scrollHeight) * 100) : 0;
+
+      setReadingProgress(Math.min(scrollProgress, 100));
+
+      // Debounce progress updates to avoid mutation storm
+      if (progressUpdateTimeoutRef.current) {
+        clearTimeout(progressUpdateTimeoutRef.current);
+      }
+
+      // Update progress in database if increased (debounced, using ref for current value)
+      if (scrollProgress > progressPercentageRef.current) {
+        progressUpdateTimeoutRef.current = setTimeout(() => {
+          saveProgressRef.current?.(scrollProgress);
+          // Update ref immediately so we don't send duplicate updates
+          progressPercentageRef.current = scrollProgress;
+        }, 1000); // Wait 1 second after scrolling stops
+      }
+    };
+
+    element.addEventListener('scroll', handleScroll);
+    hasScrollListenerRef.current = true;
+
+    return () => {
+      element.removeEventListener('scroll', handleScroll);
+      hasScrollListenerRef.current = false;
+      if (progressUpdateTimeoutRef.current) {
+        clearTimeout(progressUpdateTimeoutRef.current);
+      }
+    };
+  }, [canAccessLesson]); // Only depends on canAccessLesson - all other values accessed via refs
 
   // Track time spent (increment every minute)
   useEffect(() => {
-    if (!user || !lessonId || !isUnlocked || progress?.status === 'locked') return;
+    if (!user || !lessonId || !canAccessLesson) return;
 
     timeTrackerRef.current = setInterval(() => {
       // Note: Time tracking can be added to lesson_progress table if needed
@@ -101,7 +230,7 @@ export function LessonViewer() {
         clearInterval(timeTrackerRef.current);
       }
     };
-  }, [user, lessonId, isUnlocked, progress]);
+  }, [user, lessonId, canAccessLesson]);
 
   const isLoading = isLoadingLesson || isLoadingProgress || isCheckingUnlock;
 
@@ -127,7 +256,7 @@ export function LessonViewer() {
           <p className="text-muted-foreground mb-6">
             This lesson does not exist or has been deleted.
           </p>
-          <Button onClick={() => navigate(`/learning-system/modules/${moduleId}`)}>
+          <Button onClick={() => navigate(getModuleUrl(moduleId || '', urlLang || undefined))}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Module
           </Button>
@@ -136,8 +265,8 @@ export function LessonViewer() {
     );
   }
 
-  // Lesson is locked
-  if (!isUnlocked) {
+  // Lesson is locked - use canAccessLesson which checks both RPC result and progress status
+  if (!canAccessLesson) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md bg-white p-8 rounded-lg shadow-sm border">
@@ -151,7 +280,7 @@ export function LessonViewer() {
               Complete lesson {lesson.order_index - 1} to unlock this lesson.
             </p>
           )}
-          <Button onClick={() => navigate(`/learning-system/modules/${lesson.module_id}`)}>
+          <Button onClick={() => navigate(getModuleUrl(lesson.module_id, lesson.module?.exam_language))}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Module
           </Button>
@@ -160,14 +289,14 @@ export function LessonViewer() {
     );
   }
 
-  // Show quiz if content is completed
-  if (progress?.status === 'quiz_pending' || progress?.status === 'completed') {
+  // Show optional quiz if user requested it
+  if (showOptionalQuiz && lesson.lesson_quiz_id && progress) {
     return (
       <div className="min-h-screen bg-gray-50">
         <LessonQuizGate
           lesson={lesson}
           progress={progress}
-          onBack={() => navigate(`/learning-system/modules/${lesson.module_id}`)}
+          onBack={() => setShowOptionalQuiz(false)}
         />
       </div>
     );
@@ -184,7 +313,7 @@ export function LessonViewer() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(`/learning-system/modules/${lesson.module_id}`)}
+                onClick={() => navigate(getModuleUrl(lesson.module_id, lesson.module?.exam_language))}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
@@ -272,48 +401,33 @@ export function LessonViewer() {
 
           {/* Footer Actions */}
           <div className="px-6 py-4 border-t bg-gray-50">
-            {readingProgress >= 100 ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-green-600">
+            {readingProgress >= 100 || progress?.status === 'completed' ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-green-600 justify-center">
                   <CheckCircle className="h-5 w-5" />
-                  <span className="font-medium">Content completed!</span>
+                  <span className="font-medium">Lesson completed!</span>
                 </div>
-                {lesson.quiz_required && lesson.lesson_quiz_id ? (
-                  <Button
-                    onClick={() => {
-                      updateProgress.mutate({
-                        userId: user!.id,
-                        lessonId: lessonId!,
-                        updates: {
-                          status: 'quiz_pending',
-                          progress_percentage: 100,
-                        },
-                      });
-                    }}
-                  >
-                    Take the Quiz
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => {
-                      updateProgress.mutate({
-                        userId: user!.id,
-                        lessonId: lessonId!,
-                        updates: {
-                          status: 'completed',
-                          progress_percentage: 100,
-                          completed_at: new Date().toISOString(),
-                        },
-                      });
-                      navigate(`/learning-system/modules/${lesson.module_id}`);
-                    }}
-                  >
-                    Mark as Complete
-                  </Button>
+
+                {/* Optional Quiz Button */}
+                {lesson.lesson_quiz_id && (
+                  <div className="flex justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowOptionalQuiz(true)}
+                      className="w-auto"
+                    >
+                      <Award className="mr-2 h-4 w-4" />
+                      Practice Quiz (Optional)
+                    </Button>
+                  </div>
                 )}
+
+                <p className="text-sm text-muted-foreground text-center">
+                  Use the navigation below to continue to the next lesson
+                </p>
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground text-center">
                 Scroll down to complete the lesson
               </div>
             )}
@@ -325,6 +439,8 @@ export function LessonViewer() {
           currentLesson={lesson}
           moduleId={lesson.module_id}
           userId={user?.id}
+          basePath={basePath}
+          moduleLang={urlLang || lesson.module?.exam_language}
         />
       </div>
     </div>

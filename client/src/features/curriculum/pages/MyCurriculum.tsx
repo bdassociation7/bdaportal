@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useCurriculumDashboard,
   useUserAccesses,
   useLanguageAccess,
+  useInitializeLessonProgress,
   type Language,
 } from '@/entities/curriculum';
 import { CurriculumDashboard } from '../components/CurriculumDashboard';
 import { AccessDenied } from '../components/AccessDenied';
 import { CurriculumLoading } from '../components/CurriculumLoading';
-import { LanguageSelector } from '../components/LanguageSelector';
 
 /**
  * My Curriculum Page
@@ -21,7 +22,24 @@ import { LanguageSelector } from '../components/LanguageSelector';
  */
 export function MyCurriculum() {
   const { user } = useAuth();
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>('EN');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+
+  // Determine base path for navigation (supports both /learning-system and /ecp/learning-system)
+  const learningSystemPath = location.pathname.includes('/ecp/')
+    ? '/ecp/learning-system'
+    : '/learning-system';
+  const basePath = `${learningSystemPath}/training-kits`;
+
+  // Get language from URL param, default to EN
+  const langFromUrl = searchParams.get('lang') as Language | null;
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(langFromUrl || 'EN');
+
+  // Sync URL param with state
+  const handleLanguageChange = (lang: Language) => {
+    setSelectedLanguage(lang);
+    setSearchParams({ lang });
+  };
 
   // Get all user accesses to determine available languages
   const { data: accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(
@@ -34,22 +52,27 @@ export function MyCurriculum() {
     isLoading: languageAccessLoading,
   } = useLanguageAccess(user?.id, selectedLanguage);
 
-  // Auto-select available language on first load
+  // Auto-select available language on first load (only if not set via URL)
   useEffect(() => {
-    if (accessSummary && !languageAccessLoading) {
+    if (accessSummary && !languageAccessLoading && !langFromUrl) {
+      // If user has both languages, keep current selection (defaults to EN)
+      if (accessSummary.has_en && accessSummary.has_ar) {
+        // Both available - no auto-switch needed, user can choose via LanguageSelector
+        return;
+      }
       // If current selection has no access, switch to available language
       if (accessSummary.has_en && !accessSummary.has_ar && selectedLanguage !== 'EN') {
-        setSelectedLanguage('EN');
+        handleLanguageChange('EN');
       } else if (accessSummary.has_ar && !accessSummary.has_en && selectedLanguage !== 'AR') {
-        setSelectedLanguage('AR');
+        handleLanguageChange('AR');
       }
     }
-  }, [accessSummary, selectedLanguage, languageAccessLoading]);
+  }, [accessSummary, selectedLanguage, languageAccessLoading, langFromUrl]);
 
   // Determine certification type from language access (or default to CP)
   const certificationType = languageAccess?.certification_type || 'CP';
 
-  // Main hook: loads modules and progress for certification type
+  // Main hook: loads modules and progress for certification type AND language
   const {
     isLoading: dashboardLoading,
     isError,
@@ -65,8 +88,29 @@ export function MyCurriculum() {
   } = useCurriculumDashboard(
     user?.id,
     user?.email,
-    certificationType
+    certificationType,
+    selectedLanguage  // Pass selected language to filter modules
   );
+
+  // Initialize progress mutation
+  const initializeProgress = useInitializeLessonProgress();
+  const hasInitialized = useRef(false);
+
+  // Initialize user progress when they first access the curriculum
+  useEffect(() => {
+    if (!user?.id || !hasAccess || hasInitialized.current) return;
+
+    // Mark as initialized to prevent duplicate calls
+    hasInitialized.current = true;
+
+    // Initialize progress for this certification type
+    // This will create progress records for all lessons if they don't exist
+    initializeProgress.mutate({
+      userId: user.id,
+      certificationType: certificationType,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, certificationType, hasAccess]);
 
   const isLoading = accessSummaryLoading || languageAccessLoading || dashboardLoading;
 
@@ -98,15 +142,22 @@ export function MyCurriculum() {
   }
 
   // No access state - check language-based access
+  // Trust accessSummary which checks both EN and AR at once
   const hasLanguageAccess = languageAccess?.has_access || false;
+  const hasAnyAccessFromSummary = accessSummary?.has_en || accessSummary?.has_ar;
 
-  if (!hasLanguageAccess && !accessSummaryLoading) {
+  // If accessSummary shows user has access to the selected language, trust it
+  // This handles cases where languageAccess RPC might have temporary issues
+  const userHasAccessToSelectedLanguage =
+    (selectedLanguage === 'EN' && accessSummary?.has_en) ||
+    (selectedLanguage === 'AR' && accessSummary?.has_ar);
+
+  if (!hasLanguageAccess && !userHasAccessToSelectedLanguage && !accessSummaryLoading) {
     // Check if user has access in another language
-    const hasAnyAccess = accessSummary?.has_en || accessSummary?.has_ar;
-
-    if (hasAnyAccess) {
-      // User has access but not to currently selected language
-      // Auto-switch will handle this via useEffect
+    if (hasAnyAccessFromSummary) {
+      // User has access to a different language than currently selected
+      // For single-language access: useEffect will auto-switch
+      // For dual-language access: this shouldn't happen since userHasAccessToSelectedLanguage would be true
       return <CurriculumLoading />;
     }
 
@@ -119,23 +170,20 @@ export function MyCurriculum() {
     );
   }
 
-  // Main curriculum interface with language selector
+  // Main curriculum interface
+  // Language is already selected from the main Learning System dashboard
+  // No language selector shown here to maintain isolation between EN/AR systems
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6">
-        <LanguageSelector
-          userId={user?.id}
-          selectedLanguage={selectedLanguage}
-          onLanguageChange={setSelectedLanguage}
-        />
-      </div>
-
       <CurriculumDashboard
         access={access!}
         knowledgeModules={knowledgeModules}
         behavioralModules={behavioralModules}
         overallProgress={overallProgress}
         nextModule={nextModule}
+        basePath={basePath}
+        backPath={learningSystemPath}
+        selectedLanguage={selectedLanguage}
       />
     </div>
   );

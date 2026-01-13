@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   BookOpen,
   Clock,
@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ArrowLeft,
   Calendar,
+  RotateCcw,
 } from 'lucide-react';
 import { useExamDetails, useMyAttempts } from '@/entities/mock-exam';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -62,6 +63,10 @@ const translations = {
     readyToBegin: 'Ready to Begin?',
     clickToStart: 'Click the button below to start your exam. Good luck!',
     startExam: 'Start Exam',
+    // Retake
+    retakeAllowed: 'Retake Allowed',
+    retakeMessage: 'You can retake this exam as many times as you like to improve your score.',
+    retakeExam: 'Retake Exam',
   },
   ar: {
     // Loading/Error
@@ -96,14 +101,22 @@ const translations = {
     readyToBegin: 'مستعد للبدء؟',
     clickToStart: 'انقر على الزر أدناه لبدء الامتحان. حظاً موفقاً!',
     startExam: 'بدء الامتحان',
+    // Retake
+    retakeAllowed: 'إعادة الامتحان متاحة',
+    retakeMessage: 'يمكنك إعادة هذا الامتحان عدة مرات لتحسين درجتك.',
+    retakeExam: 'إعادة الامتحان',
   }
 };
 
 export default function ExamDetail() {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { language } = useLanguage();
   const texts = translations[language];
+
+  // Determine base path for navigation (ECP vs non-ECP routes)
+  const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : '/mock-exams';
 
   const { data: exam, isLoading, error } = useExamDetails(examId || '');
   const { data: attempts } = useMyAttempts({ exam_id: examId });
@@ -121,7 +134,7 @@ export default function ExamDetail() {
   };
 
   const handleStartExam = () => {
-    navigate(`/mock-exams/${examId}/take`);
+    navigate(`${basePath}/${examId}/take`);
   };
 
   if (isLoading) {
@@ -141,7 +154,7 @@ export default function ExamDetail() {
         <div className="rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm max-w-md">
           <p className="text-red-800">{texts.errorLoading}</p>
           <Button
-            onClick={() => navigate('/mock-exams')}
+            onClick={() => navigate(basePath)}
             className="mt-4 w-full"
             variant="outline"
           >
@@ -152,12 +165,13 @@ export default function ExamDetail() {
     );
   }
 
-  // Calculate user stats
-  const attemptCount = attempts?.length || 0;
+  // Calculate user stats - only count completed attempts (with completed_at)
+  const completedAttempts = attempts?.filter((a) => a.completed_at) || [];
+  const attemptCount = completedAttempts.length;
   const bestScore =
-    attemptCount > 0 ? Math.max(...(attempts?.map((a) => a.score) || [0])) : null;
-  const hasPassed = attempts?.some((a) => a.passed) || false;
-  const lastAttempt = attempts?.[0];
+    attemptCount > 0 ? Math.max(...completedAttempts.map((a) => a.score)) : null;
+  const hasPassed = completedAttempts.some((a) => a.passed);
+  const lastAttempt = completedAttempts[0];
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -165,7 +179,7 @@ export default function ExamDetail() {
         {/* Back Button */}
         <Button
           variant="outline"
-          onClick={() => navigate('/mock-exams')}
+          onClick={() => navigate(basePath)}
           className="mb-6"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -266,16 +280,16 @@ export default function ExamDetail() {
             </div>
 
             {/* Recent Attempts */}
-            {attempts && attempts.length > 0 && (
+            {completedAttempts && completedAttempts.length > 0 && (
               <div className="mt-4 pt-4 border-t">
                 <p className="text-sm font-semibold text-gray-700 mb-2">
                   {texts.recentAttempts}
                 </p>
                 <div className="space-y-2">
-                  {attempts.slice(0, 3).map((attempt) => (
+                  {completedAttempts.slice(0, 3).map((attempt) => (
                     <div
                       key={attempt.id}
-                      onClick={() => navigate(`/mock-exams/results/${attempt.id}`)}
+                      onClick={() => navigate(`${basePath}/results/${attempt.id}`)}
                       className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-3">
@@ -356,17 +370,41 @@ export default function ExamDetail() {
           </ul>
         </div>
 
-        {/* Start Exam Button */}
-        <div className="rounded-lg border bg-gradient-to-r from-sky-50 to-royal-100 p-6 shadow-sm">
+        {/* Start/Retake Exam Button */}
+        <div className={cn(
+          "rounded-lg border p-6 shadow-sm",
+          attemptCount > 0
+            ? "bg-gradient-to-r from-blue-50 to-sky-100"
+            : "bg-gradient-to-r from-sky-50 to-royal-100"
+        )}>
           <div className="flex flex-col items-center text-center">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{texts.readyToBegin}</h3>
-            <p className="text-gray-600 mb-4">
-              {texts.clickToStart}
-            </p>
-            <Button onClick={handleStartExam} size="lg" className="px-8">
-              <PlayCircle className="h-5 w-5 mr-2" />
-              {texts.startExam}
-            </Button>
+            {attemptCount > 0 ? (
+              <>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-800 font-semibold mb-3">
+                  <RotateCcw className="h-4 w-4" />
+                  {texts.retakeAllowed}
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{texts.readyToBegin}</h3>
+                <p className="text-gray-600 mb-4">
+                  {texts.retakeMessage}
+                </p>
+                <Button onClick={handleStartExam} size="lg" className="px-8">
+                  <RotateCcw className="h-5 w-5 mr-2" />
+                  {texts.retakeExam}
+                </Button>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{texts.readyToBegin}</h3>
+                <p className="text-gray-600 mb-4">
+                  {texts.clickToStart}
+                </p>
+                <Button onClick={handleStartExam} size="lg" className="px-8">
+                  <PlayCircle className="h-5 w-5 mr-2" />
+                  {texts.startExam}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

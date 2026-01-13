@@ -128,8 +128,8 @@ export default function MyCertifications() {
     if (navigator.share) {
       navigator
         .share({
-          title: `${certificate.certification_type} Certification`,
-          text: `I'm certified! Verify my ${certificate.certification_type} certification.`,
+          title: `$BDA-{certificate.certification_type}™ Certification`,
+          text: `I'm certified! Verify my $BDA-{certificate.certification_type}™ certification.`,
           url: verificationUrl,
         })
         .catch((error) => console.log('Error sharing:', error));

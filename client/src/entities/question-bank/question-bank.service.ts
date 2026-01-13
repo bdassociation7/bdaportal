@@ -71,6 +71,10 @@ export class QuestionBankService {
         query = query.eq('is_final_test', filters.is_final_test);
       }
 
+      if (filters?.exam_language) {
+        query = query.eq('exam_language', filters.exam_language);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
@@ -92,16 +96,37 @@ export class QuestionBankService {
    */
   static async getQuestionSetsWithProgress(
     userId: string,
-    certificationType: string
+    certificationType: string,
+    examLanguage?: 'EN' | 'AR'
   ): Promise<ServiceResponse<QuestionSetWithProgress[]>> {
     try {
-      // Get all published question sets
-      const { data: sets, error: setsError } = await supabase
+      // Get all published question sets WITH competency and sub-lesson info for hierarchy
+      let query = supabase
         .from('curriculum_question_sets')
-        .select('*')
+        .select(`
+          *,
+          competency:curriculum_modules!competency_id(
+            id,
+            competency_name,
+            competency_name_ar,
+            section_type
+          ),
+          sub_unit:curriculum_lessons!sub_unit_id(
+            id,
+            title,
+            title_ar,
+            order_index
+          )
+        `)
         .eq('certification_type', certificationType)
-        .eq('is_published', true)
-        .order('order_index', { ascending: true });
+        .eq('is_published', true);
+
+      // Filter by exam language if provided (convert to lowercase for DB)
+      if (examLanguage) {
+        query = query.eq('exam_language', examLanguage.toLowerCase());
+      }
+
+      const { data: sets, error: setsError } = await query.order('order_index', { ascending: true });
 
       if (setsError) throw setsError;
 
@@ -175,6 +200,10 @@ export class QuestionBankService {
 
       if (filters?.is_published !== undefined) {
         query = query.eq('is_published', filters.is_published);
+      }
+
+      if (filters?.exam_language) {
+        query = query.eq('exam_language', filters.exam_language);
       }
 
       const { data, error } = await query;
@@ -454,12 +483,10 @@ export class QuestionBankService {
     question: PracticeQuestionInsert
   ): Promise<ServiceResponse<PracticeQuestion>> {
     try {
+      // Note: Don't JSON.stringify options - Supabase handles JSONB serialization automatically
       const { data, error } = await supabase
         .from('curriculum_practice_questions')
-        .insert({
-          ...question,
-          options: JSON.stringify(question.options),
-        })
+        .insert(question)
         .select()
         .single();
 
@@ -485,14 +512,10 @@ export class QuestionBankService {
     updates: PracticeQuestionUpdate
   ): Promise<ServiceResponse<PracticeQuestion>> {
     try {
-      const updateData = {
-        ...updates,
-        options: updates.options ? JSON.stringify(updates.options) : undefined,
-      };
-
+      // Note: Don't JSON.stringify options - Supabase handles JSONB serialization automatically
       const { data, error } = await supabase
         .from('curriculum_practice_questions')
-        .update(updateData)
+        .update(updates)
         .eq('id', questionId)
         .select()
         .single();
@@ -544,14 +567,10 @@ export class QuestionBankService {
     questions: PracticeQuestionInsert[]
   ): Promise<ServiceResponse<PracticeQuestion[]>> {
     try {
-      const questionsWithJsonOptions = questions.map((q) => ({
-        ...q,
-        options: JSON.stringify(q.options),
-      }));
-
+      // Note: Don't JSON.stringify options - Supabase handles JSONB serialization automatically
       const { data, error } = await supabase
         .from('curriculum_practice_questions')
-        .insert(questionsWithJsonOptions)
+        .insert(questions)
         .select();
 
       if (error) throw error;
@@ -769,7 +788,8 @@ export class QuestionBankService {
    */
   static async getUserStats(
     userId: string,
-    certificationType?: string
+    certificationType?: string,
+    examLanguage?: 'en' | 'ar'
   ): Promise<ServiceResponse<QuestionBankStats>> {
     try {
       // Get all question sets
@@ -780,6 +800,10 @@ export class QuestionBankService {
 
       if (certificationType) {
         setsQuery = setsQuery.eq('certification_type', certificationType);
+      }
+
+      if (examLanguage) {
+        setsQuery = setsQuery.eq('exam_language', examLanguage);
       }
 
       const { data: sets, error: setsError } = await setsQuery;

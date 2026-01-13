@@ -19,6 +19,11 @@ import type {
   QuestionWithAnswers,
   MockExamAttemptAnswer,
   MockExamPremiumAccess,
+  MockExamProduct,
+  MockExamAccessGrant,
+  CreateMockExamProductDTO,
+  UpdateMockExamProductDTO,
+  UserMockExamCredits,
 } from './mock-exam.types';
 
 export class MockExamService {
@@ -27,7 +32,7 @@ export class MockExamService {
   // =============================================================================
 
   /**
-   * Check if user has premium access to a specific exam
+   * Check if user has premium access to a specific exam (with remaining attempts)
    */
   static async checkPremiumAccess(
     examId: string,
@@ -45,7 +50,7 @@ export class MockExamService {
 
       const { data, error } = await supabase
         .from('mock_exam_premium_access')
-        .select('id, expires_at')
+        .select('id, expires_at, attempts_allowed, attempts_used')
         .eq('mock_exam_id', examId)
         .eq('user_id', targetUserId)
         .maybeSingle();
@@ -62,10 +67,64 @@ export class MockExamService {
         }
       }
 
+      // Check if user has remaining attempts
+      if (data.attempts_used >= data.attempts_allowed) {
+        return false;
+      }
+
       return true;
     } catch (error) {
       console.error('Error checking premium access:', error);
       return false;
+    }
+  }
+
+  /**
+   * Get detailed access status for an exam (for UI display)
+   */
+  static async getExamAccessStatus(
+    examId: string,
+    userId?: string
+  ): Promise<{
+    data: {
+      exam_exists: boolean;
+      is_premium: boolean;
+      has_access: boolean;
+      can_take_exam: boolean;
+      attempts_allowed?: number;
+      attempts_used?: number;
+      attempts_remaining?: number;
+      completed_attempts?: number;
+      is_expired?: boolean;
+      expires_at?: string;
+    } | null;
+    error: any;
+  }> {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const targetUserId = userId || user?.id;
+
+      if (!targetUserId) {
+        return { data: null, error: new Error('User not authenticated') };
+      }
+
+      const { data, error } = await supabase
+        .rpc('get_mock_exam_access_status', {
+          p_user_id: targetUserId,
+          p_mock_exam_id: examId
+        });
+
+      if (error) {
+        console.error('Error getting exam access status:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in getExamAccessStatus:', error);
+      return { data: null, error };
     }
   }
 
@@ -166,6 +225,34 @@ export class MockExamService {
     }
   }
 
+  /**
+   * Get all users with premium access to a specific exam (admin only)
+   */
+  static async getExamPremiumAccess(
+    examId: string
+  ): Promise<{ data: (MockExamPremiumAccess & { user: { id: string; email: string; first_name: string; last_name: string } })[] | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('mock_exam_premium_access')
+        .select(`
+          *,
+          user:users!mock_exam_premium_access_user_id_fkey(id, email, first_name, last_name)
+        `)
+        .eq('mock_exam_id', examId)
+        .order('granted_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching exam premium access:', error);
+        return { data: null, error };
+      }
+
+      return { data: data as any, error: null };
+    } catch (error) {
+      console.error('Error in getExamPremiumAccess:', error);
+      return { data: null, error };
+    }
+  }
+
   // =============================================================================
   // EXAM LISTING & DETAILS
   // =============================================================================
@@ -213,10 +300,19 @@ export class MockExamService {
         return { data: null, error };
       }
 
-      // Get user's premium access
+      // Get user's premium access with remaining attempts
       const { data: premiumAccess } = await this.getUserPremiumAccess();
+      // Only include access records that have remaining attempts and aren't expired
       const premiumExamIds = new Set(
-        (premiumAccess || []).map((a) => a.mock_exam_id)
+        (premiumAccess || [])
+          .filter(a => {
+            // Check if has remaining attempts
+            const hasAttempts = (a.attempts_used ?? 0) < (a.attempts_allowed ?? 1);
+            // Check if not expired
+            const notExpired = !a.expires_at || new Date(a.expires_at) > new Date();
+            return hasAttempts && notExpired;
+          })
+          .map((a) => a.mock_exam_id)
       );
 
       // Enrich with user stats and premium access
@@ -267,10 +363,19 @@ export class MockExamService {
         return { data: null, error };
       }
 
-      // Get user's premium access
+      // Get user's premium access with remaining attempts
       const { data: premiumAccess } = await this.getUserPremiumAccess();
+      // Only include access records that have remaining attempts and aren't expired
       const premiumExamIds = new Set(
-        (premiumAccess || []).map((a) => a.mock_exam_id)
+        (premiumAccess || [])
+          .filter(a => {
+            // Check if has remaining attempts
+            const hasAttempts = (a.attempts_used ?? 0) < (a.attempts_allowed ?? 1);
+            // Check if not expired
+            const notExpired = !a.expires_at || new Date(a.expires_at) > new Date();
+            return hasAttempts && notExpired;
+          })
+          .map((a) => a.mock_exam_id)
       );
 
       // Enrich with stats and access info
@@ -417,6 +522,7 @@ export class MockExamService {
 
   /**
    * Start a new exam attempt
+   * For premium exams, this will consume one attempt from the user's access
    */
   static async startExam(
     dto: StartExamDTO
@@ -435,6 +541,28 @@ export class MockExamService {
       );
       if (examError || !examData) {
         return { data: null, error: examError };
+      }
+
+      // For premium exams, check and consume an attempt
+      if (examData.is_premium) {
+        const { data: accessCheck, error: accessError } = await supabase
+          .rpc('check_and_consume_mock_exam_attempt', {
+            p_user_id: user.id,
+            p_mock_exam_id: dto.exam_id
+          });
+
+        if (accessError) {
+          console.error('Error checking exam access:', accessError);
+          return { data: null, error: accessError };
+        }
+
+        if (!accessCheck?.success) {
+          const errorMessage = accessCheck?.message || 'No access to this exam';
+          return {
+            data: null,
+            error: new Error(errorMessage)
+          };
+        }
       }
 
       // Create attempt record
@@ -572,7 +700,6 @@ export class MockExamService {
         return { data: null, error: userAnswersError };
       }
 
-      console.log(`🎯 completeExam: Correcting attempt ${attemptId}`);
 
       // Calculate results for each question
       let totalPointsEarned = 0;
@@ -590,14 +717,6 @@ export class MockExamService {
             // Check if user's answer is correct
             const selectedIds = userAnswer.selected_answer_ids || [];
 
-            console.log(`Correction Q${question.order_index + 1}:`, {
-              question_type: question.question_type,
-              selectedIds,
-              correctAnswerIds,
-              selectedIds_length: selectedIds.length,
-              includes_check: correctAnswerIds.includes(selectedIds[0])
-            });
-
             if (question.question_type === 'single_choice') {
               isCorrect =
                 selectedIds.length === 1 && correctAnswerIds.includes(selectedIds[0]);
@@ -607,8 +726,6 @@ export class MockExamService {
                 selectedIds.length === correctAnswerIds.length &&
                 selectedIds.every((id: string) => correctAnswerIds.includes(id));
             }
-
-            console.log(`Q${question.order_index + 1} result: isCorrect=${isCorrect}, points=${question.points}`);
 
             pointsEarned = isCorrect ? question.points : 0;
             totalPointsEarned += pointsEarned;
@@ -623,9 +740,7 @@ export class MockExamService {
               .eq('id', userAnswer.id);
 
             if (updateError) {
-              console.error(`Failed to update answer for Q${question.order_index + 1}:`, updateError);
-            } else {
-              console.log(`✅ Updated Q${question.order_index + 1}: is_correct=${isCorrect}, points=${pointsEarned}`);
+              console.error('Failed to update answer:', updateError);
             }
           }
 
@@ -796,15 +911,9 @@ export class MockExamService {
         return { data: null, error: userAnswersError };
       }
 
-      console.log(`📖 getAttemptResults: Reading attempt ${attemptId}`);
-      console.log('getAttemptResults - userAnswers:', userAnswers);
-
       // Build results
       const questionsWithResults = questions.map((question: any) => {
         const userAnswer = userAnswers?.find((a) => a.question_id === question.id);
-
-        console.log(`Question ${question.id} - userAnswer:`, userAnswer);
-
         return {
           question: {
             ...question,
@@ -984,6 +1093,18 @@ export class MockExamService {
         );
       }
 
+      if (filters?.language) {
+        query = query.eq('language', filters.language);
+      }
+
+      if (filters?.is_premium !== undefined) {
+        query = query.eq('is_premium', filters.is_premium);
+      }
+
+      if (filters?.is_sample_exam !== undefined) {
+        query = query.eq('is_sample_exam', filters.is_sample_exam);
+      }
+
       const { data: exams, error } = await query;
 
       if (error) {
@@ -1091,10 +1212,58 @@ export class MockExamService {
   }
 
   /**
-   * Delete an exam (admin only)
+   * Check if exam can be deleted and return attempt count
    */
-  static async deleteExam(id: string): Promise<{ error: any }> {
+  static async checkExamDeletable(id: string): Promise<{
+    canDelete: boolean;
+    attemptCount: number;
+    error: any;
+  }> {
     try {
+      const { count: attemptCount, error: countError } = await supabase
+        .from('mock_exam_attempts')
+        .select('*', { count: 'exact', head: true })
+        .eq('exam_id', id);
+
+      if (countError) {
+        console.error('Error checking exam attempts:', countError);
+        return { canDelete: false, attemptCount: 0, error: countError };
+      }
+
+      return {
+        canDelete: !attemptCount || attemptCount === 0,
+        attemptCount: attemptCount || 0,
+        error: null,
+      };
+    } catch (error) {
+      console.error('Error in checkExamDeletable:', error);
+      return { canDelete: false, attemptCount: 0, error };
+    }
+  }
+
+  /**
+   * Delete an exam (admin only)
+   * @param id - The exam ID to delete
+   * @param force - If true, delete even if exam has attempts (use with caution)
+   */
+  static async deleteExam(id: string, force: boolean = false): Promise<{ error: any }> {
+    try {
+      // Step 1: Check if anyone has attempted this exam (unless force delete)
+      if (!force) {
+        const { canDelete, attemptCount } = await this.checkExamDeletable(id);
+
+        if (!canDelete) {
+          return {
+            error: {
+              type: 'HAS_ATTEMPTS',
+              attemptCount,
+              message: `This exam has been attempted by ${attemptCount} user(s).`,
+            },
+          };
+        }
+      }
+
+      // Step 2: Delete the exam
       const { error } = await supabase
         .from('mock_exams')
         .delete()
@@ -1340,6 +1509,192 @@ export class MockExamService {
     } catch (error) {
       console.error('Error in updateExamQuestionCount:', error);
       return { error };
+    }
+  }
+
+  // ============================================================================
+  // MOCK EXAM PRODUCTS (Admin)
+  // ============================================================================
+
+  /**
+   * Get all mock exam products (admin only)
+   */
+  static async getAllMockExamProducts(): Promise<{ data: MockExamProduct[] | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('mock_exam_products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching mock exam products:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in getAllMockExamProducts:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Create a mock exam product (admin only)
+   */
+  static async createMockExamProduct(
+    product: CreateMockExamProductDTO
+  ): Promise<{ data: MockExamProduct | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('mock_exam_products')
+        .insert(product)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating mock exam product:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in createMockExamProduct:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Update a mock exam product (admin only)
+   */
+  static async updateMockExamProduct(
+    id: string,
+    updates: UpdateMockExamProductDTO
+  ): Promise<{ data: MockExamProduct | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('mock_exam_products')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating mock exam product:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in updateMockExamProduct:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Delete a mock exam product (admin only)
+   */
+  static async deleteMockExamProduct(id: string): Promise<{ error: any }> {
+    try {
+      const { error } = await supabase
+        .from('mock_exam_products')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting mock exam product:', error);
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error in deleteMockExamProduct:', error);
+      return { error };
+    }
+  }
+
+  // ============================================================================
+  // MOCK EXAM CREDITS (User)
+  // ============================================================================
+
+  /**
+   * Get user's available mock exam credits
+   */
+  static async getUserMockExamCredits(
+    userId: string
+  ): Promise<{ data: UserMockExamCredits | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_mock_exam_credits', { p_user_id: userId });
+
+      if (error) {
+        console.error('Error fetching user mock exam credits:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in getUserMockExamCredits:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Use a mock exam credit to unlock an exam
+   */
+  static async useMockExamCredit(
+    userId: string,
+    examId: string
+  ): Promise<{ data: { success: boolean; message: string; premium_access_id?: string } | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .rpc('use_mock_exam_credit', {
+          p_user_id: userId,
+          p_mock_exam_id: examId
+        });
+
+      if (error) {
+        console.error('Error using mock exam credit:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in useMockExamCredit:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Get user's mock exam access grants (admin view)
+   */
+  static async getUserAccessGrants(
+    userId?: string
+  ): Promise<{ data: MockExamAccessGrant[] | null; error: any }> {
+    try {
+      let query = supabase
+        .from('mock_exam_access_grants')
+        .select(`
+          *,
+          mock_exam_product:mock_exam_products(product_name, exams_count),
+          user:profiles(email, first_name, last_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching access grants:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error in getUserAccessGrants:', error);
+      return { data: null, error };
     }
   }
 }

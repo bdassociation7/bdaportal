@@ -61,9 +61,11 @@ interface ProgramFormProps {
   onSubmit: (data: CreateProgramDTO) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
+  /** When true, only allows editing of name, description, and duration (for approved programs) */
+  limitedEdit?: boolean;
 }
 
-export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting }: ProgramFormProps) {
+export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, limitedEdit = false }: ProgramFormProps) {
   const [formData, setFormData] = useState<CreateProgramDTO>({
     program_name: initialData?.program_name || '',
     program_name_ar: initialData?.program_name_ar || '',
@@ -285,8 +287,9 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting }: P
               <Select
                 value={formData.activity_type}
                 onValueChange={value => handleInputChange('activity_type', value as ActivityType)}
+                disabled={limitedEdit}
               >
-                <SelectTrigger>
+                <SelectTrigger className={limitedEdit ? 'opacity-60' : ''}>
                   <SelectValue placeholder="Select activity type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -309,8 +312,9 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting }: P
               <Select
                 value={formData.delivery_mode}
                 onValueChange={value => handleInputChange('delivery_mode', value as DeliveryMode)}
+                disabled={limitedEdit}
               >
-                <SelectTrigger>
+                <SelectTrigger className={limitedEdit ? 'opacity-60' : ''}>
                   <SelectValue placeholder="Select delivery mode" />
                 </SelectTrigger>
                 <SelectContent>
@@ -355,6 +359,8 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting }: P
                 max={40}
                 value={formData.max_pdc_credits}
                 onChange={e => handleInputChange('max_pdc_credits', parseInt(e.target.value))}
+                disabled={limitedEdit}
+                className={limitedEdit ? 'opacity-60' : ''}
               />
               <p className="text-xs text-gray-500">Maximum PDC credits that can be earned (1-40)</p>
               {validationErrors.max_pdc_credits && (
@@ -377,6 +383,8 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting }: P
                 type="date"
                 value={formData.valid_from}
                 onChange={e => handleInputChange('valid_from', e.target.value)}
+                disabled={limitedEdit}
+                className={limitedEdit ? 'opacity-60' : ''}
               />
               {validationErrors.valid_from && (
                 <p className="text-sm text-red-500 flex items-center gap-1">
@@ -394,6 +402,8 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting }: P
                 type="date"
                 value={formData.valid_until}
                 onChange={e => handleInputChange('valid_until', e.target.value)}
+                disabled={limitedEdit}
+                className={limitedEdit ? 'opacity-60' : ''}
               />
               {validationErrors.valid_until && (
                 <p className="text-sm text-red-500 flex items-center gap-1">
@@ -413,6 +423,8 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting }: P
                 value={formData.target_audience}
                 onChange={e => handleInputChange('target_audience', e.target.value)}
                 placeholder="e.g., Business Analysts, Project Managers"
+                disabled={limitedEdit}
+                className={limitedEdit ? 'opacity-60' : ''}
               />
             </div>
             <div className="space-y-2">
@@ -422,180 +434,186 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting }: P
                 value={formData.prerequisites}
                 onChange={e => handleInputChange('prerequisites', e.target.value)}
                 placeholder="e.g., 2+ years BA experience"
+                disabled={limitedEdit}
+                className={limitedEdit ? 'opacity-60' : ''}
               />
             </div>
           </div>
 
-          {/* Learning Outcomes */}
-          <div className="space-y-2">
-            <Label>Learning Outcomes</Label>
-            <div className="flex gap-2">
-              <Input
-                value={learningOutcome}
-                onChange={e => setLearningOutcome(e.target.value)}
-                placeholder="Add a learning outcome..."
-                onKeyPress={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addLearningOutcome();
-                  }
-                }}
-              />
-              <Button type="button" variant="outline" onClick={addLearningOutcome}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            {formData.learning_outcomes && formData.learning_outcomes.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {formData.learning_outcomes.map((outcome, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border"
-                  >
-                    <span className="text-sm">{outcome}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeLearningOutcome(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+          {/* Learning Outcomes - Hidden in limited edit mode */}
+          {!limitedEdit && (
+            <div className="space-y-2">
+              <Label>Learning Outcomes</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={learningOutcome}
+                  onChange={e => setLearningOutcome(e.target.value)}
+                  placeholder="Add a learning outcome..."
+                  onKeyPress={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addLearningOutcome();
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={addLearningOutcome}>
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* BoCK Competency Mapping */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                BoCK Competency Mapping
-              </CardTitle>
-              <CardDescription>
-                Map this program to relevant BDA BoCK® competencies (optional)
-              </CardDescription>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCompetencies(!showCompetencies)}
-            >
-              {showCompetencies ? 'Hide' : 'Show'} Competencies
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {selectedCompetencies.length > 0 && (
-            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-              <h4 className="font-medium text-green-800 mb-2">
-                Selected Competencies ({selectedCompetencies.length})
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {selectedCompetencies.map(sel => {
-                  const comp = competencies?.find(c => c.id === sel.id);
-                  return comp ? (
-                    <Badge
-                      key={sel.id}
-                      className={
-                        sel.level === 'primary'
-                          ? 'bg-blue-600'
-                          : sel.level === 'secondary'
-                          ? 'bg-purple-600'
-                          : 'bg-gray-600'
-                      }
+              {formData.learning_outcomes && formData.learning_outcomes.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {formData.learning_outcomes.map((outcome, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border"
                     >
-                      {comp.code} - {sel.level}
-                    </Badge>
-                  ) : null;
-                })}
-              </div>
-            </div>
-          )}
-
-          {showCompetencies && (
-            <>
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Primary:</strong> Core focus • <strong>Secondary:</strong> Significantly
-                  addressed • <strong>Supporting:</strong> Touched upon or reinforced
-                </AlertDescription>
-              </Alert>
-
-              {competenciesByDomain && (
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {Object.entries(competenciesByDomain).map(([domain, comps]) => (
-                    <div key={domain} className="border rounded-lg p-4">
-                      <h3 className="font-semibold text-gray-900 mb-3">{domain}</h3>
-                      <div className="space-y-2">
-                        {comps.map(comp => {
-                          const level = getCompetencyLevel(comp.id);
-                          return (
-                            <div
-                              key={comp.id}
-                              className={`p-3 rounded-lg border ${
-                                level ? 'border-blue-200 bg-blue-50' : 'border-gray-200'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs">
-                                      {comp.code}
-                                    </Badge>
-                                    <span className="font-medium text-sm">{comp.name}</span>
-                                  </div>
-                                </div>
-                                <div className="flex gap-1">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={level === 'primary' ? 'default' : 'outline'}
-                                    onClick={() => toggleCompetency(comp, 'primary')}
-                                    className="text-xs px-2"
-                                  >
-                                    Primary
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={level === 'secondary' ? 'default' : 'outline'}
-                                    onClick={() => toggleCompetency(comp, 'secondary')}
-                                    className="text-xs px-2"
-                                  >
-                                    Secondary
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={level === 'supporting' ? 'default' : 'outline'}
-                                    onClick={() => toggleCompetency(comp, 'supporting')}
-                                    className="text-xs px-2"
-                                  >
-                                    Supporting
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <span className="text-sm">{outcome}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeLearningOutcome(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
               )}
-            </>
+            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* BoCK Competency Mapping - Hidden in limited edit mode */}
+      {!limitedEdit && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  BoCK Competency Mapping
+                </CardTitle>
+                <CardDescription>
+                  Map this program to relevant BDA BoCK® competencies (optional)
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCompetencies(!showCompetencies)}
+              >
+                {showCompetencies ? 'Hide' : 'Show'} Competencies
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {selectedCompetencies.length > 0 && (
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <h4 className="font-medium text-green-800 mb-2">
+                  Selected Competencies ({selectedCompetencies.length})
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCompetencies.map(sel => {
+                    const comp = competencies?.find(c => c.id === sel.id);
+                    return comp ? (
+                      <Badge
+                        key={sel.id}
+                        className={
+                          sel.level === 'primary'
+                            ? 'bg-blue-600'
+                            : sel.level === 'secondary'
+                            ? 'bg-purple-600'
+                            : 'bg-gray-600'
+                        }
+                      >
+                        {comp.code} - {sel.level}
+                      </Badge>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+
+            {showCompetencies && (
+              <>
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Primary:</strong> Core focus • <strong>Secondary:</strong> Significantly
+                    addressed • <strong>Supporting:</strong> Touched upon or reinforced
+                  </AlertDescription>
+                </Alert>
+
+                {competenciesByDomain && (
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {Object.entries(competenciesByDomain).map(([domain, comps]) => (
+                      <div key={domain} className="border rounded-lg p-4">
+                        <h3 className="font-semibold text-gray-900 mb-3">{domain}</h3>
+                        <div className="space-y-2">
+                          {comps.map(comp => {
+                            const level = getCompetencyLevel(comp.id);
+                            return (
+                              <div
+                                key={comp.id}
+                                className={`p-3 rounded-lg border ${
+                                  level ? 'border-blue-200 bg-blue-50' : 'border-gray-200'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-xs">
+                                        {comp.code}
+                                      </Badge>
+                                      <span className="font-medium text-sm">{comp.name}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={level === 'primary' ? 'default' : 'outline'}
+                                      onClick={() => toggleCompetency(comp, 'primary')}
+                                      className="text-xs px-2"
+                                    >
+                                      Primary
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={level === 'secondary' ? 'default' : 'outline'}
+                                      onClick={() => toggleCompetency(comp, 'secondary')}
+                                      className="text-xs px-2"
+                                    >
+                                      Secondary
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={level === 'supporting' ? 'default' : 'outline'}
+                                      onClick={() => toggleCompetency(comp, 'supporting')}
+                                      className="text-xs px-2"
+                                    >
+                                      Supporting
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Form Actions */}
       <div className="flex items-center gap-4">

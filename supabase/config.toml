@@ -190,14 +190,14 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# SMTP Configuration - Mailtrap (Sandbox for testing)
-# Auth emails captured in Mailtrap inbox for review before going live
+# SMTP Configuration - Resend (Production)
+# Using Resend SMTP relay for all auth emails (password reset, invites, etc.)
 [auth.email.smtp]
 enabled = true
-host = "sandbox.smtp.mailtrap.io"
-port = 2525
-user = "5f05af36146ce9"
-pass = "env(MAILTRAP_PASS)"
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
 admin_email = "noreply@bda-global.org"
 sender_name = "BDA Association"
 

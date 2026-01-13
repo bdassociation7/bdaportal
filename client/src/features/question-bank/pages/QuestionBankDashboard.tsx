@@ -4,8 +4,8 @@
  * Requires language-based access (EN or AR)
  */
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useQuestionSetsWithProgress,
@@ -28,10 +28,18 @@ import {
   Brain,
   Target,
   Lock,
+  BookOpen,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import type { QuestionSetWithProgress } from '@/entities/question-bank';
-import { LanguageSelector } from '@/features/curriculum/components/LanguageSelector';
 
 interface QuestionSetCardProps {
   questionSet: QuestionSetWithProgress;
@@ -65,6 +73,14 @@ function QuestionSetCard({ questionSet, onClick }: QuestionSetCardProps) {
               <p className="text-sm text-gray-500 mt-1" dir="rtl">
                 {questionSet.title_ar}
               </p>
+            )}
+            {/* Hierarchy breadcrumb */}
+            {questionSet.competency && questionSet.sub_unit && (
+              <div className="flex items-center gap-1 text-xs text-gray-500 mt-2 flex-wrap">
+                <span className="font-medium">{questionSet.competency.competency_name}</span>
+                <ChevronRight className="w-3 h-3" />
+                <span>Sub-lesson {questionSet.sub_unit.order_index}</span>
+              </div>
             )}
           </div>
           {isCompleted && (
@@ -152,8 +168,30 @@ function QuestionSetCard({ questionSet, onClick }: QuestionSetCardProps) {
 
 export function QuestionBankDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>('EN');
+
+  // Get language from URL params (passed from main Learning System dashboard)
+  // This ensures isolation - once user enters EN or AR system, they stay in that language
+  const langFromUrl = searchParams.get('lang') as Language | null;
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(langFromUrl || 'EN');
+
+  // Sync with URL param changes
+  useEffect(() => {
+    if (langFromUrl && langFromUrl !== selectedLanguage) {
+      setSelectedLanguage(langFromUrl);
+    }
+  }, [langFromUrl]);
+
+  // Detect base path for navigation (ECP vs Individual learning system)
+  const basePath = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith('/ecp/learning-system')) {
+      return '/ecp/learning-system';
+    }
+    return '/learning-system';
+  }, [location.pathname]);
 
   // Get all user accesses to determine available languages
   const { data: accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(
@@ -172,36 +210,58 @@ export function QuestionBankDashboard() {
     isLoading: languageAccessLoading,
   } = useLanguageAccess(user?.id, selectedLanguage);
 
-  // Auto-select available language on first load
-  useEffect(() => {
-    if (accessSummary && !accessLoading) {
-      if (accessSummary.has_en && !accessSummary.has_ar && selectedLanguage !== 'EN') {
-        setSelectedLanguage('EN');
-      } else if (accessSummary.has_ar && !accessSummary.has_en && selectedLanguage !== 'AR') {
-        setSelectedLanguage('AR');
-      }
-    }
-  }, [accessSummary, selectedLanguage, accessLoading]);
-
   // Determine certification type from language access (or default to CP)
   const certificationType = languageAccess?.certification_type || 'CP';
 
-  // Get question sets with progress
+  // Get question sets with progress (filtered by selected language)
   const {
     data: questionSets,
     isLoading: isLoadingSets,
-  } = useQuestionSetsWithProgress(user?.id, certificationType);
+  } = useQuestionSetsWithProgress(user?.id, certificationType, selectedLanguage);
 
   // Get user stats
   const { data: stats } = useQuestionBankStats(user?.id, certificationType);
 
-  // Group question sets by section
-  const introSets =
-    questionSets?.filter((s) => s.section_type === 'introduction') || [];
-  const knowledgeSets =
-    questionSets?.filter((s) => s.section_type === 'knowledge') || [];
-  const behavioralSets =
-    questionSets?.filter((s) => s.section_type === 'behavioral') || [];
+  // Group question sets hierarchically: Section → Competency → Sub-lesson → Sets
+  // Also includes standalone sets that don't have full hierarchy linkage
+  const groupedSets = useMemo(() => {
+    if (!questionSets) return { introduction: [], knowledge: {}, behavioral: {}, standalone: [] };
+
+    const introSets: QuestionSetWithProgress[] = [];
+    const knowledge: Record<string, Record<string, QuestionSetWithProgress[]>> = {};
+    const behavioral: Record<string, Record<string, QuestionSetWithProgress[]>> = {};
+    const standalone: QuestionSetWithProgress[] = [];
+
+    questionSets.forEach((set) => {
+      // Introduction sets (no hierarchy required)
+      if (set.section_type === 'introduction') {
+        introSets.push(set);
+        return;
+      }
+
+      // Sets with competency and sub-lesson hierarchy
+      if (set.competency && set.sub_unit) {
+        const competencyId = set.competency.id;
+        const subUnitId = set.sub_unit.id;
+        const sectionType = set.section_type;
+
+        if (sectionType === 'knowledge') {
+          if (!knowledge[competencyId]) knowledge[competencyId] = {};
+          if (!knowledge[competencyId][subUnitId]) knowledge[competencyId][subUnitId] = [];
+          knowledge[competencyId][subUnitId].push(set);
+        } else if (sectionType === 'behavioral') {
+          if (!behavioral[competencyId]) behavioral[competencyId] = {};
+          if (!behavioral[competencyId][subUnitId]) behavioral[competencyId][subUnitId] = [];
+          behavioral[competencyId][subUnitId].push(set);
+        }
+      } else {
+        // Sets without full hierarchy linkage go to standalone section
+        standalone.push(set);
+      }
+    });
+
+    return { introduction: introSets, knowledge, behavioral, standalone };
+  }, [questionSets]);
 
   // Loading states
   if (accessSummaryLoading || accessLoading || languageAccessLoading || isLoadingSets) {
@@ -233,7 +293,7 @@ export function QuestionBankDashboard() {
             </p>
             <div className="space-y-3">
               <Button
-                onClick={() => navigate('/learning-system')}
+                onClick={() => navigate(basePath)}
                 className="w-full"
               >
                 Back to Learning System
@@ -260,7 +320,7 @@ export function QuestionBankDashboard() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/learning-system')}
+            onClick={() => navigate(basePath)}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -278,13 +338,6 @@ export function QuestionBankDashboard() {
             </div>
           </div>
         </div>
-
-        {/* Language Selector */}
-        <LanguageSelector
-          userId={user?.id}
-          selectedLanguage={selectedLanguage}
-          onLanguageChange={setSelectedLanguage}
-        />
 
         {/* Stats Overview */}
         {stats && (
@@ -353,8 +406,8 @@ export function QuestionBankDashboard() {
           </div>
         )}
 
-        {/* Introduction Section */}
-        {introSets.length > 0 && (
+        {/* Introduction Section - No hierarchy */}
+        {groupedSets.introduction.length > 0 && (
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -368,47 +421,19 @@ export function QuestionBankDashboard() {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {introSets.map((set) => (
+              {groupedSets.introduction.map((set) => (
                 <QuestionSetCard
                   key={set.id}
                   questionSet={set}
-                  onClick={() => navigate(`/learning-system/question-bank/${set.id}`)}
+                  onClick={() => navigate(`${basePath}/question-bank/${set.id}`)}
                 />
               ))}
             </div>
           </div>
         )}
 
-        {/* Knowledge-Based Competencies */}
-        {knowledgeSets.length > 0 && (
-          <div className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Brain className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  Knowledge-Based Competencies
-                </h2>
-                <p className="text-sm text-gray-600">
-                  {knowledgeSets.length} question sets covering technical knowledge
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {knowledgeSets.map((set) => (
-                <QuestionSetCard
-                  key={set.id}
-                  questionSet={set}
-                  onClick={() => navigate(`/learning-system/question-bank/${set.id}`)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Behavioral Competencies */}
-        {behavioralSets.length > 0 && (
+        {/* Behavioral Competencies - HIERARCHICAL (Section → Competency → Sub-lesson → Sets) */}
+        {Object.keys(groupedSets.behavioral).length > 0 && (
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -419,16 +444,250 @@ export function QuestionBankDashboard() {
                   Behavioral Competencies
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {behavioralSets.length} question sets covering soft skills
+                  {Object.keys(groupedSets.behavioral).length} Core Competencies with Sub-lessons
+                </p>
+              </div>
+            </div>
+
+            <Accordion type="multiple" className="space-y-3">
+              {Object.entries(groupedSets.behavioral).map(([competencyId, subUnits]) => {
+                const firstSet = Object.values(subUnits)[0]?.[0];
+                const competency = firstSet?.competency;
+                if (!competency) return null;
+
+                const totalSets = Object.values(subUnits).reduce(
+                  (sum, sets) => sum + sets.length,
+                  0
+                );
+
+                return (
+                  <AccordionItem
+                    key={competencyId}
+                    value={competencyId}
+                    className="border rounded-lg bg-white shadow-sm"
+                  >
+                    <AccordionTrigger className="px-4 hover:no-underline">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex items-center gap-3">
+                          <BookOpen className="w-5 h-5 text-purple-600" />
+                          <div className="text-left">
+                            <h3 className="font-semibold text-gray-900">
+                              {competency.competency_name}
+                            </h3>
+                            {competency.competency_name_ar && (
+                              <p className="text-sm text-gray-500" dir="rtl">
+                                {competency.competency_name_ar}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                            {Object.keys(subUnits).length} Sub-lessons
+                          </Badge>
+                          <Badge variant="outline" className="bg-gray-50">
+                            {totalSets} Sets
+                          </Badge>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pt-2 pb-4">
+                      {/* Sub-lessons nested accordion */}
+                      <Accordion type="multiple" className="space-y-2">
+                        {Object.entries(subUnits)
+                          .sort(([, a], [, b]) => {
+                            const orderA = a[0]?.sub_unit?.order_index || 0;
+                            const orderB = b[0]?.sub_unit?.order_index || 0;
+                            return orderA - orderB;
+                          })
+                          .map(([subUnitId, sets]) => {
+                            const subUnit = sets[0]?.sub_unit;
+                            if (!subUnit) return null;
+
+                            return (
+                              <AccordionItem
+                                key={subUnitId}
+                                value={subUnitId}
+                                className="border rounded-md bg-gray-50"
+                              >
+                                <AccordionTrigger className="px-3 py-2 hover:no-underline">
+                                  <div className="flex items-center justify-between w-full pr-4">
+                                    <div className="text-left">
+                                      <p className="font-medium text-gray-800 text-sm">
+                                        Sub-lesson {subUnit.order_index}: {subUnit.title}
+                                      </p>
+                                      {subUnit.title_ar && (
+                                        <p className="text-xs text-gray-500" dir="rtl">
+                                          {subUnit.title_ar}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {sets.length} {sets.length === 1 ? 'Set' : 'Sets'}
+                                    </Badge>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-3 pb-3">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+                                    {sets.map((set) => (
+                                      <QuestionSetCard
+                                        key={set.id}
+                                        questionSet={set}
+                                        onClick={() => navigate(`${basePath}/question-bank/${set.id}`)}
+                                      />
+                                    ))}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            );
+                          })}
+                      </Accordion>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          </div>
+        )}
+
+        {/* Knowledge-Based Competencies - HIERARCHICAL (Section → Competency → Sub-lesson → Sets) */}
+        {Object.keys(groupedSets.knowledge).length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Brain className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Knowledge-Based Competencies
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {Object.keys(groupedSets.knowledge).length} Core Competencies with Sub-lessons
+                </p>
+              </div>
+            </div>
+
+            <Accordion type="multiple" className="space-y-3">
+              {Object.entries(groupedSets.knowledge).map(([competencyId, subUnits]) => {
+                const firstSet = Object.values(subUnits)[0]?.[0];
+                const competency = firstSet?.competency;
+                if (!competency) return null;
+
+                const totalSets = Object.values(subUnits).reduce(
+                  (sum, sets) => sum + sets.length,
+                  0
+                );
+
+                return (
+                  <AccordionItem
+                    key={competencyId}
+                    value={competencyId}
+                    className="border rounded-lg bg-white shadow-sm"
+                  >
+                    <AccordionTrigger className="px-4 hover:no-underline">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex items-center gap-3">
+                          <Brain className="w-5 h-5 text-blue-600" />
+                          <div className="text-left">
+                            <h3 className="font-semibold text-gray-900">
+                              {competency.competency_name}
+                            </h3>
+                            {competency.competency_name_ar && (
+                              <p className="text-sm text-gray-500" dir="rtl">
+                                {competency.competency_name_ar}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            {Object.keys(subUnits).length} Sub-lessons
+                          </Badge>
+                          <Badge variant="outline" className="bg-gray-50">
+                            {totalSets} Sets
+                          </Badge>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pt-2 pb-4">
+                      {/* Sub-lessons nested accordion */}
+                      <Accordion type="multiple" className="space-y-2">
+                        {Object.entries(subUnits)
+                          .sort(([, a], [, b]) => {
+                            const orderA = a[0]?.sub_unit?.order_index || 0;
+                            const orderB = b[0]?.sub_unit?.order_index || 0;
+                            return orderA - orderB;
+                          })
+                          .map(([subUnitId, sets]) => {
+                            const subUnit = sets[0]?.sub_unit;
+                            if (!subUnit) return null;
+
+                            return (
+                              <AccordionItem
+                                key={subUnitId}
+                                value={subUnitId}
+                                className="border rounded-md bg-gray-50"
+                              >
+                                <AccordionTrigger className="px-3 py-2 hover:no-underline">
+                                  <div className="flex items-center justify-between w-full pr-4">
+                                    <div className="text-left">
+                                      <p className="font-medium text-gray-800 text-sm">
+                                        Sub-lesson {subUnit.order_index}: {subUnit.title}
+                                      </p>
+                                      {subUnit.title_ar && (
+                                        <p className="text-xs text-gray-500" dir="rtl">
+                                          {subUnit.title_ar}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {sets.length} {sets.length === 1 ? 'Set' : 'Sets'}
+                                    </Badge>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-3 pb-3">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+                                    {sets.map((set) => (
+                                      <QuestionSetCard
+                                        key={set.id}
+                                        questionSet={set}
+                                        onClick={() => navigate(`${basePath}/question-bank/${set.id}`)}
+                                      />
+                                    ))}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            );
+                          })}
+                      </Accordion>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          </div>
+        )}
+
+        {/* Standalone Question Sets - Not linked to hierarchy */}
+        {groupedSets.standalone.length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">📋</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Practice Sets</h2>
+                <p className="text-sm text-gray-600">
+                  Additional practice question sets
                 </p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {behavioralSets.map((set) => (
+              {groupedSets.standalone.map((set) => (
                 <QuestionSetCard
                   key={set.id}
                   questionSet={set}
-                  onClick={() => navigate(`/learning-system/question-bank/${set.id}`)}
+                  onClick={() => navigate(`${basePath}/question-bank/${set.id}`)}
                 />
               ))}
             </div>
@@ -445,7 +704,7 @@ export function QuestionBankDashboard() {
             <p className="text-gray-600 mb-6">
               Question sets will appear here once they are published by the admin.
             </p>
-            <Button onClick={() => navigate('/learning-system')}>
+            <Button onClick={() => navigate(basePath)}>
               Back to Learning System
             </Button>
           </div>

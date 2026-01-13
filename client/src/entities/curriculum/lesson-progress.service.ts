@@ -150,7 +150,8 @@ export class LessonProgressService {
   }
 
   /**
-   * Update progress for a lesson
+   * Update progress for a lesson (creates record if doesn't exist)
+   * Uses two-step process to ensure database triggers fire properly
    */
   static async updateLessonProgress(
     userId: string,
@@ -165,32 +166,86 @@ export class LessonProgressService {
         updateData.completed_at = new Date().toISOString();
       }
 
+      // Check if record exists first
+      const { data: existing } = await supabase
+        .from('user_lesson_progress')
+        .select('id, quiz_attempts_count, best_quiz_score, status')
+        .eq('user_id', userId)
+        .eq('lesson_id', lessonId)
+        .maybeSingle();
+
       // Increment quiz attempts if quiz score is provided
-      if (updates.best_quiz_score !== undefined) {
-        const { data: current } = await supabase
-          .from('user_lesson_progress')
-          .select('quiz_attempts_count, best_quiz_score')
-          .eq('user_id', userId)
-          .eq('lesson_id', lessonId)
-          .maybeSingle();
+      if (updates.best_quiz_score !== undefined && existing) {
+        updateData.quiz_attempts_count = (existing.quiz_attempts_count || 0) + 1;
 
-        if (current) {
-          updateData.quiz_attempts_count = (current.quiz_attempts_count || 0) + 1;
-
-          // Only update best score if new score is higher
-          if (current.best_quiz_score !== null && updates.best_quiz_score <= current.best_quiz_score) {
-            delete updateData.best_quiz_score;
-          }
+        // Only update best score if new score is higher
+        if (existing.best_quiz_score !== null && updates.best_quiz_score <= existing.best_quiz_score) {
+          delete updateData.best_quiz_score;
         }
       }
 
-      const { data, error } = await supabase
-        .from('user_lesson_progress')
-        .update(updateData)
-        .eq('user_id', userId)
-        .eq('lesson_id', lessonId)
-        .select()
-        .single();
+      let data, error;
+
+      if (existing) {
+        // Record exists - update it (this will fire the trigger)
+        const result = await supabase
+          .from('user_lesson_progress')
+          .update(updateData)
+          .eq('user_id', userId)
+          .eq('lesson_id', lessonId)
+          .select()
+          .single();
+        data = result.data;
+        error = result.error;
+      } else {
+        // Record doesn't exist - create it first with in_progress status
+        // Then update to desired status to ensure trigger fires
+        const createResult = await supabase
+          .from('user_lesson_progress')
+          .insert({
+            user_id: userId,
+            lesson_id: lessonId,
+            status: 'in_progress',
+            progress_percentage: 0,
+          })
+          .select()
+          .single();
+
+        if (createResult.error) {
+          console.error('Error creating lesson progress:', createResult.error);
+          return { data: null, error: createResult.error };
+        }
+
+        // If the desired status is different from in_progress, update it
+        // This ensures the AFTER UPDATE trigger fires properly
+        if (updateData.status && updateData.status !== 'in_progress') {
+          const updateResult = await supabase
+            .from('user_lesson_progress')
+            .update(updateData)
+            .eq('user_id', userId)
+            .eq('lesson_id', lessonId)
+            .select()
+            .single();
+          data = updateResult.data;
+          error = updateResult.error;
+        } else {
+          // Just update the progress percentage if needed
+          if (updateData.progress_percentage && updateData.progress_percentage > 0) {
+            const updateResult = await supabase
+              .from('user_lesson_progress')
+              .update(updateData)
+              .eq('user_id', userId)
+              .eq('lesson_id', lessonId)
+              .select()
+              .single();
+            data = updateResult.data;
+            error = updateResult.error;
+          } else {
+            data = createResult.data;
+            error = null;
+          }
+        }
+      }
 
       if (error) {
         console.error('Error updating lesson progress:', error);

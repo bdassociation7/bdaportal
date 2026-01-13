@@ -3,32 +3,67 @@
  * Navigation between lessons within a module with status indicators
  */
 
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Lock, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useLessonsByModule, useLessonProgress } from '@/entities/curriculum';
+import { useLessonsByModule, useLessonProgress, useIsLessonUnlocked } from '@/entities/curriculum';
 import type { Lesson } from '@/entities/curriculum';
 
 interface LessonNavigatorProps {
   currentLesson: Lesson;
   moduleId: string;
   userId: string | undefined;
+  basePath?: string;
+  moduleLang?: string; // Module's exam_language for navigation
 }
 
 export function LessonNavigator({
   currentLesson,
   moduleId,
   userId,
+  basePath = '/learning-system/training-kits',
+  moduleLang,
 }: LessonNavigatorProps) {
   const navigate = useNavigate();
+
+  // Helper to build URL with language parameter
+  const withLang = (url: string) => {
+    if (moduleLang) {
+      return `${url}?lang=${moduleLang}`;
+    }
+    return url;
+  };
+
+  // Memoize filters to prevent new object reference on every render
+  // This prevents React Query from treating it as a new query key
+  const progressFilters = useMemo(() => ({ module_id: moduleId }), [moduleId]);
 
   // Fetch all 3 lessons for this module
   const { data: moduleLessons } = useLessonsByModule(moduleId);
 
   // Fetch user progress for all lessons
-  const { data: allProgress } = useLessonProgress(userId, { module_id: moduleId });
+  const { data: allProgress } = useLessonProgress(userId, progressFilters);
 
+  // Calculate next lesson - memoized to be stable for hook dependency
+  // All hooks must be called before any early returns to follow React's rules of hooks
+  const nextLesson = useMemo(() => {
+    if (!moduleLessons || moduleLessons.length === 0) return null;
+    const sortedLessons = [...moduleLessons].sort((a, b) => a.order_index - b.order_index);
+    const currentIndex = sortedLessons.findIndex((l) => l.id === currentLesson.id);
+    return currentIndex < sortedLessons.length - 1 ? sortedLessons[currentIndex + 1] : null;
+  }, [moduleLessons, currentLesson.id]);
+
+  // Check if next lesson is unlocked using database function
+  // IMPORTANT: This hook MUST be called before any early returns
+  const { data: isNextLessonUnlocked } = useIsLessonUnlocked(
+    userId,
+    nextLesson?.id,
+    !!nextLesson
+  );
+
+  // Early return AFTER all hooks are called
   if (!moduleLessons || moduleLessons.length === 0) {
     return null;
   }
@@ -39,12 +74,6 @@ export function LessonNavigator({
   // Find previous and next lessons
   const currentIndex = sortedLessons.findIndex((l) => l.id === currentLesson.id);
   const previousLesson = currentIndex > 0 ? sortedLessons[currentIndex - 1] : null;
-  const nextLesson =
-    currentIndex < sortedLessons.length - 1 ? sortedLessons[currentIndex + 1] : null;
-
-  // Get progress for next lesson to check if unlocked
-  const nextLessonProgress = allProgress?.find((p) => p.lesson_id === nextLesson?.id);
-  const isNextLessonUnlocked = nextLessonProgress?.status !== 'locked';
 
   return (
     <div className="mt-8 space-y-4">
@@ -111,7 +140,7 @@ export function LessonNavigator({
           <Button
             variant="outline"
             onClick={() =>
-              navigate(`/learning-system/modules/${moduleId}/lessons/${previousLesson.id}`)
+              navigate(withLang(`${basePath}/modules/${moduleId}/lessons/${previousLesson.id}`))
             }
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -126,7 +155,7 @@ export function LessonNavigator({
           isNextLessonUnlocked ? (
             <Button
               onClick={() =>
-                navigate(`/learning-system/modules/${moduleId}/lessons/${nextLesson.id}`)
+                navigate(withLang(`${basePath}/modules/${moduleId}/lessons/${nextLesson.id}`))
               }
             >
               Next Lesson
@@ -141,7 +170,7 @@ export function LessonNavigator({
         ) : (
           <Button
             variant="outline"
-            onClick={() => navigate(`/learning-system/modules/${moduleId}`)}
+            onClick={() => navigate(withLang(`${basePath}/module/${moduleId}`))}
           >
             Back to Module
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -159,7 +188,7 @@ export function LessonNavigator({
           <p className="text-sm text-green-700 mb-4">
             You have completed all 3 lessons of this module.
           </p>
-          <Button onClick={() => navigate(`/learning-system/modules/${moduleId}`)}>
+          <Button onClick={() => navigate(withLang(`${basePath}/module/${moduleId}`))}>
             Back to Module
           </Button>
         </div>

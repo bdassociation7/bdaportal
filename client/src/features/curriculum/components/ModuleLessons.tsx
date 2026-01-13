@@ -3,6 +3,7 @@
  * Displays the list of 3 lessons in a module with status and unlock logic
  */
 
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Lock, CheckCircle, Clock, Eye, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,18 +20,20 @@ import {
 interface ModuleLessonsProps {
   moduleId: string;
   userId: string | undefined;
+  basePath?: string;
 }
 
-export function ModuleLessons({ moduleId, userId }: ModuleLessonsProps) {
+export function ModuleLessons({ moduleId, userId, basePath = '/learning-system' }: ModuleLessonsProps) {
   const navigate = useNavigate();
+
+  // Memoize filters to prevent new object reference on every render
+  const progressFilters = useMemo(() => ({ module_id: moduleId }), [moduleId]);
 
   // Fetch the 3 lessons for this module
   const { data: lessons, isLoading: isLoadingLessons } = useLessonsByModule(moduleId);
 
   // Fetch user progress for all lessons
-  const { data: allProgress, isLoading: isLoadingProgress } = useLessonProgress(userId, {
-    module_id: moduleId,
-  });
+  const { data: allProgress, isLoading: isLoadingProgress } = useLessonProgress(userId, progressFilters);
 
   if (isLoadingLessons || isLoadingProgress) {
     return (
@@ -62,9 +65,14 @@ export function ModuleLessons({ moduleId, userId }: ModuleLessonsProps) {
     return allProgress?.find((p) => p.lesson_id === lessonId);
   };
 
-  const getStatusIcon = (progress: LessonProgress | undefined) => {
-    if (!progress || progress.status === 'locked') {
+  const getStatusIcon = (lesson: Lesson, progress: LessonProgress | undefined, isLocked: boolean) => {
+    if (isLocked) {
       return <Lock className="h-5 w-5 text-gray-400" />;
+    }
+
+    if (!progress || progress.status === 'locked') {
+      // First lesson without progress - show as ready to start
+      return <BookOpen className="h-5 w-5 text-blue-600" />;
     }
 
     switch (progress.status) {
@@ -79,9 +87,14 @@ export function ModuleLessons({ moduleId, userId }: ModuleLessonsProps) {
     }
   };
 
-  const getStatusBadge = (progress: LessonProgress | undefined) => {
-    if (!progress || progress.status === 'locked') {
+  const getStatusBadge = (lesson: Lesson, progress: LessonProgress | undefined, isLocked: boolean) => {
+    if (isLocked) {
       return <Badge variant="outline">Locked</Badge>;
+    }
+
+    if (!progress || progress.status === 'locked') {
+      // First lesson without progress - show as ready to start
+      return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Ready</Badge>;
     }
 
     switch (progress.status) {
@@ -98,8 +111,25 @@ export function ModuleLessons({ moduleId, userId }: ModuleLessonsProps) {
     }
   };
 
-  const canAccessLesson = (progress: LessonProgress | undefined): boolean => {
-    return progress?.status !== 'locked';
+  const canAccessLesson = (lesson: Lesson, progress: LessonProgress | undefined): boolean => {
+    // First lesson is always unlocked
+    if (lesson.order_index === 1) {
+      return true;
+    }
+
+    // Check if progress exists and is not locked
+    if (progress && progress.status !== 'locked') {
+      return true;
+    }
+
+    // Check if previous lesson is completed
+    const prevLesson = sortedLessons.find(l => l.order_index === lesson.order_index - 1);
+    if (prevLesson) {
+      const prevProgress = getLessonProgress(prevLesson.id);
+      return prevProgress?.status === 'completed';
+    }
+
+    return false;
   };
 
   return (
@@ -113,7 +143,7 @@ export function ModuleLessons({ moduleId, userId }: ModuleLessonsProps) {
 
       {sortedLessons.map((lesson) => {
         const progress = getLessonProgress(lesson.id);
-        const isLocked = !canAccessLesson(progress);
+        const isLocked = !canAccessLesson(lesson, progress);
 
         return (
           <Card
@@ -123,7 +153,7 @@ export function ModuleLessons({ moduleId, userId }: ModuleLessonsProps) {
             }`}
             onClick={() => {
               if (!isLocked) {
-                navigate(`/learning-system/modules/${moduleId}/lessons/${lesson.id}`);
+                navigate(`${basePath}/modules/${moduleId}/lessons/${lesson.id}`);
               }
             }}
           >
@@ -150,7 +180,7 @@ export function ModuleLessons({ moduleId, userId }: ModuleLessonsProps) {
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        {getStatusIcon(progress)}
+                        {getStatusIcon(lesson, progress, isLocked)}
                         <h4 className="font-semibold text-lg">{lesson.title}</h4>
                       </div>
                       {lesson.title_ar && (
@@ -159,7 +189,7 @@ export function ModuleLessons({ moduleId, userId }: ModuleLessonsProps) {
                         </p>
                       )}
                     </div>
-                    {getStatusBadge(progress)}
+                    {getStatusBadge(lesson, progress, isLocked)}
                   </div>
 
                   {/* Description */}
@@ -207,7 +237,7 @@ export function ModuleLessons({ moduleId, userId }: ModuleLessonsProps) {
                         className="gap-1"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/learning-system/modules/${moduleId}/lessons/${lesson.id}`);
+                          navigate(`${basePath}/modules/${moduleId}/lessons/${lesson.id}`);
                         }}
                       >
                         {progress?.status === 'completed' ? 'Review' : 'Start'}

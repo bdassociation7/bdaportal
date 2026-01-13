@@ -225,17 +225,19 @@ export const QuestionEditor = ({
     }
   };
 
-  // Handle correct answer toggle (multiple_choice specific)
+  // Handle correct answer toggle
+  // For multiple_choice and true_false: only one correct answer (radio behavior)
+  // For multi_select: multiple correct answers allowed (checkbox behavior)
   const handleCorrectToggle = (index: number) => {
-    if (questionType === 'multiple_choice') {
-      // Uncheck all others
+    if (questionType === 'multiple_choice' || questionType === 'true_false') {
+      // Uncheck all others, set only the clicked one as correct (radio button behavior)
       const newAnswers = answers.map((ans, i) => ({
         ...ans,
         is_correct: i === index,
       }));
       setValue('answers', newAnswers);
     } else {
-      // Toggle current
+      // Toggle current (checkbox behavior for multi_select)
       setValue(`answers.${index}.is_correct`, !answers[index].is_correct);
     }
   };
@@ -638,12 +640,23 @@ export const QuestionEditor = ({
                       {index + 1}
                     </span>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={answers[index]?.is_correct || false}
-                        onChange={() => handleCorrectToggle(index)}
-                        className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                      />
+                      {/* Use radio buttons for single-answer types, checkboxes for multi-select */}
+                      {(questionType === 'multiple_choice' || questionType === 'true_false') ? (
+                        <input
+                          type="radio"
+                          name="correct_answer"
+                          checked={answers[index]?.is_correct || false}
+                          onChange={() => handleCorrectToggle(index)}
+                          className="h-4 w-4 border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={answers[index]?.is_correct || false}
+                          onChange={() => handleCorrectToggle(index)}
+                          className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                      )}
                       <span className="text-sm font-medium text-gray-700">
                         {isArabic ? 'إجابة صحيحة' : 'Correct Answer'}
                       </span>

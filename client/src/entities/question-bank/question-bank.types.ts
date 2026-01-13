@@ -104,6 +104,18 @@ export interface QuestionSetWithCompetency extends QuestionSet {
 
 export interface QuestionSetWithProgress extends QuestionSet {
   progress?: UserQuestionBankProgress | null;
+  competency?: {
+    id: string;
+    competency_name: string;
+    competency_name_ar: string | null;
+    section_type: ModuleSectionType;
+  };
+  sub_unit?: {
+    id: string;
+    title: string;
+    title_ar: string | null;
+    order_index?: number;
+  };
 }
 
 export interface PracticeQuestionWithAttempt extends PracticeQuestion {
@@ -128,6 +140,7 @@ export interface QuestionSetInsert {
   time_limit_minutes?: number | null;
   passing_score?: number;
   is_published?: boolean;
+  exam_language?: 'en' | 'ar';
 }
 
 export interface QuestionSetUpdate {
@@ -211,12 +224,15 @@ export interface QuestionResult {
 // Filter Types
 // ============================================================================
 
+export type ExamLanguage = 'en' | 'ar';
+
 export interface QuestionSetFilters {
   certification_type?: CertificationType;
   section_type?: ModuleSectionType;
   competency_id?: string;
   is_published?: boolean;
   is_final_test?: boolean;
+  exam_language?: ExamLanguage;
 }
 
 export interface QuestionFilters {

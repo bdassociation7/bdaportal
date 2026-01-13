@@ -14,6 +14,8 @@ import {
   Shield,
   ExternalLink,
   RefreshCw,
+  FileText,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,6 +83,10 @@ const translations = {
     downloading: 'Downloading...',
     downloadCertificate: 'Download Certificate',
     certificatePending: 'Certificate Pending',
+    generateCertificate: 'Get Your Certificate',
+    generating: 'Generating...',
+    certificateGenerationFailed: 'Failed to generate certificate',
+    certificateGenerated: 'Certificate generated successfully!',
     // Benefits
     yourBenefits: 'Your Membership Benefits',
     professionalBenefitsDesc: 'Enjoy all the exclusive benefits of your Professional membership',
@@ -93,7 +99,7 @@ const translations = {
     bdaBock: 'BDA BoCK®',
     bdaBockDesc: 'Access your exclusive books',
     certifications: 'Certifications',
-    certificationsDesc: 'View your CP™ and SCP™ credentials',
+    certificationsDesc: 'View your BDA-CP™ and BDA-SCP™ credentials',
     helpCenter: 'Help Center',
     helpCenterDesc: 'Get support and answers',
     // Toast
@@ -142,6 +148,10 @@ const translations = {
     downloading: 'جارٍ التحميل...',
     downloadCertificate: 'تحميل الشهادة',
     certificatePending: 'الشهادة قيد الإعداد',
+    generateCertificate: 'احصل على شهادتك',
+    generating: 'جارٍ الإنشاء...',
+    certificateGenerationFailed: 'فشل في إنشاء الشهادة',
+    certificateGenerated: 'تم إنشاء الشهادة بنجاح!',
     // Benefits
     yourBenefits: 'مزايا عضويتك',
     professionalBenefitsDesc: 'استمتع بجميع المزايا الحصرية لعضويتك المهنية',
@@ -154,7 +164,7 @@ const translations = {
     bdaBock: 'BDA BoCK®',
     bdaBockDesc: 'الوصول إلى كتبك الحصرية',
     certifications: 'الشهادات',
-    certificationsDesc: 'عرض شهادات CP™ و SCP™',
+    certificationsDesc: 'عرض شهادات BDA-CP™ و BDA-SCP™',
     helpCenter: 'مركز المساعدة',
     helpCenterDesc: 'احصل على الدعم والإجابات',
     // Toast
@@ -168,9 +178,10 @@ export default function MyMembership() {
   const { language } = useLanguage();
   const texts = translations[language];
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Fetch membership status
-  const { data: statusResult, isLoading } = useUserMembershipStatus(user?.id || '');
+  const { data: statusResult, isLoading, refetch } = useUserMembershipStatus(user?.id || '');
   const membershipStatus = statusResult?.data;
 
   // Fetch benefits for both types to compare
@@ -198,6 +209,26 @@ export default function MyMembership() {
       toast.error(error.message || texts.downloadFailed);
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const handleGenerateCertificate = async () => {
+    if (!membershipStatus?.membership?.id) return;
+
+    setIsGenerating(true);
+    try {
+      const result = await MembershipService.generateMembershipCertificate(
+        membershipStatus.membership.id
+      );
+      if (result.error) throw result.error;
+
+      toast.success(texts.certificateGenerated);
+      // Refetch membership status to get updated certificate_url
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || texts.certificateGenerationFailed);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -237,7 +268,7 @@ export default function MyMembership() {
   const getMembershipIcon = (type: MembershipType | 'none') => {
     switch (type) {
       case 'professional':
-        return <Crown className="h-8 w-8 text-yellow-500" />;
+        return <Crown className="h-8 w-8 text-royal-600" />;
       case 'basic':
         return <Star className="h-8 w-8 text-blue-500" />;
       default:
@@ -354,9 +385,9 @@ export default function MyMembership() {
                   {professionalBenefits.map((benefit) => (
                     <div
                       key={benefit.id}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-yellow-50"
+                      className="flex items-start gap-3 p-3 rounded-lg bg-royal-50"
                     >
-                      <div className="text-yellow-600">{getBenefitIcon(benefit.benefit_key)}</div>
+                      <div className="text-royal-600">{getBenefitIcon(benefit.benefit_key)}</div>
                       <div>
                         <p className="font-medium text-gray-900">{benefit.benefit_name}</p>
                         {benefit.benefit_description && (
@@ -433,12 +464,12 @@ export default function MyMembership() {
       )}
 
       {/* Membership Status Card */}
-      <Card className={isProfessional ? 'border-yellow-200 bg-yellow-50/30' : 'border-blue-200 bg-blue-50/30'}>
+      <Card className={isProfessional ? 'border-royal-200 bg-royal-50/30' : 'border-blue-200 bg-blue-50/30'}>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             {/* Left: Membership Info */}
             <div className="flex items-start gap-4">
-              <div className={`p-4 rounded-full ${isProfessional ? 'bg-yellow-100' : 'bg-blue-100'}`}>
+              <div className={`p-4 rounded-full ${isProfessional ? 'bg-royal-100' : 'bg-blue-100'}`}>
                 {getMembershipIcon(membership.membership_type)}
               </div>
               <div>
@@ -502,7 +533,7 @@ export default function MyMembership() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-yellow-600" />
+              <Shield className="h-5 w-5 text-royal-600" />
               {texts.membershipCertificate}
             </CardTitle>
             <CardDescription>
@@ -512,8 +543,12 @@ export default function MyMembership() {
           <CardContent>
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-yellow-100 rounded-lg">
-                  <Download className="h-6 w-6 text-yellow-600" />
+                <div className="p-3 bg-royal-100 rounded-lg">
+                  {membership.certificate_url ? (
+                    <Download className="h-6 w-6 text-royal-600" />
+                  ) : (
+                    <FileText className="h-6 w-6 text-royal-600" />
+                  )}
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">{texts.professionalCertificate}</p>
@@ -522,27 +557,45 @@ export default function MyMembership() {
                   </p>
                 </div>
               </div>
-              <Button
-                onClick={handleDownloadCertificate}
-                disabled={isDownloading || !membership.certificate_url}
-              >
-                {isDownloading ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    {texts.downloading}
-                  </>
-                ) : membership.certificate_url ? (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    {texts.downloadCertificate}
-                  </>
+              <div className="flex gap-2">
+                {membership.certificate_url ? (
+                  <Button
+                    onClick={handleDownloadCertificate}
+                    disabled={isDownloading}
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {texts.downloading}
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        {texts.downloadCertificate}
+                      </>
+                    )}
+                  </Button>
                 ) : (
-                  <>
-                    <Clock className="h-4 w-4 mr-2" />
-                    {texts.certificatePending}
-                  </>
+                  <Button
+                    onClick={handleGenerateCertificate}
+                    disabled={isGenerating}
+                    variant="default"
+                    className="bg-royal-600 hover:bg-royal-700"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {texts.generating}
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 mr-2" />
+                        {texts.generateCertificate}
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -567,10 +620,10 @@ export default function MyMembership() {
               <div
                 key={benefit.id}
                 className={`flex items-start gap-3 p-4 rounded-lg ${
-                  isProfessional ? 'bg-yellow-50' : 'bg-blue-50'
+                  isProfessional ? 'bg-royal-50' : 'bg-blue-50'
                 }`}
               >
-                <div className={isProfessional ? 'text-yellow-600' : 'text-blue-600'}>
+                <div className={isProfessional ? 'text-royal-600' : 'text-blue-600'}>
                   {getBenefitIcon(benefit.benefit_key)}
                 </div>
                 <div className="flex-1">
@@ -579,17 +632,17 @@ export default function MyMembership() {
                     <p className="text-sm text-gray-600 mt-1">{benefit.benefit_description}</p>
                   )}
                 </div>
-                <CheckCircle className={`h-5 w-5 ${isProfessional ? 'text-yellow-600' : 'text-blue-600'}`} />
+                <CheckCircle className={`h-5 w-5 ${isProfessional ? 'text-royal-600' : 'text-blue-600'}`} />
               </div>
             ))}
           </div>
 
           {/* Upgrade CTA for Basic Members */}
           {!isProfessional && membershipStatus.hasActiveMembership && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+            <div className="mt-6 p-4 bg-gradient-to-r from-royal-50 to-sky-50 rounded-lg border border-royal-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Crown className="h-8 w-8 text-yellow-600" />
+                  <Crown className="h-8 w-8 text-royal-600" />
                   <div>
                     <p className="font-semibold text-gray-900">{texts.upgradeToProfessional}</p>
                     <p className="text-sm text-gray-600">
@@ -599,7 +652,7 @@ export default function MyMembership() {
                 </div>
                 <Button
                   variant="default"
-                  className="bg-yellow-600 hover:bg-yellow-700"
+                  className="bg-royal-600 hover:bg-royal-700"
                   onClick={() => window.open('https://bda-global.org/membership/upgrade', '_blank')}
                 >
                   <Crown className="h-4 w-4 mr-2" />

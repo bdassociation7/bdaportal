@@ -144,17 +144,16 @@ export class CertificationsService {
       }
 
       // The certificate_url stores the file path within the certificates bucket
-      // Generate signed URL for private certificate (1 hour validity)
-      const { data, error } = await supabase.storage
+      // Get public URL since bucket is public
+      const { data } = supabase.storage
         .from('certificates')
-        .createSignedUrl(certification.certificate_url, 3600);
+        .getPublicUrl(certification.certificate_url);
 
-      if (error) {
-        console.error('Storage error:', error);
+      if (!data?.publicUrl) {
         throw new Error('Failed to generate download link. Please try again.');
       }
 
-      return { data: data.signedUrl, error: null };
+      return { data: data.publicUrl, error: null };
     } catch (error) {
       console.error('Error getting certificate URL:', error);
       return { data: null, error: error as Error };
@@ -222,30 +221,43 @@ export class CertificationsService {
   /**
    * Search certifications by holder name
    * Returns all certifications matching the name
+   * Uses RPC function for proper name search across joined tables
    */
   static async searchCertificationsByName(
     name: string
   ): Promise<CertificationResult<Array<UserCertification & { user_name: string; user_email: string }>>> {
     try {
-      const { data, error } = await supabase
-        .from('user_certifications')
-        .select(`
-          *,
-          users!user_certifications_user_id_fkey!inner(first_name, last_name, email)
-        `)
-        .or(`first_name.ilike.%${name}%,last_name.ilike.%${name}%`, { foreignTable: 'users' })
-        .order('issued_date', { ascending: false });
+      const { data, error } = await supabase.rpc('search_certifications_by_name', {
+        p_search_name: name.trim(),
+      });
 
       if (error) throw error;
 
-      // Transform the data
-      const results = data.map((item: any) => ({
-        ...item,
-        user_name: `${item.users.first_name || ''} ${item.users.last_name || ''}`.trim(),
-        user_email: item.users.email,
-      }));
+      // The RPC already returns properly formatted data
+      return { data: data as any, error: null };
+    } catch (error) {
+      console.error('Error searching certifications:', error);
+      return { data: null, error: error as Error };
+    }
+  }
 
-      return { data: results as any, error: null };
+  /**
+   * Unified search for certifications by credential ID OR name
+   * Returns all certifications matching either the credential ID or holder name
+   * Smart search that automatically detects and prioritizes credential ID matches
+   */
+  static async searchCertificationsUnified(
+    query: string
+  ): Promise<CertificationResult<Array<UserCertification & { user_name: string; user_email: string }>>> {
+    try {
+      const { data, error } = await supabase.rpc('search_certifications_unified', {
+        p_search_query: query.trim(),
+      });
+
+      if (error) throw error;
+
+      // The RPC already returns properly formatted data
+      return { data: data as any, error: null };
     } catch (error) {
       console.error('Error searching certifications:', error);
       return { data: null, error: error as Error };

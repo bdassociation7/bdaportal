@@ -78,6 +78,10 @@ export class FlashcardService {
         query = query.eq('is_published', filters.is_published);
       }
 
+      if (filters?.exam_language) {
+        query = query.eq('exam_language', filters.exam_language);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
@@ -96,19 +100,41 @@ export class FlashcardService {
 
   /**
    * Get decks with user progress
+   * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
    */
   static async getDecksWithProgress(
     userId: string,
-    certificationType: string
+    certificationType: string,
+    examLanguage?: 'en' | 'ar'
   ): Promise<ServiceResponse<FlashcardDeckWithProgress[]>> {
     try {
-      // Get all published decks
-      const { data: decks, error: decksError } = await supabase
+      // Get all published decks WITH competency and sub-lesson info for hierarchy
+      let query = supabase
         .from('curriculum_flashcard_decks')
-        .select('*')
+        .select(`
+          *,
+          competency:curriculum_modules!competency_id(
+            id,
+            competency_name,
+            competency_name_ar,
+            section_type
+          ),
+          sub_unit:curriculum_lessons!sub_unit_id(
+            id,
+            title,
+            title_ar,
+            order_index
+          )
+        `)
         .eq('certification_type', certificationType)
-        .eq('is_published', true)
-        .order('order_index', { ascending: true });
+        .eq('is_published', true);
+
+      // Filter by exam_language if provided
+      if (examLanguage) {
+        query = query.eq('exam_language', examLanguage);
+      }
+
+      const { data: decks, error: decksError } = await query.order('order_index', { ascending: true });
 
       if (decksError) throw decksError;
 
@@ -178,6 +204,14 @@ export class FlashcardService {
 
       if (filters?.is_published !== undefined) {
         query = query.eq('is_published', filters.is_published);
+      }
+
+      if (filters?.exam_language) {
+        query = query.eq('exam_language', filters.exam_language);
+      }
+
+      if (filters?.section_type) {
+        query = query.eq('section_type', filters.section_type);
       }
 
       const { data, error } = await query;
@@ -839,13 +873,15 @@ export class FlashcardService {
 
   /**
    * Get user's flashcard statistics
+   * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
    */
   static async getUserStats(
     userId: string,
-    certificationType?: string
+    certificationType?: string,
+    examLanguage?: 'en' | 'ar'
   ): Promise<ServiceResponse<FlashcardStats>> {
     try {
-      // Get all decks
+      // Get all decks, filtered by language if specified
       let decksQuery = supabase
         .from('curriculum_flashcard_decks')
         .select('id, card_count')
@@ -855,11 +891,34 @@ export class FlashcardService {
         decksQuery = decksQuery.eq('certification_type', certificationType);
       }
 
+      if (examLanguage) {
+        decksQuery = decksQuery.eq('exam_language', examLanguage);
+      }
+
       const { data: decks, error: decksError } = await decksQuery;
       if (decksError) throw decksError;
 
       const deckIds = decks?.map((d) => d.id) || [];
       const totalCards = decks?.reduce((sum, d) => sum + d.card_count, 0) || 0;
+
+      // If no decks found, return empty stats
+      if (deckIds.length === 0) {
+        return {
+          data: {
+            totalDecks: 0,
+            totalCards: 0,
+            cardsNew: 0,
+            cardsLearning: 0,
+            cardsReviewing: 0,
+            cardsMastered: 0,
+            cardsDueToday: 0,
+            studyStreak: 0,
+            longestStreak: 0,
+            totalStudyTimeMinutes: 0,
+            favoritedCards: 0,
+          },
+        };
+      }
 
       // Get deck progress
       const { data: deckProgress, error: deckProgressError } = await supabase

@@ -1,19 +1,18 @@
 /**
- * Certification Exams Page
+ * Certification Exams Page - Exam Runner
  *
- * Complete workflow:
- * 1. Check if user has valid voucher for the exam type
- * 2. If voucher exists, check if exam is scheduled
- * 3. If scheduled, check if it's exam time (can launch)
- * 4. Allow user to take exam only when all conditions are met
+ * Two modes:
+ * 1. Voucher-selected mode: User arrives from ExamApplications with voucher_id
+ *    - Loads the exam flow for that voucher
+ * 2. No voucher context: Shows prompt to select a voucher first
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthContext } from '@/app/providers/AuthProvider';
 import { CertificationExamService, type CertificationExam } from '@/entities/certification-exam';
-import { VoucherService } from '@/entities/quiz/voucher.service';
+import { useMergedVoucherById } from '@/entities/quiz';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,15 +26,17 @@ import {
   CheckCircle,
   AlertCircle,
   Calendar,
+  CalendarX,
+  CalendarCheck,
   Ticket,
   ArrowRight,
+  ArrowLeft,
   Lock,
   Play,
-  ShoppingCart,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-type ExamStatus = 'no_voucher' | 'has_voucher' | 'scheduled' | 'ready' | 'certified';
+type ExamStatus = 'has_voucher' | 'scheduled' | 'ready' | 'certified';
 
 // DEV MODE: Set to true to bypass exam time window check for testing
 // WARNING: Set to false for production!
@@ -43,44 +44,58 @@ const DEV_MODE_SKIP_TIME_CHECK = true;
 
 interface ExamWithStatus extends CertificationExam {
   userStatus: ExamStatus;
-  voucher?: any;
   booking?: any;
 }
 
 export default function TakeCertificationExam() {
   const { user } = useAuthContext();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { language } = useLanguage();
-  const [selectedType, setSelectedType] = useState<'CP' | 'SCP' | undefined>();
+
+  // Get voucher_id from URL params
+  const voucherIdFromUrl = searchParams.get('voucher_id');
+  const hasVoucherContext = !!voucherIdFromUrl;
+
+  // Fetch the selected voucher using merged hook
+  const {
+    data: selectedVoucher,
+    isLoading: voucherLoading,
+    isNotFound: voucherNotFound,
+  } = useMergedVoucherById(voucherIdFromUrl);
 
   const t = {
     en: {
       // Header
       title: 'Certification Exams',
-      subtitle: 'Take official certification exams to earn your CP™ or SCP™ credential',
-      // Info Banner
-      howToTake: 'How to Take an Exam',
-      step1Title: 'Purchase a voucher',
-      step1Desc: 'Buy an exam voucher from our store',
-      step2Title: 'Schedule your exam',
-      step2Desc: 'Pick a date and time that works for you',
-      step3Title: 'Take the exam',
-      step3Desc: 'Launch when your scheduled time arrives',
-      // Filter Buttons
-      allCertifications: 'All Certifications',
-      cpCertified: 'CP™ - Certified Professional',
-      scpCertified: 'SCP™ - Senior Certified Professional',
+      subtitle: 'Take official certification exams to earn your BDA-CP™ or BDA-SCP™ credential',
+      // No Voucher Mode
+      selectVoucherTitle: 'Select a Voucher to Continue',
+      selectVoucherDesc: 'To take an official certification exam, you need to select an active voucher first. Your vouchers can be obtained from purchasing certification books or through ECP partners.',
+      goToVouchers: 'Go to My Vouchers',
+      // Invalid Voucher
+      invalidVoucherTitle: 'Invalid Voucher',
+      invalidVoucherDesc: 'The voucher ID provided is invalid or the voucher no longer exists.',
+      voucherUsedTitle: 'Voucher Already Used',
+      voucherUsedDesc: 'This voucher has already been used for an exam attempt.',
+      voucherExpiredTitle: 'Voucher Expired',
+      voucherExpiredDesc: 'This voucher has expired and can no longer be used.',
+      selectDifferent: 'Select a Different Voucher',
+      // Voucher Info
+      selectedVoucher: 'Selected Voucher',
+      voucherCode: 'Voucher Code',
+      certType: 'Certification',
+      source: 'Source',
+      expires: 'Expires',
       // Section Titles
-      availableExams: 'Available Exams',
-      yourVouchers: 'Your Vouchers',
+      availableExams: 'Available Exams for Your Voucher',
       attemptHistory: 'Your Attempt History',
       // Status Badges
       certification: 'Certification',
       certified: 'Certified',
       readyToStart: 'Ready to Start',
       scheduled: 'Scheduled',
-      hasVoucher: 'Has Voucher',
-      voucherRequired: 'Voucher Required',
+      hasVoucher: 'Ready to Schedule',
       // Exam Info
       questions: 'Questions',
       minutes: 'Minutes',
@@ -95,17 +110,14 @@ export default function TakeCertificationExam() {
       canLaunchNow: 'You can launch the exam now.',
       // Buttons
       alreadyCertified: 'Already Certified',
-      purchaseVoucher: 'Purchase Voucher',
       scheduleExam: 'Schedule Exam',
       waitingForTime: 'Waiting for Exam Time',
       launchBefore: 'You can launch 15 minutes before your scheduled time',
       launchExamNow: 'Launch Exam Now',
+      backToVouchers: 'Back to My Vouchers',
       // Empty State
       noExamsAvailable: 'No Exams Available',
-      noExamsDesc: 'No certification exams are available at the moment. Please check back later or contact support for more information.',
-      // Vouchers
-      available: 'Available',
-      expires: 'Expires',
+      noExamsDesc: 'No certification exams are available for your voucher type at the moment.',
       // History Table
       exam: 'Exam',
       type: 'Type',
@@ -117,34 +129,47 @@ export default function TakeCertificationExam() {
       inProgress: 'In Progress',
       completed: 'Completed',
       unknownExam: 'Unknown Exam',
+      // Exam Registration Windows
+      registrationOpen: 'Exam Registration Open',
+      registrationOpenDesc: 'Exam registration is currently open. You can schedule your exam now.',
+      registrationClosed: 'Exam Registration Closed',
+      registrationClosedDesc: 'Exam registration is currently closed.',
+      nextWindowOpens: 'Next exam window opens:',
+      noUpcomingWindows: 'Please check back later for exam scheduling availability.',
+      currentWindow: 'Current Window',
+      windowEnds: 'Window ends:',
     },
     ar: {
       // Header
       title: 'امتحانات الشهادات',
-      subtitle: 'أدِّ امتحانات الشهادات الرسمية للحصول على اعتماد CP™ أو SCP™',
-      // Info Banner
-      howToTake: 'كيفية أداء الامتحان',
-      step1Title: 'شراء قسيمة',
-      step1Desc: 'اشترِ قسيمة امتحان من متجرنا',
-      step2Title: 'جدولة امتحانك',
-      step2Desc: 'اختر التاريخ والوقت المناسب لك',
-      step3Title: 'أدِّ الامتحان',
-      step3Desc: 'ابدأ عند حلول الموعد المحدد',
-      // Filter Buttons
-      allCertifications: 'جميع الشهادات',
-      cpCertified: 'CP™ - محترف معتمد',
-      scpCertified: 'SCP™ - محترف معتمد أول',
+      subtitle: 'أدِّ امتحانات الشهادات الرسمية للحصول على اعتماد BDA-CP™ أو BDA-SCP™',
+      // No Voucher Mode
+      selectVoucherTitle: 'اختر قسيمة للمتابعة',
+      selectVoucherDesc: 'لأداء امتحان شهادة رسمي، تحتاج إلى اختيار قسيمة صالحة أولاً. يمكنك الحصول على قسائمك من شراء كتب الشهادات أو من خلال شركاء ECP.',
+      goToVouchers: 'انتقل إلى قسائمي',
+      // Invalid Voucher
+      invalidVoucherTitle: 'قسيمة غير صالحة',
+      invalidVoucherDesc: 'معرف القسيمة المقدم غير صالح أو لم تعد القسيمة موجودة.',
+      voucherUsedTitle: 'القسيمة مستخدمة بالفعل',
+      voucherUsedDesc: 'تم استخدام هذه القسيمة بالفعل لمحاولة امتحان.',
+      voucherExpiredTitle: 'انتهت صلاحية القسيمة',
+      voucherExpiredDesc: 'انتهت صلاحية هذه القسيمة ولا يمكن استخدامها بعد الآن.',
+      selectDifferent: 'اختر قسيمة مختلفة',
+      // Voucher Info
+      selectedVoucher: 'القسيمة المختارة',
+      voucherCode: 'رمز القسيمة',
+      certType: 'الشهادة',
+      source: 'المصدر',
+      expires: 'تنتهي في',
       // Section Titles
-      availableExams: 'الامتحانات المتاحة',
-      yourVouchers: 'قسائمك',
+      availableExams: 'الامتحانات المتاحة لقسيمتك',
       attemptHistory: 'سجل محاولاتك',
       // Status Badges
       certification: 'شهادة',
       certified: 'معتمد',
       readyToStart: 'جاهز للبدء',
       scheduled: 'مجدول',
-      hasVoucher: 'لديك قسيمة',
-      voucherRequired: 'قسيمة مطلوبة',
+      hasVoucher: 'جاهز للجدولة',
       // Exam Info
       questions: 'سؤال',
       minutes: 'دقيقة',
@@ -159,17 +184,14 @@ export default function TakeCertificationExam() {
       canLaunchNow: 'يمكنك بدء الامتحان الآن.',
       // Buttons
       alreadyCertified: 'معتمد بالفعل',
-      purchaseVoucher: 'شراء قسيمة',
       scheduleExam: 'جدولة الامتحان',
       waitingForTime: 'في انتظار موعد الامتحان',
       launchBefore: 'يمكنك البدء قبل 15 دقيقة من موعدك المحدد',
       launchExamNow: 'ابدأ الامتحان الآن',
+      backToVouchers: 'العودة إلى قسائمي',
       // Empty State
       noExamsAvailable: 'لا توجد امتحانات متاحة',
-      noExamsDesc: 'لا توجد امتحانات شهادات متاحة حالياً. يرجى المراجعة لاحقاً أو التواصل مع الدعم لمزيد من المعلومات.',
-      // Vouchers
-      available: 'متاحة',
-      expires: 'تنتهي في',
+      noExamsDesc: 'لا توجد امتحانات شهادات متاحة لنوع قسيمتك حالياً.',
       // History Table
       exam: 'الامتحان',
       type: 'النوع',
@@ -181,45 +203,63 @@ export default function TakeCertificationExam() {
       inProgress: 'قيد التقدم',
       completed: 'مكتمل',
       unknownExam: 'امتحان غير معروف',
-    }
+      // Exam Registration Windows
+      registrationOpen: 'التسجيل للامتحانات مفتوح',
+      registrationOpenDesc: 'التسجيل للامتحانات مفتوح حالياً. يمكنك جدولة امتحانك الآن.',
+      registrationClosed: 'التسجيل للامتحانات مغلق',
+      registrationClosedDesc: 'التسجيل للامتحانات مغلق حالياً.',
+      nextWindowOpens: 'فترة التسجيل القادمة تبدأ في:',
+      noUpcomingWindows: 'يرجى التحقق لاحقاً من توفر جدولة الامتحانات.',
+      currentWindow: 'الفترة الحالية',
+      windowEnds: 'تنتهي الفترة في:',
+    },
   };
 
   const texts = t[language];
 
-  // Fetch available exams
-  const { data: exams, isLoading: examsLoading } = useQuery({
-    queryKey: ['available-certification-exams', selectedType],
+  // Fetch exam window status
+  interface ExamWindowStatus {
+    is_open: boolean;
+    current_window_id: string | null;
+    current_window_name: string | null;
+    current_window_end: string | null;
+    next_window_date: string | null;
+    next_window_name: string | null;
+    message: string;
+  }
+
+  const { data: examWindowStatus } = useQuery<ExamWindowStatus>({
+    queryKey: ['exam-window-status', selectedVoucher?.certification_type],
     queryFn: async () => {
-      const result = await CertificationExamService.getAvailableCertificationExams(selectedType);
+      const { data, error } = await supabase.rpc('check_exam_window_open', {
+        p_certification_type: selectedVoucher?.certification_type || null,
+      });
+      if (error) throw error;
+      // RPC returns a TABLE (array), extract first row
+      const result = Array.isArray(data) ? data[0] : data;
+      return result as ExamWindowStatus;
+    },
+    enabled: !!selectedVoucher && selectedVoucher.displayInfo.canUse,
+  });
+
+  // Fetch exams matching the voucher's certification type
+  const { data: exams, isLoading: examsLoading } = useQuery({
+    queryKey: ['certification-exams-for-voucher', selectedVoucher?.certification_type],
+    queryFn: async () => {
+      if (!selectedVoucher) return [];
+      const result = await CertificationExamService.getAvailableCertificationExams(
+        selectedVoucher.certification_type
+      );
       if (result.error) throw result.error;
       return result.data || [];
     },
-  });
-
-  // Fetch user's vouchers (available or assigned = usable vouchers)
-  const { data: vouchers, isLoading: vouchersLoading } = useQuery({
-    queryKey: ['user-vouchers'],
-    queryFn: async () => {
-      // Fetch both available and assigned vouchers
-      const { data, error } = await supabase
-        .from('exam_vouchers')
-        .select('*')
-        .eq('user_id', user?.id)
-        .in('status', ['available', 'assigned'])
-        .gte('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user?.id,
+    enabled: !!selectedVoucher && selectedVoucher.displayInfo.canUse,
   });
 
   // Fetch user's exam bookings
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
     queryKey: ['user-exam-bookings'],
     queryFn: async () => {
-      // Fetch from exam_bookings table (scheduled or rescheduled = active bookings)
       const { data, error } = await supabase
         .from('exam_bookings')
         .select('*')
@@ -229,7 +269,7 @@ export default function TakeCertificationExam() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && hasVoucherContext,
   });
 
   // Fetch user attempt history
@@ -240,80 +280,60 @@ export default function TakeCertificationExam() {
       if (result.error) throw result.error;
       return result.data || [];
     },
+    enabled: hasVoucherContext,
   });
 
-  // Combine exam data with user status
-  const getExamWithStatus = (exam: any): ExamWithStatus => {
+  // Combine exam data with user status (using voucher context)
+  const getExamWithStatus = (exam: CertificationExam): ExamWithStatus => {
     // Check if already certified
     if (exam.is_certified) {
       return { ...exam, userStatus: 'certified' };
     }
 
-    // PRIORITY 1: Check if user has a booking for this exam FIRST
+    // Check if user has a booking for this exam
     const booking = bookings?.find(
       (b: any) => b.quiz_id === exam.id && ['scheduled', 'rescheduled'].includes(b.status)
     );
 
-    // If booking exists, find associated voucher (can be available or assigned)
     if (booking) {
-      const voucher = vouchers?.find(
-        (v: any) =>
-          v.certification_type === exam.certification_type &&
-          (v.status === 'available' || v.status === 'assigned') &&
-          (!v.quiz_id || v.quiz_id === exam.id)
-      );
-
       // DEV MODE: Skip time check and always allow exam launch
       if (DEV_MODE_SKIP_TIME_CHECK) {
-        return { ...exam, userStatus: 'ready', voucher, booking };
+        return { ...exam, userStatus: 'ready', booking };
       }
 
-    // Check if exam is ready to start (within time window)
-    const now = new Date();
-    const examStart = new Date(booking.scheduled_start_time);
-    const examEnd = new Date(booking.scheduled_end_time);
-    const windowStart = new Date(examStart.getTime() - 15 * 60 * 1000); // 15 min before
+      // Check if exam is ready to start (within time window)
+      const now = new Date();
+      const examStart = new Date(booking.scheduled_start_time);
+      const examEnd = new Date(booking.scheduled_end_time);
+      const windowStart = new Date(examStart.getTime() - 15 * 60 * 1000); // 15 min before
 
-    if (now >= windowStart && now <= examEnd) {
-      return { ...exam, userStatus: 'ready', voucher, booking };
+      if (now >= windowStart && now <= examEnd) {
+        return { ...exam, userStatus: 'ready', booking };
+      }
+
+      return { ...exam, userStatus: 'scheduled', booking };
     }
 
-      return { ...exam, userStatus: 'scheduled', voucher, booking };
-    }
-
-    // PRIORITY 2: No booking - check if user has an available voucher
-    const voucher = vouchers?.find(
-      (v: any) =>
-        v.certification_type === exam.certification_type &&
-        v.status === 'available' &&
-        (!v.quiz_id || v.quiz_id === exam.id)
-    );
-
-    if (voucher) {
-      return { ...exam, userStatus: 'has_voucher', voucher };
-    }
-
-    // No voucher and no booking - user needs to purchase
-    return { ...exam, userStatus: 'no_voucher' };
+    // Has voucher context, ready to schedule
+    return { ...exam, userStatus: 'has_voucher' };
   };
 
   const examsWithStatus: ExamWithStatus[] =
-    exams?.map((exam: any) => getExamWithStatus(exam)) || [];
+    exams?.map((exam: CertificationExam) => getExamWithStatus(exam)) || [];
 
-  const isLoading = examsLoading || vouchersLoading || bookingsLoading;
+  const isLoading = voucherLoading || examsLoading || bookingsLoading;
 
   // Handlers
-  const handleBuyVoucher = (certType: string) => {
-    // Redirect to store/purchase page
-    window.open('https://bda-association.com/shop', '_blank');
-  };
-
   const handleScheduleExam = (exam: ExamWithStatus) => {
-    navigate(`/schedule-exam?quiz_id=${exam.id}&voucher_id=${exam.voucher?.id}`);
+    navigate(`/schedule-exam?quiz_id=${exam.id}&voucher_id=${voucherIdFromUrl}`);
   };
 
   const handleLaunchExam = (exam: ExamWithStatus) => {
     navigate(`/exam-launch?booking_id=${exam.booking?.id}&quiz_id=${exam.id}`);
+  };
+
+  const handleBackToVouchers = () => {
+    navigate('/exam-applications');
   };
 
   const formatDateTime = (dateString: string) => {
@@ -329,6 +349,48 @@ export default function TakeCertificationExam() {
     return texts.hard;
   };
 
+  // =========================================================================
+  // MODE B: No voucher context - Show prompt to select voucher
+  // =========================================================================
+  if (!hasVoucherContext) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-sky-500 via-royal-600 to-navy-800 rounded-lg p-6 text-white mb-8">
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Award className="h-8 w-8" />
+            {texts.title}
+          </h1>
+          <p className="mt-2 opacity-90">{texts.subtitle}</p>
+        </div>
+
+        {/* No Voucher Selected Card */}
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-12 text-center">
+            <Ticket className="h-16 w-16 text-orange-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-orange-900 mb-2">
+              {texts.selectVoucherTitle}
+            </h2>
+            <p className="text-orange-800 mb-6 max-w-xl mx-auto">
+              {texts.selectVoucherDesc}
+            </p>
+            <Button
+              size="lg"
+              onClick={handleBackToVouchers}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <Ticket className="mr-2 h-5 w-5" />
+              {texts.goToVouchers}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // LOADING STATE
+  // =========================================================================
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -337,6 +399,60 @@ export default function TakeCertificationExam() {
     );
   }
 
+  // =========================================================================
+  // ERROR STATES: Invalid/Used/Expired Voucher
+  // =========================================================================
+  if (voucherNotFound) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{texts.invalidVoucherTitle}</AlertTitle>
+          <AlertDescription>{texts.invalidVoucherDesc}</AlertDescription>
+        </Alert>
+        <Button onClick={handleBackToVouchers}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {texts.selectDifferent}
+        </Button>
+      </div>
+    );
+  }
+
+  if (selectedVoucher && selectedVoucher.displayInfo.status === 'used') {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{texts.voucherUsedTitle}</AlertTitle>
+          <AlertDescription>{texts.voucherUsedDesc}</AlertDescription>
+        </Alert>
+        <Button onClick={handleBackToVouchers}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {texts.selectDifferent}
+        </Button>
+      </div>
+    );
+  }
+
+  if (selectedVoucher && selectedVoucher.displayInfo.status === 'expired') {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{texts.voucherExpiredTitle}</AlertTitle>
+          <AlertDescription>{texts.voucherExpiredDesc}</AlertDescription>
+        </Alert>
+        <Button onClick={handleBackToVouchers}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {texts.selectDifferent}
+        </Button>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // MODE A: Voucher-selected mode - Show matching exams
+  // =========================================================================
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
@@ -345,54 +461,91 @@ export default function TakeCertificationExam() {
           <Award className="h-8 w-8" />
           {texts.title}
         </h1>
-        <p className="mt-2 opacity-90">
-          {texts.subtitle}
-        </p>
+        <p className="mt-2 opacity-90">{texts.subtitle}</p>
       </div>
 
-      {/* Info Banner */}
-      <Alert className="mb-6 bg-blue-50 border-blue-200">
-        <AlertCircle className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-900">{texts.howToTake}</AlertTitle>
-        <AlertDescription className="text-blue-800">
-          <ol className="list-decimal list-inside mt-2 space-y-1">
-            <li>
-              <strong>{texts.step1Title}</strong> - {texts.step1Desc}
-            </li>
-            <li>
-              <strong>{texts.step2Title}</strong> - {texts.step2Desc}
-            </li>
-            <li>
-              <strong>{texts.step3Title}</strong> - {texts.step3Desc}
-            </li>
-          </ol>
-        </AlertDescription>
-      </Alert>
-
-      {/* Certification Type Selector */}
-      <div className="flex gap-4 mb-8 flex-wrap">
-        <Button
-          onClick={() => setSelectedType(undefined)}
-          variant={!selectedType ? 'default' : 'outline'}
-          className={!selectedType ? 'bg-blue-600' : ''}
-        >
-          {texts.allCertifications}
-        </Button>
-        <Button
-          onClick={() => setSelectedType('CP')}
-          variant={selectedType === 'CP' ? 'default' : 'outline'}
-          className={selectedType === 'CP' ? 'bg-green-600 hover:bg-green-700' : ''}
-        >
-          {texts.cpCertified}
-        </Button>
-        <Button
-          onClick={() => setSelectedType('SCP')}
-          variant={selectedType === 'SCP' ? 'default' : 'outline'}
-          className={selectedType === 'SCP' ? 'bg-purple-600 hover:bg-purple-700' : ''}
-        >
-          {texts.scpCertified}
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button variant="outline" onClick={handleBackToVouchers}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {texts.backToVouchers}
         </Button>
       </div>
+
+      {/* Selected Voucher Info */}
+      {selectedVoucher && (
+        <Card className="mb-6 border-green-200 bg-green-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-green-900 flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              {texts.selectedVoucher}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-gray-600">{texts.voucherCode}</p>
+                <p className="font-mono font-semibold">{selectedVoucher.code}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">{texts.certType}</p>
+                <Badge
+                  className={
+                    selectedVoucher.certification_type === 'CP'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-purple-100 text-purple-800'
+                  }
+                >
+                  BDA-{selectedVoucher.certification_type}™
+                </Badge>
+              </div>
+              <div>
+                <p className="text-gray-600">{texts.source}</p>
+                <p className="font-medium">{selectedVoucher.displayInfo.sourceLabel}</p>
+              </div>
+              {selectedVoucher.expires_at && (
+                <div>
+                  <p className="text-gray-600">{texts.expires}</p>
+                  <p className="font-medium">
+                    {new Date(selectedVoucher.expires_at).toLocaleDateString(
+                      language === 'ar' ? 'ar-SA' : 'en-US'
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Exam Window Status - Only show for users who need to schedule (not for ready/scheduled exams) */}
+      {examWindowStatus &&
+       !examWindowStatus.is_open &&
+       examsWithStatus?.every(e => e.userStatus !== 'ready' && e.userStatus !== 'scheduled') && (
+        <div className="mb-8">
+          <Alert className="border-red-200 bg-red-50">
+            <CalendarX className="h-5 w-5 text-red-600" />
+            <AlertTitle className="text-red-800">{texts.registrationClosed}</AlertTitle>
+            <AlertDescription className="text-red-700">
+              <p>{texts.registrationClosedDesc}</p>
+              {examWindowStatus.next_window_date ? (
+                <p className="mt-2 font-medium">
+                  {texts.nextWindowOpens}{' '}
+                  {new Date(examWindowStatus.next_window_date).toLocaleDateString(
+                    language === 'ar' ? 'ar-SA' : 'en-US',
+                    { year: 'numeric', month: 'long', day: 'numeric' }
+                  )}
+                  {examWindowStatus.next_window_name && (
+                    <span className="font-normal"> ({examWindowStatus.next_window_name})</span>
+                  )}
+                </p>
+              ) : (
+                <p className="mt-2">{texts.noUpcomingWindows}</p>
+              )}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
 
       {/* Available Exams */}
       <div className="mb-12">
@@ -420,7 +573,7 @@ export default function TakeCertificationExam() {
                           : 'bg-purple-100 text-purple-800 border-purple-300'
                       }
                     >
-                      {exam.certification_type}™ {texts.certification}
+                      BDA-{exam.certification_type}™ {texts.certification}
                     </Badge>
 
                     {/* User Status Badge */}
@@ -448,12 +601,6 @@ export default function TakeCertificationExam() {
                         {texts.hasVoucher}
                       </Badge>
                     )}
-                    {exam.userStatus === 'no_voucher' && (
-                      <Badge variant="outline" className="text-gray-500">
-                        <Lock className="w-3 h-3 mr-1" />
-                        {texts.voucherRequired}
-                      </Badge>
-                    )}
                   </div>
 
                   <CardTitle className="text-xl">
@@ -461,7 +608,9 @@ export default function TakeCertificationExam() {
                   </CardTitle>
                   {exam.description && (
                     <CardDescription>
-                      {language === 'ar' && exam.description_ar ? exam.description_ar : exam.description}
+                      {language === 'ar' && exam.description_ar
+                        ? exam.description_ar
+                        : exam.description}
                     </CardDescription>
                   )}
                 </CardHeader>
@@ -471,15 +620,21 @@ export default function TakeCertificationExam() {
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div className="flex items-center gap-2 text-gray-700">
                       <FileText size={16} className="text-gray-400" />
-                      <span>{exam.question_count || 0} {texts.questions}</span>
+                      <span>
+                        {exam.question_count || 0} {texts.questions}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
                       <Clock size={16} className="text-gray-400" />
-                      <span>{exam.time_limit_minutes} {texts.minutes}</span>
+                      <span>
+                        {exam.time_limit_minutes} {texts.minutes}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
                       <TrendingUp size={16} className="text-gray-400" />
-                      <span>{texts.pass}: {exam.passing_score_percentage}%</span>
+                      <span>
+                        {texts.pass}: {exam.passing_score_percentage}%
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
                       <Award size={16} className="text-gray-400" />
@@ -517,30 +672,26 @@ export default function TakeCertificationExam() {
                       </Button>
                     )}
 
-                    {exam.userStatus === 'no_voucher' && (
-                      <Button
-                        onClick={() => handleBuyVoucher(exam.certification_type)}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        {texts.purchaseVoucher}
-                      </Button>
-                    )}
-
                     {exam.userStatus === 'has_voucher' && (
-                      <Button
-                        onClick={() => handleScheduleExam(exam)}
-                        className={`w-full ${
-                          exam.certification_type === 'CP'
-                            ? 'bg-green-600 hover:bg-green-700'
-                            : 'bg-purple-600 hover:bg-purple-700'
-                        }`}
-                      >
-                        <Calendar className="w-4 h-4 mr-2" />
-                        {texts.scheduleExam}
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
+                      examWindowStatus?.is_open ? (
+                        <Button
+                          onClick={() => handleScheduleExam(exam)}
+                          className={`w-full ${
+                            exam.certification_type === 'CP'
+                              ? 'bg-green-600 hover:bg-green-700'
+                              : 'bg-purple-600 hover:bg-purple-700'
+                          }`}
+                        >
+                          <Calendar className="w-4 h-4 mr-2" />
+                          {texts.scheduleExam}
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      ) : (
+                        <Button disabled variant="secondary" className="w-full">
+                          <CalendarX className="w-4 h-4 mr-2" />
+                          {texts.registrationClosed}
+                        </Button>
+                      )
                     )}
 
                     {exam.userStatus === 'scheduled' && (
@@ -549,9 +700,7 @@ export default function TakeCertificationExam() {
                           <Clock className="w-4 h-4 mr-2" />
                           {texts.waitingForTime}
                         </Button>
-                        <p className="text-xs text-center text-gray-500">
-                          {texts.launchBefore}
-                        </p>
+                        <p className="text-xs text-center text-gray-500">{texts.launchBefore}</p>
                       </div>
                     )}
 
@@ -574,54 +723,10 @@ export default function TakeCertificationExam() {
           <Alert className="bg-yellow-50 border-yellow-200">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
             <AlertTitle className="text-yellow-900">{texts.noExamsAvailable}</AlertTitle>
-            <AlertDescription className="text-yellow-800">
-              {texts.noExamsDesc}
-            </AlertDescription>
+            <AlertDescription className="text-yellow-800">{texts.noExamsDesc}</AlertDescription>
           </Alert>
         )}
       </div>
-
-      {/* User's Vouchers Section */}
-      {vouchers && vouchers.length > 0 && (
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">{texts.yourVouchers}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {vouchers.map((voucher: any) => (
-              <Card key={voucher.id} className="border-l-4 border-l-blue-500">
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge
-                      className={
-                        voucher.certification_type === 'CP'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-purple-100 text-purple-800'
-                      }
-                    >
-                      {voucher.certification_type}™
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className={
-                        voucher.status === 'available'
-                          ? 'text-green-600 border-green-300'
-                          : 'text-gray-500'
-                      }
-                    >
-                      {voucher.status === 'available' ? texts.available : voucher.status}
-                    </Badge>
-                  </div>
-                  <p className="font-mono text-sm text-gray-600 mb-2">{voucher.code}</p>
-                  {voucher.expires_at && (
-                    <p className="text-xs text-gray-500">
-                      {texts.expires}: {new Date(voucher.expires_at).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Attempt History */}
       {history && history.length > 0 && (
@@ -668,11 +773,13 @@ export default function TakeCertificationExam() {
                               : 'bg-purple-100 text-purple-800'
                           }
                         >
-                          {attempt.quiz?.certification_type}™
+                          BDA-{attempt.quiz?.certification_type}™
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {new Date(attempt.started_at).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}
+                        {new Date(attempt.started_at).toLocaleDateString(
+                          language === 'ar' ? 'ar-SA' : 'en-US'
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {attempt.score !== null ? (

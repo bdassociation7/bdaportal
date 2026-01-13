@@ -23,6 +23,7 @@ export type UserCurriculumProgressUpdate = Database['public']['Tables']['user_cu
 export type SectionType = 'knowledge_based' | 'behavioral';
 export type ModuleStatus = 'locked' | 'in_progress' | 'quiz_pending' | 'completed';
 export type CertificationType = 'CP' | 'SCP';
+export type ExamLanguage = 'en' | 'ar';
 
 // =============================================================================
 // RICH CONTENT TYPES (TipTap JSON format)
@@ -137,6 +138,7 @@ export interface CreateModuleDTO {
   quiz_required?: boolean;
   quiz_passing_score?: number;
   certification_type: CertificationType;
+  exam_language: ExamLanguage;
   is_published?: boolean;
 }
 
@@ -169,6 +171,7 @@ export interface GrantAccessDTO {
 export interface ModuleFilters {
   section_type?: SectionType;
   certification_type?: CertificationType;
+  exam_language?: ExamLanguage;
   is_published?: boolean;
   search?: string;
 }

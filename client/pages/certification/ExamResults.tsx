@@ -307,7 +307,7 @@ export default function ExamResults() {
                   : 'bg-purple-100 text-purple-800'
               }
             >
-              {attempt.quiz?.certification_type}™
+              BDA-{attempt.quiz?.certification_type}™
             </Badge>
           </div>
 
@@ -383,7 +383,7 @@ export default function ExamResults() {
               <div className="flex-1">
                 <h3 className="font-semibold text-green-900 mb-1">What's Next?</h3>
                 <p className="text-sm text-green-800 mb-3">
-                  Congratulations on earning your {attempt.quiz?.certification_type}™ certification!
+                  Congratulations on earning your BDA-{attempt.quiz?.certification_type}™ certification!
                   Your certification has been issued and you can view it in your dashboard.
                 </p>
               </div>

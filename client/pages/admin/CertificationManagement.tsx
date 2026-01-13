@@ -359,7 +359,7 @@ export default function CertificationManagement() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">CP™</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">BDA-CP™</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">{stats.cp_certifications}</div>
@@ -367,7 +367,7 @@ export default function CertificationManagement() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">SCP™</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">BDA-SCP™</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-600">{stats.scp_certifications}</div>
@@ -436,8 +436,8 @@ export default function CertificationManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('certMgmt.allTypes')}</SelectItem>
-                  <SelectItem value="CP">CP™</SelectItem>
-                  <SelectItem value="SCP">SCP™</SelectItem>
+                  <SelectItem value="CP">BDA-CP™</SelectItem>
+                  <SelectItem value="SCP">BDA-SCP™</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -476,8 +476,8 @@ export default function CertificationManagement() {
               <TabsTrigger value="expired">{t('certMgmt.expired')}</TabsTrigger>
               <TabsTrigger value="revoked">{t('certMgmt.revoked')}</TabsTrigger>
               <TabsTrigger value="suspended">{t('certMgmt.suspended')}</TabsTrigger>
-              <TabsTrigger value="cp">CP™</TabsTrigger>
-              <TabsTrigger value="scp">SCP™</TabsTrigger>
+              <TabsTrigger value="cp">BDA-CP™</TabsTrigger>
+              <TabsTrigger value="scp">BDA-SCP™</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
@@ -521,7 +521,7 @@ export default function CertificationManagement() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={cert.certification_type === 'SCP' ? 'border-purple-300 bg-purple-50' : 'border-blue-300 bg-blue-50'}>
-                            {cert.certification_type}™
+                            BDA-{cert.certification_type}™
                           </Badge>
                         </TableCell>
                         <TableCell>{getStatusBadge(cert.status)}</TableCell>

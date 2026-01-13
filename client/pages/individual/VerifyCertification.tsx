@@ -1,24 +1,20 @@
 import { useState } from 'react';
-import { Search, ShieldCheck, CheckCircle, XCircle, AlertCircle, Award, Calendar, User } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Search, ShieldCheck, CheckCircle, XCircle, AlertCircle, Award, Calendar, User, ExternalLink, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { verifyCertificate, searchCertificatesByName, type CertificateSearchResult } from '@/entities/certificate';
 import { CertificationsService } from '@/entities/certifications';
 import type { UserCertification, CertificationStatus } from '@/entities/certifications';
 
 /**
  * Verify Certification Page
- * Public tool for verifying certification credentials by ID or holder name
+ * Tool for verifying certification credentials by Credential ID or Name
+ * Supports both search modes with real-time verification
  * Restricted to authenticated users only
  */
 
@@ -28,94 +24,140 @@ interface CertificationWithUser extends UserCertification {
   exam_score?: number;
 }
 
-type SearchType = 'credential_id' | 'holder_name';
-
 export default function VerifyCertification() {
-  // Search state
-  const [searchType, setSearchType] = useState<SearchType>('credential_id');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Search mode state
+  const [searchMode, setSearchMode] = useState<'credential' | 'name'>('credential');
+  const [credentialId, setCredentialId] = useState('');
+  const [searchName, setSearchName] = useState('');
   const [searching, setSearching] = useState(false);
 
   // Results
   const [results, setResults] = useState<CertificationWithUser[]>([]);
+  const [nameSearchResults, setNameSearchResults] = useState<CertificateSearchResult[]>([]);
   const [searched, setSearched] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
+  const handleCredentialSearch = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!searchQuery.trim()) {
-      toast.error('Please enter a search term');
+    if (!credentialId.trim()) {
+      toast.error('Please enter the complete Credential ID');
       return;
     }
 
     setSearching(true);
     setSearched(true);
     setResults([]);
+    setNameSearchResults([]);
 
     try {
-      let certifications: CertificationWithUser[] = [];
+      // Use the certificate verification function
+      const result = await verifyCertificate(credentialId.trim());
 
-      if (searchType === 'credential_id') {
-        // Search by credential ID (exact match)
-        const result = await CertificationsService.verifyCertificationByCredentialId(
-          searchQuery.trim()
-        );
-
-        if (result.error) {
-          throw result.error;
-        }
-
-        if (result.data) {
-          // Get exam score
-          const scoreResult = await CertificationsService.getCertificationExamScore(
-            result.data.id
-          );
-
-          certifications = [{
-            ...result.data,
-            exam_score: scoreResult.data || undefined,
-          }];
-        }
-      } else {
-        // Search by holder name (partial match)
-        const result = await CertificationsService.searchCertificationsByName(
-          searchQuery.trim()
-        );
-
-        if (result.error) {
-          throw result.error;
-        }
-
-        if (result.data) {
-          // Get exam scores for all results
-          const withScores = await Promise.all(
-            result.data.map(async (cert) => {
-              const scoreResult = await CertificationsService.getCertificationExamScore(
-                cert.id
-              );
-              return {
-                ...cert,
-                exam_score: scoreResult.data || undefined,
-              };
-            })
-          );
-          certifications = withScores;
-        }
+      if (result.error) {
+        throw new Error(result.error.message);
       }
 
-      setResults(certifications);
-
-      if (certifications.length === 0) {
-        toast.info('No certifications found matching your search');
+      if (!result.data || !result.data.is_valid || result.data.status === 'not_found') {
+        setResults([]);
+        toast.info('No certifications found. Please check your Credential ID and try again.');
       } else {
-        toast.success(`Found ${certifications.length} certification${certifications.length > 1 ? 's' : ''}`);
+        // Get exam score for the result
+        const certResult = await CertificationsService.getCertificationByCredentialId(credentialId.trim());
+
+        if (certResult.data) {
+          const scoreResult = await CertificationsService.getCertificationExamScore(certResult.data.id);
+          const certWithDetails: CertificationWithUser = {
+            ...certResult.data,
+            user_name: result.data.holder_name || 'N/A',
+            user_email: '',
+            exam_score: scoreResult.data || undefined,
+          };
+          setResults([certWithDetails]);
+          toast.success('Certification verified successfully');
+        }
+      }
+    } catch (error: any) {
+      console.error('Search error:', error);
+      toast.error(error.message || 'Failed to verify certification');
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleNameSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!searchName.trim()) {
+      toast.error('Please enter a name to search');
+      return;
+    }
+
+    setSearching(true);
+    setSearched(true);
+    setResults([]);
+    setNameSearchResults([]);
+
+    try {
+      const result = await searchCertificatesByName(searchName.trim());
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      if (!result.data || result.data.length === 0) {
+        setNameSearchResults([]);
+        toast.info(`No certifications found for "${searchName}". Please check the spelling and try again.`);
+      } else {
+        setNameSearchResults(result.data);
+        toast.success(`Found ${result.data.length} certificate${result.data.length !== 1 ? 's' : ''}`);
       }
     } catch (error: any) {
       console.error('Search error:', error);
       toast.error(error.message || 'Failed to search certifications');
+      setNameSearchResults([]);
     } finally {
       setSearching(false);
     }
+  };
+
+  const handleViewCertificate = async (credId: string) => {
+    setSearching(true);
+    setNameSearchResults([]);
+    setSearchMode('credential');
+    setCredentialId(credId);
+
+    try {
+      const result = await verifyCertificate(credId);
+
+      if (result.error || !result.data) {
+        throw new Error('Failed to load certificate details');
+      }
+
+      const certResult = await CertificationsService.getCertificationByCredentialId(credId);
+
+      if (certResult.data) {
+        const scoreResult = await CertificationsService.getCertificationExamScore(certResult.data.id);
+        const certWithDetails: CertificationWithUser = {
+          ...certResult.data,
+          user_name: result.data.holder_name || 'N/A',
+          user_email: '',
+          exam_score: scoreResult.data || undefined,
+        };
+        setResults([certWithDetails]);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load certificate');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleModeChange = (mode: 'credential' | 'name') => {
+    setSearchMode(mode);
+    setResults([]);
+    setNameSearchResults([]);
+    setSearched(false);
   };
 
   const getStatusBadge = (status: CertificationStatus) => {
@@ -191,12 +233,12 @@ export default function VerifyCertification() {
               <p className="text-sm text-blue-800 mb-2">
                 This tool allows you to verify the authenticity of BDA certifications. You can search by:
               </p>
-              <ul className="text-sm text-blue-800 list-disc list-inside space-y-1">
-                <li><strong>Credential ID</strong>: The unique identifier (e.g., CP-2024-0001)</li>
-                <li><strong>Holder Name</strong>: The name of the certified professional</li>
+              <ul className="text-sm text-blue-800 list-disc list-inside space-y-1 mb-2">
+                <li><strong>Credential ID:</strong> Enter the complete ID (e.g., BDA-CP-2026-A7K2M9)</li>
+                <li><strong>Holder Name:</strong> Search by certificate holder's name (supports partial matches)</li>
               </ul>
-              <p className="text-sm text-blue-800 mt-2">
-                All search results are real-time and reflect the current status in the BDA database.
+              <p className="text-sm text-blue-800">
+                All verification results are real-time and reflect the current status in the BDA database.
               </p>
             </div>
           </div>
@@ -206,51 +248,65 @@ export default function VerifyCertification() {
       {/* Search Form */}
       <Card>
         <CardHeader>
-          <CardTitle>Search for Certification</CardTitle>
+          <div className="space-y-4">
+            {/* Search Mode Tabs */}
+            <Tabs
+              value={searchMode}
+              onValueChange={(value) => handleModeChange(value as 'credential' | 'name')}
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="credential">Credential ID</TabsTrigger>
+                <TabsTrigger value="name">Holder Name</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div>
+              <CardTitle>
+                {searchMode === 'credential' ? 'Verify by Credential ID' : 'Search by Name'}
+              </CardTitle>
+              <CardDescription>
+                {searchMode === 'credential'
+                  ? 'Enter the complete credential ID to verify a certification'
+                  : 'Enter the certificate holder\'s name to find matching certificates'}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSearch} className="space-y-4">
-            {/* Search Type */}
-            <div>
-              <Label htmlFor="search_type">Search By</Label>
-              <Select
-                value={searchType}
-                onValueChange={(value) => setSearchType(value as SearchType)}
-              >
-                <SelectTrigger id="search_type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="credential_id">Credential ID</SelectItem>
-                  <SelectItem value="holder_name">Holder Name</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
+          <form onSubmit={searchMode === 'credential' ? handleCredentialSearch : handleNameSearch} className="space-y-4">
             {/* Search Input */}
             <div>
               <Label htmlFor="search_query">
-                {searchType === 'credential_id' ? 'Credential ID' : 'Holder Name'}
+                {searchMode === 'credential' ? 'Full Credential ID' : 'Holder Name'}
               </Label>
               <div className="flex gap-2">
-                <Input
-                  id="search_query"
-                  placeholder={
-                    searchType === 'credential_id'
-                      ? 'e.g., CP-2024-0001'
-                      : 'e.g., John Doe'
-                  }
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1"
-                />
+                {searchMode === 'credential' ? (
+                  <Input
+                    id="search_query"
+                    placeholder="BDA-CP-2026-A7K2M9"
+                    value={credentialId}
+                    onChange={(e) => setCredentialId(e.target.value)}
+                    className="flex-1 font-mono"
+                  />
+                ) : (
+                  <Input
+                    id="search_query"
+                    placeholder="John Doe"
+                    value={searchName}
+                    onChange={(e) => setSearchName(e.target.value)}
+                    className="flex-1"
+                  />
+                )}
                 <Button type="submit" disabled={searching}>
                   {searching ? (
-                    <>Searching...</>
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {searchMode === 'credential' ? 'Verifying...' : 'Searching...'}
+                    </>
                   ) : (
                     <>
                       <Search className="h-4 w-4 mr-2" />
-                      Search
+                      {searchMode === 'credential' ? 'Verify' : 'Search'}
                     </>
                   )}
                 </Button>
@@ -260,8 +316,91 @@ export default function VerifyCertification() {
         </CardContent>
       </Card>
 
-      {/* Search Results */}
-      {searched && (
+      {/* Name Search Results */}
+      {searchMode === 'name' && searched && nameSearchResults.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Search Results ({nameSearchResults.length} certificate{nameSearchResults.length !== 1 ? 's' : ''} found)
+            </CardTitle>
+            <CardDescription>Click on a certificate to view full details</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {nameSearchResults.map((result, index) => (
+                <div
+                  key={`${result.credential_id}-${index}`}
+                  className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => handleViewCertificate(result.credential_id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-3">
+                        <h4 className="text-lg font-semibold text-gray-900">
+                          {result.holder_name}
+                        </h4>
+                        <Badge
+                          variant={result.is_valid ? 'default' : 'secondary'}
+                          className={result.is_valid ? 'bg-green-600' : ''}
+                        >
+                          {result.is_valid ? (
+                            <>
+                              <CheckCircle className="mr-1 h-3 w-3" />
+                              Active
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="mr-1 h-3 w-3" />
+                              {result.status === 'expired' ? 'Expired' : 'Inactive'}
+                            </>
+                          )}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <span className="text-gray-600">Credential ID: </span>
+                          <span className="font-mono font-medium text-gray-900">
+                            {result.credential_id}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Type: </span>
+                          <span className="font-medium text-gray-900">
+                            BDA-{result.certification_type}™
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Issued: </span>
+                          <span className="text-gray-900">
+                            {formatDate(result.issued_date)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <ExternalLink className="h-5 w-5 text-gray-400 ml-4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No Results for Name Search */}
+      {searchMode === 'name' && searched && nameSearchResults.length === 0 && results.length === 0 && (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <ShieldCheck className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600 mb-2">No Results Found</p>
+            <p className="text-sm text-gray-500">
+              No certifications match "{searchName}". Please check the spelling and try again.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Credential Search Results */}
+      {searchMode === 'credential' && searched && (
         <div className="space-y-4">
           {results.length === 0 ? (
             <Card>
@@ -327,7 +466,7 @@ export default function VerifyCertification() {
                             Certification Type
                           </div>
                           <Badge variant="outline" className="font-semibold">
-                            {cert.certification_type}™
+                            BDA-{cert.certification_type}™
                           </Badge>
                         </div>
                       </div>

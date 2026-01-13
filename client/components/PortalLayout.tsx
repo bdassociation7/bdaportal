@@ -6,7 +6,7 @@ import { AuthService } from '@/entities/auth/auth.service';
 import { navigationConfig } from '@/config/navigation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Menu, X, Globe, Settings, LogOut } from 'lucide-react';
+import { Menu, X, Settings, LogOut } from 'lucide-react';
 import { ROLE_DEFINITIONS, type UserRole } from '@/shared/types/roles.types';
 
 interface PortalLayoutProps {
@@ -14,7 +14,7 @@ interface PortalLayoutProps {
 }
 
 export function PortalLayout({ children }: PortalLayoutProps) {
-  const { language, setLanguage, isRTL, t } = useLanguage();
+  const { isRTL, t } = useLanguage();
   const { user } = useAuthContext();
   const location = useLocation();
   const navigate = useNavigate();
@@ -26,10 +26,6 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   // Get navigation items based on current role
   const navItems = navigationConfig[currentRole];
   const roleInfo = ROLE_DEFINITIONS[currentRole];
-
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'ar' : 'en');
-  };
 
   const closeSidebar = () => {
     setSidebarOpen(false);
@@ -196,7 +192,6 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                     : user?.email || t('common.unknown')}
                 </p>
                 <p>{t('common.role')}: {roleInfo.label}</p>
-                <p>{t('common.language')}: {language.toUpperCase()}</p>
               </div>
             </div>
           </div>
@@ -229,16 +224,8 @@ export function PortalLayout({ children }: PortalLayoutProps) {
             </div>
 
             <div className="flex items-center gap-x-4 lg:gap-x-6">
-              {/* Language switcher */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleLanguage}
-                className="flex items-center gap-2"
-              >
-                <Globe className="h-4 w-4" />
-                {language.toUpperCase()}
-              </Button>
+              {/* Language display (read-only) */}
+              <span className="text-sm text-gray-500">EN</span>
             </div>
           </div>
         </div>

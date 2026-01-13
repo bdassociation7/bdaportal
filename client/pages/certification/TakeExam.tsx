@@ -88,6 +88,20 @@ export default function TakeExam() {
     return () => clearInterval(timer);
   }, [timeRemaining]);
 
+  // Warn before leaving/refreshing page during exam
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Only warn if exam is in progress (has attemptId and not submitting)
+      if (attemptId && !isSubmitting) {
+        e.preventDefault();
+        e.returnValue = ''; // Required for Chrome
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [attemptId, isSubmitting]);
+
   const handleAnswerSelect = (answerId: string) => {
     if (!currentQuestion) return;
 

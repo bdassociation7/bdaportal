@@ -57,7 +57,9 @@ export interface PDPProgram {
   updated_at: string;
   // Computed/Joined
   competencies?: ProgramCompetency[];
-  enrollment_count?: number;
+  enrollment_count?: number; // Count of distinct users who submitted PDCs
+  total_pdcs?: number; // Total PDC submissions for this program
+  approved_pdcs?: number; // Number of approved PDC submissions
 }
 
 // Legacy alias for backward compatibility
@@ -337,6 +339,28 @@ export interface PDPToolkitItem {
   updated_at: string;
 }
 
+export interface CreateToolkitItemDTO {
+  category: ToolkitCategory;
+  title: string;
+  description?: string;
+  file_url: string;
+  file_type?: string;
+  file_size?: number;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface UpdateToolkitItemDTO {
+  category?: ToolkitCategory;
+  title?: string;
+  description?: string;
+  file_url?: string;
+  file_type?: string;
+  file_size?: number;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
 // =============================================================================
 // PDP Partner Profile
 // =============================================================================
@@ -344,6 +368,7 @@ export interface PDPToolkitItem {
 export type DeliveryMethod = 'in_person' | 'online' | 'hybrid' | 'blended';
 export type TargetAudience = 'corporate' | 'individual' | 'government' | 'academic' | 'nonprofit';
 export type Specialization =
+  | 'business_development'
   | 'leadership'
   | 'project_management'
   | 'data_analytics'
@@ -401,6 +426,7 @@ export interface PDPPartnerProfile {
 
   // Branding
   logo_url?: string;
+  badge_url?: string;
 
   // Timestamps
   created_at: string;
@@ -435,6 +461,7 @@ export interface UpdatePDPPartnerProfileDTO {
   twitter_url?: string;
   facebook_url?: string;
   logo_url?: string;
+  badge_url?: string;
 }
 
 // =============================================================================

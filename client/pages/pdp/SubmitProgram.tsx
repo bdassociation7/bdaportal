@@ -42,7 +42,7 @@ import {
   X,
   Globe,
 } from "lucide-react";
-import { useCreateProgram, useBockCompetencies, useProgramSlotStatus } from "@/entities/pdp";
+import { useCreateProgram, useSubmitProgram, useBockCompetencies, useProgramSlotStatus } from "@/entities/pdp";
 import type { ActivityType, DeliveryMode, CreateProgramDTO, BockCompetency } from "@/entities/pdp";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -125,6 +125,7 @@ export default function SubmitProgram() {
 
   // Create mutation
   const createProgram = useCreateProgram();
+  const submitProgram = useSubmitProgram();
 
   // Check if user can submit programs
   const canSubmit = slotStatus?.can_submit === true;
@@ -224,7 +225,11 @@ export default function SubmitProgram() {
     };
 
     const result = await createProgram.mutateAsync(dto);
-    if (!result.error) {
+    if (!result.error && result.data) {
+      // If not saving as draft, auto-approve and activate the program
+      if (!asDraft) {
+        await submitProgram.mutateAsync(result.data.id);
+      }
       navigate("/pdp/programs");
     }
   };
@@ -394,7 +399,7 @@ export default function SubmitProgram() {
               >
                 {step === 1 && "Program Details"}
                 {step === 2 && "BoCK Alignment"}
-                {step === 3 && "Review & Submit"}
+                {step === 3 && "Review & Activate"}
               </p>
             </div>
             {step < 3 && (
@@ -819,16 +824,16 @@ export default function SubmitProgram() {
         </Card>
       )}
 
-      {/* Step 3: Review & Submit */}
+      {/* Step 3: Review & Activate */}
       {currentStep === 3 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-primary" />
-              Review & Submit
+              Review & Activate
             </CardTitle>
             <CardDescription>
-              Review your program details before submitting
+              Review your program details before activation
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -956,10 +961,10 @@ export default function SubmitProgram() {
               <AlertTitle>Submission Options</AlertTitle>
               <AlertDescription>
                 <p className="mb-2">
-                  <strong>Save as Draft:</strong> Save your progress and submit later
+                  <strong>Save as Draft:</strong> Save your progress and activate later
                 </p>
                 <p>
-                  <strong>Submit for Review:</strong> Send directly to BDA for accreditation review
+                  <strong>Activate Program:</strong> Your program will be immediately available in the Accredited Programs directory
                 </p>
               </AlertDescription>
             </Alert>
@@ -1000,9 +1005,9 @@ export default function SubmitProgram() {
                 {createProgram.isPending && !saveAsDraft ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
-                  <Send className="h-4 w-4 mr-2" />
+                  <CheckCircle className="h-4 w-4 mr-2" />
                 )}
-                Submit for Review
+                Activate Program
               </Button>
             </>
           ) : (

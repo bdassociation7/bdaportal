@@ -63,26 +63,35 @@ export default function FinanceTransactions() {
 
   // State
   const [activeTab, setActiveTab] = useState<TabType>('overview');
-  const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus>('all');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus>('completed'); // Default to completed
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('month');
 
-  // Data
+  // Data - Fetch orders based on filter (completed by default)
   const { data: orders, isLoading: ordersLoading, refetch: refetchOrders } = useWooCommerceOrders({
     status: orderStatusFilter === 'all' ? undefined : orderStatusFilter,
     limit: 50,
   });
+
+  // Also fetch all completed orders separately for accurate revenue calculation
+  const { data: completedOrders } = useWooCommerceOrders({
+    status: 'completed',
+    limit: 100,
+  });
+
   const { data: voucherStats, isLoading: statsLoading } = useVoucherStats();
 
-  // Computed stats
+  // Computed stats - Revenue calculated ONLY from completed orders
   const orderStats = {
     total: orders?.length || 0,
     pending: orders?.filter(o => o.status === 'pending').length || 0,
     processing: orders?.filter(o => o.status === 'processing').length || 0,
     completed: orders?.filter(o => o.status === 'completed').length || 0,
     cancelled: orders?.filter(o => o.status === 'cancelled' || o.status === 'refunded').length || 0,
-    totalRevenue: orders?.reduce((sum, o) => sum + parseFloat(o.total || '0'), 0) || 0,
+    // Revenue is ONLY from completed orders
+    totalRevenue: completedOrders?.reduce((sum, o) => sum + parseFloat(o.total || '0'), 0) || 0,
+    completedOrdersCount: completedOrders?.length || 0,
   };
 
   // Filter orders by search
@@ -145,7 +154,7 @@ export default function FinanceTransactions() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">{isRTL ? 'إجمالي الإيرادات' : 'Total Revenue'}</p>
+              <p className="text-sm text-gray-500 mb-1">{isRTL ? 'إيرادات الطلبات المكتملة' : 'Completed Orders Revenue'}</p>
               <p className="text-2xl font-bold text-gray-900">
                 ${orderStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
@@ -155,16 +164,16 @@ export default function FinanceTransactions() {
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-            <span className="text-green-600">{isRTL ? 'هذا الشهر' : 'This month'}</span>
+            <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
+            <span className="text-green-600">{isRTL ? 'الطلبات المدفوعة فقط' : 'Paid orders only'}</span>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">{isRTL ? 'إجمالي الطلبات' : 'Total Orders'}</p>
-              <p className="text-2xl font-bold text-gray-900">{orderStats.total}</p>
+              <p className="text-sm text-gray-500 mb-1">{isRTL ? 'الطلبات المكتملة' : 'Completed Orders'}</p>
+              <p className="text-2xl font-bold text-gray-900">{orderStats.completedOrdersCount}</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-full">
               <ShoppingCart className="w-6 h-6 text-blue-600" />

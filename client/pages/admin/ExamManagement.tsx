@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Plus,
@@ -16,9 +17,16 @@ import {
   Crown,
   Globe,
   LayoutList,
+  Users,
+  UserPlus,
+  X,
+  Loader2,
+  Calendar,
+  Gift,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -29,9 +37,20 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   useExamsAdmin,
   useDeleteExam,
   useToggleExamActive,
+  useExamPremiumAccess,
+  useGrantPremiumAccess,
+  useRevokePremiumAccess,
 } from '@/entities/mock-exam';
 import {
   EXAM_CATEGORY_LABELS,
@@ -43,12 +62,21 @@ import {
 import { cn } from '@/shared/utils/cn';
 import { useToast } from '@/components/ui/use-toast';
 import { useConfirm } from '@/contexts/ConfirmDialogContext';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
+import { supabase } from '@/lib/supabase';
 
 /**
  * ExamManagement Page
  * Admin page for managing mock exams (CRUD operations)
  */
+
+// Selected user type
+interface SelectedUser {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+}
 
 export default function ExamManagement() {
   const { t } = useLanguage();
@@ -62,6 +90,20 @@ export default function ExamManagement() {
   const [categoryFilter, setCategoryFilter] = useState<ExamCategory | 'all'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<ExamDifficulty | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'sample' | 'premium' | 'free'>('all');
+
+  // Access Management Dialog State
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
+  const [selectedExamForAccess, setSelectedExamForAccess] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<SelectedUser[]>([]);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [accessDuration, setAccessDuration] = useState<'lifetime' | '3' | '6' | '12'>('12');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Build filters object
   const filters = {
@@ -70,12 +112,167 @@ export default function ExamManagement() {
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
     difficulty: difficultyFilter !== 'all' ? difficultyFilter : undefined,
     is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+    is_premium: typeFilter === 'premium' ? true : typeFilter === 'free' || typeFilter === 'sample' ? false : undefined,
+    is_sample_exam: typeFilter === 'sample' ? true : undefined,
   };
 
   // Data fetching
   const { data: exams, isLoading } = useExamsAdmin(filters);
   const deleteExamMutation = useDeleteExam();
   const toggleActiveMutation = useToggleExamActive();
+
+  // Access management hooks
+  const { data: examPremiumAccess, isLoading: isLoadingAccess } = useExamPremiumAccess(
+    selectedExamForAccess?.id || '',
+    accessDialogOpen && !!selectedExamForAccess
+  );
+  const grantAccessMutation = useGrantPremiumAccess();
+  const revokeAccessMutation = useRevokePremiumAccess();
+
+  // Search users for granting access
+  const { data: searchResults, isLoading: isSearching } = useQuery({
+    queryKey: ['users-search', userSearchQuery],
+    queryFn: async () => {
+      if (!userSearchQuery || userSearchQuery.length < 2) return [];
+      const searchLower = userSearchQuery.toLowerCase();
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name')
+        .or(`email.ilike.%${searchLower}%,first_name.ilike.%${searchLower}%,last_name.ilike.%${searchLower}%`)
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: userSearchQuery.length >= 2 && accessDialogOpen,
+    staleTime: 30000,
+  });
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowUserDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Add user to selection
+  const addUser = useCallback((user: SelectedUser) => {
+    if (!selectedUsers.find(u => u.id === user.id)) {
+      setSelectedUsers(prev => [...prev, user]);
+    }
+    setUserSearchQuery('');
+    setShowUserDropdown(false);
+    searchInputRef.current?.focus();
+  }, [selectedUsers]);
+
+  // Remove user from selection
+  const removeUser = useCallback((userId: string) => {
+    setSelectedUsers(prev => prev.filter(u => u.id !== userId));
+  }, []);
+
+  // Open access dialog
+  const openAccessDialog = (exam: { id: string; title: string }) => {
+    setSelectedExamForAccess(exam);
+    setAccessDialogOpen(true);
+    setSelectedUsers([]);
+    setUserSearchQuery('');
+    setAccessDuration('12'); // Default to 12 months per business rules
+  };
+
+  // Close access dialog
+  const closeAccessDialog = () => {
+    setAccessDialogOpen(false);
+    setSelectedExamForAccess(null);
+    setSelectedUsers([]);
+    setUserSearchQuery('');
+  };
+
+  // Grant access to selected users
+  const handleGrantAccess = async () => {
+    if (!selectedExamForAccess || selectedUsers.length === 0) return;
+
+    let expiresAt: string | undefined;
+    if (accessDuration !== 'lifetime') {
+      const months = parseInt(accessDuration);
+      const expiry = new Date();
+      expiry.setMonth(expiry.getMonth() + months);
+      expiresAt = expiry.toISOString();
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const user of selectedUsers) {
+      try {
+        const result = await grantAccessMutation.mutateAsync({
+          userId: user.id,
+          examId: selectedExamForAccess.id,
+          expiresAt,
+        });
+        if (result.error) {
+          failCount++;
+        } else {
+          successCount++;
+        }
+      } catch {
+        failCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast({
+        title: t('common.success'),
+        description: `Access granted to ${successCount} user(s)${failCount > 0 ? `, ${failCount} failed` : ''}`,
+      });
+      setSelectedUsers([]);
+    } else {
+      toast({
+        title: t('common.error'),
+        description: 'Failed to grant access',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Revoke access
+  const handleRevokeAccess = async (userId: string, userEmail: string) => {
+    if (!selectedExamForAccess) return;
+
+    const confirmed = await confirm({
+      title: 'Revoke Access',
+      description: `Are you sure you want to revoke access for ${userEmail}?`,
+      confirmText: 'Revoke',
+      variant: 'destructive',
+    });
+
+    if (!confirmed) return;
+
+    const { error } = await revokeAccessMutation.mutateAsync({
+      userId,
+      examId: selectedExamForAccess.id,
+    });
+
+    if (error) {
+      toast({
+        title: t('common.error'),
+        description: 'Failed to revoke access',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: t('common.success'),
+        description: 'Access revoked successfully',
+      });
+    }
+  };
 
   // Calculate summary statistics
   const totalExams = exams?.length || 0;
@@ -274,7 +471,7 @@ export default function ExamManagement() {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -284,6 +481,31 @@ export default function ExamManagement() {
                 className="pl-10"
               />
             </div>
+
+            <Select
+              value={typeFilter}
+              onValueChange={(value) => setTypeFilter(value as 'all' | 'sample' | 'premium' | 'free')}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Exam Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="sample">
+                  <span className="flex items-center gap-2">
+                    <Gift className="h-3 w-3 text-green-600" />
+                    Free Samples
+                  </span>
+                </SelectItem>
+                <SelectItem value="premium">
+                  <span className="flex items-center gap-2">
+                    <Crown className="h-3 w-3 text-amber-600" />
+                    Premium
+                  </span>
+                </SelectItem>
+                <SelectItem value="free">Free (Non-Sample)</SelectItem>
+              </SelectContent>
+            </Select>
 
             <Select
               value={categoryFilter}
@@ -393,6 +615,12 @@ export default function ExamManagement() {
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-gray-900">{exam.title}</p>
+                            {exam.is_sample_exam && (
+                              <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
+                                <Gift className="h-3 w-3 mr-1" />
+                                Sample
+                              </Badge>
+                            )}
                             {exam.is_premium && (
                               <Badge className="bg-amber-100 text-amber-700 border-amber-300 text-xs">
                                 <Crown className="h-3 w-3 mr-1" />
@@ -475,6 +703,16 @@ export default function ExamManagement() {
                           >
                             <LayoutList className="h-4 w-4" />
                           </Button>
+                          {exam.is_premium && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openAccessDialog({ id: exam.id, title: exam.title })}
+                              title="Manage Access"
+                            >
+                              <Users className="h-4 w-4 text-amber-600" />
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
@@ -513,6 +751,226 @@ export default function ExamManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Access Management Dialog */}
+      <Dialog open={accessDialogOpen} onOpenChange={(open) => !open && closeAccessDialog()}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-amber-600" />
+              Manage Premium Access
+            </DialogTitle>
+            <DialogDescription>
+              {selectedExamForAccess?.title}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Grant Access Section */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Grant Access to Users
+              </h3>
+
+              {/* User Search */}
+              <div className="space-y-2">
+                <Label>Search Users</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    ref={searchInputRef}
+                    placeholder="Search by name or email..."
+                    value={userSearchQuery}
+                    onChange={(e) => {
+                      setUserSearchQuery(e.target.value);
+                      setShowUserDropdown(true);
+                    }}
+                    onFocus={() => setShowUserDropdown(true)}
+                    className="pl-10"
+                  />
+
+                  {/* Search Results Dropdown */}
+                  {showUserDropdown && userSearchQuery.length >= 2 && (
+                    <div
+                      ref={dropdownRef}
+                      className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto"
+                    >
+                      {isSearching ? (
+                        <div className="p-3 text-center text-gray-500">
+                          <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                          Searching...
+                        </div>
+                      ) : searchResults && searchResults.length > 0 ? (
+                        searchResults.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center justify-between"
+                            onClick={() => addUser(user)}
+                          >
+                            <div>
+                              <p className="font-medium text-sm">
+                                {user.first_name} {user.last_name}
+                              </p>
+                              <p className="text-xs text-gray-500">{user.email}</p>
+                            </div>
+                            <UserPlus className="h-4 w-4 text-gray-400" />
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-3 text-center text-gray-500 text-sm">
+                          No users found
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Selected Users */}
+              {selectedUsers.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Selected Users ({selectedUsers.length})</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedUsers.map((user) => (
+                      <Badge
+                        key={user.id}
+                        variant="secondary"
+                        className="flex items-center gap-1 pr-1"
+                      >
+                        <span>{user.first_name || user.email}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeUser(user.id)}
+                          className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Access Duration */}
+              <div className="space-y-2">
+                <Label>Access Duration</Label>
+                <Select
+                  value={accessDuration}
+                  onValueChange={(value) => setAccessDuration(value as typeof accessDuration)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="12">12 Months (Recommended)</SelectItem>
+                    <SelectItem value="6">6 Months</SelectItem>
+                    <SelectItem value="3">3 Months</SelectItem>
+                    <SelectItem value="lifetime">Lifetime (no expiry)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Grant Button */}
+              <Button
+                onClick={handleGrantAccess}
+                disabled={selectedUsers.length === 0 || grantAccessMutation.isPending}
+                className="w-full"
+              >
+                {grantAccessMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Granting Access...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Grant Access to {selectedUsers.length} User(s)
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t" />
+
+            {/* Current Access Section */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Users with Access ({examPremiumAccess?.length || 0})
+              </h3>
+
+              {isLoadingAccess ? (
+                <div className="text-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
+                </div>
+              ) : examPremiumAccess && examPremiumAccess.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {examPremiumAccess.map((access) => (
+                    <div
+                      key={access.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div>
+                        <p className="font-medium text-sm">
+                          {access.user?.first_name} {access.user?.last_name}
+                        </p>
+                        <p className="text-xs text-gray-500">{access.user?.email}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Granted: {format(new Date(access.granted_at), 'MMM d, yyyy')}
+                          </span>
+                          {access.expires_at ? (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'text-xs',
+                                new Date(access.expires_at) < new Date()
+                                  ? 'border-red-300 text-red-600'
+                                  : 'border-green-300 text-green-600'
+                              )}
+                            >
+                              {new Date(access.expires_at) < new Date()
+                                ? 'Expired'
+                                : `Expires: ${format(new Date(access.expires_at), 'MMM d, yyyy')}`}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs border-blue-300 text-blue-600">
+                              Lifetime
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRevokeAccess(access.user_id, access.user?.email || '')}
+                        disabled={revokeAccessMutation.isPending}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  No users have access to this exam yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeAccessDialog}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

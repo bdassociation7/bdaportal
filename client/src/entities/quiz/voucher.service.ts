@@ -1,4 +1,5 @@
 import { supabase } from '@/shared/config/supabase.config';
+import { queueVoucherCreatedEmail } from '@/entities/email';
 import type {
   CertificationProduct,
   CertificationProductWithQuiz,
@@ -88,6 +89,94 @@ export class VoucherService {
         error: {
           code: 'UNKNOWN_ERROR',
           message: 'An unexpected error occurred while fetching vouchers',
+          details: err,
+        },
+      };
+    }
+  }
+
+  /**
+   * Get ECP vouchers assigned to the current user (via assigned_to_email)
+   * These are vouchers that ECP partners have assigned to the individual
+   */
+  static async getECPAssignedVouchers(): Promise<QuizResult<any[]>> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        return {
+          data: null,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'User must be authenticated',
+          },
+        };
+      }
+
+      // Get user's email
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('id', user.id)
+        .single();
+
+      if (userError || !userData?.email) {
+        return {
+          data: [],
+          error: null,
+        };
+      }
+
+      // Fetch ECP vouchers assigned to this user's email
+      // RLS policy should now allow this after the migration
+      const { data, error } = await supabase
+        .from('ecp_vouchers')
+        .select(`
+          id,
+          voucher_code,
+          certification_type,
+          status,
+          valid_until,
+          assigned_at,
+          assigned_to_name,
+          assigned_to_email
+        `)
+        .ilike('assigned_to_email', userData.email)
+        .in('status', ['assigned', 'available'])
+        .order('assigned_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching ECP assigned vouchers:', error);
+        return {
+          data: null,
+          error: {
+            code: error.code,
+            message: 'Failed to fetch ECP assigned vouchers',
+            details: error,
+          },
+        };
+      }
+
+      // Transform to match expected voucher format
+      // Note: ecp_vouchers table doesn't have exam_language column, default to 'en'
+      const transformedVouchers = (data || []).map((v) => ({
+        id: v.id,
+        code: v.voucher_code,
+        certification_type: v.certification_type,
+        exam_language: 'en', // Default - ecp_vouchers doesn't track language
+        status: v.status === 'assigned' ? 'available' : v.status, // Treat 'assigned' as 'available' for individuals
+        expires_at: v.valid_until,
+        source: 'ecp' as const, // Mark as ECP voucher
+        assigned_at: v.assigned_at,
+      }));
+
+      return { data: transformedVouchers, error: null };
+    } catch (err) {
+      return {
+        data: null,
+        error: {
+          code: 'UNKNOWN_ERROR',
+          message: 'An unexpected error occurred while fetching ECP vouchers',
           details: err,
         },
       };
@@ -754,6 +843,39 @@ export class VoucherService {
         };
       }
 
+      // Queue voucher notification email to the user
+      try {
+        // Get user and quiz details for email
+        const { data: userData } = await supabase
+          .from('users')
+          .select('email, first_name, last_name')
+          .eq('id', dto.user_id)
+          .single();
+
+        if (userData?.email) {
+          const examType = dto.certification_type === 'CP'
+            ? 'BDA-CP Certification Exam'
+            : 'BDA-SCP Certification Exam';
+
+          await queueVoucherCreatedEmail(userData.email, {
+            partnerName: userData.first_name || 'User',
+            voucherCode: codeData,
+            examType,
+            validUntil: new Date(dto.expires_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            bookingUrl: 'https://portal.bda-global.org/individual/exams',
+            partnerDashboardUrl: 'https://portal.bda-global.org/individual/dashboard',
+          });
+          console.log('Voucher created email queued for:', userData.email);
+        }
+      } catch (emailError) {
+        console.error('Failed to queue voucher email:', emailError);
+        // Don't fail voucher creation if email fails
+      }
+
       return { data, error: null };
     } catch (err) {
       return {
@@ -1107,10 +1229,11 @@ export class VoucherService {
   static async getVoucherStats(): Promise<
     QuizResult<{
       total: number;
-      unused: number;
+      available: number;
+      assigned: number;
       used: number;
       expired: number;
-      revoked: number;
+      cancelled: number;
     }>
   > {
     try {

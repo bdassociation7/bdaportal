@@ -24,6 +24,7 @@ export interface FlashcardDeck {
   order_index: number;
   estimated_study_time_minutes: number;
   is_published: boolean;
+  exam_language: 'en' | 'ar';
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -117,6 +118,19 @@ export interface FlashcardDeckWithCompetency extends FlashcardDeck {
 
 export interface FlashcardDeckWithProgress extends FlashcardDeck {
   progress?: UserFlashcardDeckProgress | null;
+  // Joined competency and sub-unit data for hierarchical display
+  competency?: {
+    id: string;
+    competency_name: string;
+    competency_name_ar: string | null;
+    section_type: ModuleSectionType;
+  } | null;
+  sub_unit?: {
+    id: string;
+    title: string;
+    title_ar: string | null;
+    order_index: number;
+  } | null;
 }
 
 export interface FlashcardWithProgress extends Flashcard {
@@ -140,6 +154,7 @@ export interface FlashcardDeckInsert {
   order_index: number;
   estimated_study_time_minutes?: number;
   is_published?: boolean;
+  exam_language?: 'en' | 'ar';
 }
 
 export interface FlashcardDeckUpdate {
@@ -231,11 +246,14 @@ export type StudyRating = 'again' | 'hard' | 'good' | 'easy';
 // Filter Types
 // ============================================================================
 
+export type ExamLanguage = 'en' | 'ar';
+
 export interface FlashcardDeckFilters {
   certification_type?: CertificationType;
   section_type?: ModuleSectionType;
   competency_id?: string;
   is_published?: boolean;
+  exam_language?: ExamLanguage;
 }
 
 export interface FlashcardFilters {

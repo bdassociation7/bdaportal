@@ -76,6 +76,9 @@ import {
   Ban,
   Play,
   Upload,
+  BookOpen,
+  Power,
+  PowerOff,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -120,6 +123,32 @@ interface LicenseRequest {
   admin_notes?: string;
   created_at: string;
   partner?: { company_name: string; email: string };
+}
+
+interface PDPProgram {
+  id: string;
+  program_id: string;
+  program_name: string;
+  provider_id: string;
+  provider_name: string;
+  activity_type: string;
+  max_pdc_credits: number;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'expired';
+  is_active: boolean;
+  valid_from: string;
+  valid_until: string;
+  created_at: string;
+}
+
+// Fetch all PDP programs for admin
+async function fetchAllPrograms(): Promise<PDPProgram[]> {
+  const { data, error } = await supabase
+    .from('pdp_programs')
+    .select('id, program_id, program_name, provider_id, provider_name, activity_type, max_pdc_credits, status, is_active, valid_from, valid_until, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []) as PDPProgram[];
 }
 
 // Fetch PDP partners with licenses
@@ -229,6 +258,11 @@ export default function PDPManagement() {
     queryFn: fetchPDPPartners,
   });
 
+  const { data: programs, isLoading: programsLoading } = useQuery({
+    queryKey: ['admin', 'pdp-programs'],
+    queryFn: fetchAllPrograms,
+  });
+
   const { data: licenseRequests, isLoading: requestsLoading } = useQuery({
     queryKey: ['admin', 'pdp-license-requests'],
     queryFn: fetchLicenseRequests,
@@ -305,6 +339,30 @@ export default function PDPManagement() {
         });
 
       if (profileExistsError) throw profileExistsError;
+
+      // Auto-create PDP license for the new partner (default: 5 programs, 12 months)
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + 12);
+      const countryCode = formData.country?.toUpperCase() || 'XX';
+
+      const { error: licenseError } = await supabase
+        .from('pdp_licenses')
+        .insert({
+          partner_id: userId,
+          license_number: `PDP-LIC-${Date.now()}`,
+          partner_code: `PDP-${countryCode}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+          status: 'active',
+          issue_date: new Date().toISOString(),
+          expiry_date: expiryDate.toISOString(),
+          max_programs: 5,
+          programs_used: 0,
+          program_submission_enabled: true,
+        });
+
+      if (licenseError) {
+        console.error('Failed to create license:', licenseError);
+        // Don't throw - partner is created, license can be added manually
+      }
 
       return { id: userId };
     },
@@ -449,6 +507,49 @@ export default function PDPManagement() {
       toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
     },
   });
+
+  // Mutation to approve/activate a program
+  const updateProgramMutation = useMutation({
+    mutationFn: async ({ programId, updates }: { programId: string; updates: { status?: string; is_active?: boolean; valid_until?: string } }) => {
+      const { error } = await supabase
+        .from('pdp_programs')
+        .update(updates)
+        .eq('id', programId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pdp-programs'] });
+      toast({ title: 'Success', description: 'Program updated successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Function to approve and activate a program
+  const handleApproveProgram = async (program: PDPProgram) => {
+    const validUntil = new Date();
+    validUntil.setFullYear(validUntil.getFullYear() + 1);
+
+    await updateProgramMutation.mutateAsync({
+      programId: program.id,
+      updates: {
+        status: 'approved',
+        is_active: true,
+        valid_until: validUntil.toISOString().split('T')[0],
+      },
+    });
+  };
+
+  // Toggle program active status
+  const handleToggleProgramActive = async (program: PDPProgram) => {
+    await updateProgramMutation.mutateAsync({
+      programId: program.id,
+      updates: {
+        is_active: !program.is_active,
+      },
+    });
+  };
 
   // Helpers
   const getStatusBadge = (status: string) => {
@@ -627,6 +728,11 @@ export default function PDPManagement() {
                   <Badge className="ml-2 bg-amber-500">{pendingRequestsCount}</Badge>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="programs">
+                <BookOpen className="h-4 w-4 mr-2" />
+                Programs
+                <Badge className="ml-2" variant="outline">{programs?.length || 0}</Badge>
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
@@ -761,10 +867,15 @@ export default function PDPManagement() {
                                 <Eye className="h-4 w-4 mr-2" />
                                 {t('partners.viewDetails')}
                               </DropdownMenuItem>
-                              {partner.license && (
+                              {partner.license ? (
                                 <DropdownMenuItem onClick={() => navigate(`/admin/pdp/${partner.id}/license`)}>
                                   <Edit className="h-4 w-4 mr-2" />
                                   {t('pdp.manageLicense')}
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onClick={() => openCreateLicense(partner)}>
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  {t('pdp.createLicense')}
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem onClick={() => navigate(`/admin/partners/${partner.id}/edit`)}>
@@ -851,6 +962,118 @@ export default function PDPManagement() {
                 <div className="text-center py-12 text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
                   <p>{t('pdp.noLicenseRequests')}</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Programs Tab */}
+          {activeTab === "programs" && (
+            <>
+              {programsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : programs && programs.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Program</TableHead>
+                      <TableHead>Provider</TableHead>
+                      <TableHead>PDCs</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Active</TableHead>
+                      <TableHead>Valid Until</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {programs.map((program) => (
+                      <TableRow key={program.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{program.program_name}</p>
+                            <p className="text-sm text-gray-500">{program.program_id}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>{program.provider_name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            <Award className="h-3 w-3 mr-1" />
+                            {program.max_pdc_credits}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {program.status === 'approved' ? (
+                            <Badge className="bg-green-100 text-green-700">Approved</Badge>
+                          ) : program.status === 'submitted' ? (
+                            <Badge className="bg-blue-100 text-blue-700">Submitted</Badge>
+                          ) : program.status === 'draft' ? (
+                            <Badge className="bg-gray-100 text-gray-700">Draft</Badge>
+                          ) : program.status === 'rejected' ? (
+                            <Badge className="bg-red-100 text-red-700">Rejected</Badge>
+                          ) : (
+                            <Badge variant="outline">{program.status}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {program.is_active ? (
+                            <Badge className="bg-green-100 text-green-700">
+                              <Power className="h-3 w-3 mr-1" />
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-700">
+                              <PowerOff className="h-3 w-3 mr-1" />
+                              Inactive
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className={new Date(program.valid_until) < new Date() ? 'text-red-600' : ''}>
+                            {new Date(program.valid_until).toLocaleDateString()}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {(program.status !== 'approved' || !program.is_active) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleApproveProgram(program)}
+                                disabled={updateProgramMutation.isPending}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Approve & Activate
+                              </Button>
+                            )}
+                            {program.status === 'approved' && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleToggleProgramActive(program)}
+                                disabled={updateProgramMutation.isPending}
+                              >
+                                {program.is_active ? (
+                                  <PowerOff className="h-4 w-4 text-orange-600" />
+                                ) : (
+                                  <Power className="h-4 w-4 text-green-600" />
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No programs found</p>
                 </div>
               )}
             </>

@@ -5,10 +5,11 @@ import { CurriculumService, curriculumKeys } from '@/entities/curriculum';
 import { RichTextEditor } from './RichTextEditor';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { CurriculumModule, RichContent, CertificationType, SectionType } from '@/entities/curriculum';
+import type { CurriculumModule, RichContent, CertificationType, SectionType, ExamLanguage } from '@/entities/curriculum';
 
 interface ModuleEditorProps {
   moduleId?: string;
+  defaultLanguage?: ExamLanguage;
   onClose: () => void;
 }
 
@@ -16,12 +17,18 @@ interface ModuleEditorProps {
  * Module Editor Component
  * Form for creating/editing curriculum modules
  */
-export function ModuleEditor({ moduleId, onClose }: ModuleEditorProps) {
+export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEditorProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const isEditing = !!moduleId;
 
-  // Form state - English
+  // Module language (set once, cannot be changed after creation)
+  const [examLanguage, setExamLanguage] = useState<ExamLanguage>(defaultLanguage || 'en');
+
+  // Language tab for content editing
+  const [activeLanguageTab, setActiveLanguageTab] = useState<'en' | 'ar'>('en');
+
+  // Form state
   const [competencyName, setCompetencyName] = useState('');
   const [competencyNameAr, setCompetencyNameAr] = useState('');
   const [sectionType, setSectionType] = useState<SectionType>('knowledge_based');
@@ -38,9 +45,6 @@ export function ModuleEditor({ moduleId, onClose }: ModuleEditorProps) {
   const [prerequisiteModuleId, setPrerequisiteModuleId] = useState<string>('');
   const [quizPassingScore, setQuizPassingScore] = useState(70);
   const [isPublished, setIsPublished] = useState(false);
-
-  // Language tab state
-  const [activeLanguageTab, setActiveLanguageTab] = useState<'en' | 'ar'>('en');
 
   // Fetch existing module if editing
   const { data: module, isLoading: isLoadingModule } = useQuery({
@@ -83,6 +87,7 @@ export function ModuleEditor({ moduleId, onClose }: ModuleEditorProps) {
       setCompetencyNameAr(module.competency_name_ar || '');
       setSectionType(module.section_type as SectionType);
       setCertificationType(module.certification_type);
+      setExamLanguage((module as any).exam_language || 'en');
       setOrderIndex(module.order_index);
       setEstimatedMinutes(module.estimated_minutes || 30);
       setContent(module.content as RichContent | null);
@@ -118,6 +123,7 @@ export function ModuleEditor({ moduleId, onClose }: ModuleEditorProps) {
         competency_name_ar: competencyNameAr || null,
         section_type: sectionType,
         certification_type: certificationType,
+        exam_language: examLanguage,
         order_index: orderIndex,
         estimated_minutes: estimatedMinutes,
         content: content || {},
@@ -514,6 +520,7 @@ export function ModuleEditor({ moduleId, onClose }: ModuleEditorProps) {
                 {quizzes?.map((quiz) => (
                   <option key={quiz.id} value={quiz.id}>
                     {quiz.title}
+                    {(quiz as any).title_ar && ` | ${(quiz as any).title_ar}`}
                   </option>
                 ))}
               </select>
@@ -551,6 +558,7 @@ export function ModuleEditor({ moduleId, onClose }: ModuleEditorProps) {
                   ?.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.order_index}. {m.competency_name}
+                      {m.competency_name_ar && ` | ${m.competency_name_ar}`}
                     </option>
                   ))}
               </select>

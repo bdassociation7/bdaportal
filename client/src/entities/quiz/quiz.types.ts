@@ -19,6 +19,35 @@ export type QuestionType = 'multiple_choice' | 'true_false' | 'multi_select';
 
 export type VoucherStatus = 'available' | 'assigned' | 'used' | 'expired' | 'cancelled';
 
+/**
+ * Certification exam attempt status (state machine)
+ * Transitions:
+ *   not_started -> in_progress | cancelled
+ *   in_progress -> paused | submitted | expired | cancelled
+ *   paused -> in_progress | submitted | expired | cancelled
+ *   submitted -> scored | cancelled
+ *   scored -> passed | failed
+ *   passed, failed, expired, cancelled -> (terminal)
+ */
+export type AttemptStatus =
+  | 'not_started'   // Attempt created but exam not launched
+  | 'in_progress'   // User is actively taking the exam
+  | 'paused'        // User has paused the exam
+  | 'submitted'     // User has submitted answers, pending scoring
+  | 'scored'        // Scoring complete
+  | 'passed'        // Final status: passed
+  | 'failed'        // Final status: failed
+  | 'expired'       // Time ran out before submission
+  | 'cancelled';    // Admin cancelled or voided
+
+export type ExamActivityEventType =
+  | 'exam_created'
+  | 'state_transition'
+  | 'answer_saved'
+  | 'tab_switch'
+  | 'browser_blur'
+  | 'suspicious_activity';
+
 // =============================================================================
 // DATABASE TYPES (matching Supabase schema)
 // =============================================================================
@@ -88,6 +117,29 @@ export interface QuizAttempt {
   total_points_possible: number | null;
   passed: boolean | null;
   time_spent_minutes: number | null;
+  // Certification exam state machine fields
+  status?: AttemptStatus;
+  proctoring_token?: string;
+  proctoring_token_expires_at?: string;
+  session_id?: string;
+  // Pause/resume tracking
+  paused_at?: string | null;
+  total_pause_time_seconds?: number;
+  pause_count?: number;
+  // Time tracking
+  time_remaining_seconds?: number;
+  last_activity_at?: string;
+  // Scoring
+  scored_at?: string | null;
+  scoring_notes?: string | null;
+  // Security/audit
+  ip_address?: string;
+  user_agent?: string;
+  browser_info?: Record<string, unknown>;
+  suspicious_activity_count?: number;
+  flagged_for_review?: boolean;
+  review_notes?: string | null;
+  exam_type?: 'mock' | 'certification';
 }
 
 /**
@@ -100,6 +152,21 @@ export interface QuizAttemptAnswer {
   selected_answer_ids: string[];
   is_correct: boolean;
   points_earned: number;
+  created_at: string;
+  // Enhanced fields for certification exam
+  answered_at?: string;
+  time_spent_seconds?: number;
+  answer_changes?: number;
+}
+
+/**
+ * Exam activity log entry for audit trail
+ */
+export interface ExamActivityLog {
+  id: string;
+  attempt_id: string;
+  event_type: ExamActivityEventType;
+  event_data: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -473,6 +540,124 @@ export interface QuizResult<T> {
   data: T | null;
   error: QuizError | null;
 }
+
+// =============================================================================
+// CERTIFICATION EXAM TYPES
+// =============================================================================
+
+/**
+ * Result from check_exam_eligibility RPC function
+ */
+export interface ExamEligibilityResult {
+  eligible: boolean;
+  reason?: string;
+  has_active_attempt?: boolean;
+  attempt_id?: string;
+  attempt_status?: AttemptStatus;
+  can_resume?: boolean;
+  voucher_id?: string;
+  voucher_source?: 'direct' | 'ecp';
+  booking_id?: string | null;
+  has_booking?: boolean;
+  quiz?: {
+    id: string;
+    title: string;
+    time_limit_minutes: number;
+    passing_score: number;
+  };
+}
+
+/**
+ * Parameters for starting a certification exam
+ */
+export interface StartExamParams {
+  quiz_id: string;
+  voucher_id?: string;
+  booking_id?: string;
+  ip_address?: string;
+  user_agent?: string;
+  browser_info?: Record<string, unknown>;
+}
+
+/**
+ * Parameters for saving an exam answer
+ */
+export interface SaveExamAnswerParams {
+  attempt_id: string;
+  question_id: string;
+  selected_answer_ids: string[];
+  time_spent_seconds?: number;
+}
+
+/**
+ * Certification exam session state (frontend)
+ */
+export interface CertificationExamSession {
+  attempt: QuizAttempt;
+  quiz: QuizWithQuestions;
+  current_question_index: number;
+  answers: Map<string, string[]>;
+  time_remaining_seconds: number;
+  is_paused: boolean;
+  started_at: Date;
+  proctoring_token: string;
+}
+
+/**
+ * State transition event data
+ */
+export interface StateTransitionEvent {
+  from_status: AttemptStatus;
+  to_status: AttemptStatus;
+  timestamp: string;
+  additional_data?: Record<string, unknown>;
+}
+
+/**
+ * Certification exam results
+ */
+export interface CertificationExamResults {
+  attempt: QuizAttempt;
+  quiz: Quiz;
+  total_questions: number;
+  answered_questions: number;
+  correct_answers: number;
+  incorrect_answers: number;
+  score_percentage: number;
+  passed: boolean;
+  time_spent_minutes: number;
+  certification?: {
+    id: string;
+    certification_type: CertificationType;
+    issued_date: string;
+    expiry_date: string;
+  };
+}
+
+/**
+ * Valid state transitions map
+ */
+export const VALID_STATE_TRANSITIONS: Record<AttemptStatus, AttemptStatus[]> = {
+  not_started: ['in_progress', 'cancelled'],
+  in_progress: ['paused', 'submitted', 'expired', 'cancelled'],
+  paused: ['in_progress', 'submitted', 'expired', 'cancelled'],
+  submitted: ['scored', 'cancelled'],
+  scored: ['passed', 'failed'],
+  passed: [],
+  failed: [],
+  expired: [],
+  cancelled: [],
+};
+
+/**
+ * Terminal states (no further transitions allowed)
+ */
+export const TERMINAL_STATES: AttemptStatus[] = ['passed', 'failed', 'expired', 'cancelled'];
+
+/**
+ * Active states (exam is ongoing)
+ */
+export const ACTIVE_STATES: AttemptStatus[] = ['not_started', 'in_progress', 'paused'];
 
 // =============================================================================
 // CONSTANTS

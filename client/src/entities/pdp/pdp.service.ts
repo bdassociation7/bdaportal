@@ -24,6 +24,8 @@ import type {
   PDPLicenseRequest,
   PDPToolkitItem,
   ToolkitCategory,
+  CreateToolkitItemDTO,
+  UpdateToolkitItemDTO,
   PDPPartnerProfile,
   UpdatePDPPartnerProfileDTO,
   PDPGuideline,
@@ -88,28 +90,34 @@ export class PDPService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      let query = supabase
-        .from('pdp_programs')
-        .select('*')
-        .eq('provider_id', user.id)
-        .order('created_at', { ascending: false });
+      // Use RPC function to get programs with enrollment counts
+      const { data: programs, error: rpcError } = await supabase
+        .rpc('get_my_pdp_programs_with_stats');
+
+      if (rpcError) throw rpcError;
+      if (!programs) return { data: [], error: null };
+
+      // Apply client-side filtering (since RPC doesn't support dynamic filters)
+      let filteredPrograms = programs;
 
       if (filters.status) {
-        query = query.eq('status', filters.status);
+        filteredPrograms = filteredPrograms.filter(p => p.status === filters.status);
       }
       if (filters.activity_type) {
-        query = query.eq('activity_type', filters.activity_type);
+        filteredPrograms = filteredPrograms.filter(p => p.activity_type === filters.activity_type);
       }
       if (filters.is_active !== undefined) {
-        query = query.eq('is_active', filters.is_active);
+        filteredPrograms = filteredPrograms.filter(p => p.is_active === filters.is_active);
       }
       if (filters.search) {
-        query = query.or(`program_name.ilike.%${filters.search}%,program_id.ilike.%${filters.search}%`);
+        const searchLower = filters.search.toLowerCase();
+        filteredPrograms = filteredPrograms.filter(p =>
+          p.program_name.toLowerCase().includes(searchLower) ||
+          p.program_id.toLowerCase().includes(searchLower)
+        );
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return { data: data as PDPProgram[], error: null };
+      return { data: filteredPrograms as PDPProgram[], error: null };
     } catch (error) {
       console.error('Error fetching programs:', error);
       return { data: null, error: error as Error };
@@ -118,22 +126,37 @@ export class PDPService {
 
   static async getProgram(id: string): Promise<ServiceResult<PDPProgram>> {
     try {
-      const { data, error } = await supabase
-        .from('pdp_programs')
-        .select(`
-          *,
-          competencies:pdp_program_competencies(
-            id,
-            competency_id,
-            relevance_level,
-            competency:bock_competencies(*)
-          )
-        `)
-        .eq('id', id)
-        .single();
+      // Get program with enrollment stats using RPC
+      const { data: programsWithStats, error: rpcError } = await supabase
+        .rpc('get_pdp_program_with_stats', { p_program_id: id });
 
-      if (error) throw error;
-      return { data: data as PDPProgram, error: null };
+      if (rpcError) throw rpcError;
+      if (!programsWithStats || programsWithStats.length === 0) {
+        throw new Error('Program not found');
+      }
+
+      const programWithStats = programsWithStats[0];
+
+      // Also fetch competencies separately (can't do this in RPC easily)
+      const { data: competencies, error: compError } = await supabase
+        .from('pdp_program_competencies')
+        .select(`
+          id,
+          competency_id,
+          relevance_level,
+          competency:bock_competencies(*)
+        `)
+        .eq('program_id', id);
+
+      if (compError) throw compError;
+
+      // Merge competencies into program data
+      const programData = {
+        ...programWithStats,
+        competencies: competencies || [],
+      };
+
+      return { data: programData as PDPProgram, error: null };
     } catch (error) {
       console.error('Error fetching program:', error);
       return { data: null, error: error as Error };
@@ -159,13 +182,16 @@ export class PDPService {
 
       const { competency_ids, ...programData } = dto;
 
+      // Fallback ID generation if RPC fails
+      const fallbackId = `ID-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
       const { data, error } = await supabase
         .from('pdp_programs')
         .insert({
           ...programData,
           provider_id: user.id,
           provider_name: userData?.company_name || 'Unknown Provider',
-          program_id: programIdData || `PDC-${Date.now()}`,
+          program_id: programIdData || fallbackId,
           created_by: user.id,
           status: 'draft',
         })
@@ -230,7 +256,19 @@ export class PDPService {
   }
 
   static async submitProgramForReview(id: string): Promise<ServiceResult<PDPProgram>> {
-    return this.updateProgram(id, { status: 'submitted' });
+    // Auto-approve programs on submission - admin can view for visibility only
+    const now = new Date().toISOString();
+    const validFrom = now.split('T')[0];
+    // Default validity: 1 year from submission
+    const validUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    return this.updateProgram(id, {
+      status: 'approved',
+      is_active: true,
+      reviewed_at: now,
+      valid_from: validFrom,
+      valid_until: validUntil,
+    });
   }
 
   static async deleteProgram(id: string): Promise<ServiceResult<void>> {
@@ -466,6 +504,108 @@ export class PDPService {
     }
   }
 
+  // Admin: Get all toolkit items (including inactive)
+  static async getAllToolkitItems(): Promise<ServiceResult<PDPToolkitItem[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('pdp_toolkit_items')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      return { data: data as PDPToolkitItem[], error: null };
+    } catch (error) {
+      console.error('Error fetching all toolkit items:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // Admin: Create toolkit item
+  static async createToolkitItem(dto: CreateToolkitItemDTO): Promise<ServiceResult<PDPToolkitItem>> {
+    try {
+      const { data, error } = await supabase
+        .from('pdp_toolkit_items')
+        .insert({
+          ...dto,
+          sort_order: dto.sort_order ?? 0,
+          is_active: dto.is_active ?? true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: data as PDPToolkitItem, error: null };
+    } catch (error) {
+      console.error('Error creating toolkit item:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // Admin: Update toolkit item
+  static async updateToolkitItem(id: string, dto: UpdateToolkitItemDTO): Promise<ServiceResult<PDPToolkitItem>> {
+    try {
+      const { data, error } = await supabase
+        .from('pdp_toolkit_items')
+        .update(dto)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: data as PDPToolkitItem, error: null };
+    } catch (error) {
+      console.error('Error updating toolkit item:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // Admin: Delete toolkit item
+  static async deleteToolkitItem(id: string): Promise<ServiceResult<void>> {
+    try {
+      const { error } = await supabase
+        .from('pdp_toolkit_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch (error) {
+      console.error('Error deleting toolkit item:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // Admin: Upload toolkit file
+  static async uploadToolkitFile(file: File, category: ToolkitCategory): Promise<ServiceResult<{ url: string; fileType: string; fileSize: number }>> {
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+      const fileName = `${category}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('pdp-toolkit')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('pdp-toolkit')
+        .getPublicUrl(fileName);
+
+      return {
+        data: {
+          url: publicUrl,
+          fileType: fileExt,
+          fileSize: file.size,
+        },
+        error: null,
+      };
+    } catch (error) {
+      console.error('Error uploading toolkit file:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
   // ==========================================================================
   // Partner Profile
   // ==========================================================================
@@ -540,6 +680,89 @@ export class PDPService {
       return { data: publicUrl, error: null };
     } catch (error) {
       console.error('Error uploading partner logo:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  static async removePartnerLogo(): Promise<ServiceResult<void>> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Remove logo from storage (try common extensions)
+      const extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+      for (const ext of extensions) {
+        await supabase.storage
+          .from('partner-logos')
+          .remove([`${user.id}/logo.${ext}`]);
+      }
+
+      // Clear logo URL from profile
+      await supabase
+        .from('pdp_partner_profiles')
+        .update({ logo_url: null })
+        .eq('partner_id', user.id);
+
+      return { data: null, error: null };
+    } catch (error) {
+      console.error('Error removing partner logo:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  static async uploadPartnerBadge(file: File): Promise<ServiceResult<string>> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/badge.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('partner-logos')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('partner-logos')
+        .getPublicUrl(fileName);
+
+      // Update profile with badge URL
+      await supabase
+        .from('pdp_partner_profiles')
+        .update({ badge_url: publicUrl })
+        .eq('partner_id', user.id);
+
+      return { data: publicUrl, error: null };
+    } catch (error) {
+      console.error('Error uploading partner badge:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  static async removePartnerBadge(): Promise<ServiceResult<void>> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Remove badge from storage
+      const extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+      for (const ext of extensions) {
+        await supabase.storage
+          .from('partner-logos')
+          .remove([`${user.id}/badge.${ext}`]);
+      }
+
+      // Clear badge URL from profile
+      await supabase
+        .from('pdp_partner_profiles')
+        .update({ badge_url: null })
+        .eq('partner_id', user.id);
+
+      return { data: null, error: null };
+    } catch (error) {
+      console.error('Error removing partner badge:', error);
       return { data: null, error: error as Error };
     }
   }

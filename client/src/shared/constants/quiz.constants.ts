@@ -14,16 +14,16 @@ import type { CertificationType, DifficultyLevel, QuestionType } from '@/entitie
  * Certification type labels (English)
  */
 export const CERTIFICATION_TYPE_LABELS: Record<CertificationType, string> = {
-  CP: 'Certified Professional (CP™)',
-  SCP: 'Senior Certified Professional (SCP™)',
+  CP: 'BDA Certified Professional (BDA-CP™)',
+  SCP: 'BDA Senior Certified Professional (BDA-SCP™)',
 } as const;
 
 /**
  * Certification type labels (Arabic)
  */
 export const CERTIFICATION_TYPE_LABELS_AR: Record<CertificationType, string> = {
-  CP: 'محترف معتمد (CP™)',
-  SCP: 'محترف معتمد أول (SCP™)',
+  CP: 'محترف معتمد (BDA-CP™)',
+  SCP: 'محترف معتمد أول (BDA-SCP™)',
 } as const;
 
 /**
@@ -48,18 +48,18 @@ export const DIFFICULTY_LABELS_AR: Record<DifficultyLevel, string> = {
  * Question type labels
  */
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
-  multiple_choice: 'Multiple Choice (Single Answer)',
+  multiple_choice: 'Single Choice',
   true_false: 'True/False',
-  multi_select: 'Multiple Select (Multiple Answers)',
+  multi_select: 'Multiple Answers',
 } as const;
 
 /**
  * Question type labels (Arabic)
  */
 export const QUESTION_TYPE_LABELS_AR: Record<QuestionType, string> = {
-  multiple_choice: 'اختيار من متعدد (إجابة واحدة)',
+  multiple_choice: 'اختيار واحد',
   true_false: 'صح/خطأ',
-  multi_select: 'اختيار متعدد (عدة إجابات)',
+  multi_select: 'إجابات متعددة',
 } as const;
 
 // =============================================================================

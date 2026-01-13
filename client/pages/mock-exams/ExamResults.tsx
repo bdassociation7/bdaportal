@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Trophy,
   XCircle,
@@ -89,11 +89,40 @@ const translations = {
 export default function ExamResults() {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { language } = useLanguage();
   const texts = translations[language];
   const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
 
+  // Determine base path for navigation (ECP vs non-ECP routes)
+  const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : '/mock-exams';
+
   const { data: results, isLoading, error } = useAttemptResults(attemptId || '');
+
+  // Get localized text based on exam language
+  const getQuestionText = (question: { question_text: string; question_text_ar?: string | null }) => {
+    const examLanguage = results?.exam?.language || 'en';
+    if (examLanguage === 'ar' && question.question_text_ar) {
+      return question.question_text_ar;
+    }
+    return question.question_text;
+  };
+
+  const getAnswerText = (answer: { answer_text: string; answer_text_ar?: string | null }) => {
+    const examLanguage = results?.exam?.language || 'en';
+    if (examLanguage === 'ar' && answer.answer_text_ar) {
+      return answer.answer_text_ar;
+    }
+    return answer.answer_text;
+  };
+
+  const getExplanationText = (question: { explanation?: string | null; explanation_ar?: string | null }) => {
+    const examLanguage = results?.exam?.language || 'en';
+    if (examLanguage === 'ar' && question.explanation_ar) {
+      return question.explanation_ar;
+    }
+    return question.explanation;
+  };
 
   const toggleQuestion = (index: number) => {
     setExpandedQuestions((prev) => {
@@ -134,7 +163,7 @@ export default function ExamResults() {
         <div className="rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm max-w-md">
           <p className="text-red-800">{texts.errorLoading}</p>
           <Button
-            onClick={() => navigate('/mock-exams')}
+            onClick={() => navigate(basePath)}
             className="mt-4 w-full"
             variant="outline"
           >
@@ -287,7 +316,7 @@ export default function ExamResults() {
                           {texts.question} {index + 1}
                         </p>
                         <p className="text-sm text-gray-600 mt-1">
-                          {item.question.question_text}
+                          {getQuestionText(item.question)}
                         </p>
                       </div>
                     </div>
@@ -304,17 +333,6 @@ export default function ExamResults() {
                       {item.question.answers.map((answer) => {
                         const wasSelected = item.user_answer_ids.includes(answer.id);
                         const isCorrectAnswer = correctAnswerIds.includes(answer.id);
-
-                        // Debug log
-                        if (index === 0 && answer === item.question.answers[0]) {
-                          console.log('Question 1 debug:', {
-                            user_answer_ids: item.user_answer_ids,
-                            answer_id: answer.id,
-                            wasSelected,
-                            isCorrectAnswer,
-                            correctAnswerIds
-                          });
-                        }
 
                         // Determine styling based on correct/selected state
                         const answerStyle = isCorrectAnswer
@@ -354,7 +372,7 @@ export default function ExamResults() {
                               {answerStyle.icon}
                               <div className="flex-1">
                                 <p className={cn("font-medium", answerStyle.textColor)}>
-                                  {answer.answer_text}
+                                  {getAnswerText(answer)}
                                 </p>
                                 {answerStyle.label}
                               </div>
@@ -364,13 +382,13 @@ export default function ExamResults() {
                       })}
 
                       {/* Explanation */}
-                      {item.question.explanation && (
+                      {getExplanationText(item.question) && (
                         <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
                           <p className="text-sm font-semibold text-blue-900 mb-1">
                             {texts.explanation}
                           </p>
                           <p className="text-sm text-blue-800">
-                            {item.question.explanation}
+                            {getExplanationText(item.question)}
                           </p>
                         </div>
                       )}
@@ -400,7 +418,7 @@ export default function ExamResults() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4">
           <Button
-            onClick={() => navigate('/mock-exams')}
+            onClick={() => navigate(basePath)}
             variant="outline"
             className="flex-1"
           >
@@ -408,7 +426,7 @@ export default function ExamResults() {
             {texts.backToExams}
           </Button>
           <Button
-            onClick={() => navigate(`/mock-exams/${results.exam.id}`)}
+            onClick={() => navigate(`${basePath}/${results.exam.id}`)}
             className="flex-1"
           >
             <RotateCcw className="h-4 w-4 mr-2" />

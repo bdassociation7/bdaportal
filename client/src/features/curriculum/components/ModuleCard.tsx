@@ -4,17 +4,31 @@ import type { CurriculumModuleWithStatus } from '@/entities/curriculum';
 interface ModuleCardProps {
   module: CurriculumModuleWithStatus;
   onClick: () => void;
+  /** Show Arabic name instead of English */
+  showArabicName?: boolean;
 }
 
 /**
  * Module Card Component
  * Displays module with status (locked, in progress, completed)
  */
-export function ModuleCard({ module, onClick }: ModuleCardProps) {
+export function ModuleCard({ module, onClick, showArabicName = false }: ModuleCardProps) {
   const progress = module.user_progress;
   const isLocked = !module.is_unlocked;
   const isCompleted = progress?.status === 'completed';
   const isInProgress = progress?.status === 'in_progress' || progress?.status === 'quiz_pending';
+
+  // UI Labels - Always in English (only content/module names are in Arabic)
+  const labels = {
+    locked: 'Locked',
+    completed: 'Completed',
+    inProgress: 'In Progress',
+    notStarted: 'Not Started',
+    module: 'Module',
+    progress: 'Progress',
+    quizScore: 'Quiz Score',
+    completePrevious: 'Complete previous modules to unlock',
+  };
 
   // Status styling
   const getStatusStyles = () => {
@@ -24,7 +38,7 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
         badge: 'bg-gray-200 text-gray-600',
         icon: Lock,
         iconColor: 'text-gray-400',
-        statusText: 'Locked',
+        statusText: labels.locked,
       };
     }
 
@@ -35,7 +49,7 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
         badge: 'bg-green-100 text-green-700',
         icon: CheckCircle,
         iconColor: 'text-green-600',
-        statusText: 'Completed',
+        statusText: labels.completed,
       };
     }
 
@@ -46,7 +60,7 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
         badge: 'bg-blue-100 text-blue-700',
         icon: Clock,
         iconColor: 'text-blue-600',
-        statusText: 'In Progress',
+        statusText: labels.inProgress,
       };
     }
 
@@ -56,7 +70,7 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
       badge: 'bg-gray-100 text-gray-700',
       icon: Award,
       iconColor: 'text-gray-400',
-      statusText: 'Not Started',
+      statusText: labels.notStarted,
     };
   };
 
@@ -87,17 +101,20 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
         <span
           className={`${styles.badge} text-xs font-medium px-2 py-1 rounded-full`}
         >
-          Module {module.order_index}
+          {labels.module} {module.order_index}
         </span>
       </div>
 
-      {/* Title */}
+      {/* Title - prefer Arabic name when showArabicName is true, or use whichever is available */}
       <h3
         className={`font-semibold mb-2 line-clamp-2 ${
           isLocked ? 'text-gray-500' : 'text-gray-900'
         }`}
+        dir={showArabicName || (module.competency_name_ar && !module.competency_name) ? 'rtl' : 'ltr'}
       >
-        {module.competency_name}
+        {showArabicName
+          ? (module.competency_name_ar || module.competency_name || 'وحدة بدون عنوان')
+          : (module.competency_name || module.competency_name_ar || 'Untitled Module')}
       </h3>
 
       {/* Description */}
@@ -115,7 +132,7 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
       {!isLocked && progress && progress.progress_percentage > 0 && (
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-            <span>Progress</span>
+            <span>{labels.progress}</span>
             <span>{progress.progress_percentage}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -148,7 +165,7 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
       {isCompleted && progress?.best_quiz_score && (
         <div className="mt-3 pt-3 border-t border-gray-200">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Quiz Score</span>
+            <span className="text-gray-600">{labels.quizScore}</span>
             <span className="font-semibold text-green-600">
               {progress.best_quiz_score}%
             </span>
@@ -160,7 +177,7 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
       {isLocked && (
         <div className="mt-3 pt-3 border-t border-gray-300">
           <p className="text-xs text-gray-500">
-            Complete previous modules to unlock
+            {labels.completePrevious}
           </p>
         </div>
       )}

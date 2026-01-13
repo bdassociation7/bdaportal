@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Eye, Lock, Unlock, BookMarked, FileText, CheckCircle, Brain } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Lock, Unlock, BookMarked, FileText, CheckCircle, Brain, Globe } from 'lucide-react';
 import { CurriculumService, curriculumKeys } from '@/entities/curriculum';
 import { ModuleEditor } from '../components/ModuleEditor';
 import { ModulePreview } from '../components/ModulePreview';
@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { StatCard } from '../components/shared';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+type ExamLanguage = 'en' | 'ar';
 
 /**
  * Curriculum Module Manager (Admin)
@@ -19,20 +21,24 @@ export function CurriculumModuleManager() {
   const { toast } = useToast();
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [createLanguage, setCreateLanguage] = useState<ExamLanguage>('en');
   const [previewModule, setPreviewModule] = useState<string | null>(null);
   const [filterSection, setFilterSection] = useState<'all' | 'knowledge_based' | 'behavioral'>('all');
   const [filterPublished, setFilterPublished] = useState<'all' | 'published' | 'draft'>('all');
+  const [filterLanguage, setFilterLanguage] = useState<ExamLanguage>('en');
 
   // Fetch all modules
   const { data: modules, isLoading, refetch } = useQuery({
     queryKey: curriculumKeys.modulesList({
       section_type: filterSection === 'all' ? undefined : filterSection,
       is_published: filterPublished === 'all' ? undefined : filterPublished === 'published',
+      exam_language: filterLanguage,
     }),
     queryFn: async () => {
       const result = await CurriculumService.getModules({
         section_type: filterSection === 'all' ? undefined : filterSection,
         is_published: filterPublished === 'all' ? undefined : filterPublished === 'published',
+        exam_language: filterLanguage,
       });
       if (result.error) throw result.error;
       return result.data || [];
@@ -81,6 +87,7 @@ export function CurriculumModuleManager() {
     return (
       <ModuleEditor
         moduleId={selectedModule || undefined}
+        defaultLanguage={isCreating ? createLanguage : undefined}
         onClose={() => {
           setSelectedModule(null);
           setIsCreating(false);
@@ -113,12 +120,58 @@ export function CurriculumModuleManager() {
               {t('curriculum.subtitle')}
             </p>
           </div>
+          <div className="flex items-center gap-3">
+            {/* Create Module with Language Selection */}
+            <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
+              <button
+                onClick={() => {
+                  setCreateLanguage('en');
+                  setIsCreating(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 font-semibold rounded-md hover:bg-blue-50 transition"
+              >
+                <Plus className="w-4 h-4" />
+                🇬🇧 English Module
+              </button>
+              <button
+                onClick={() => {
+                  setCreateLanguage('ar');
+                  setIsCreating(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-emerald-600 font-semibold rounded-md hover:bg-emerald-50 transition"
+              >
+                <Plus className="w-4 h-4" />
+                🇸🇦 وحدة عربية
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Language Filter - Prominent */}
+      <div className="flex items-center gap-4 bg-white rounded-lg shadow-sm p-4">
+        <Globe className="h-5 w-5 text-gray-500" />
+        <span className="font-medium text-gray-700">{t('curriculum.selectLanguage')}:</span>
+        <div className="flex gap-2">
           <button
-            onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition"
+            onClick={() => setFilterLanguage('en')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
+              filterLanguage === 'en'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
           >
-            <Plus className="w-5 h-5" />
-            {t('curriculum.createModule')}
+            🇬🇧 English Modules
+          </button>
+          <button
+            onClick={() => setFilterLanguage('ar')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
+              filterLanguage === 'ar'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            🇸🇦 الوحدات العربية
           </button>
         </div>
       </div>

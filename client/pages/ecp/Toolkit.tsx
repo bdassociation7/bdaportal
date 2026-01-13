@@ -442,14 +442,14 @@ export default function ECPToolkit() {
               <p className="text-xs text-gray-500">#1E3A5F</p>
             </div>
             <div className="text-center">
-              <div className="h-20 rounded-lg bg-[#3B82F6] mb-2" />
+              <div className="h-20 rounded-lg bg-[#2C5282] mb-2" />
               <p className="text-sm font-medium">{texts.royalBlue}</p>
-              <p className="text-xs text-gray-500">#3B82F6</p>
+              <p className="text-xs text-gray-500">#2C5282</p>
             </div>
             <div className="text-center">
-              <div className="h-20 rounded-lg bg-[#0EA5E9] mb-2" />
+              <div className="h-20 rounded-lg bg-[#1E9BF5] mb-2" />
               <p className="text-sm font-medium">{texts.skyBlue}</p>
-              <p className="text-xs text-gray-500">#0EA5E9</p>
+              <p className="text-xs text-gray-500">#1E9BF5</p>
             </div>
             <div className="text-center">
               <div className="h-20 rounded-lg bg-[#10B981] mb-2" />

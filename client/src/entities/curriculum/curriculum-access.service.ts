@@ -29,35 +29,29 @@ export class CurriculumAccessService {
   ): Promise<ServiceResponse<AccessCheckResult>> {
     try {
       // 1. Check if user already has access record in Supabase
-      const { data: existingAccess } = await supabase
+      // Note: User may have multiple records (EN + AR), so we use .limit(1) instead of .maybeSingle()
+      // to avoid errors when both language accesses exist
+      const { data: existingAccessList } = await supabase
         .from('user_curriculum_access')
         .select('*')
         .eq('user_id', userId)
         .eq('certification_type', certificationType)
-        .maybeSingle();
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString())
+        .order('expires_at', { ascending: false })
+        .limit(1);
 
-      // If access exists and is active, return it
+      const existingAccess = existingAccessList?.[0] || null;
+
+      // If access exists (already filtered for active and non-expired), return it
       if (existingAccess) {
-        const isActive = existingAccess.is_active && new Date(existingAccess.expires_at) > new Date();
-
-        if (isActive) {
-          return {
-            data: {
-              hasAccess: true,
-              access: existingAccess,
-              expiresAt: existingAccess.expires_at,
-            },
-          };
-        } else {
-          // Access expired
-          return {
-            data: {
-              hasAccess: false,
-              reason: 'expired',
-              access: existingAccess,
-            },
-          };
-        }
+        return {
+          data: {
+            hasAccess: true,
+            access: existingAccess,
+            expiresAt: existingAccess.expires_at,
+          },
+        };
       }
 
       // 2. No access record found, check WooCommerce for certification purchases

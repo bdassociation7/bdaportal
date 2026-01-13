@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Award, Download, Clock, AlertCircle, CheckCircle, XCircle, Calendar, TrendingUp, ExternalLink } from 'lucide-react';
+import { Award, Download, Clock, AlertCircle, CheckCircle, XCircle, Calendar, TrendingUp, ExternalLink, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,14 +20,14 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * My Certifications Page
- * Displays user's earned certifications (CP™, SCP™)
+ * Displays user's earned certifications (BDA-CP™, BDA-SCP™)
  */
 
 const translations = {
   en: {
     // Header
     title: 'My Certifications',
-    subtitle: 'Track your CP™ and SCP™ certifications and renewals',
+    subtitle: 'Track your BDA-CP and BDA-SCP certifications and renewals',
     // Stats
     totalCertifications: 'Total Certifications',
     active: 'Active',
@@ -43,7 +44,7 @@ const translations = {
     // Loading/Empty
     loading: 'Loading your certifications...',
     noCertifications: 'No certifications found',
-    noCertificationsDesc: 'Complete a certification exam to earn your CP™ or SCP™ certification',
+    noCertificationsDesc: 'Complete a certification exam to earn your BDA-CP or BDA-SCP certification',
     viewExams: 'View Available Exams',
     // Card content
     certification: 'Certification',
@@ -69,7 +70,7 @@ const translations = {
   ar: {
     // Header
     title: 'شهاداتي',
-    subtitle: 'تتبع شهادات CP™ و SCP™ الخاصة بك والتجديدات',
+    subtitle: 'تتبع شهادات BDA-CP و BDA-SCP الخاصة بك والتجديدات',
     // Stats
     totalCertifications: 'إجمالي الشهادات',
     active: 'نشطة',
@@ -86,7 +87,7 @@ const translations = {
     // Loading/Empty
     loading: 'جارٍ تحميل شهاداتك...',
     noCertifications: 'لم يتم العثور على شهادات',
-    noCertificationsDesc: 'أكمل امتحان الشهادة للحصول على شهادة CP™ أو SCP™',
+    noCertificationsDesc: 'أكمل امتحان الشهادة للحصول على شهادة BDA-CP أو BDA-SCP',
     viewExams: 'عرض الامتحانات المتاحة',
     // Card content
     certification: 'الشهادة',
@@ -133,17 +134,54 @@ export default function MyCertifications() {
   const certifications = certificationsResult?.data || [];
   const stats = statsResult?.data;
 
-  const handleDownloadCertificate = async (certId: string, credentialId: string) => {
-    try {
-      const result = await CertificationsService.getCertificateUrl(certId);
-      if (result.error) throw result.error;
+  const [generatingCerts, setGeneratingCerts] = useState<Set<string>>(new Set());
 
-      if (result.data) {
-        window.open(result.data, '_blank');
-        toast.success(texts.downloading(credentialId));
+  const handleDownloadCertificate = async (certId: string, credentialId: string, hasUrl: boolean) => {
+    try {
+      // If certificate URL exists, download directly
+      if (hasUrl) {
+        const result = await CertificationsService.getCertificateUrl(certId);
+        if (result.error) throw result.error;
+
+        if (result.data) {
+          window.open(result.data, '_blank');
+          toast.success(texts.downloading(credentialId));
+        }
+        return;
+      }
+
+      // Request certificate generation
+      setGeneratingCerts(prev => new Set(prev).add(credentialId));
+      toast.info(language === 'ar' ? 'جارٍ إنشاء الشهادة...' : 'Generating certificate...');
+
+      const { data, error } = await supabase.rpc('request_certificate_generation', {
+        p_credential_id: credentialId,
+      });
+
+      if (error) throw error;
+
+      const response = data as { success: boolean; status: string; certificate_url?: string; message?: string };
+
+      if (response.status === 'ready' && response.certificate_url) {
+        // Certificate is ready, download it
+        const urlResult = await CertificationsService.getCertificateUrl(certId);
+        if (urlResult.data) {
+          window.open(urlResult.data, '_blank');
+          toast.success(texts.downloading(credentialId));
+        }
+      } else if (response.status === 'queued' || response.status === 'generating') {
+        toast.info(response.message || (language === 'ar'
+          ? 'تم طلب إنشاء الشهادة. يرجى المحاولة مرة أخرى بعد قليل.'
+          : 'Certificate generation requested. Please try again shortly.'));
       }
     } catch (error: any) {
       toast.error(error.message || texts.downloadFailed);
+    } finally {
+      setGeneratingCerts(prev => {
+        const next = new Set(prev);
+        next.delete(credentialId);
+        return next;
+      });
     }
   };
 
@@ -267,8 +305,8 @@ export default function MyCertifications() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{texts.allTypes}</SelectItem>
-                  <SelectItem value="CP">CP™</SelectItem>
-                  <SelectItem value="SCP">SCP™</SelectItem>
+                  <SelectItem value="CP">BDA-CP™</SelectItem>
+                  <SelectItem value="SCP">BDA-SCP™</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -327,7 +365,7 @@ export default function MyCertifications() {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-xl">
-                        {cert.certification_type}™ {texts.certification}
+                        BDA-{cert.certification_type}™ {texts.certification}
                       </CardTitle>
                       <p className="text-sm text-gray-500 mt-1">
                         {texts.credentialId}: <span className="font-mono font-semibold">{cert.credential_id}</span>
@@ -398,11 +436,17 @@ export default function MyCertifications() {
                   <div className="flex gap-2 pt-2">
                     <Button
                       className="flex-1"
-                      disabled={!cert.certificate_url}
-                      onClick={() => handleDownloadCertificate(cert.id, cert.credential_id)}
+                      disabled={generatingCerts.has(cert.credential_id)}
+                      onClick={() => handleDownloadCertificate(cert.id, cert.credential_id, !!cert.certificate_url)}
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      {cert.certificate_url ? texts.downloadCertificate : texts.certificatePending}
+                      {generatingCerts.has(cert.credential_id) ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-2" />
+                      )}
+                      {generatingCerts.has(cert.credential_id)
+                        ? (language === 'ar' ? 'جارٍ الإنشاء...' : 'Generating...')
+                        : texts.downloadCertificate}
                     </Button>
                     <Button
                       variant="outline"

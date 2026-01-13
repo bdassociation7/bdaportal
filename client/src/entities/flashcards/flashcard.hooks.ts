@@ -37,8 +37,8 @@ export const flashcardKeys = {
   decks: () => [...flashcardKeys.all, 'decks'] as const,
   decksList: (filters?: FlashcardDeckFilters) =>
     [...flashcardKeys.decks(), { filters }] as const,
-  decksWithProgress: (userId: string, certType: CertificationType) =>
-    [...flashcardKeys.decks(), 'progress', userId, certType] as const,
+  decksWithProgress: (userId: string, certType: CertificationType, examLanguage?: 'en' | 'ar') =>
+    [...flashcardKeys.decks(), 'progress', userId, certType, examLanguage] as const,
   decksWithCompetency: (filters?: FlashcardDeckFilters) =>
     [...flashcardKeys.decks(), 'competency', { filters }] as const,
   deck: (id: string) => [...flashcardKeys.decks(), id] as const,
@@ -60,8 +60,8 @@ export const flashcardKeys = {
     [...flashcardKeys.progress(userId), deckId] as const,
 
   // Stats
-  stats: (userId: string, certType?: CertificationType) =>
-    [...flashcardKeys.all, 'stats', userId, certType] as const,
+  stats: (userId: string, certType?: CertificationType, examLanguage?: 'en' | 'ar') =>
+    [...flashcardKeys.all, 'stats', userId, certType, examLanguage] as const,
   adminStats: (certType?: CertificationType) =>
     [...flashcardKeys.all, 'admin-stats', certType] as const,
 
@@ -94,18 +94,21 @@ export function useFlashcardDecks(filters?: FlashcardDeckFilters) {
 
 /**
  * Get decks with user progress
+ * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
  */
 export function useDecksWithProgress(
   userId: string | undefined,
-  certificationType: CertificationType
+  certificationType: CertificationType,
+  examLanguage?: 'en' | 'ar'
 ) {
   return useQuery({
-    queryKey: flashcardKeys.decksWithProgress(userId || '', certificationType),
+    queryKey: flashcardKeys.decksWithProgress(userId || '', certificationType, examLanguage),
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
       const result = await FlashcardService.getDecksWithProgress(
         userId,
-        certificationType
+        certificationType,
+        examLanguage
       );
       if (result.error) throw result.error;
       return result.data!;
@@ -235,18 +238,21 @@ export function useFlashcard(cardId: string | undefined) {
 
 /**
  * Get user's flashcard stats
+ * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
  */
 export function useFlashcardStats(
   userId: string | undefined,
-  certificationType?: CertificationType
+  certificationType?: CertificationType,
+  examLanguage?: 'en' | 'ar'
 ) {
   return useQuery({
-    queryKey: flashcardKeys.stats(userId || '', certificationType),
+    queryKey: flashcardKeys.stats(userId || '', certificationType, examLanguage),
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
       const result = await FlashcardService.getUserStats(
         userId,
-        certificationType
+        certificationType,
+        examLanguage
       );
       if (result.error) throw result.error;
       return result.data!;

@@ -43,6 +43,10 @@ export class CurriculumService {
         query = query.eq('is_published', filters.is_published);
       }
 
+      if (filters?.exam_language) {
+        query = query.eq('exam_language', filters.exam_language);
+      }
+
       if (filters?.search) {
         query = query.or(
           `competency_name.ilike.%${filters.search}%,competency_name_ar.ilike.%${filters.search}%`
@@ -196,18 +200,30 @@ export class CurriculumService {
 
   /**
    * Get modules with user progress and unlock status
+   * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
    */
   static async getModulesWithProgress(
     userId: string,
-    certificationType: string
+    certificationType: string,
+    examLanguage?: 'en' | 'ar'
   ): Promise<ServiceResponse<CurriculumModuleWithStatus[]>> {
     try {
-      // Get all published modules
-      const { data: modules, error: modulesError } = await supabase
+      // Get all published modules, filtered by language if specified
+      let query = supabase
         .from('curriculum_modules')
         .select('*')
         .eq('certification_type', certificationType)
-        .eq('is_published', true)
+        .eq('is_published', true);
+
+      // Filter by exam_language if provided
+      if (examLanguage) {
+        query = query.eq('exam_language', examLanguage);
+      }
+
+      // Order by section_type (behavioral=1, knowledge_based=2) then order_index
+      // This ensures Behavioral competencies appear first
+      const { data: modules, error: modulesError } = await query
+        .order('section_type', { ascending: true }) // 'behavioral' < 'knowledge_based' alphabetically
         .order('order_index', { ascending: true });
 
       if (modulesError) throw modulesError;
@@ -304,16 +320,41 @@ export class CurriculumService {
         prerequisiteModule = prereq || undefined;
       }
 
-      // Get next module
-      const { data: nextModule } = await supabase
+      // Get next module - use section_type ordering (behavioral first, then knowledge_based)
+      // Within same section, get next by order_index
+      // If at end of section, get first of next section
+      // IMPORTANT: Filter by exam_language to keep Arabic/English isolated
+      let nextModule = null;
+
+      // First try to get next in same section AND same language
+      const { data: nextInSection } = await supabase
         .from('curriculum_modules')
         .select('*')
         .eq('certification_type', module.certification_type)
+        .eq('section_type', module.section_type)
+        .eq('exam_language', module.exam_language) // Same language only
         .eq('is_published', true)
         .gt('order_index', module.order_index)
         .order('order_index', { ascending: true })
         .limit(1)
         .single();
+
+      if (nextInSection) {
+        nextModule = nextInSection;
+      } else if (module.section_type === 'behavioral') {
+        // At end of behavioral, get first knowledge_based in SAME LANGUAGE
+        const { data: firstKnowledge } = await supabase
+          .from('curriculum_modules')
+          .select('*')
+          .eq('certification_type', module.certification_type)
+          .eq('section_type', 'knowledge_based')
+          .eq('exam_language', module.exam_language) // Same language only
+          .eq('is_published', true)
+          .order('order_index', { ascending: true })
+          .limit(1)
+          .single();
+        nextModule = firstKnowledge;
+      }
 
       return {
         data: {
@@ -344,10 +385,12 @@ export class CurriculumService {
 
   /**
    * Get next unlocked module for user
+   * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
    */
   static async getNextUnlockedModule(
     userId: string,
-    certificationType: string
+    certificationType: string,
+    examLanguage?: 'en' | 'ar'
   ): Promise<ServiceResponse<CurriculumModule | null>> {
     try {
       const { data: moduleId, error } = await supabase.rpc(
@@ -355,6 +398,7 @@ export class CurriculumService {
         {
           p_user_id: userId,
           p_certification_type: certificationType,
+          p_exam_language: examLanguage || null,
         }
       );
 

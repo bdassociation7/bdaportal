@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CertificationExamService, type CertificationExam, type CertificationExamType } from '@/entities/certification-exam';
+import { CertificationExamService, type CertificationExam, type CertificationExamType, type ExamLanguage } from '@/entities/certification-exam';
 import { useToast } from '@/components/ui/use-toast';
-import { X } from 'lucide-react';
+import { X, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CertificationExamFormProps {
@@ -25,18 +25,20 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
       certificationType: 'Certification Type',
       certifiedProfessional: 'Certified Professional',
       seniorCertifiedProfessional: 'Senior Certified Professional',
-      titleEnglish: 'Title (English)',
-      titleArabic: 'Title (Arabic)',
-      descEnglish: 'Description (English)',
-      descArabic: 'Description (Arabic)',
+      examLanguage: 'Exam Language',
+      examLanguageDesc: 'Each exam is language-specific. Create separate exams for English and Arabic.',
+      englishExam: 'English Exam',
+      arabicExam: 'Arabic Exam',
+      title: 'Exam Title',
+      description: 'Description',
       difficultyLevel: 'Difficulty Level',
       timeLimit: 'Time Limit (minutes)',
       passingScore: 'Passing Score (%)',
       // Placeholders
       titlePlaceholder: 'e.g., Business Data Analytics Professional Certification',
-      titleArPlaceholder: 'العنوان بالعربية',
+      titlePlaceholderAr: 'مثال: شهادة محترف تحليلات بيانات الأعمال',
       descPlaceholder: 'Describe the certification exam, its objectives, and what candidates will be assessed on...',
-      descArPlaceholder: 'الوصف بالعربية...',
+      descPlaceholderAr: 'وصف امتحان الشهادة وأهدافه وما سيتم تقييم المرشحين عليه...',
       // Difficulty Options
       easy: 'Easy',
       medium: 'Medium',
@@ -46,8 +48,9 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
       inactiveNote: 'The exam will be created in inactive state by default',
       addQuestionsNote: 'You need to add questions before activating the exam',
       activateNote: 'Once activated, candidates can take the exam',
-      cpCertNote: 'CP™ certification will be issued upon passing',
-      scpCertNote: 'SCP™ certification will be issued upon passing',
+      cpCertNote: 'BDA-CP™ certification will be issued upon passing',
+      scpCertNote: 'SBDA-CP™ certification will be issued upon passing',
+      languageNote: 'Questions should be in the selected exam language only',
       // Buttons
       cancel: 'Cancel',
       createExamBtn: 'Create Exam',
@@ -75,18 +78,20 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
       certificationType: 'نوع الشهادة',
       certifiedProfessional: 'محترف معتمد',
       seniorCertifiedProfessional: 'محترف معتمد أول',
-      titleEnglish: 'العنوان (بالإنجليزية)',
-      titleArabic: 'العنوان (بالعربية)',
-      descEnglish: 'الوصف (بالإنجليزية)',
-      descArabic: 'الوصف (بالعربية)',
+      examLanguage: 'لغة الامتحان',
+      examLanguageDesc: 'كل امتحان خاص بلغة واحدة. أنشئ امتحانات منفصلة للإنجليزية والعربية.',
+      englishExam: 'امتحان إنجليزي',
+      arabicExam: 'امتحان عربي',
+      title: 'عنوان الامتحان',
+      description: 'الوصف',
       difficultyLevel: 'مستوى الصعوبة',
       timeLimit: 'الحد الزمني (بالدقائق)',
       passingScore: 'درجة النجاح (%)',
       // Placeholders
-      titlePlaceholder: 'مثال: شهادة محترف تحليلات بيانات الأعمال',
-      titleArPlaceholder: 'العنوان بالعربية',
-      descPlaceholder: 'وصف امتحان الشهادة وأهدافه وما سيتم تقييم المرشحين عليه...',
-      descArPlaceholder: 'الوصف بالعربية...',
+      titlePlaceholder: 'e.g., Business Data Analytics Professional Certification',
+      titlePlaceholderAr: 'مثال: شهادة محترف تحليلات بيانات الأعمال',
+      descPlaceholder: 'Describe the certification exam, its objectives, and what candidates will be assessed on...',
+      descPlaceholderAr: 'وصف امتحان الشهادة وأهدافه وما سيتم تقييم المرشحين عليه...',
       // Difficulty Options
       easy: 'سهل',
       medium: 'متوسط',
@@ -96,8 +101,9 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
       inactiveNote: 'سيتم إنشاء الامتحان في حالة غير نشطة افتراضياً',
       addQuestionsNote: 'تحتاج إلى إضافة أسئلة قبل تفعيل الامتحان',
       activateNote: 'بمجرد التفعيل، يمكن للمرشحين أداء الامتحان',
-      cpCertNote: 'سيتم إصدار شهادة CP™ عند النجاح',
-      scpCertNote: 'سيتم إصدار شهادة SCP™ عند النجاح',
+      cpCertNote: 'سيتم إصدار شهادة BDA-CP™ عند النجاح',
+      scpCertNote: 'سيتم إصدار شهادة BDA-SCP™ عند النجاح',
+      languageNote: 'يجب أن تكون الأسئلة بلغة الامتحان المحددة فقط',
       // Buttons
       cancel: 'إلغاء',
       createExamBtn: 'إنشاء الامتحان',
@@ -122,10 +128,11 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
   const texts = t[language];
 
   // Form state
+  const [examLanguage, setExamLanguage] = useState<ExamLanguage>(
+    exam?.exam_language || 'en'
+  );
   const [title, setTitle] = useState(exam?.title || '');
-  const [titleAr, setTitleAr] = useState(exam?.title_ar || '');
   const [description, setDescription] = useState(exam?.description || '');
-  const [descriptionAr, setDescriptionAr] = useState(exam?.description_ar || '');
   const [certificationType, setCertificationType] = useState<CertificationExamType>(
     exam?.certification_type || 'CP'
   );
@@ -211,10 +218,12 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
 
     const formData = {
       title: title.trim(),
-      title_ar: titleAr.trim() || undefined,
+      // For Arabic exams, store the title in title_ar as well for compatibility
+      title_ar: examLanguage === 'ar' ? title.trim() : undefined,
       description: description.trim() || undefined,
-      description_ar: descriptionAr.trim() || undefined,
+      description_ar: examLanguage === 'ar' ? description.trim() : undefined,
       certification_type: certificationType,
+      exam_language: examLanguage,
       difficulty_level: difficultyLevel,
       time_limit_minutes: timeLimitMinutes,
       passing_score_percentage: passingScorePercentage,
@@ -263,7 +272,7 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
                     : 'border-gray-300 bg-white text-gray-700 hover:border-green-300'
                 }`}
               >
-                <div className="font-bold text-lg">CP™</div>
+                <div className="font-bold text-lg">BDA-CP™</div>
                 <div className="text-sm mt-1">{texts.certifiedProfessional}</div>
               </button>
               <button
@@ -275,68 +284,77 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
                     : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'
                 }`}
               >
-                <div className="font-bold text-lg">SCP™</div>
+                <div className="font-bold text-lg">BDA-SCP™</div>
                 <div className="text-sm mt-1">{texts.seniorCertifiedProfessional}</div>
               </button>
             </div>
           </div>
 
-          {/* Title (English) */}
+          {/* Exam Language - CRITICAL */}
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+            <label className="flex items-center gap-2 text-sm font-semibold text-blue-800 mb-2">
+              <Globe className="h-5 w-5" />
+              {texts.examLanguage} <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-blue-700 mb-3">{texts.examLanguageDesc}</p>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => !isEditing && setExamLanguage('en')}
+                disabled={isEditing}
+                className={`p-4 rounded-lg border-2 transition ${
+                  examLanguage === 'en'
+                    ? 'border-blue-500 bg-blue-100 text-blue-900'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-300'
+                } ${isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                <div className="font-bold text-lg">🇬🇧 EN</div>
+                <div className="text-sm mt-1">{texts.englishExam}</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => !isEditing && setExamLanguage('ar')}
+                disabled={isEditing}
+                className={`p-4 rounded-lg border-2 transition ${
+                  examLanguage === 'ar'
+                    ? 'border-emerald-500 bg-emerald-100 text-emerald-900'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
+                } ${isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
+              >
+                <div className="font-bold text-lg">🇸🇦 AR</div>
+                <div className="text-sm mt-1">{texts.arabicExam}</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Title - Based on exam language */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {texts.titleEnglish} <span className="text-red-500">*</span>
+              {texts.title} ({examLanguage === 'en' ? 'English' : 'العربية'}) <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder={texts.titlePlaceholder}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${examLanguage === 'ar' ? 'text-right' : ''}`}
+              placeholder={examLanguage === 'en' ? texts.titlePlaceholder : texts.titlePlaceholderAr}
+              dir={examLanguage === 'ar' ? 'rtl' : 'ltr'}
               required
             />
           </div>
 
-          {/* Title (Arabic) */}
+          {/* Description - Based on exam language */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {texts.titleArabic}
-            </label>
-            <input
-              type="text"
-              value={titleAr}
-              onChange={(e) => setTitleAr(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
-              placeholder={texts.titleArPlaceholder}
-              dir="rtl"
-            />
-          </div>
-
-          {/* Description (English) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {texts.descEnglish}
+              {texts.description} ({examLanguage === 'en' ? 'English' : 'العربية'})
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder={texts.descPlaceholder}
-            />
-          </div>
-
-          {/* Description (Arabic) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {texts.descArabic}
-            </label>
-            <textarea
-              value={descriptionAr}
-              onChange={(e) => setDescriptionAr(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
-              placeholder={texts.descArPlaceholder}
-              dir="rtl"
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${examLanguage === 'ar' ? 'text-right' : ''}`}
+              placeholder={examLanguage === 'en' ? texts.descPlaceholder : texts.descPlaceholderAr}
+              dir={examLanguage === 'ar' ? 'rtl' : 'ltr'}
             />
           </div>
 
@@ -404,6 +422,7 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
               <li>• {texts.addQuestionsNote}</li>
               <li>• {texts.activateNote}</li>
               <li>• {certificationType === 'CP' ? texts.cpCertNote : texts.scpCertNote}</li>
+              <li className="text-blue-900 font-medium">• {texts.languageNote} ({examLanguage === 'en' ? '🇬🇧 English' : '🇸🇦 العربية'})</li>
             </ul>
           </div>
 

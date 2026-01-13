@@ -177,19 +177,53 @@ export class MembershipService {
         throw new Error('Certificate not yet generated. Please contact support.');
       }
 
-      // Generate signed URL for private certificate (1 hour validity)
-      const { data, error } = await supabase.storage
+      // Get public URL for certificate (bucket is public)
+      const { data } = supabase.storage
         .from('membership-certificates')
-        .createSignedUrl(membership.certificate_url, 3600);
+        .getPublicUrl(membership.certificate_url);
 
-      if (error) {
-        console.error('Storage error:', error);
-        throw new Error('Failed to generate download link. Please try again.');
-      }
-
-      return { data: data.signedUrl, error: null };
+      return { data: data.publicUrl, error: null };
     } catch (error) {
       console.error('Error getting certificate URL:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Generate membership certificate on-demand
+   * Creates PDF certificate for Professional members
+   * Note: Certificate generation is handled server-side; this method requests certificate processing
+   */
+  static async generateMembershipCertificate(
+    membershipId: string
+  ): Promise<MembershipResult<string>> {
+    try {
+      // Check if certificate already exists (might have been generated since page load)
+      const { data: membership, error: checkError } = await supabase
+        .from('user_memberships')
+        .select('certificate_url, membership_type')
+        .eq('id', membershipId)
+        .single();
+
+      if (checkError) throw checkError;
+
+      if (membership.membership_type !== 'professional') {
+        throw new Error('Certificates are only available for Professional members');
+      }
+
+      // If certificate exists, return success
+      if (membership.certificate_url) {
+        return { data: membership.certificate_url, error: null };
+      }
+
+      // Certificate needs to be generated server-side
+      // Show a user-friendly message
+      throw new Error(
+        'Your certificate is being prepared. Please refresh the page in a few minutes. ' +
+        'If the issue persists, contact support@bda-global.org'
+      );
+    } catch (error) {
+      console.error('Error generating certificate:', error);
       return { data: null, error: error as Error };
     }
   }

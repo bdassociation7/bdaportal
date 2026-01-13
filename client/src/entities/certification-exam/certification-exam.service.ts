@@ -8,6 +8,7 @@ import { supabase } from '@/shared/config/supabase.config';
 import type { QuizService } from '@/entities/quiz/quiz.service';
 
 export type CertificationExamType = 'CP' | 'SCP';
+export type ExamLanguage = 'en' | 'ar';
 export type ExamStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface CertificationExam {
@@ -17,6 +18,7 @@ export interface CertificationExam {
   description?: string;
   description_ar?: string;
   certification_type: CertificationExamType;
+  exam_language: ExamLanguage; // Language of the exam (en or ar) - exams are language-specific
   difficulty_level: 'easy' | 'medium' | 'hard';
   time_limit_minutes: number;
   passing_score_percentage: number;
@@ -110,6 +112,7 @@ export class CertificationExamService {
     description?: string;
     description_ar?: string;
     certification_type: CertificationExamType;
+    exam_language: ExamLanguage; // Required: each exam is language-specific
     difficulty_level?: 'easy' | 'medium' | 'hard';
     time_limit_minutes?: number;
     passing_score_percentage?: number;
@@ -121,6 +124,7 @@ export class CertificationExamService {
         .from('quizzes')
         .insert({
           ...dto,
+          exam_language: dto.exam_language || 'en',
           difficulty_level: dto.difficulty_level || 'medium',
           time_limit_minutes: dto.time_limit_minutes || 120,
           passing_score_percentage: dto.passing_score_percentage || 70,
@@ -170,65 +174,71 @@ export class CertificationExamService {
   }
 
   /**
-   * Supprimer un examen de certification (admin)
-   * Cascade deletes: quiz_answers -> quiz_questions -> quiz
+   * Check if exam can be deleted and return attempt count
    */
-  static async deleteCertificationExam(examId: string): Promise<{ error: any }> {
+  static async checkExamDeletable(examId: string): Promise<{
+    canDelete: boolean;
+    attemptCount: number;
+    error: any;
+  }> {
     try {
-      // Step 1: Get all question IDs for this exam
-      const { data: questions, error: questionsError } = await supabase
-        .from('quiz_questions')
-        .select('id')
+      const { count: attemptCount, error: countError } = await supabase
+        .from('quiz_attempts')
+        .select('*', { count: 'exact', head: true })
         .eq('quiz_id', examId);
 
-      if (questionsError) {
-        console.error('Error fetching exam questions for deletion:', questionsError);
-        return { error: questionsError };
+      if (countError) {
+        console.error('Error checking exam attempts:', countError);
+        return { canDelete: false, attemptCount: 0, error: countError };
       }
 
-      // Step 2: Delete all answers for these questions
-      if (questions && questions.length > 0) {
-        const questionIds = questions.map(q => q.id);
+      return {
+        canDelete: !attemptCount || attemptCount === 0,
+        attemptCount: attemptCount || 0,
+        error: null,
+      };
+    } catch (error) {
+      console.error('Error in checkExamDeletable:', error);
+      return { canDelete: false, attemptCount: 0, error };
+    }
+  }
 
-        const { error: answersError } = await supabase
-          .from('quiz_answers')
-          .delete()
-          .in('question_id', questionIds);
+  /**
+   * Supprimer un examen de certification (admin)
+   * @param examId - The exam ID to delete
+   * @param force - If true, delete even if exam has attempts (use with caution)
+   */
+  static async deleteCertificationExam(
+    examId: string,
+    force: boolean = false
+  ): Promise<{ error: any }> {
+    try {
+      // Step 1: Check if anyone has attempted this exam (unless force delete)
+      if (!force) {
+        const { canDelete, attemptCount } = await this.checkExamDeletable(examId);
 
-        if (answersError) {
-          console.error('Error deleting exam answers:', answersError);
-          return { error: answersError };
+        if (!canDelete) {
+          return {
+            error: {
+              type: 'HAS_ATTEMPTS',
+              attemptCount,
+              message: `This exam has been attempted by ${attemptCount} user(s).`,
+            },
+          };
         }
       }
 
-      // Step 3: Delete all questions for this exam
-      const { error: deleteQuestionsError } = await supabase
-        .from('quiz_questions')
-        .delete()
-        .eq('quiz_id', examId);
-
-      if (deleteQuestionsError) {
-        console.error('Error deleting exam questions:', deleteQuestionsError);
-        return { error: deleteQuestionsError };
-      }
-
-      // Step 4: Delete the exam itself
-      const { data, error } = await supabase
+      // Step 2: Delete the exam
+      // CASCADE will handle: quiz_questions, quiz_answers, exam_bookings, exam_timeslots
+      // SET NULL will preserve: user_certifications (quiz_attempt_id becomes null)
+      const { error } = await supabase
         .from('quizzes')
         .delete()
-        .eq('id', examId)
-        .select();
+        .eq('id', examId);
 
       if (error) {
         console.error('Error deleting certification exam:', error);
         return { error };
-      }
-
-      // Check if any row was actually deleted
-      if (!data || data.length === 0) {
-        const notFoundError = new Error('Exam not found or could not be deleted. You may not have permission to delete this exam.');
-        console.error('No exam deleted:', notFoundError);
-        return { error: notFoundError };
       }
 
       return { error: null };
@@ -329,12 +339,22 @@ export class CertificationExamService {
         return { data: null, error };
       }
 
-      // Enrichir avec stats utilisateur
+      // Enrichir avec question count et stats utilisateur
       const examsWithStats = await Promise.all(
         (data || []).map(async (exam) => {
+          // Get question count
+          const { data: questions } = await supabase
+            .from('quiz_questions')
+            .select('points')
+            .eq('quiz_id', exam.id);
+
+          // Get user stats
           const stats = await this.getUserExamStats(exam.id);
+
           return {
             ...exam,
+            question_count: questions?.length || 0,
+            total_points: questions?.reduce((sum, q) => sum + (q.points || 1), 0) || 0,
             ...stats,
           };
         })
@@ -366,6 +386,13 @@ export class CertificationExamService {
         };
       }
 
+      // Get the exam's certification type first
+      const { data: exam } = await supabase
+        .from('quizzes')
+        .select('certification_type')
+        .eq('id', examId)
+        .single();
+
       // Récupérer les tentatives de l'utilisateur
       const { data: attempts } = await supabase
         .from('quiz_attempts')
@@ -376,13 +403,19 @@ export class CertificationExamService {
         .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false });
 
-      // Vérifier si l'utilisateur est certifié
-      const { data: certification } = await supabase
-        .from('user_certifications')
-        .select('id')
-        .eq('user_id', user.user.id)
-        .eq('status', 'active')
-        .maybeSingle();
+      // Check if user is certified for THIS SPECIFIC certification type (CP or SCP)
+      // A CP certification should NOT block taking SCP exams and vice versa
+      let certification = null;
+      if (exam?.certification_type) {
+        const { data: certData } = await supabase
+          .from('user_certifications')
+          .select('id')
+          .eq('user_id', user.user.id)
+          .eq('certification_type', exam.certification_type) // Filter by specific type!
+          .eq('status', 'active')
+          .maybeSingle();
+        certification = certData;
+      }
 
       return {
         total_attempts: attempts?.length || 0,

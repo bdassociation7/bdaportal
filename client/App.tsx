@@ -23,6 +23,7 @@ import { DashboardRouter } from "@/components/DashboardRouter";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import SetPassword from "./pages/auth/SetPassword";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 import NotFound from "./pages/NotFound";
 
 // Admin pages
@@ -48,8 +49,10 @@ import MyBooks from "./pages/individual/MyBooks";
 import MyCertifications from "./pages/individual/MyCertifications";
 import MyMembership from "./pages/individual/MyMembership";
 import AuthorizedProviders from "./pages/individual/AuthorizedProviders";
+import AccreditedPrograms from "./pages/individual/AccreditedPrograms";
 import VerifyCertification from "./pages/individual/VerifyCertification";
 import VerifyCertificate from "./pages/VerifyCertificate";
+import { PublicPageLayout } from "./components/PublicPageLayout";
 import AuthDebug from "./pages/AuthDebug";
 import Settings from "./pages/settings/Settings";
 
@@ -95,13 +98,20 @@ import ExamLaunch from "./pages/ExamLaunch";
 
 // Admin Certification pages
 import CertificationProducts from "./pages/admin/CertificationProductsUnified";
+import MockExamProducts from "./pages/admin/MockExamProducts";
+import MembershipBenefitBooks from "./pages/admin/MembershipBenefitBooks";
+import BookProducts from "./pages/admin/BookProducts";
+import GrantBookAccess from "./pages/admin/GrantBookAccess";
+import PartnershipProducts from "./pages/admin/PartnershipProducts";
 import CertificationExamsAdmin from "./pages/admin/CertificationExams";
 import CertificationExamQuestionManager from "./pages/admin/CertificationExamQuestionManager";
 import Vouchers from "./pages/admin/Vouchers";
 import CustomersVouchers from "./pages/admin/CustomersVouchers";
 import ContentManagement from "./pages/admin/ContentManagement";
+import ToolkitManagement from "./pages/admin/ToolkitManagement";
 import ResourceConfiguration from "./pages/admin/ResourceConfiguration";
 import ECPManagement from "./pages/admin/ECPManagement";
+import ECPToolkitManagement from "./pages/admin/ECPToolkitManagement";
 import ECPDetails from "./pages/admin/ecp/ECPDetails";
 import VoucherAllocation from "./pages/admin/ecp/VoucherAllocation";
 import AdminECPTrainingBatches from "./pages/admin/ecp/TrainingBatches";
@@ -122,12 +132,14 @@ import AdminManagement from "./pages/admin/AdminManagement";
 import BulkUserUpload from "./pages/admin/BulkUserUpload";
 import TrainingBatchManagement from "./pages/admin/TrainingBatchManagement";
 import ExamSchedulingAdmin from "./pages/admin/ExamSchedulingAdmin";
+import ExamWindows from "./pages/admin/ExamWindows";
 import ReportsAnalytics from "./pages/admin/ReportsAnalytics";
 import FinanceTransactions from "./pages/admin/FinanceTransactions";
 import Communications from "./pages/admin/Communications";
 import SystemSettings from "./pages/admin/SystemSettings";
 import SecurityLogs from "./pages/admin/SecurityLogs";
 import TrainerManagement from "./pages/admin/TrainerManagement";
+import LearningSystemProducts from "./pages/admin/LearningSystemProducts";
 
 // Profile Completion pages
 import IndividualCompleteProfile from "./pages/individual/CompleteProfile";
@@ -170,6 +182,17 @@ const IndividualOnlyWrapper = () => (
         <PortalLayout>
           <Outlet />
         </PortalLayout>
+      </RoleGuard>
+    </ProfileCompletionGuard>
+  </ProtectedRoute>
+);
+
+// Exam mode wrapper - no sidebar, full-screen focus mode for taking exams
+const ExamModeWrapper = () => (
+  <ProtectedRoute>
+    <ProfileCompletionGuard>
+      <RoleGuard allowedRoles={['individual']}>
+        <Outlet />
       </RoleGuard>
     </ProfileCompletionGuard>
   </ProtectedRoute>
@@ -280,9 +303,32 @@ const App = () => (
                 <Route path="/verify" element={<VerifyCertificate />} />
                 <Route path="/verify/:credentialId" element={<VerifyCertificate />} />
 
+                {/* Public pages - no auth required */}
+                <Route path="/public/programs" element={
+                  <PublicPageLayout>
+                    <AccreditedPrograms />
+                  </PublicPageLayout>
+                } />
+                <Route path="/public/providers" element={
+                  <PublicPageLayout>
+                    <AuthorizedProviders />
+                  </PublicPageLayout>
+                } />
+                <Route path="/public/verify" element={
+                  <PublicPageLayout>
+                    <VerifyCertificate />
+                  </PublicPageLayout>
+                } />
+                <Route path="/public/verify/:credentialId" element={
+                  <PublicPageLayout>
+                    <VerifyCertificate />
+                  </PublicPageLayout>
+                } />
+
                 {/* Auth routes - no layout */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/auth/set-password" element={<SetPassword />} />
 
                 {/* Profile Completion routes - protected but NO profile guard */}
@@ -310,6 +356,11 @@ const App = () => (
                   <Route path="/settings" element={<Settings />} />
                 </Route>
 
+                {/* EXAM MODE routes - full-screen, no sidebar for focus */}
+                <Route element={<ExamModeWrapper />}>
+                  <Route path="/certification/exam/:examId/attempt/:attemptId" element={<TakeCertificationExamAttempt />} />
+                </Route>
+
                 {/* INDIVIDUAL-ONLY routes */}
                 <Route element={<IndividualOnlyWrapper />}>
                   <Route path="/individual/dashboard" element={<IndividualDashboard />} />
@@ -319,6 +370,7 @@ const App = () => (
                   <Route path="/my-recognitions" element={<PlaceholderPage title="My Recognitions" />} />
                   <Route path="/pdcs" element={<PDCs />} />
                   <Route path="/authorized-providers" element={<AuthorizedProviders />} />
+                  <Route path="/accredited-programs" element={<AccreditedPrograms />} />
                   <Route path="/resources" element={<Resources />} />
                   <Route path="/verify-certification" element={<VerifyCertification />} />
                   <Route path="/help-center" element={<HelpCenter />} />
@@ -327,7 +379,7 @@ const App = () => (
                   <Route path="/certification-exams" element={<TakeCertificationExam />} />
                   <Route path="/schedule-exam" element={<ScheduleExam />} />
                   <Route path="/exam-launch" element={<ExamLaunch />} />
-                  <Route path="/certification/exam/:examId/attempt/:attemptId" element={<TakeCertificationExamAttempt />} />
+                  {/* Note: Exam attempt route moved to ExamModeWrapper for full-screen focus mode */}
                   <Route path="/exam-applications" element={<ExamApplications />} />
                   <Route path="/exam-applications/:examId" element={<CertExamDetail />} />
                   <Route path="/exam-applications/:examId/take" element={<TakeCertExam />} />
@@ -374,6 +426,20 @@ const App = () => (
                   <Route path="/ecp/trainers/:id/edit" element={<ECPTrainerEdit />} />
                   <Route path="/ecp/vouchers" element={<ECPVouchers />} />
                   <Route path="/ecp/reports" element={<ECPReports />} />
+                  {/* ECP Learning System routes */}
+                  <Route path="/ecp/learning-system" element={<LearningSystemDashboard />} />
+                  <Route path="/ecp/learning-system/training-kits" element={<MyCurriculum />} />
+                  <Route path="/ecp/learning-system/training-kits/module/:moduleId" element={<ModuleViewer />} />
+                  <Route path="/ecp/learning-system/training-kits/modules/:moduleId/lessons/:lessonId" element={<LessonViewer />} />
+                  <Route path="/ecp/learning-system/question-bank" element={<QuestionBankDashboard />} />
+                  <Route path="/ecp/learning-system/question-bank/:setId" element={<PracticeSession />} />
+                  <Route path="/ecp/learning-system/flashcards" element={<FlashcardsDashboard />} />
+                  <Route path="/ecp/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
+                  {/* ECP Mock Exams routes */}
+                  <Route path="/ecp/mock-exams" element={<MockExamList />} />
+                  <Route path="/ecp/mock-exams/:examId" element={<ExamDetail />} />
+                  <Route path="/ecp/mock-exams/:examId/take" element={<TakeExam />} />
+                  <Route path="/ecp/mock-exams/results/:attemptId" element={<ExamResults />} />
                   <Route path="/ecp/license" element={<ECPLicense />} />
                   <Route path="/ecp/toolkit" element={<ECPToolkit />} />
                   <Route path="/ecp/help" element={<ECPHelpCenter />} />
@@ -412,6 +478,11 @@ const App = () => (
                   <Route path="/admin/certification-exams" element={<CertificationExamsAdmin />} />
                   <Route path="/admin/certification-exams/:examId/questions" element={<CertificationExamQuestionManager />} />
                   <Route path="/admin/certification-products" element={<CertificationProducts />} />
+                  <Route path="/admin/mock-exam-products" element={<MockExamProducts />} />
+                  <Route path="/admin/membership-benefit-books" element={<MembershipBenefitBooks />} />
+                  <Route path="/admin/book-products" element={<BookProducts />} />
+                  <Route path="/admin/grant-book-access" element={<GrantBookAccess />} />
+                  <Route path="/admin/partnership-products" element={<PartnershipProducts />} />
                   <Route path="/admin/vouchers" element={<Vouchers />} />
                   <Route path="/admin/customers-vouchers" element={<CustomersVouchers />} />
                   <Route path="/admin/role-mapping" element={<RoleMappingSettings />} />
@@ -420,10 +491,12 @@ const App = () => (
                   <Route path="/admin/pdcs" element={<PDCValidation />} />
                   <Route path="/admin/trainers" element={<TrainerManagement />} />
                   <Route path="/admin/content" element={<ContentManagement />} />
+                  <Route path="/admin/toolkit" element={<ToolkitManagement />} />
                   <Route path="/admin/curriculum" element={<CurriculumModuleManager />} />
                   <Route path="/admin/curriculum/lessons" element={<LessonManager />} />
                   <Route path="/admin/curriculum/quizzes" element={<LessonQuizManager />} />
                   <Route path="/admin/curriculum/access" element={<AccessManagement />} />
+                  <Route path="/admin/learning-system-products" element={<LearningSystemProducts />} />
                   {/* Question Bank Admin */}
                   <Route path="/admin/question-bank" element={<QuestionBankManager />} />
                   <Route path="/admin/question-bank/sets/:setId" element={<QuestionSetEditor />} />
@@ -444,6 +517,7 @@ const App = () => (
                   <Route path="/admin/ecp/trainings/new" element={<AdminECPTrainingBatchNew />} />
                   <Route path="/admin/ecp/trainings/:id" element={<AdminECPTrainingBatchDetail />} />
                   <Route path="/admin/ecp/trainings/:id/edit" element={<AdminECPTrainingBatchEdit />} />
+                  <Route path="/admin/ecp-toolkit" element={<ECPToolkitManagement />} />
                   <Route path="/admin/pdp-management" element={<PDPManagement />} />
                   <Route path="/admin/pdp/:id" element={<PDPDetails />} />
                   <Route path="/admin/pdp/:id/license" element={<LicenseManagement />} />
@@ -456,6 +530,7 @@ const App = () => (
                   <Route path="/admin/pdp-reports" element={<PDPAnnualReportsAdmin />} />
                   <Route path="/admin/training-batches" element={<TrainingBatchManagement />} />
                   <Route path="/admin/exam-scheduling" element={<ExamSchedulingAdmin />} />
+                  <Route path="/admin/exam-windows" element={<ExamWindows />} />
                   <Route path="/admin/admins" element={<AdminManagement />} />
                   <Route path="/admin/finance" element={<FinanceTransactions />} />
                   <Route path="/admin/reports" element={<ReportsAnalytics />} />

@@ -236,8 +236,8 @@ export default function ExamComplete() {
                     <p className="text-sm text-gray-600">Certification Type</p>
                     <p className="text-lg font-semibold text-gray-900">
                       {certificate.certification_type === 'CP'
-                        ? 'Certified Professional (CP™)'
-                        : 'Senior Certified Professional (SCP™)'}
+                        ? 'BDA Certified Professional (BDA-CP™)'
+                        : 'BDA Senior Certified Professional (BDA-SCP™)'}
                     </p>
                   </div>
                   <div>

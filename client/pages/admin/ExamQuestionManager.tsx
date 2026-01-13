@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Circle,
   GraduationCap,
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,6 +90,7 @@ export default function ExamQuestionManager() {
   });
 
   const questions = exam?.questions || [];
+  const examLanguage = exam?.language || 'en'; // Exam's language determines question/answer language
 
   // Handlers
   const handleAddQuestion = () => {
@@ -136,11 +138,12 @@ export default function ExamQuestionManager() {
   };
 
   const handleSaveQuestion = async () => {
-    // Validation
-    if (!questionForm.question_text.trim()) {
+    // Validation - check based on exam language
+    const questionText = examLanguage === 'ar' ? questionForm.question_text_ar : questionForm.question_text;
+    if (!questionText.trim()) {
       toast({
         title: 'Validation Error',
-        description: 'Question text is required',
+        description: examLanguage === 'ar' ? 'نص السؤال مطلوب' : 'Question text is required',
         variant: 'destructive',
       });
       return;
@@ -149,18 +152,21 @@ export default function ExamQuestionManager() {
     if (questionForm.answers.length < 2) {
       toast({
         title: 'Validation Error',
-        description: 'At least 2 answers are required',
+        description: examLanguage === 'ar' ? 'يجب إضافة إجابتين على الأقل' : 'At least 2 answers are required',
         variant: 'destructive',
       });
       return;
     }
 
-    // Validate answer text
-    const hasEmptyAnswers = questionForm.answers.some((a) => !a.answer_text.trim());
+    // Validate answer text based on exam language
+    const hasEmptyAnswers = questionForm.answers.some((a) => {
+      const answerText = examLanguage === 'ar' ? a.answer_text_ar : a.answer_text;
+      return !answerText?.trim();
+    });
     if (hasEmptyAnswers) {
       toast({
         title: 'Validation Error',
-        description: 'All answers must have text',
+        description: examLanguage === 'ar' ? 'جميع الإجابات يجب أن تحتوي على نص' : 'All answers must have text',
         variant: 'destructive',
       });
       return;
@@ -430,11 +436,24 @@ export default function ExamQuestionManager() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <GraduationCap className="h-8 w-8" />
-              Question Manager
-            </h1>
-            <p className="mt-2 opacity-90">{exam.title}</p>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                <GraduationCap className="h-8 w-8" />
+                Question Manager
+              </h1>
+              <Badge
+                variant="outline"
+                className={examLanguage === 'ar'
+                  ? 'border-emerald-300 text-emerald-100 bg-emerald-500/20'
+                  : 'border-blue-300 text-blue-100 bg-blue-500/20'
+                }
+              >
+                {examLanguage === 'ar' ? '🇸🇦 Arabic Exam' : '🇬🇧 English Exam'}
+              </Badge>
+            </div>
+            <p className={`mt-2 opacity-90 ${examLanguage === 'ar' ? 'text-right' : ''}`} dir={examLanguage === 'ar' ? 'rtl' : 'ltr'}>
+              {examLanguage === 'ar' && exam.title_ar ? exam.title_ar : exam.title}
+            </p>
             <div className="mt-2 flex items-center gap-4 text-sm">
               <span>{questions.length} Questions</span>
               <span>•</span>
@@ -482,33 +501,63 @@ export default function ExamQuestionManager() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6 mt-6">
-            {/* Question Text */}
-            <div className="space-y-2">
-              <Label>
-                Question Text (English) <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                value={questionForm.question_text}
-                onChange={(e) =>
-                  setQuestionForm((prev) => ({ ...prev, question_text: e.target.value }))
-                }
-                placeholder="Enter question text in English"
-                rows={3}
-              />
+            {/* Language Indicator */}
+            <div className={cn(
+              "p-3 rounded-lg border-2 flex items-center gap-3",
+              examLanguage === 'ar'
+                ? "bg-emerald-50 border-emerald-200"
+                : "bg-blue-50 border-blue-200"
+            )}>
+              <span className="text-2xl">{examLanguage === 'ar' ? '🇸🇦' : '🇬🇧'}</span>
+              <div>
+                <p className={cn(
+                  "font-semibold",
+                  examLanguage === 'ar' ? "text-emerald-800" : "text-blue-800"
+                )}>
+                  {examLanguage === 'ar' ? 'امتحان عربي' : 'English Exam'}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {examLanguage === 'ar'
+                    ? 'جميع الأسئلة والإجابات بالعربية فقط'
+                    : 'All questions and answers in English only'
+                  }
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Question Text (Arabic)</Label>
-              <Textarea
-                value={questionForm.question_text_ar}
-                onChange={(e) =>
-                  setQuestionForm((prev) => ({ ...prev, question_text_ar: e.target.value }))
-                }
-                placeholder="أدخل نص السؤال بالعربية"
-                rows={3}
-                dir="rtl"
-              />
-            </div>
+            {/* Question Text - Based on exam language */}
+            {examLanguage === 'en' ? (
+              <div className="space-y-2 p-4 bg-blue-50/50 rounded-lg border border-blue-100">
+                <Label className="text-blue-800 font-semibold">
+                  Question Text <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  value={questionForm.question_text}
+                  onChange={(e) =>
+                    setQuestionForm((prev) => ({ ...prev, question_text: e.target.value }))
+                  }
+                  placeholder="Enter question text"
+                  rows={3}
+                  className="bg-white"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2 p-4 bg-emerald-50/50 rounded-lg border border-emerald-100">
+                <Label className="text-emerald-800 font-semibold">
+                  نص السؤال <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  value={questionForm.question_text_ar}
+                  onChange={(e) =>
+                    setQuestionForm((prev) => ({ ...prev, question_text_ar: e.target.value }))
+                  }
+                  placeholder="أدخل نص السؤال"
+                  rows={3}
+                  dir="rtl"
+                  className="bg-white"
+                />
+              </div>
+            )}
 
             {/* Answer Selection Type */}
             <div className="space-y-4">
@@ -666,22 +715,25 @@ export default function ExamQuestionManager() {
                               id={`answer-${answer.tempId}`}
                             />
                           </div>
-                          <div className="flex-1 space-y-3">
-                            <Input
-                              value={answer.answer_text}
-                              onChange={(e) =>
-                                handleUpdateAnswer(answer.tempId, 'answer_text', e.target.value)
-                              }
-                              placeholder={`Answer ${index + 1} (English)`}
-                            />
-                            <Input
-                              value={answer.answer_text_ar}
-                              onChange={(e) =>
-                                handleUpdateAnswer(answer.tempId, 'answer_text_ar', e.target.value)
-                              }
-                              placeholder={`الإجابة ${index + 1} (عربي)`}
-                              dir="rtl"
-                            />
+                          <div className="flex-1">
+                            {examLanguage === 'en' ? (
+                              <Input
+                                value={answer.answer_text}
+                                onChange={(e) =>
+                                  handleUpdateAnswer(answer.tempId, 'answer_text', e.target.value)
+                                }
+                                placeholder={`Answer ${index + 1}`}
+                              />
+                            ) : (
+                              <Input
+                                value={answer.answer_text_ar}
+                                onChange={(e) =>
+                                  handleUpdateAnswer(answer.tempId, 'answer_text_ar', e.target.value)
+                                }
+                                placeholder={`الإجابة ${index + 1}`}
+                                dir="rtl"
+                              />
+                            )}
                           </div>
                           {questionForm.answers.length > 2 && (
                             <Button
@@ -724,22 +776,25 @@ export default function ExamQuestionManager() {
                             }}
                           />
                         </div>
-                        <div className="flex-1 space-y-3">
-                          <Input
-                            value={answer.answer_text}
-                            onChange={(e) =>
-                              handleUpdateAnswer(answer.tempId, 'answer_text', e.target.value)
-                            }
-                            placeholder={`Answer ${index + 1} (English)`}
-                          />
-                          <Input
-                            value={answer.answer_text_ar}
-                            onChange={(e) =>
-                              handleUpdateAnswer(answer.tempId, 'answer_text_ar', e.target.value)
-                            }
-                            placeholder={`الإجابة ${index + 1} (عربي)`}
-                            dir="rtl"
-                          />
+                        <div className="flex-1">
+                          {examLanguage === 'en' ? (
+                            <Input
+                              value={answer.answer_text}
+                              onChange={(e) =>
+                                handleUpdateAnswer(answer.tempId, 'answer_text', e.target.value)
+                              }
+                              placeholder={`Answer ${index + 1}`}
+                            />
+                          ) : (
+                            <Input
+                              value={answer.answer_text_ar}
+                              onChange={(e) =>
+                                handleUpdateAnswer(answer.tempId, 'answer_text_ar', e.target.value)
+                              }
+                              placeholder={`الإجابة ${index + 1}`}
+                              dir="rtl"
+                            />
+                          )}
                         </div>
                         {questionForm.answers.length > 2 && (
                           <Button
@@ -759,31 +814,35 @@ export default function ExamQuestionManager() {
               )}
             </div>
 
-            {/* Explanation */}
-            <div className="space-y-2">
-              <Label>Explanation (English)</Label>
-              <Textarea
-                value={questionForm.explanation}
-                onChange={(e) =>
-                  setQuestionForm((prev) => ({ ...prev, explanation: e.target.value }))
-                }
-                placeholder="Optional explanation for the correct answer"
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Explanation (Arabic)</Label>
-              <Textarea
-                value={questionForm.explanation_ar}
-                onChange={(e) =>
-                  setQuestionForm((prev) => ({ ...prev, explanation_ar: e.target.value }))
-                }
-                placeholder="شرح اختياري للإجابة الصحيحة"
-                rows={3}
-                dir="rtl"
-              />
-            </div>
+            {/* Explanation - Based on exam language */}
+            {examLanguage === 'en' ? (
+              <div className="space-y-2 p-4 bg-amber-50/50 rounded-lg border border-amber-100">
+                <Label className="text-amber-800 font-medium">Explanation (Optional)</Label>
+                <Textarea
+                  value={questionForm.explanation}
+                  onChange={(e) =>
+                    setQuestionForm((prev) => ({ ...prev, explanation: e.target.value }))
+                  }
+                  placeholder="Optional explanation for the correct answer"
+                  rows={3}
+                  className="bg-white"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2 p-4 bg-amber-50/50 rounded-lg border border-amber-100">
+                <Label className="text-amber-800 font-medium">التوضيح (اختياري)</Label>
+                <Textarea
+                  value={questionForm.explanation_ar}
+                  onChange={(e) =>
+                    setQuestionForm((prev) => ({ ...prev, explanation_ar: e.target.value }))
+                  }
+                  placeholder="شرح اختياري للإجابة الصحيحة"
+                  rows={3}
+                  dir="rtl"
+                  className="bg-white"
+                />
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3 justify-between pt-6 mt-6 border-t-2 border-gray-200 bg-gray-50 -mx-6 -mb-6 px-6 py-4 rounded-b-lg">
@@ -853,8 +912,13 @@ export default function ExamQuestionManager() {
                           {question.points} {question.points === 1 ? 'point' : 'points'}
                         </Badge>
                       </div>
-                      <p className="text-gray-900 font-semibold mb-4 text-base leading-relaxed">
-                        {question.question_text}
+                      <p className={cn(
+                        "text-gray-900 font-semibold mb-4 text-base leading-relaxed",
+                        examLanguage === 'ar' && "text-right"
+                      )} dir={examLanguage === 'ar' ? 'rtl' : 'ltr'}>
+                        {examLanguage === 'ar' && question.question_text_ar
+                          ? question.question_text_ar
+                          : question.question_text}
                       </p>
                       <div className="space-y-2">
                         {question.answers.map((answer) => (
@@ -864,7 +928,8 @@ export default function ExamQuestionManager() {
                               'flex items-start gap-3 p-3 rounded-lg border-2 transition-all',
                               answer.is_correct
                                 ? 'border-green-500 bg-green-50'
-                                : 'border-gray-200 bg-gray-50'
+                                : 'border-gray-200 bg-gray-50',
+                              examLanguage === 'ar' && 'flex-row-reverse'
                             )}
                           >
                             {answer.is_correct ? (
@@ -873,27 +938,44 @@ export default function ExamQuestionManager() {
                               <Circle className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
                             )}
                             <span className={cn(
-                              'text-sm leading-relaxed',
-                              answer.is_correct ? 'text-green-900 font-medium' : 'text-gray-700'
-                            )}>
-                              {answer.answer_text}
+                              'text-sm leading-relaxed flex-1',
+                              answer.is_correct ? 'text-green-900 font-medium' : 'text-gray-700',
+                              examLanguage === 'ar' && 'text-right'
+                            )} dir={examLanguage === 'ar' ? 'rtl' : 'ltr'}>
+                              {examLanguage === 'ar' && answer.answer_text_ar
+                                ? answer.answer_text_ar
+                                : answer.answer_text}
                             </span>
                           </div>
                         ))}
                       </div>
-                      {question.explanation && (
-                        <div className="mt-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                          <div className="flex items-start gap-2">
-                            <div className="h-5 w-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <span className="text-white text-xs font-bold">i</span>
-                            </div>
-                            <div>
-                              <strong className="text-blue-900 text-sm">Explanation:</strong>
-                              <p className="text-blue-800 text-sm mt-1 leading-relaxed">{question.explanation}</p>
+                      {/* Explanation */}
+                      {(() => {
+                        const explanation = examLanguage === 'ar'
+                          ? (question.explanation_ar || question.explanation)
+                          : question.explanation;
+                        return explanation ? (
+                          <div className={cn(
+                            "mt-4 p-4 bg-amber-50 border-2 border-amber-200 rounded-lg",
+                            examLanguage === 'ar' && "text-right"
+                          )} dir={examLanguage === 'ar' ? 'rtl' : 'ltr'}>
+                            <div className={cn(
+                              "flex items-start gap-2",
+                              examLanguage === 'ar' && 'flex-row-reverse'
+                            )}>
+                              <div className="h-5 w-5 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-white text-xs font-bold">!</span>
+                              </div>
+                              <div className="flex-1">
+                                <strong className="text-amber-900 text-sm">
+                                  {examLanguage === 'ar' ? 'التوضيح:' : 'Explanation:'}
+                                </strong>
+                                <p className="text-amber-800 text-sm mt-1 leading-relaxed">{explanation}</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        ) : null;
+                      })()}
                     </div>
                     <div className="flex flex-col gap-2">
                       <Button

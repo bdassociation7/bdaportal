@@ -486,13 +486,13 @@ export default function ECPHelpCenter() {
             <Mail className="h-8 w-8 mx-auto text-green-600 mb-3" />
             <h3 className="font-semibold text-green-900">{texts.emailSupport}</h3>
             <p className="text-sm text-green-700 mt-1" dir="ltr">
-              ecp-support@bda-global.org
+              support@bda-global.org
             </p>
             <Button
               variant="outline"
               size="sm"
               className="mt-3"
-              onClick={() => window.open("mailto:ecp-support@bda-global.org", "_blank")}
+              onClick={() => window.open("mailto:support@bda-global.org", "_blank")}
             >
               <Mail className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
               {texts.sendEmail}

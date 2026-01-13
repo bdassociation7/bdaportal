@@ -362,7 +362,7 @@ export default function ECPDashboard() {
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-xs">
-                          {batch.certification_type}
+                          BDA-{batch.certification_type}™
                         </Badge>
                         <span className="text-xs text-blue-600">
                           {batch.trainee_count || 0} {texts.enrolled}
@@ -419,7 +419,7 @@ export default function ECPDashboard() {
                     <p className="text-sm text-gray-600">{trainee.email}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="outline" className="text-xs">
-                        {trainee.certification_type}
+                        BDA-{trainee.certification_type}™
                       </Badge>
                       <Badge
                         variant={trainee.certified ? 'default' : 'secondary'}

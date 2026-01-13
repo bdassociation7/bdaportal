@@ -21,7 +21,9 @@ import {
   usePDPPartnerProfile,
   useUpdatePDPPartnerProfile,
   useUploadPartnerLogo,
+  useRemovePartnerLogo,
   usePDPLicense,
+  usePDPToolkit,
 } from "@/entities/pdp";
 import type {
   UpdatePDPPartnerProfileDTO,
@@ -43,6 +45,8 @@ import {
   AlertCircle,
   RefreshCw,
   Loader2,
+  Download,
+  Award,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -123,23 +127,29 @@ const translations = {
 
     // Branding tab
     organizationLogo: "Organization Logo",
-    organizationLogoDesc: "Upload your organization logo (PNG or JPG, max 2MB)",
+    organizationLogoDesc: "Your company logo. Upload your organization's own logo to display on your partner profile.",
     uploadLogo: "Upload Logo",
+    removeLogo: "Remove Logo",
     logoRecommendation: "Recommended: Square image, at least 200x200 pixels",
-    noLogo: "No logo",
-    partnerBadge: "Partner Badge",
-    partnerBadgeDesc: "Your official BDA PDP Partner badge",
+    noLogo: "No logo uploaded",
+    bdaPartnerBadge: "BDA Partner Badge",
+    bdaPartnerBadgeDesc: "Official BDA accreditation badge issued to authorized PDP partners. Download and use on your website and marketing materials.",
+    downloadBadge: "Download Badge",
+    downloadBadgePng: "Download PNG",
+    downloadBadgeSvg: "Download SVG",
     bdaAccredited: "BDA Accredited",
     pdp: "PDP",
     partner: "Partner",
-    badgeUsageInfo: "Use this badge on your website and marketing materials to show your BDA accreditation status.",
-    downloadBadge: "Download Badge",
+    badgeUsageInfo: "This official BDA Partner Badge is provided by BDA and certifies your accreditation status. Display it on your website, marketing materials, and training documentation.",
     viewUsageGuidelines: "View Usage Guidelines",
     brandGuidelines: "Brand Guidelines",
     brandGuidelinesInfo: "When using BDA logos and badges, please follow the official brand guidelines. Improper use may result in partnership review.",
     viewBrandGuidelines: "View Brand Guidelines →",
+    badgeNotAvailable: "Badge not yet available",
+    badgeNotAvailableDesc: "Your BDA Partner Badge will be available once your partnership is fully activated. Contact support if you believe this is an error.",
 
     // Specialization options
+    specBusinessDevelopment: "Business Development",
     specLeadership: "Leadership & Management",
     specProjectManagement: "Project Management",
     specDataAnalytics: "Data Analytics",
@@ -242,23 +252,29 @@ const translations = {
 
     // Branding tab
     organizationLogo: "شعار المؤسسة",
-    organizationLogoDesc: "تحميل شعار مؤسستك (PNG أو JPG، بحد أقصى 2 ميجابايت)",
+    organizationLogoDesc: "شعار شركتك. قم بتحميل شعار مؤسستك لعرضه في ملفك الشخصي كشريك.",
     uploadLogo: "تحميل الشعار",
+    removeLogo: "حذف الشعار",
     logoRecommendation: "يُنصح بصورة مربعة بحجم 200×200 بكسل على الأقل",
-    noLogo: "لا يوجد شعار",
-    partnerBadge: "شارة الشريك",
-    partnerBadgeDesc: "شارة شريك BDA PDP الرسمية الخاصة بك",
+    noLogo: "لم يتم تحميل شعار",
+    bdaPartnerBadge: "شارة شريك BDA",
+    bdaPartnerBadgeDesc: "شارة اعتماد BDA الرسمية الممنوحة لشركاء PDP المعتمدين. قم بتنزيلها واستخدامها على موقعك الإلكتروني ومواد التسويق.",
+    downloadBadge: "تنزيل الشارة",
+    downloadBadgePng: "تنزيل PNG",
+    downloadBadgeSvg: "تنزيل SVG",
     bdaAccredited: "معتمد من BDA",
     pdp: "PDP",
     partner: "شريك",
-    badgeUsageInfo: "استخدم هذه الشارة على موقعك الإلكتروني والمواد التسويقية لإظهار حالة اعتمادك من BDA.",
-    downloadBadge: "تحميل الشارة",
+    badgeUsageInfo: "شارة شريك BDA الرسمية هذه مقدمة من BDA وتشهد على حالة اعتمادك. اعرضها على موقعك الإلكتروني ومواد التسويق ووثائق التدريب.",
     viewUsageGuidelines: "عرض إرشادات الاستخدام",
     brandGuidelines: "إرشادات العلامة التجارية",
     brandGuidelinesInfo: "عند استخدام شعارات وشارات BDA، يرجى اتباع إرشادات العلامة التجارية الرسمية. قد يؤدي الاستخدام غير السليم إلى مراجعة الشراكة.",
     viewBrandGuidelines: "عرض إرشادات العلامة التجارية ←",
+    badgeNotAvailable: "الشارة غير متاحة بعد",
+    badgeNotAvailableDesc: "ستتوفر شارة شريك BDA الخاصة بك بمجرد تفعيل شراكتك بالكامل. تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ.",
 
     // Specialization options
+    specBusinessDevelopment: "تطوير الأعمال",
     specLeadership: "القيادة والإدارة",
     specProjectManagement: "إدارة المشاريع",
     specDataAnalytics: "تحليل البيانات",
@@ -288,6 +304,7 @@ const translations = {
 };
 
 const getSpecializationOptions = (texts: typeof translations.en) => [
+  { id: "business_development" as Specialization, name: texts.specBusinessDevelopment },
   { id: "leadership" as Specialization, name: texts.specLeadership },
   { id: "project_management" as Specialization, name: texts.specProjectManagement },
   { id: "data_analytics" as Specialization, name: texts.specDataAnalytics },
@@ -378,8 +395,28 @@ export default function EditProfile() {
   // Fetch profile data
   const { data: profile, isLoading, error, refetch } = usePDPPartnerProfile();
   const { data: licenseInfo } = usePDPLicense();
+  const { data: toolkitItems } = usePDPToolkit('logos');
   const updateProfile = useUpdatePDPPartnerProfile();
   const uploadLogo = useUploadPartnerLogo();
+  const removeLogo = useRemovePartnerLogo();
+
+  // Find BDA Partner Badge/Logo from toolkit items (provided by BDA admin)
+  const bdaPartnerBadge = toolkitItems?.find(item =>
+    item.title.toLowerCase().includes('partner badge') ||
+    item.title.toLowerCase().includes('pdp badge') ||
+    item.title.toLowerCase().includes('accreditation badge') ||
+    item.title.toLowerCase().includes('partner logo')
+  );
+
+  // Default BDA logo available to all accredited partners
+  const defaultBadgeUrl = '/bda-logo.png';
+
+  // Use profile badge_url first, then toolkit badge, then default BDA logo
+  // Note: All accredited PDP partners have access to the badge
+  const effectiveBadgeUrl = profile?.badge_url || bdaPartnerBadge?.file_url || defaultBadgeUrl;
+
+  // Partner is accredited if they have a profile (they can access this page)
+  const isAccreditedPartner = !!profile;
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -502,6 +539,23 @@ export default function EditProfile() {
     }
   };
 
+  const handleRemoveLogo = async () => {
+    await removeLogo.mutateAsync();
+    setLogoFile(null);
+    setLogoPreview(null);
+  };
+
+  const handleDownloadBadge = () => {
+    if (effectiveBadgeUrl) {
+      const link = document.createElement('a');
+      link.href = effectiveBadgeUrl;
+      link.download = bdaPartnerBadge?.title || 'bda-partner-badge';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   const handleSubmit = async () => {
     // Build the update DTO
     const dto: UpdatePDPPartnerProfileDTO = {
@@ -578,7 +632,7 @@ export default function EditProfile() {
     );
   }
 
-  const isSubmitting = updateProfile.isPending || uploadLogo.isPending;
+  const isSubmitting = updateProfile.isPending || uploadLogo.isPending || removeLogo.isPending;
   const license = licenseInfo?.license;
 
   return (
@@ -1080,15 +1134,6 @@ export default function EditProfile() {
                         alt="Logo preview"
                         className="w-full h-full object-contain rounded-lg"
                       />
-                      <button
-                        onClick={() => {
-                          setLogoFile(null);
-                          setLogoPreview(profile?.logo_url || null);
-                        }}
-                        className={`absolute -top-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 ${language === 'ar' ? '-left-2' : '-right-2'}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
                     </div>
                   ) : (
                     <div className="text-center">
@@ -1105,14 +1150,31 @@ export default function EditProfile() {
                     onChange={handleLogoChange}
                     className="hidden"
                   />
-                  <label htmlFor="logo-upload">
-                    <Button variant="outline" asChild>
-                      <span className="cursor-pointer">
-                        <Upload className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                        {texts.uploadLogo}
-                      </span>
-                    </Button>
-                  </label>
+                  <div className={`flex gap-2 ${language === 'ar' ? 'flex-row-reverse justify-end' : ''}`}>
+                    <label htmlFor="logo-upload">
+                      <Button variant="outline" asChild>
+                        <span className="cursor-pointer">
+                          <Upload className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                          {texts.uploadLogo}
+                        </span>
+                      </Button>
+                    </label>
+                    {(logoPreview || profile?.logo_url) && (
+                      <Button
+                        variant="outline"
+                        onClick={handleRemoveLogo}
+                        disabled={removeLogo.isPending}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        {removeLogo.isPending ? (
+                          <Loader2 className={`h-4 w-4 animate-spin ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                        ) : (
+                          <X className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                        )}
+                        {texts.removeLogo}
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-500 mt-2">
                     {texts.logoRecommendation}
                   </p>
@@ -1121,33 +1183,56 @@ export default function EditProfile() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-blue-200 bg-blue-50/50">
             <CardHeader>
-              <CardTitle className={language === 'ar' ? 'text-right' : ''}>{texts.partnerBadge}</CardTitle>
+              <CardTitle className={`flex items-center gap-2 ${language === 'ar' ? 'flex-row-reverse text-right' : ''}`}>
+                <Award className="h-5 w-5 text-blue-600" />
+                {texts.bdaPartnerBadge}
+              </CardTitle>
               <CardDescription className={language === 'ar' ? 'text-right' : ''}>
-                {texts.partnerBadgeDesc}
+                {texts.bdaPartnerBadgeDesc}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className={`flex items-center gap-6 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-                <div className={`p-4 rounded-lg text-white text-center ${language === 'ar' ? 'bg-gradient-to-bl' : 'bg-gradient-to-br'} from-blue-500 to-blue-700`}>
-                  <div className="text-xs font-medium mb-1">{texts.bdaAccredited}</div>
-                  <div className="text-lg font-bold">{texts.pdp}</div>
-                  <div className="text-xs">{texts.partner}</div>
+              <div className={`flex items-start gap-6 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                <div className="w-32 h-32 border-2 border-blue-200 rounded-lg flex items-center justify-center bg-white shadow-sm">
+                  {effectiveBadgeUrl ? (
+                    <img
+                      src={effectiveBadgeUrl}
+                      alt="BDA Partner Badge"
+                      className="w-full h-full object-contain rounded-lg p-2"
+                    />
+                  ) : (
+                    <div className={`p-4 rounded-lg text-white text-center ${language === 'ar' ? 'bg-gradient-to-bl' : 'bg-gradient-to-br'} from-blue-500 to-blue-700 w-full h-full flex flex-col items-center justify-center`}>
+                      <div className="text-[10px] font-medium mb-1">{texts.bdaAccredited}</div>
+                      <div className="text-lg font-bold">{texts.pdp}</div>
+                      <div className="text-[10px]">{texts.partner}</div>
+                    </div>
+                  )}
                 </div>
                 <div className={`flex-1 ${language === 'ar' ? 'text-right' : ''}`}>
                   <p className="text-sm text-gray-600 mb-3">
                     {texts.badgeUsageInfo}
                   </p>
-                  <div className={`flex gap-2 ${language === 'ar' ? 'flex-row-reverse justify-end' : ''}`}>
-                    <Button variant="outline" size="sm">
-                      <Upload className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                      {texts.downloadBadge}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => navigate("/pdp/toolkit")}>
-                      {texts.viewUsageGuidelines}
-                    </Button>
-                  </div>
+                  {isAccreditedPartner ? (
+                    <div className={`flex gap-2 flex-wrap ${language === 'ar' ? 'flex-row-reverse justify-end' : ''}`}>
+                      <Button
+                        onClick={handleDownloadBadge}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Download className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                        {texts.downloadBadge}
+                      </Button>
+                      <Button variant="outline" onClick={() => navigate("/pdp/toolkit")}>
+                        {texts.viewUsageGuidelines}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-100 rounded-lg">
+                      <p className="text-sm font-medium text-gray-700">{texts.badgeNotAvailable}</p>
+                      <p className="text-xs text-gray-500 mt-1">{texts.badgeNotAvailableDesc}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

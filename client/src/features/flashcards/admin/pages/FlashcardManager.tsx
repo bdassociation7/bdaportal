@@ -3,7 +3,7 @@
  * CRUD operations for flashcard decks and cards
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -37,6 +37,7 @@ import {
   Upload,
   Clock,
   CheckCircle,
+  Globe,
 } from 'lucide-react';
 import { AdminPageHeader, StatCard, AdminFilterCard } from '@/features/curriculum/admin/components/shared';
 import { Button } from '@/components/ui/button';
@@ -69,9 +70,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+type ExamLanguage = 'en' | 'ar';
+
 export function FlashcardManager() {
   const navigate = useNavigate();
-  const { language } = useLanguage();
+  // Admin interface should always be in English - only content is language-specific
+  const language = 'en' as const;
 
   const t = {
     en: {
@@ -140,6 +144,11 @@ export function FlashcardManager() {
       arabicVersion: 'Arabic Version',
       descriptionArabic: 'Description (Arabic)',
       enterDescriptionAr: 'أدخل وصف المجموعة...',
+      selectLanguage: 'Select Language',
+      englishDecks: 'English Decks',
+      arabicDecks: 'Arabic Decks',
+      createEnglishDeck: 'English Deck',
+      createArabicDeck: 'Arabic Deck',
     },
     ar: {
       title: 'إدارة البطاقات التعليمية',
@@ -207,6 +216,11 @@ export function FlashcardManager() {
       arabicVersion: 'النسخة العربية',
       descriptionArabic: 'الوصف (بالعربية)',
       enterDescriptionAr: 'أدخل وصف المجموعة...',
+      selectLanguage: 'اختر اللغة',
+      englishDecks: 'المجموعات الإنجليزية',
+      arabicDecks: 'المجموعات العربية',
+      createEnglishDeck: 'مجموعة إنجليزية',
+      createArabicDeck: 'مجموعة عربية',
     }
   };
 
@@ -216,6 +230,8 @@ export function FlashcardManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
   const [publishedFilter, setPublishedFilter] = useState<string>('all');
+  const [filterLanguage, setFilterLanguage] = useState<ExamLanguage>('en');
+  const [createLanguage, setCreateLanguage] = useState<ExamLanguage>('en');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingDeck, setEditingDeck] =
     useState<FlashcardDeckWithCompetency | null>(null);
@@ -229,6 +245,7 @@ export function FlashcardManager() {
       sectionFilter !== 'all' ? (sectionFilter as any) : undefined,
     is_published:
       publishedFilter === 'all' ? undefined : publishedFilter === 'published',
+    exam_language: filterLanguage,
   });
   const { data: stats } = useAdminFlashcardStats('CP');
 
@@ -244,7 +261,8 @@ export function FlashcardManager() {
       return (
         deck.title.toLowerCase().includes(search) ||
         deck.title_ar?.toLowerCase().includes(search) ||
-        deck.competency?.competency_name.toLowerCase().includes(search)
+        deck.competency?.competency_name?.toLowerCase().includes(search) ||
+        deck.competency?.competency_name_ar?.toLowerCase().includes(search)
       );
     }
     return true;
@@ -323,13 +341,53 @@ export function FlashcardManager() {
               <Download className="w-4 h-4 mr-2" />
               {texts.export}
             </Button>
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-white text-blue-600 hover:bg-blue-50">
-              <Plus className="w-4 h-4 mr-2" />
-              {texts.createDeck}
-            </Button>
+            <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
+              <Button
+                onClick={() => {
+                  setCreateLanguage('en');
+                  setIsCreateDialogOpen(true);
+                }}
+                className="bg-white text-blue-600 hover:bg-blue-50"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                🇬🇧 {texts.createEnglishDeck}
+              </Button>
+              <Button
+                onClick={() => {
+                  setCreateLanguage('ar');
+                  setIsCreateDialogOpen(true);
+                }}
+                className="bg-white text-emerald-600 hover:bg-emerald-50"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                🇸🇦 {texts.createArabicDeck}
+              </Button>
+            </div>
           </div>
         }
       />
+
+      {/* Language Filter */}
+      <div className="flex items-center gap-4 bg-white rounded-lg shadow-sm p-4 mb-6">
+        <Globe className="h-5 w-5 text-gray-500" />
+        <span className="font-medium text-gray-700">{texts.selectLanguage}:</span>
+        <div className="flex gap-2">
+          <Button
+            variant={filterLanguage === 'en' ? 'default' : 'outline'}
+            onClick={() => setFilterLanguage('en')}
+            className={filterLanguage === 'en' ? 'bg-blue-600' : ''}
+          >
+            🇬🇧 {texts.englishDecks}
+          </Button>
+          <Button
+            variant={filterLanguage === 'ar' ? 'default' : 'outline'}
+            onClick={() => setFilterLanguage('ar')}
+            className={filterLanguage === 'ar' ? 'bg-emerald-600' : ''}
+          >
+            🇸🇦 {texts.arabicDecks}
+          </Button>
+        </div>
+      </div>
 
       {/* Stats Cards */}
       {stats && (
@@ -434,6 +492,7 @@ export function FlashcardManager() {
         onSubmit={handleCreate}
         title={texts.createDeckTitle}
         texts={texts}
+        defaultLanguage={createLanguage}
       />
 
       {/* Edit Dialog */}
@@ -541,8 +600,10 @@ function DeckCard({
           </p>
         )}
         {deck.competency && (
-          <p className="text-sm text-gray-600 mt-2">
-            {deck.competency.competency_name}
+          <p className="text-sm text-gray-600 mt-2" dir={deck.exam_language === 'ar' ? 'rtl' : 'ltr'}>
+            {deck.exam_language === 'ar' && deck.competency.competency_name_ar
+              ? deck.competency.competency_name_ar
+              : deck.competency.competency_name || deck.competency.competency_name_ar || ''}
           </p>
         )}
         <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
@@ -603,6 +664,7 @@ interface DeckDialogProps {
   title: string;
   defaultValues?: Partial<FlashcardDeckWithCompetency>;
   texts: Record<string, string>;
+  defaultLanguage?: ExamLanguage;
 }
 
 function DeckDialog({
@@ -612,7 +674,11 @@ function DeckDialog({
   title,
   defaultValues,
   texts,
+  defaultLanguage = 'en',
 }: DeckDialogProps) {
+  const [examLanguage, setExamLanguage] = useState<ExamLanguage>(
+    (defaultValues as any)?.exam_language || defaultLanguage
+  );
   const [formData, setFormData] = useState<Partial<FlashcardDeckInsert>>({
     certification_type: defaultValues?.certification_type || 'CP',
     section_type: defaultValues?.section_type || 'knowledge',
@@ -627,13 +693,22 @@ function DeckDialog({
       defaultValues?.estimated_study_time_minutes || undefined,
     order_index: defaultValues?.order_index || 1,
     is_published: defaultValues?.is_published || false,
+    exam_language: (defaultValues as any)?.exam_language || defaultLanguage,
   });
 
-  // Fetch modules for competency selector
+  // Update exam_language when defaultLanguage changes
+  useEffect(() => {
+    if (!defaultValues) {
+      setExamLanguage(defaultLanguage);
+      setFormData(prev => ({ ...prev, exam_language: defaultLanguage }));
+    }
+  }, [defaultLanguage, defaultValues]);
+
+  // Fetch modules for competency selector (filtered by exam language)
   const { data: modules } = useQuery({
-    queryKey: curriculumKeys.modulesList({}),
+    queryKey: curriculumKeys.modulesList({ exam_language: examLanguage }),
     queryFn: async () => {
-      const result = await CurriculumService.getModules({});
+      const result = await CurriculumService.getModules({ exam_language: examLanguage });
       return result.data || [];
     },
   });
@@ -645,9 +720,17 @@ function DeckDialog({
   );
 
   const handleSubmit = () => {
-    if (!formData.title) {
-      toast.error(texts.titleRequired);
-      return;
+    // Language-aware validation: only require fields for the active exam language
+    if (examLanguage === 'ar') {
+      if (!formData.title_ar) {
+        toast.error('Arabic title is required / العنوان بالعربية مطلوب');
+        return;
+      }
+    } else {
+      if (!formData.title) {
+        toast.error(texts.titleRequired);
+        return;
+      }
     }
     onSubmit(formData as FlashcardDeckInsert);
   };
@@ -656,7 +739,12 @@ function DeckDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {title}
+            <span className={`text-sm px-2 py-1 rounded ${examLanguage === 'en' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+              {examLanguage === 'en' ? '🇬🇧 English' : '🇸🇦 Arabic'}
+            </span>
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -722,7 +810,9 @@ function DeckDialog({
                     <SelectItem value="none">{texts.none}</SelectItem>
                     {modules?.map((module) => (
                       <SelectItem key={module.id} value={module.id}>
-                        {module.order_index}. {module.competency_name}
+                        {module.order_index}. {examLanguage === 'ar' && module.competency_name_ar
+                          ? module.competency_name_ar
+                          : module.competency_name || module.competency_name_ar || 'Untitled'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -747,7 +837,9 @@ function DeckDialog({
                     <SelectItem value="none">{texts.noneOption}</SelectItem>
                     {lessons?.map((lesson) => (
                       <SelectItem key={lesson.id} value={lesson.id}>
-                        {lesson.order_index}. {lesson.title}
+                        {lesson.order_index}. {examLanguage === 'ar' && lesson.title_ar
+                          ? lesson.title_ar
+                          : lesson.title || lesson.title_ar || 'Untitled'}
                       </SelectItem>
                     ))}
                   </SelectContent>

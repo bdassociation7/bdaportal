@@ -20,7 +20,6 @@ import {
   LogOut,
   Menu,
   X,
-  Globe,
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -28,7 +27,7 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
-  const { t, language, setLanguage, isRTL } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const { user } = useAuthContext();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -73,10 +72,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       external: true,
     },
   ];
-
-  const toggleLanguage = () => {
-    setLanguage(language === "en" ? "ar" : "en");
-  };
 
   const closeSidebar = () => setSidebarOpen(false);
 
@@ -207,18 +202,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             <div className="flex flex-1" />
 
             <div className="flex items-center gap-x-4 lg:gap-x-6">
-              {/* Language switcher */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleLanguage}
-                className="flex items-center gap-2"
-              >
-                <Globe className="h-4 w-4" />
-                {language.toUpperCase()}
-              </Button>
-
-
               {/* Profile and Sign Out */}
               <div className="flex items-center gap-x-3">
                 {/* Profile info */}

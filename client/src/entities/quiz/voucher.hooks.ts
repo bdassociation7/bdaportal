@@ -1,5 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { VoucherService } from './voucher.service';
+import {
+  mergeVouchers,
+  getActiveVouchers,
+  getVoucherCounts,
+  type MergedVoucher,
+  type ECPVoucherRaw,
+} from './voucher.utils';
 import type {
   CertificationProduct,
   ExamVoucher,
@@ -33,6 +41,7 @@ export const voucherKeys = {
   details: () => [...voucherKeys.all, 'detail'] as const,
   detail: (id: string) => [...voucherKeys.details(), id] as const,
   userVouchers: () => [...voucherKeys.all, 'user'] as const,
+  ecpAssignedVouchers: () => [...voucherKeys.all, 'ecp-assigned'] as const,
   voucherCheck: (quizId: string) => [...voucherKeys.all, 'check', quizId] as const,
   stats: () => [...voucherKeys.all, 'stats'] as const,
 };
@@ -51,7 +60,7 @@ export const certProductKeys = {
 // =============================================================================
 
 /**
- * Hook to fetch user's vouchers
+ * Hook to fetch user's vouchers (from exam_vouchers table)
  */
 export const useUserVouchers = (filters?: ExamVoucherFilters) => {
   return useQuery({
@@ -68,17 +77,38 @@ export const useUserVouchers = (filters?: ExamVoucherFilters) => {
 };
 
 /**
+ * Hook to fetch ECP vouchers assigned to the current user (via email)
+ * These are vouchers that ECP partners have assigned to the individual
+ */
+export const useECPAssignedVouchers = () => {
+  return useQuery({
+    queryKey: voucherKeys.ecpAssignedVouchers(),
+    queryFn: async () => {
+      const result = await VoucherService.getECPAssignedVouchers();
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      return result.data!;
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+};
+
+/**
  * Hook to get available vouchers count by certification type
  * Returns { CP: 2, SCP: 0 }
+ * Includes both direct vouchers and ECP-assigned vouchers
  */
 export const useVoucherCountsByCertType = () => {
   const { data: vouchers } = useUserVouchers();
+  const { data: ecpVouchers } = useECPAssignedVouchers();
 
   const counts = {
     CP: 0,
     SCP: 0,
   };
 
+  // Count direct vouchers (from exam_vouchers table)
   if (vouchers) {
     vouchers.forEach((voucher) => {
       // Count available and assigned vouchers (both are usable)
@@ -96,7 +126,73 @@ export const useVoucherCountsByCertType = () => {
     });
   }
 
+  // Count ECP-assigned vouchers
+  if (ecpVouchers) {
+    ecpVouchers.forEach((voucher) => {
+      if (voucher.status === 'available') {
+        const now = new Date();
+        const expiresAt = voucher.expires_at ? new Date(voucher.expires_at) : null;
+        if (!expiresAt || expiresAt > now) {
+          if (voucher.certification_type === 'CP') {
+            counts.CP++;
+          } else if (voucher.certification_type === 'SCP') {
+            counts.SCP++;
+          }
+        }
+      }
+    });
+  }
+
   return counts;
+};
+
+/**
+ * Hook to get merged vouchers from both direct and ECP sources
+ * Provides unified MergedVoucher[] with display info
+ */
+export const useMergedVouchers = () => {
+  const { data: directVouchers, isLoading: directLoading, error: directError } = useUserVouchers();
+  const { data: ecpVouchers, isLoading: ecpLoading, error: ecpError } = useECPAssignedVouchers();
+
+  const mergedData = useMemo(() => {
+    const vouchers = mergeVouchers(directVouchers, ecpVouchers as ECPVoucherRaw[] | undefined);
+    const activeVouchers = getActiveVouchers(vouchers);
+    const counts = getVoucherCounts(vouchers);
+
+    return {
+      vouchers,
+      activeVouchers,
+      usedVouchers: vouchers.filter((v) => v.displayInfo.status === 'used'),
+      expiredVouchers: vouchers.filter((v) => v.displayInfo.status === 'expired'),
+      counts,
+    };
+  }, [directVouchers, ecpVouchers]);
+
+  return {
+    ...mergedData,
+    isLoading: directLoading || ecpLoading,
+    error: directError || ecpError,
+  };
+};
+
+/**
+ * Hook to get a specific voucher from merged sources by ID
+ * Works with both direct and ECP vouchers
+ */
+export const useMergedVoucherById = (voucherId: string | null) => {
+  const { vouchers, isLoading, error } = useMergedVouchers();
+
+  const voucher = useMemo(() => {
+    if (!voucherId || !vouchers) return null;
+    return vouchers.find((v) => v.id === voucherId) || null;
+  }, [voucherId, vouchers]);
+
+  return {
+    data: voucher,
+    isLoading,
+    error,
+    isNotFound: !isLoading && !voucher && !!voucherId,
+  };
 };
 
 /**

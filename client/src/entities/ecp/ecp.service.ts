@@ -25,9 +25,13 @@ import type {
   LicenseRequest,
   CreateLicenseRequestDTO,
   LicenseDocument,
+  LicenseDocumentType,
   LicenseTerm,
   ComplianceRequirement,
   ECPLicense,
+  LicenseStatus,
+  LicenseRequestStatus,
+  CertificationType,
   Voucher,
   VoucherRequest,
   VoucherStats,
@@ -36,6 +40,8 @@ import type {
   AssignVoucherDTO,
   ECPToolkitItem,
   ECPToolkitCategory,
+  CreateECPToolkitItemDTO,
+  UpdateECPToolkitItemDTO,
 } from './ecp.types';
 
 interface ServiceResult<T> {
@@ -280,6 +286,10 @@ export class ECPService {
         .insert({
           ...dto,
           partner_id: user.id,
+          // Auto-approve trainers - no BDA approval required
+          // Trainers are for record/reference purposes only
+          status: 'approved',
+          is_active: true,
         })
         .select()
         .single();
@@ -545,20 +555,24 @@ export class ECPService {
 
   /**
    * Get the license record directly
+   * Returns null if no license exists (license must be created by admin)
    */
   static async getLicense(): Promise<ServiceResult<ECPLicense | null>> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase
+      // partner_id in ecp_licenses is actually the user's ID (from partnership activation)
+      const { data: license, error: fetchError } = await supabase
         .from('ecp_licenses')
         .select('*')
         .eq('partner_id', user.id)
         .maybeSingle();
 
-      if (error) throw error;
-      return { data: data as ECPLicense | null, error: null };
+      if (fetchError) throw fetchError;
+
+      // Return the license (or null if none exists)
+      return { data: license as ECPLicense | null, error: null };
     } catch (error) {
       console.error('Error fetching license:', error);
       return { data: null, error: error as Error };
@@ -573,7 +587,7 @@ export class ECPService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // First get the license
+      // Get the license (partner_id is user.id)
       const { data: license } = await supabase
         .from('ecp_licenses')
         .select('id')
@@ -667,7 +681,7 @@ export class ECPService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Get the license ID
+      // Get the license ID (partner_id is user.id)
       const { data: license } = await supabase
         .from('ecp_licenses')
         .select('id')
@@ -924,6 +938,364 @@ export class ECPService {
       return { data: data as ECPToolkitItem[], error: null };
     } catch (error) {
       console.error('Error fetching toolkit items:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // Admin: Get all toolkit items (including inactive)
+  static async getAllToolkitItems(): Promise<ServiceResult<ECPToolkitItem[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('ecp_toolkit_items')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      return { data: data as ECPToolkitItem[], error: null };
+    } catch (error) {
+      console.error('Error fetching all toolkit items:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // Admin: Create toolkit item
+  static async createToolkitItem(dto: CreateECPToolkitItemDTO): Promise<ServiceResult<ECPToolkitItem>> {
+    try {
+      const { data, error } = await supabase
+        .from('ecp_toolkit_items')
+        .insert({
+          ...dto,
+          sort_order: dto.sort_order ?? 0,
+          is_active: dto.is_active ?? true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: data as ECPToolkitItem, error: null };
+    } catch (error) {
+      console.error('Error creating toolkit item:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // Admin: Update toolkit item
+  static async updateToolkitItem(id: string, dto: UpdateECPToolkitItemDTO): Promise<ServiceResult<ECPToolkitItem>> {
+    try {
+      const { data, error } = await supabase
+        .from('ecp_toolkit_items')
+        .update(dto)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: data as ECPToolkitItem, error: null };
+    } catch (error) {
+      console.error('Error updating toolkit item:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // Admin: Delete toolkit item
+  static async deleteToolkitItem(id: string): Promise<ServiceResult<void>> {
+    try {
+      const { error } = await supabase
+        .from('ecp_toolkit_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return { data: null, error: null };
+    } catch (error) {
+      console.error('Error deleting toolkit item:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // Admin: Upload toolkit file
+  static async uploadToolkitFile(file: File, category: ECPToolkitCategory): Promise<ServiceResult<{ url: string; fileType: string; fileSize: number }>> {
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+      const fileName = `${category}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('ecp-toolkit')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('ecp-toolkit')
+        .getPublicUrl(fileName);
+
+      return {
+        data: {
+          url: publicUrl,
+          fileType: fileExt,
+          fileSize: file.size,
+        },
+        error: null,
+      };
+    } catch (error) {
+      console.error('Error uploading toolkit file:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // ==========================================================================
+  // ADMIN: License Management
+  // ==========================================================================
+
+  /**
+   * Admin: Get license by partner ID
+   */
+  static async getAdminLicense(partnerId: string): Promise<ServiceResult<ECPLicense | null>> {
+    try {
+      const { data, error } = await supabase
+        .from('ecp_licenses')
+        .select('*')
+        .eq('partner_id', partnerId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return { data: data as ECPLicense | null, error: null };
+    } catch (error) {
+      console.error('Error fetching license:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Admin: Create license for a partner
+   */
+  static async createLicense(partnerId: string, licenseData: {
+    license_number: string;
+    partner_code: string;
+    issue_date: string;
+    expiry_date: string;
+    territories: string[];
+    programs: CertificationType[];
+    status?: LicenseStatus;
+    notes?: string;
+  }): Promise<ServiceResult<ECPLicense>> {
+    try {
+      const { data, error } = await supabase
+        .from('ecp_licenses')
+        .insert({
+          partner_id: partnerId,
+          license_number: licenseData.license_number,
+          partner_code: licenseData.partner_code,
+          issue_date: licenseData.issue_date,
+          expiry_date: licenseData.expiry_date,
+          territories: licenseData.territories,
+          programs: licenseData.programs,
+          status: licenseData.status || 'active',
+          notes: licenseData.notes,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: data as ECPLicense, error: null };
+    } catch (error) {
+      console.error('Error creating license:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Admin: Update license
+   */
+  static async updateLicense(licenseId: string, updates: {
+    license_number?: string;
+    partner_code?: string;
+    issue_date?: string;
+    expiry_date?: string;
+    territories?: string[];
+    programs?: CertificationType[];
+    status?: LicenseStatus;
+    notes?: string;
+    renewal_requested?: boolean;
+  }): Promise<ServiceResult<ECPLicense>> {
+    try {
+      const { data, error } = await supabase
+        .from('ecp_licenses')
+        .update(updates)
+        .eq('id', licenseId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: data as ECPLicense, error: null };
+    } catch (error) {
+      console.error('Error updating license:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Admin: Get license documents by license ID
+   */
+  static async getAdminLicenseDocuments(licenseId: string): Promise<ServiceResult<LicenseDocument[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('ecp_license_documents')
+        .select('*')
+        .eq('license_id', licenseId)
+        .order('document_type');
+
+      if (error) throw error;
+      return { data: data as LicenseDocument[], error: null };
+    } catch (error) {
+      console.error('Error fetching license documents:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Admin: Upload license document file
+   */
+  static async uploadLicenseDocumentFile(file: File, licenseId: string): Promise<ServiceResult<{ url: string; fileName: string; fileSize: number; mimeType: string }>> {
+    try {
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+      const fileName = `${licenseId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('license-documents')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('license-documents')
+        .getPublicUrl(fileName);
+
+      return {
+        data: {
+          url: publicUrl,
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+        },
+        error: null,
+      };
+    } catch (error) {
+      console.error('Error uploading license document:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Admin: Create license document record
+   */
+  static async createLicenseDocument(licenseId: string, documentData: {
+    document_type: LicenseDocumentType;
+    title: string;
+    description?: string;
+    file_url: string;
+    file_name: string;
+    file_size?: number;
+    mime_type?: string;
+    version?: string;
+  }): Promise<ServiceResult<LicenseDocument>> {
+    try {
+      // Mark previous versions as not current
+      await supabase
+        .from('ecp_license_documents')
+        .update({ is_current: false })
+        .eq('license_id', licenseId)
+        .eq('document_type', documentData.document_type);
+
+      const { data, error } = await supabase
+        .from('ecp_license_documents')
+        .insert({
+          license_id: licenseId,
+          document_type: documentData.document_type,
+          title: documentData.title,
+          description: documentData.description,
+          file_url: documentData.file_url,
+          file_name: documentData.file_name,
+          file_size: documentData.file_size,
+          mime_type: documentData.mime_type,
+          version: documentData.version || '1.0',
+          is_current: true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: data as LicenseDocument, error: null };
+    } catch (error) {
+      console.error('Error creating license document:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Admin: Delete license document
+   */
+  static async deleteLicenseDocument(documentId: string): Promise<ServiceResult<void>> {
+    try {
+      const { error } = await supabase
+        .from('ecp_license_documents')
+        .delete()
+        .eq('id', documentId);
+
+      if (error) throw error;
+      return { data: undefined, error: null };
+    } catch (error) {
+      console.error('Error deleting license document:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Admin: Get license requests for a partner
+   */
+  static async getAdminLicenseRequests(partnerId: string): Promise<ServiceResult<LicenseRequest[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('ecp_license_requests')
+        .select('*')
+        .eq('partner_id', partnerId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return { data: data as LicenseRequest[], error: null };
+    } catch (error) {
+      console.error('Error fetching license requests:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Admin: Update license request status
+   */
+  static async updateLicenseRequest(requestId: string, updates: {
+    status: LicenseRequestStatus;
+    admin_notes?: string;
+  }): Promise<ServiceResult<LicenseRequest>> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { data, error } = await supabase
+        .from('ecp_license_requests')
+        .update({
+          status: updates.status,
+          admin_notes: updates.admin_notes,
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', requestId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: data as LicenseRequest, error: null };
+    } catch (error) {
+      console.error('Error updating license request:', error);
       return { data: null, error: error as Error };
     }
   }

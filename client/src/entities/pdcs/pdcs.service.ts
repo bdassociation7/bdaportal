@@ -317,6 +317,36 @@ export class PdcsService {
   }
 
   /**
+   * Get PDC cycle totals for a specific certification
+   * Returns current cycle credits, reserved credits for next cycle, and total entries
+   */
+  static async getCycleTotals(certificationId: string): Promise<PdcResult<{
+    current_cycle_credits: number;
+    reserved_next_cycle_credits: number;
+    total_entries: number;
+  }>> {
+    try {
+      const { data, error } = await supabase.rpc('get_cycle_pdc_totals', {
+        p_certification_id: certificationId,
+      });
+
+      if (error) throw error;
+
+      return {
+        data: data?.[0] || {
+          current_cycle_credits: 0,
+          reserved_next_cycle_credits: 0,
+          total_entries: 0,
+        },
+        error: null,
+      };
+    } catch (error) {
+      console.error('Error fetching cycle totals:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
    * Get active PDP programs
    */
   static async getActivePrograms(): Promise<PdcResult<PdpProgram[]>> {
@@ -353,6 +383,123 @@ export class PdcsService {
       return { data: data[0] || { is_valid: false, max_credits: null, program_name: null }, error: null };
     } catch (error) {
       console.error('Error validating program ID:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Get detailed program information for auto-fill
+   */
+  static async getProgramDetails(programId: string): Promise<PdcResult<{
+    is_valid: boolean;
+    program_id: string | null;
+    program_name: string | null;
+    program_name_ar: string | null;
+    max_pdc_credits: number | null;
+    activity_type: string | null;
+    provider_name: string | null;
+    valid_until: string | null;
+    message: string;
+  }>> {
+    try {
+      const { data, error } = await supabase.rpc('get_pdp_program_details', {
+        p_program_id: programId,
+      });
+
+      if (error) throw error;
+      return {
+        data: data?.[0] || {
+          is_valid: false,
+          program_id: null,
+          program_name: null,
+          program_name_ar: null,
+          max_pdc_credits: null,
+          activity_type: null,
+          provider_name: null,
+          valid_until: null,
+          message: 'Program not found',
+        },
+        error: null,
+      };
+    } catch (error) {
+      console.error('Error getting program details:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Check if user has already used a program ID
+   */
+  static async checkProgramAlreadyUsed(userId: string, programId: string): Promise<PdcResult<boolean>> {
+    try {
+      const { data, error } = await supabase.rpc('check_program_already_used', {
+        p_user_id: userId,
+        p_program_id: programId,
+      });
+
+      if (error) throw error;
+      return { data: data as boolean, error: null };
+    } catch (error) {
+      console.error('Error checking program usage:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  /**
+   * Create PDC entry with auto-approval for valid programs
+   */
+  static async createPdcEntryWithAutoApprove(
+    userId: string,
+    dto: CreatePdcEntryDTO
+  ): Promise<PdcResult<{
+    entry_id: string;
+    final_status: string;
+    credits_approved: number | null;
+    auto_approved: boolean;
+    program_name: string | null;
+    message: string;
+  }>> {
+    try {
+      // Upload certificate if provided
+      let certificateUrl: string | null = null;
+      if (dto.certificate_file) {
+        const uploadResult = await this.uploadCertificate(dto.certificate_file, userId);
+        if (uploadResult.error) throw uploadResult.error;
+        certificateUrl = uploadResult.data;
+      }
+
+      const { data, error } = await supabase.rpc('submit_pdc_with_auto_approve', {
+        p_user_id: userId,
+        p_certification_type: dto.certification_type,
+        p_program_id: dto.program_id || '',
+        p_activity_type: dto.activity_type,
+        p_activity_title: dto.activity_title,
+        p_activity_title_ar: dto.activity_title_ar || null,
+        p_activity_description: dto.activity_description || null,
+        p_credits_claimed: dto.credits_claimed,
+        p_activity_date: dto.activity_date,
+        p_certificate_url: certificateUrl,
+        p_notes: dto.notes || null,
+      });
+
+      if (error) throw error;
+
+      const result = data?.[0];
+      if (!result) {
+        throw new Error('No response from auto-approve function');
+      }
+
+      // Check if it's a duplicate submission
+      if (result.final_status === 'duplicate') {
+        return {
+          data: null,
+          error: new Error(result.message || 'This Program ID has already been used'),
+        };
+      }
+
+      return { data: result, error: null };
+    } catch (error) {
+      console.error('Error creating PDC entry with auto-approve:', error);
       return { data: null, error: error as Error };
     }
   }

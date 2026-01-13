@@ -1,14 +1,12 @@
 /**
  * Lesson Content Component
- * Affiche le contenu riche d'une leçon (JSON TipTap/Lexical)
+ * Displays rich lesson content (JSON TipTap/Lexical)
  *
- * Note: Pour l'instant, affiche le contenu de manière simple.
- * À terme, intégrer un vrai renderer TipTap/Lexical pour affichage riche.
+ * Each lesson belongs to ONE language only - no bilingual content.
+ * Arabic lessons use content_ar, English lessons use content.
+ * Renders TipTap/Lexical JSON structure
  */
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Json } from '@/shared/database.types';
 
 interface LessonContentProps {
@@ -17,14 +15,19 @@ interface LessonContentProps {
 }
 
 export function LessonContent({ content, contentAr }: LessonContentProps) {
-  const [language, setLanguage] = useState<'fr' | 'ar'>('fr');
+  // Determine which content to display
+  // If contentAr has actual content, this is an Arabic lesson
+  // Otherwise, use English content
+  const isArabicLesson = contentAr && typeof contentAr === 'object' && 'type' in contentAr;
+  const displayContent = isArabicLesson ? contentAr : content;
+  const isRTL = isArabicLesson;
 
   // Helper function to render TipTap/Lexical JSON content
   const renderContent = (jsonContent: Json): React.ReactNode => {
     if (!jsonContent || typeof jsonContent !== 'object' || !('type' in jsonContent)) {
       return (
         <div className="text-muted-foreground italic">
-          Aucun contenu disponible
+          No content available
         </div>
       );
     }
@@ -205,28 +208,11 @@ export function LessonContent({ content, contentAr }: LessonContentProps) {
     });
   };
 
-  // If both FR and AR content available, show tabs
-  if (contentAr && Object.keys(contentAr).length > 0) {
-    return (
-      <Tabs value={language} onValueChange={(v) => setLanguage(v as 'fr' | 'ar')}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="fr">Français</TabsTrigger>
-          <TabsTrigger value="ar">العربية</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="fr">
-          <div className="lesson-content">{renderContent(content)}</div>
-        </TabsContent>
-
-        <TabsContent value="ar">
-          <div className="lesson-content" dir="rtl">
-            {renderContent(contentAr)}
-          </div>
-        </TabsContent>
-      </Tabs>
-    );
-  }
-
-  // Only FR content
-  return <div className="lesson-content">{renderContent(content)}</div>;
+  // Render the appropriate content based on lesson language
+  // No tabs - each lesson is single-language
+  return (
+    <div className="lesson-content" dir={isRTL ? 'rtl' : 'ltr'}>
+      {renderContent(displayContent)}
+    </div>
+  );
 }

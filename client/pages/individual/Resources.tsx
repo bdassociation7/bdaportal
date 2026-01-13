@@ -237,8 +237,8 @@ export default function Resources() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{texts.allCertifications}</SelectItem>
-                  <SelectItem value="CP">CP™</SelectItem>
-                  <SelectItem value="SCP">SCP™</SelectItem>
+                  <SelectItem value="CP">BDA-CP™</SelectItem>
+                  <SelectItem value="SCP">BDA-SCP™</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -275,7 +275,7 @@ export default function Resources() {
                     </div>
                     <div className="flex flex-col gap-1 items-end">
                       {resource.certification_type ? (
-                        <Badge variant="outline">{resource.certification_type}™</Badge>
+                        <Badge variant="outline">BDA-{resource.certification_type}™</Badge>
                       ) : (
                         <Badge variant="secondary">{texts.general}</Badge>
                       )}

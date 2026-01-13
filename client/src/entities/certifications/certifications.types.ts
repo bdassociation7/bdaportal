@@ -1,6 +1,6 @@
 /**
  * Certifications Types
- * User earned certifications (CP™, SCP™)
+ * User earned certifications (BDA-CP™, BDA-SCP™)
  */
 
 export type CertificationStatus = 'active' | 'expired' | 'revoked' | 'suspended';
@@ -9,7 +9,7 @@ export interface UserCertification {
   id: string;
   user_id: string;
   certification_type: 'CP' | 'SCP';
-  credential_id: string; // e.g., CP-2024-0001
+  credential_id: string; // e.g., BDA-CP-2026-A7K2M9
   quiz_attempt_id?: string;
   issued_date: string;
   expiry_date: string;

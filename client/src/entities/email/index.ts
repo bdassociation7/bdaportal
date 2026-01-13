@@ -9,6 +9,10 @@ export * from './email.types';
 
 // Services
 export * from './email.service';
+export * from './email-templates.service';
+
+// Templates
+export * from './templates';
 
 // Named exports for convenience
 export {
@@ -19,3 +23,16 @@ export {
   getEmailStatistics,
   replaceTemplateVariables,
 } from './email.service';
+
+// Template-based queue functions (recommended)
+export {
+  queueWelcomeEmail,
+  queueExamBookingEmail,
+  queueExamReminderEmail,
+  queuePasswordResetEmail,
+  queueCertificationIssuedEmail,
+  queueVoucherCreatedEmail,
+  queuePartnerApprovedEmail,
+  triggerEmailSending,
+  EmailTemplatesService,
+} from './email-templates.service';

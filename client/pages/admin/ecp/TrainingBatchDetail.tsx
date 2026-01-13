@@ -209,7 +209,7 @@ export default function AdminECPTrainingBatchDetail() {
                       : 'bg-purple-50 text-purple-700'
                   }`}
                 >
-                  {batch.certification_type}
+                  BDA-{batch.certification_type}™
                 </Badge>
               </div>
             </div>

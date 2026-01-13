@@ -34,8 +34,8 @@ export const curriculumKeys = {
   dashboard: (userId: string, certType: CertificationType) =>
     [...curriculumKeys.all, 'dashboard', userId, certType] as const,
 
-  stats: (userId: string, certType: CertificationType) =>
-    [...curriculumKeys.all, 'stats', userId, certType] as const,
+  stats: (userId: string, certType: CertificationType, examLanguage?: 'en' | 'ar') =>
+    [...curriculumKeys.all, 'stats', userId, certType, examLanguage] as const,
 };
 
 // =============================================================================
@@ -77,20 +77,23 @@ export function useCurriculumAccess(
 
 /**
  * Get all modules with user progress
+ * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
  */
 export function useModulesWithProgress(
   userId: string | undefined,
   certificationType: CertificationType,
-  enabled: boolean = true
+  enabled: boolean = true,
+  examLanguage?: 'en' | 'ar'
 ) {
   return useQuery({
-    queryKey: curriculumKeys.dashboard(userId || '', certificationType),
+    queryKey: [...curriculumKeys.dashboard(userId || '', certificationType), examLanguage],
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
 
       const result = await CurriculumService.getModulesWithProgress(
         userId,
-        certificationType
+        certificationType,
+        examLanguage
       );
 
       if (result.error) throw result.error;
@@ -123,19 +126,22 @@ export function useModuleDetail(
 
 /**
  * Get next unlocked module
+ * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
  */
 export function useNextModule(
   userId: string | undefined,
-  certificationType: CertificationType
+  certificationType: CertificationType,
+  examLanguage?: 'en' | 'ar'
 ) {
   return useQuery({
-    queryKey: [...curriculumKeys.all, 'next-module', userId, certificationType],
+    queryKey: [...curriculumKeys.all, 'next-module', userId, certificationType, examLanguage],
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
 
       const result = await CurriculumService.getNextUnlockedModule(
         userId,
-        certificationType
+        certificationType,
+        examLanguage
       );
 
       if (result.error) throw result.error;
@@ -175,19 +181,22 @@ export function useModuleProgress(
 
 /**
  * Get overall progress statistics
+ * @param examLanguage - Optional language filter ('en' or 'ar' lowercase)
  */
 export function useOverallProgress(
   userId: string | undefined,
-  certificationType: CertificationType
+  certificationType: CertificationType,
+  examLanguage?: 'en' | 'ar'
 ) {
   return useQuery({
-    queryKey: curriculumKeys.stats(userId || '', certificationType),
+    queryKey: curriculumKeys.stats(userId || '', certificationType, examLanguage),
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
 
       const result = await CurriculumProgressService.getOverallProgress(
         userId,
-        certificationType
+        certificationType,
+        examLanguage
       );
 
       if (result.error) throw result.error;
@@ -204,20 +213,26 @@ export function useOverallProgress(
 /**
  * Complete curriculum dashboard data
  * Combines access check, modules, and progress
+ * @param examLanguage - Optional language filter ('EN' or 'AR' uppercase, will be converted to lowercase for DB)
  */
 export function useCurriculumDashboard(
   userId: string | undefined,
   userEmail: string | undefined,
-  certificationType: CertificationType
+  certificationType: CertificationType,
+  examLanguage?: 'EN' | 'AR'
 ) {
+  // Convert uppercase language to lowercase for database query
+  const dbLanguage = examLanguage?.toLowerCase() as 'en' | 'ar' | undefined;
+
   // Check access first
   const accessQuery = useCurriculumAccess(userId, userEmail, certificationType);
 
-  // Get modules with progress
+  // Get modules with progress, filtered by language
   const modulesQuery = useModulesWithProgress(
     userId,
     certificationType,
-    accessQuery.data?.hasAccess || false
+    accessQuery.data?.hasAccess || false,
+    dbLanguage
   );
 
   // Get overall stats
@@ -226,8 +241,16 @@ export function useCurriculumDashboard(
     certificationType
   );
 
-  // Get next module
-  const nextModuleQuery = useNextModule(userId, certificationType);
+  // Get next module (filtered by language)
+  const nextModuleQuery = useNextModule(userId, certificationType, dbLanguage);
+
+  // Filter modules by section_type instead of hardcoded slice
+  const knowledgeModules = modulesQuery.data?.filter(
+    (m) => m.section_type === 'knowledge_based'
+  ) || [];
+  const behavioralModules = modulesQuery.data?.filter(
+    (m) => m.section_type === 'behavioral'
+  ) || [];
 
   return {
     // Loading states
@@ -240,10 +263,10 @@ export function useCurriculumDashboard(
     accessReason: accessQuery.data?.reason,
     access: accessQuery.data?.access,
 
-    // Modules data
+    // Modules data (filtered by section_type)
     modules: modulesQuery.data || [],
-    knowledgeModules: modulesQuery.data?.slice(0, 7) || [],
-    behavioralModules: modulesQuery.data?.slice(7, 14) || [],
+    knowledgeModules,
+    behavioralModules,
 
     // Stats
     overallProgress: statsQuery.data,

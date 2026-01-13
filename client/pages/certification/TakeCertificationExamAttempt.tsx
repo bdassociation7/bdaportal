@@ -445,7 +445,7 @@ export default function TakeCertificationExamAttempt() {
             if (errorMessage.includes('already has an active certification')) {
               toast({
                 title: '🎉 Congratulations!',
-                description: `You passed with ${scorePercentage}%! You already have an active ${exam.certification_type}™ certification.`,
+                description: `You passed with ${scorePercentage}%! You already have an active $BDA-{exam.certification_type}™ certification.`,
                 duration: 10000,
               });
             } else {
@@ -459,7 +459,7 @@ export default function TakeCertificationExamAttempt() {
           } else {
             toast({
               title: '🎉 Congratulations!',
-              description: `You passed with ${scorePercentage}%! Your ${exam.certification_type}™ certification has been issued!`,
+              description: `You passed with ${scorePercentage}%! Your $BDA-{exam.certification_type}™ certification has been issued!`,
               duration: 10000,
             });
           }
@@ -469,7 +469,7 @@ export default function TakeCertificationExamAttempt() {
           if (errorMessage.includes('already has an active certification')) {
             toast({
               title: '🎉 Congratulations!',
-              description: `You passed with ${scorePercentage}%! You already have an active ${exam.certification_type}™ certification.`,
+              description: `You passed with ${scorePercentage}%! You already have an active $BDA-{exam.certification_type}™ certification.`,
               duration: 10000,
             });
           } else {
@@ -610,7 +610,7 @@ export default function TakeCertificationExamAttempt() {
               <div>
                 <h1 className="text-lg font-bold">{exam.title}</h1>
                 <Badge variant="outline" className="border-white/30 text-white bg-white/10 mt-1">
-                  {exam.certification_type}™ Certification Exam
+                  BDA-{exam.certification_type}™ Certification Exam
                 </Badge>
               </div>
             </div>

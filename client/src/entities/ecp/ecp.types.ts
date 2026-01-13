@@ -486,3 +486,25 @@ export interface ECPToolkitItem {
   created_at: string;
   updated_at: string;
 }
+
+export interface CreateECPToolkitItemDTO {
+  category: ECPToolkitCategory;
+  title: string;
+  description?: string;
+  file_url: string;
+  file_type?: string;
+  file_size?: number;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+export interface UpdateECPToolkitItemDTO {
+  category?: ECPToolkitCategory;
+  title?: string;
+  description?: string;
+  file_url?: string;
+  file_type?: string;
+  file_size?: number;
+  sort_order?: number;
+  is_active?: boolean;
+}

@@ -4,6 +4,20 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  welcomeEmailHtml,
+  welcomeEmailText,
+  examReminderHtml,
+  examReminderText,
+  examBookingHtml,
+  examBookingText,
+  partnerApprovedHtml,
+  partnerApprovedText,
+  certificationIssuedHtml,
+  certificationIssuedText,
+  voucherCreatedHtml,
+  voucherCreatedText,
+} from '../_shared/email-templates.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -277,14 +291,161 @@ serve(async (req) => {
         let htmlBody = ''
         let textBody = ''
 
-        // Check for embedded template (welcome emails)
+        // Check for embedded template first
         if (emailItem.template_data?.html_body && emailItem.template_data?.text_body) {
           htmlBody = emailItem.template_data.html_body
           textBody = emailItem.template_data.text_body
         } else {
-          // Would need to fetch from templates table if implemented
-          console.warn(`[send-emails] No embedded template for: ${emailItem.template_name}`)
-          throw new Error(`Template not found: ${emailItem.template_name}`)
+          // Generate from template based on template_name
+          const data = emailItem.template_data || {}
+          const portalUrl = Deno.env.get('PORTAL_URL') || 'https://portal.bda-global.org'
+
+          switch (emailItem.template_name) {
+            case 'welcome':
+              htmlBody = welcomeEmailHtml({
+                firstName: data.firstName || data.candidate_name || 'User',
+                email: emailItem.recipient_email,
+                loginUrl: data.loginUrl || `${portalUrl}/login`,
+                setPasswordUrl: data.setPasswordUrl,
+              })
+              textBody = welcomeEmailText({
+                firstName: data.firstName || data.candidate_name || 'User',
+                email: emailItem.recipient_email,
+                loginUrl: data.loginUrl || `${portalUrl}/login`,
+                setPasswordUrl: data.setPasswordUrl,
+              })
+              if (!subject) subject = `Welcome to BDA Association, ${data.firstName || 'User'}!`
+              break
+
+            case 'exam_reminder_48h':
+            case 'exam_reminder_24h':
+            case 'exam_reminder':
+              const hoursUntil = emailItem.template_name === 'exam_reminder_24h' ? 24 : 48
+              htmlBody = examReminderHtml({
+                firstName: data.candidate_name?.split(' ')[0] || data.firstName || 'Candidate',
+                examTitle: data.exam_title || 'BDA Certification Exam',
+                examDate: data.exam_date || 'TBD',
+                examTime: data.exam_time || 'TBD',
+                timezone: data.timezone || 'UTC',
+                confirmationCode: data.confirmation_code || 'N/A',
+                duration: data.duration || '3 hours',
+                dashboardUrl: data.dashboard_url || `${portalUrl}/individual/dashboard`,
+                hoursUntilExam: hoursUntil as 24 | 48,
+              })
+              textBody = examReminderText({
+                firstName: data.candidate_name?.split(' ')[0] || data.firstName || 'Candidate',
+                examTitle: data.exam_title || 'BDA Certification Exam',
+                examDate: data.exam_date || 'TBD',
+                examTime: data.exam_time || 'TBD',
+                timezone: data.timezone || 'UTC',
+                confirmationCode: data.confirmation_code || 'N/A',
+                duration: data.duration || '3 hours',
+                dashboardUrl: data.dashboard_url || `${portalUrl}/individual/dashboard`,
+                hoursUntilExam: hoursUntil as 24 | 48,
+              })
+              if (!subject) {
+                const urgency = hoursUntil === 24 ? '⚠️ Tomorrow' : 'Reminder'
+                subject = `${urgency}: Your ${data.exam_title || 'BDA'} Exam`
+              }
+              break
+
+            case 'exam_booking':
+            case 'booking_confirmation':
+              htmlBody = examBookingHtml({
+                firstName: data.candidate_name?.split(' ')[0] || data.firstName || 'Candidate',
+                examTitle: data.exam_title || 'BDA Certification Exam',
+                examDate: data.exam_date || 'TBD',
+                examTime: data.exam_time || 'TBD',
+                timezone: data.timezone || 'UTC',
+                duration: data.duration || '3 hours',
+                confirmationCode: data.confirmation_code || 'N/A',
+                dashboardUrl: data.dashboard_url || `${portalUrl}/individual/dashboard`,
+              })
+              textBody = examBookingText({
+                firstName: data.candidate_name?.split(' ')[0] || data.firstName || 'Candidate',
+                examTitle: data.exam_title || 'BDA Certification Exam',
+                examDate: data.exam_date || 'TBD',
+                examTime: data.exam_time || 'TBD',
+                timezone: data.timezone || 'UTC',
+                duration: data.duration || '3 hours',
+                confirmationCode: data.confirmation_code || 'N/A',
+                dashboardUrl: data.dashboard_url || `${portalUrl}/individual/dashboard`,
+              })
+              if (!subject) subject = `Exam Booking Confirmed: ${data.confirmation_code || 'N/A'}`
+              break
+
+            case 'partner_approved':
+              htmlBody = partnerApprovedHtml({
+                firstName: data.firstName || 'Partner',
+                organizationName: data.organizationName || emailItem.recipient_name || 'Organization',
+                partnerType: data.partnerType || 'ECP',
+                partnerNumber: data.partnerNumber || 'N/A',
+                dashboardUrl: data.dashboardUrl || `${portalUrl}/${(data.partnerType || 'ecp').toLowerCase()}/dashboard`,
+              })
+              textBody = partnerApprovedText({
+                firstName: data.firstName || 'Partner',
+                organizationName: data.organizationName || emailItem.recipient_name || 'Organization',
+                partnerType: data.partnerType || 'ECP',
+                partnerNumber: data.partnerNumber || 'N/A',
+                dashboardUrl: data.dashboardUrl || `${portalUrl}/${(data.partnerType || 'ecp').toLowerCase()}/dashboard`,
+              })
+              if (!subject) subject = `✓ Partner Application Approved`
+              break
+
+            case 'certification_issued':
+              htmlBody = certificationIssuedHtml({
+                firstName: data.firstName || 'Candidate',
+                lastName: data.lastName || '',
+                certificationName: data.certificationName || 'BDA Certification',
+                certificationLevel: data.certificationLevel || 'Professional',
+                issueDate: data.issueDate || new Date().toLocaleDateString(),
+                expirationDate: data.expirationDate,
+                certificateNumber: data.certificateNumber || 'N/A',
+                verificationUrl: data.verificationUrl || `${portalUrl}/verify`,
+                downloadUrl: data.downloadUrl || `${portalUrl}/individual/certifications`,
+              })
+              textBody = certificationIssuedText({
+                firstName: data.firstName || 'Candidate',
+                lastName: data.lastName || '',
+                certificationName: data.certificationName || 'BDA Certification',
+                certificationLevel: data.certificationLevel || 'Professional',
+                issueDate: data.issueDate || new Date().toLocaleDateString(),
+                expirationDate: data.expirationDate,
+                certificateNumber: data.certificateNumber || 'N/A',
+                verificationUrl: data.verificationUrl || `${portalUrl}/verify`,
+                downloadUrl: data.downloadUrl || `${portalUrl}/individual/certifications`,
+              })
+              if (!subject) subject = `🎉 Your ${data.certificationName || 'BDA'} Certificate is Ready`
+              break
+
+            case 'voucher_created':
+              htmlBody = voucherCreatedHtml({
+                partnerName: data.partnerName || emailItem.recipient_name || 'Partner',
+                voucherCode: data.voucherCode || 'N/A',
+                examType: data.examType || 'BDA Certification Exam',
+                candidateEmail: data.candidateEmail,
+                candidateName: data.candidateName,
+                validUntil: data.validUntil || 'N/A',
+                bookingUrl: data.bookingUrl || `${portalUrl}/exam-booking`,
+                partnerDashboardUrl: data.partnerDashboardUrl || `${portalUrl}/ecp/dashboard`,
+              })
+              textBody = voucherCreatedText({
+                partnerName: data.partnerName || emailItem.recipient_name || 'Partner',
+                voucherCode: data.voucherCode || 'N/A',
+                examType: data.examType || 'BDA Certification Exam',
+                candidateEmail: data.candidateEmail,
+                candidateName: data.candidateName,
+                validUntil: data.validUntil || 'N/A',
+                bookingUrl: data.bookingUrl || `${portalUrl}/exam-booking`,
+                partnerDashboardUrl: data.partnerDashboardUrl || `${portalUrl}/ecp/dashboard`,
+              })
+              if (!subject) subject = `New Exam Voucher Created: ${data.voucherCode || 'N/A'}`
+              break
+
+            default:
+              console.warn(`[send-emails] Unknown template: ${emailItem.template_name}`)
+              throw new Error(`Template not found: ${emailItem.template_name}`)
+          }
         }
 
         let sendResult = { success: false, error: 'No provider', messageId: '' }

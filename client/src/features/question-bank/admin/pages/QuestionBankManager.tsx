@@ -3,7 +3,7 @@
  * CRUD operations for question sets and questions
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -43,6 +43,7 @@ import {
   ChevronDown,
   Folder,
   FolderOpen,
+  Globe,
 } from 'lucide-react';
 import { AdminPageHeader, StatCard, AdminFilterCard } from '@/features/curriculum/admin/components/shared';
 import { Button } from '@/components/ui/button';
@@ -75,9 +76,12 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+type ExamLanguage = 'en' | 'ar';
+
 export function QuestionBankManager() {
   const navigate = useNavigate();
-  const { language } = useLanguage();
+  // Admin interface should always be in English - only content is language-specific
+  const language = 'en' as const;
 
   const t = {
     en: {
@@ -153,6 +157,11 @@ export function QuestionBankManager() {
       expandAll: 'Expand All',
       collapseAll: 'Collapse All',
       noCompetency: 'Standalone Sets',
+      selectLanguage: 'Select Language',
+      englishQuestionSets: 'English Question Sets',
+      arabicQuestionSets: 'Arabic Question Sets',
+      createEnglishSet: 'English Set',
+      createArabicSet: 'Arabic Set',
     },
     ar: {
       title: 'إدارة بنك الأسئلة',
@@ -227,6 +236,11 @@ export function QuestionBankManager() {
       expandAll: 'توسيع الكل',
       collapseAll: 'طي الكل',
       noCompetency: 'مجموعات مستقلة',
+      selectLanguage: 'اختر اللغة',
+      englishQuestionSets: 'مجموعات الأسئلة الإنجليزية',
+      arabicQuestionSets: 'مجموعات الأسئلة العربية',
+      createEnglishSet: 'مجموعة إنجليزية',
+      createArabicSet: 'مجموعة عربية',
     }
   };
 
@@ -238,6 +252,8 @@ export function QuestionBankManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
   const [publishedFilter, setPublishedFilter] = useState<string>('all');
+  const [filterLanguage, setFilterLanguage] = useState<ExamLanguage>('en');
+  const [createLanguage, setCreateLanguage] = useState<ExamLanguage>('en');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingSet, setEditingSet] = useState<QuestionSetWithCompetency | null>(
     null
@@ -251,6 +267,7 @@ export function QuestionBankManager() {
     section_type:
       sectionFilter !== 'all' ? (sectionFilter as any) : undefined,
     is_published: publishedFilter === 'all' ? undefined : publishedFilter === 'published',
+    exam_language: filterLanguage,
   });
   const { data: stats } = useAdminQuestionBankStats('CP');
 
@@ -382,13 +399,53 @@ export function QuestionBankManager() {
               <Download className="w-4 h-4 mr-2" />
               {texts.export}
             </Button>
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-white text-blue-600 hover:bg-blue-50">
-              <Plus className="w-4 h-4 mr-2" />
-              {texts.createQuestionSet}
-            </Button>
+            <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
+              <Button
+                onClick={() => {
+                  setCreateLanguage('en');
+                  setIsCreateDialogOpen(true);
+                }}
+                className="bg-white text-blue-600 hover:bg-blue-50"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                🇬🇧 {texts.createEnglishSet}
+              </Button>
+              <Button
+                onClick={() => {
+                  setCreateLanguage('ar');
+                  setIsCreateDialogOpen(true);
+                }}
+                className="bg-white text-emerald-600 hover:bg-emerald-50"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                🇸🇦 {texts.createArabicSet}
+              </Button>
+            </div>
           </div>
         }
       />
+
+      {/* Language Filter */}
+      <div className="flex items-center gap-4 bg-white rounded-lg shadow-sm p-4 mb-6">
+        <Globe className="h-5 w-5 text-gray-500" />
+        <span className="font-medium text-gray-700">{texts.selectLanguage}:</span>
+        <div className="flex gap-2">
+          <Button
+            variant={filterLanguage === 'en' ? 'default' : 'outline'}
+            onClick={() => setFilterLanguage('en')}
+            className={filterLanguage === 'en' ? 'bg-blue-600' : ''}
+          >
+            🇬🇧 {texts.englishQuestionSets}
+          </Button>
+          <Button
+            variant={filterLanguage === 'ar' ? 'default' : 'outline'}
+            onClick={() => setFilterLanguage('ar')}
+            className={filterLanguage === 'ar' ? 'bg-emerald-600' : ''}
+          >
+            🇸🇦 {texts.arabicQuestionSets}
+          </Button>
+        </div>
+      </div>
 
       {/* Stats Cards */}
       {stats && (
@@ -743,6 +800,7 @@ export function QuestionBankManager() {
         onSubmit={handleCreate}
         title={texts.createSet}
         texts={texts}
+        defaultLanguage={createLanguage}
       />
 
       {/* Edit Dialog */}
@@ -797,6 +855,7 @@ interface QuestionSetDialogProps {
   title: string;
   defaultValues?: Partial<QuestionSetWithCompetency>;
   texts: Record<string, string>;
+  defaultLanguage?: ExamLanguage;
 }
 
 function QuestionSetDialog({
@@ -806,7 +865,11 @@ function QuestionSetDialog({
   title,
   defaultValues,
   texts,
+  defaultLanguage = 'en',
 }: QuestionSetDialogProps) {
+  const [examLanguage, setExamLanguage] = useState<ExamLanguage>(
+    (defaultValues as any)?.exam_language || defaultLanguage
+  );
   const [formData, setFormData] = useState<Partial<QuestionSetInsert>>({
     certification_type: defaultValues?.certification_type || 'CP',
     section_type: defaultValues?.section_type || 'knowledge',
@@ -821,13 +884,22 @@ function QuestionSetDialog({
     passing_score: defaultValues?.passing_score || 70,
     order_index: defaultValues?.order_index || 1,
     is_published: defaultValues?.is_published || false,
+    exam_language: (defaultValues as any)?.exam_language || defaultLanguage,
   });
 
-  // Fetch modules for competency selector
+  // Update exam_language when defaultLanguage changes
+  useEffect(() => {
+    if (!defaultValues) {
+      setExamLanguage(defaultLanguage);
+      setFormData(prev => ({ ...prev, exam_language: defaultLanguage }));
+    }
+  }, [defaultLanguage, defaultValues]);
+
+  // Fetch modules for competency selector (filtered by exam language)
   const { data: modules } = useQuery({
-    queryKey: curriculumKeys.modulesList({}),
+    queryKey: curriculumKeys.modulesList({ exam_language: examLanguage }),
     queryFn: async () => {
-      const result = await CurriculumService.getModules({});
+      const result = await CurriculumService.getModules({ exam_language: examLanguage });
       return result.data || [];
     },
   });
@@ -839,9 +911,17 @@ function QuestionSetDialog({
   );
 
   const handleSubmit = () => {
-    if (!formData.title) {
-      toast.error(texts.titleRequired);
-      return;
+    // Language-aware validation: only require fields for the active exam language
+    if (examLanguage === 'ar') {
+      if (!formData.title_ar) {
+        toast.error('Arabic title is required / العنوان بالعربية مطلوب');
+        return;
+      }
+    } else {
+      if (!formData.title) {
+        toast.error(texts.titleRequired);
+        return;
+      }
     }
     onSubmit(formData as QuestionSetInsert);
   };
@@ -850,7 +930,12 @@ function QuestionSetDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {title}
+            <span className={`text-sm px-2 py-1 rounded ${examLanguage === 'en' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+              {examLanguage === 'en' ? '🇬🇧 English' : '🇸🇦 Arabic'}
+            </span>
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -912,7 +997,9 @@ function QuestionSetDialog({
                     <SelectItem value="none">{texts.none}</SelectItem>
                     {modules?.map((module) => (
                       <SelectItem key={module.id} value={module.id}>
-                        {module.order_index}. {module.competency_name}
+                        {module.order_index}. {examLanguage === 'ar' && module.competency_name_ar
+                          ? module.competency_name_ar
+                          : module.competency_name || module.competency_name_ar || 'Untitled'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -937,7 +1024,9 @@ function QuestionSetDialog({
                     <SelectItem value="none">{texts.noneOption}</SelectItem>
                     {lessons?.map((lesson) => (
                       <SelectItem key={lesson.id} value={lesson.id}>
-                        {lesson.order_index}. {lesson.title}
+                        {lesson.order_index}. {examLanguage === 'ar' && lesson.title_ar
+                          ? lesson.title_ar
+                          : lesson.title || lesson.title_ar || 'Untitled'}
                       </SelectItem>
                     ))}
                   </SelectContent>

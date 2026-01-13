@@ -1,4 +1,5 @@
 import { supabase } from '@/shared/config/supabase.config';
+import { queueCertificationIssuedEmail } from '@/entities/email';
 
 export interface UserCertification {
   id: string;
@@ -74,6 +75,46 @@ export class CertificationService {
         return { data: null, error };
       }
 
+      // Queue certification issued email
+      try {
+        // Get user details for email
+        const { data: user } = await supabase
+          .from('users')
+          .select('email, first_name, last_name')
+          .eq('id', dto.user_id)
+          .single();
+
+        if (user?.email) {
+          const certificationName = dto.certification_type === 'CP'
+            ? 'BDA-CP (Certified Professional)'
+            : 'BDA-SCP (Senior Certified Professional)';
+
+          await queueCertificationIssuedEmail(user.email, {
+            firstName: user.first_name || 'Candidate',
+            lastName: user.last_name || '',
+            certificationName,
+            certificationLevel: dto.certification_type,
+            issueDate: issuedDate.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            expirationDate: expiryDate.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            certificateNumber: credentialId,
+            verificationUrl: `https://portal.bda-global.org/verify/${credentialId}`,
+            downloadUrl: 'https://portal.bda-global.org/individual/certifications',
+          });
+          console.log('Certification issued email queued for:', user.email);
+        }
+      } catch (emailError) {
+        console.error('Failed to queue certification email:', emailError);
+        // Don't fail the certification issuance if email fails
+      }
+
       return { data: data as UserCertification, error: null };
     } catch (error) {
       console.error('Error in issueCertification:', error);
@@ -82,23 +123,24 @@ export class CertificationService {
   }
 
   /**
-   * Générer un credential_id unique
-   * Format: CP-2024-001234 ou SCP-2024-001234
+   * Générer un credential_id unique via la fonction base de données
+   * Format: BDA-CP-2026-XXXXXX ou BDA-SCP-2026-XXXXXX
    */
   private static async generateCredentialId(type: 'CP' | 'SCP'): Promise<string> {
-    const year = new Date().getFullYear();
-    const prefix = `${type}-${year}`;
+    // Use database function to ensure uniqueness and proper format
+    const { data, error } = await supabase.rpc('generate_credential_id', {
+      cert_type: type,
+    });
 
-    // Compter les certifications de ce type cette année
-    const { count } = await supabase
-      .from('user_certifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('certification_type', type)
-      .gte('issued_date', `${year}-01-01`)
-      .lt('issued_date', `${year + 1}-01-01`);
+    if (error) {
+      console.error('Error generating credential ID:', error);
+      // Fallback: generate locally if RPC fails
+      const year = new Date().getFullYear();
+      const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+      return `BDA-${type}-${year}-${randomSuffix}`;
+    }
 
-    const nextNumber = (count || 0) + 1;
-    return `${prefix}-${nextNumber.toString().padStart(6, '0')}`;
+    return data as string;
   }
 
   /**

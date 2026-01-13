@@ -88,6 +88,7 @@ export interface MockExam {
 
   // Premium/Language fields
   is_premium: boolean;
+  is_sample_exam: boolean; // Free sample exam (1 per language)
   language: MockExamLanguage;
   woocommerce_product_id: number | null;
 
@@ -110,6 +111,9 @@ export interface MockExamPremiumAccess {
   granted_at: string;
   expires_at: string | null;
   created_at: string;
+  // Single-use attempt tracking
+  attempts_allowed: number;
+  attempts_used: number;
 }
 
 export interface MockExamQuestion {
@@ -259,6 +263,7 @@ export interface CreateExamDTO {
   passing_score: number;
   is_active?: boolean;
   is_premium?: boolean;
+  is_sample_exam?: boolean; // Free sample exam (1 per language)
   language?: MockExamLanguage;
   woocommerce_product_id?: number;
 }
@@ -315,6 +320,7 @@ export interface ExamFilters {
   is_active?: boolean;
   search?: string;
   is_premium?: boolean;
+  is_sample_exam?: boolean;
   language?: MockExamLanguage;
 }
 
@@ -354,4 +360,62 @@ export interface ExamResults {
   score_percentage: number;
   passed: boolean;
   time_spent_minutes: number;
+}
+
+// =============================================================================
+// MOCK EXAM PRODUCTS (for WooCommerce automation)
+// =============================================================================
+
+export interface MockExamProduct {
+  id: string;
+  woocommerce_product_id: number;
+  product_name: string;
+  language: MockExamLanguage; // en or ar - package is language-specific
+  exams_count: number;
+  specific_exam_ids: string[] | null; // If set, grants access to these specific exams
+  validity_months: number | null; // NULL = lifetime, default 12
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+}
+
+export interface MockExamAccessGrant {
+  id: string;
+  user_id: string;
+  mock_exam_product_id: string;
+  woocommerce_order_id: number;
+  exams_granted: number;
+  exams_remaining: number;
+  expires_at: string | null;
+  status: 'active' | 'revoked' | 'expired';
+  created_at: string;
+}
+
+export interface CreateMockExamProductDTO {
+  woocommerce_product_id: number;
+  product_name: string;
+  exams_count: number;
+  specific_exam_ids?: string[];
+  validity_months?: number;
+  is_active?: boolean;
+}
+
+export interface UpdateMockExamProductDTO {
+  product_name?: string;
+  exams_count?: number;
+  specific_exam_ids?: string[] | null;
+  validity_months?: number | null;
+  is_active?: boolean;
+}
+
+export interface UserMockExamCredits {
+  total_credits: number;
+  grants: {
+    id: string;
+    product_name: string;
+    exams_remaining: number;
+    expires_at: string | null;
+    created_at: string;
+  }[];
 }

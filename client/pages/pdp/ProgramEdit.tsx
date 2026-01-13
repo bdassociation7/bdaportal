@@ -63,7 +63,11 @@ export default function PDPProgramEdit() {
     );
   }
 
-  if (program.status !== 'draft' && program.status !== 'rejected') {
+  // Determine if limited edit mode should be used (approved programs can only edit name, description, duration)
+  const isLimitedEdit = program.status === 'approved';
+
+  // Block editing for submitted, under_review, and expired programs
+  if (program.status !== 'draft' && program.status !== 'rejected' && program.status !== 'approved') {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -81,7 +85,7 @@ export default function PDPProgramEdit() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            You cannot edit a program that is {program.status}. Only draft and rejected programs can be edited.
+            You cannot edit a program that is {program.status}. Only draft, rejected, and approved programs can be edited.
           </AlertDescription>
         </Alert>
       </div>
@@ -99,7 +103,11 @@ export default function PDPProgramEdit() {
 
       <div>
         <h1 className="text-3xl font-bold">Edit Program</h1>
-        <p className="text-gray-600 mt-2">Update your program details</p>
+        <p className="text-gray-600 mt-2">
+          {isLimitedEdit
+            ? 'Update program name, description, and duration (other fields are locked for approved programs)'
+            : 'Update your program details'}
+        </p>
       </div>
 
       <ProgramForm
@@ -107,6 +115,7 @@ export default function PDPProgramEdit() {
         onSubmit={handleSubmit}
         onCancel={() => navigate(`/pdp/programs/${id}`)}
         isSubmitting={updateMutation.isPending}
+        limitedEdit={isLimitedEdit}
       />
     </div>
   );

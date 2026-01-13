@@ -11,10 +11,12 @@ import type {
   CertificateListResponse,
   CertificateDetailsResponse,
   CertificateVerificationResponse,
+  CertificateSearchResponse,
   BooleanResponse,
   UserCertificate,
   CertificateDetails,
   CertificateVerification,
+  CertificateSearchResult,
 } from './certificate.types';
 
 // ============================================================================
@@ -138,6 +140,59 @@ export async function verifyCertificate(
 
     return {
       data: data[0] as CertificateVerification,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+    };
+  }
+}
+
+// ============================================================================
+// Search Certificates by Name (Public)
+// ============================================================================
+
+export async function searchCertificatesByName(
+  searchName: string
+): Promise<CertificateSearchResponse> {
+  try {
+    if (!searchName.trim()) {
+      return {
+        data: null,
+        error: {
+          message: 'Search name is required',
+          code: 'INVALID_INPUT',
+        },
+      };
+    }
+
+    const { data, error } = await supabase.rpc('search_certificates_by_name', {
+      p_search_name: searchName.trim(),
+    });
+
+    if (error) {
+      return {
+        data: null,
+        error: {
+          message: error.message,
+          code: error.code,
+        },
+      };
+    }
+
+    if (!data || data.length === 0) {
+      return {
+        data: [],
+        error: null,
+      };
+    }
+
+    return {
+      data: data as CertificateSearchResult[],
       error: null,
     };
   } catch (error) {

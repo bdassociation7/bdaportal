@@ -13,6 +13,8 @@ import type {
   UpdateReportDTO,
   CreateLicenseRequestDTO,
   ToolkitCategory,
+  CreateToolkitItemDTO,
+  UpdateToolkitItemDTO,
   UpdatePDPPartnerProfileDTO,
   GuidelineCategory,
   CreatePDPGuidelineDTO,
@@ -32,6 +34,7 @@ export const pdpKeys = {
   license: () => [...pdpKeys.all, 'license'] as const,
   slotStatus: () => [...pdpKeys.all, 'slotStatus'] as const,
   toolkit: (category?: ToolkitCategory) => [...pdpKeys.all, 'toolkit', category] as const,
+  allToolkit: () => [...pdpKeys.all, 'allToolkit'] as const,
   profile: () => [...pdpKeys.all, 'profile'] as const,
   guidelines: (category?: GuidelineCategory) => [...pdpKeys.all, 'guidelines', category] as const,
   allGuidelines: () => [...pdpKeys.all, 'allGuidelines'] as const,
@@ -404,6 +407,135 @@ export function usePDPToolkit(category?: ToolkitCategory) {
   });
 }
 
+// Admin: Get all toolkit items (including inactive)
+export function useAllToolkitItems() {
+  return useQuery({
+    queryKey: pdpKeys.allToolkit(),
+    queryFn: async () => {
+      const result = await PDPService.getAllToolkitItems();
+      if (result.error) throw result.error;
+      return result.data;
+    },
+  });
+}
+
+// Admin: Create toolkit item
+export function useCreateToolkitItem() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (dto: CreateToolkitItemDTO) => PDPService.createToolkitItem(dto),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: pdpKeys.allToolkit() });
+      queryClient.invalidateQueries({ queryKey: pdpKeys.toolkit() });
+      toast({
+        title: 'Success',
+        description: 'Toolkit item created successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Admin: Update toolkit item
+export function useUpdateToolkitItem() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateToolkitItemDTO }) =>
+      PDPService.updateToolkitItem(id, dto),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: pdpKeys.allToolkit() });
+      queryClient.invalidateQueries({ queryKey: pdpKeys.toolkit() });
+      toast({
+        title: 'Success',
+        description: 'Toolkit item updated successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Admin: Delete toolkit item
+export function useDeleteToolkitItem() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => PDPService.deleteToolkitItem(id),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: pdpKeys.allToolkit() });
+      queryClient.invalidateQueries({ queryKey: pdpKeys.toolkit() });
+      toast({
+        title: 'Success',
+        description: 'Toolkit item deleted successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+// Admin: Upload toolkit file
+export function useUploadToolkitFile() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ file, category }: { file: File; category: ToolkitCategory }) =>
+      PDPService.uploadToolkitFile(file, category),
+    onError: (error: Error) => {
+      toast({
+        title: 'Upload Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
 // =============================================================================
 // Partner Profile
 // =============================================================================
@@ -469,6 +601,99 @@ export function useUploadPartnerLogo() {
       toast({
         title: 'Success',
         description: 'Logo uploaded successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useRemovePartnerLogo() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: () => PDPService.removePartnerLogo(),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: pdpKeys.profile() });
+      toast({
+        title: 'Success',
+        description: 'Logo removed successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useUploadPartnerBadge() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (file: File) => PDPService.uploadPartnerBadge(file),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: pdpKeys.profile() });
+      toast({
+        title: 'Success',
+        description: 'Badge uploaded successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useRemovePartnerBadge() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: () => PDPService.removePartnerBadge(),
+    onSuccess: (result) => {
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: pdpKeys.profile() });
+      toast({
+        title: 'Success',
+        description: 'Badge removed successfully',
       });
     },
     onError: (error: Error) => {

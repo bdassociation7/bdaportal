@@ -5,6 +5,10 @@ import {
   handleWooCommerceOrderWebhook,
   handleWebhookHealth,
 } from "./routes/woocommerce-webhook";
+import {
+  handleWordPressSyncWebhook,
+  handleWordPressSyncHealth,
+} from "./routes/wordpress-sync-webhook";
 
 export function createServer() {
   const app = express();
@@ -26,6 +30,12 @@ export function createServer() {
   app.post("/api/webhooks/woocommerce/order", handleWooCommerceOrderWebhook);
   // Health check for webhook endpoint
   app.get("/api/webhooks/woocommerce/health", handleWebhookHealth);
+
+  // WordPress Sync Webhook routes
+  // POST endpoint for WordPress user sync (user creation, profile updates)
+  app.post("/api/webhooks/wordpress/sync", handleWordPressSyncWebhook);
+  // Health check for WordPress sync webhook
+  app.get("/api/webhooks/wordpress/health", handleWordPressSyncHealth);
 
   return app;
 }

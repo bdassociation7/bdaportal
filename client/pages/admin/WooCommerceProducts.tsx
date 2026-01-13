@@ -144,8 +144,8 @@ export default function WooCommerceProducts() {
                 <Select value={linkForm.certification_type} onValueChange={(v) => setLinkForm({ ...linkForm, certification_type: v as CertificationType })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CP">CP™</SelectItem>
-                    <SelectItem value="SCP">SCP™</SelectItem>
+                    <SelectItem value="CP">BDA-CP™</SelectItem>
+                    <SelectItem value="SCP">BDA-SCP™</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

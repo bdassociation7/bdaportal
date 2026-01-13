@@ -270,7 +270,7 @@ function usePartnerDetails(partnerId: string | null) {
         const { data: programs } = await (supabase as any)
           .from('pdp_programs')
           .select('*')
-          .eq('partner_id', partnerId)
+          .eq('provider_id', partnerId)
           .eq('status', 'approved');
 
         relatedData = { programs: programs || [] };

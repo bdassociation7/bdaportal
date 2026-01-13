@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Ticket,
   Plus,
@@ -61,8 +62,8 @@ import { UserLookupService } from '@/entities/auth/user-lookup.service';
  */
 
 const CERTIFICATION_LABELS: Record<CertificationType, string> = {
-  CP: 'CP™',
-  SCP: 'SCP™',
+  CP: 'BDA-CP™',
+  SCP: 'BDA-SCP™',
 };
 
 const STATUS_COLORS: Record<VoucherStatus, string> = {
@@ -79,6 +80,13 @@ interface VoucherFormData {
   quiz_id: string;
   validity_months: string;
   admin_notes: string;
+}
+
+interface SelectedUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
 }
 
 const emptyFormData: VoucherFormData = {
@@ -137,8 +145,8 @@ export default function Vouchers() {
       userEmail: 'User Email',
       userEmailPlaceholder: 'user@example.com',
       userEmailHelp: 'The email address of the user receiving this voucher',
-      cpLabel: 'CP™ - Certified Professional',
-      scpLabel: 'SCP™ - Senior Certified Professional',
+      cpLabel: 'BDA-CP™ - BDA Certified Professional',
+      scpLabel: 'BDA-SCP™ - BDA Senior Certified Professional',
       linkedQuiz: 'Linked Quiz (Optional)',
       linkedQuizPlaceholder: 'Any quiz of this type',
       linkedQuizHelp: 'Leave empty to allow any quiz of the selected certification type',
@@ -153,9 +161,13 @@ export default function Vouchers() {
       cancel: 'Cancel',
       bulkModalTitle: 'Bulk Issue Vouchers',
       bulkModalDescription: 'Issue exam vouchers to multiple users at once',
-      emailAddresses: 'Email Addresses',
-      emailPlaceholder: 'Enter email addresses (comma or newline separated)\ne.g.,\nuser1@example.com, user2@example.com\nuser3@example.com',
-      emailHelp: 'Users must have existing accounts in the portal. Separate emails with commas or newlines.',
+      searchUsers: 'Search Users',
+      searchUsersPlaceholder: 'Search by name or email...',
+      selectedUsers: 'Selected Users',
+      noUsersSelected: 'No users selected. Search and select users above.',
+      searching: 'Searching...',
+      noUsersFound: 'No users found',
+      selectAtLeastOneUser: 'Please select at least one user',
       cpLabelFull: 'Certified Professional (CP)',
       scpLabelFull: 'Senior Certified Professional (SCP)',
       expiresAt: 'Expires At',
@@ -177,7 +189,6 @@ export default function Vouchers() {
       revokeConfirm: 'Revoke',
       voucherRevoked: 'Voucher revoked successfully',
       failedToRevoke: 'Failed to revoke voucher',
-      enterEmail: 'Please enter at least one email address',
       selectExpiration: 'Please select an expiration date',
       vouchersCreated: '{count} voucher(s) created successfully',
       failedEmails: '{count} failed',
@@ -235,8 +246,8 @@ export default function Vouchers() {
       userEmail: 'البريد الإلكتروني للمستخدم',
       userEmailPlaceholder: 'user@example.com',
       userEmailHelp: 'عنوان البريد الإلكتروني للمستخدم الذي سيستلم هذه القسيمة',
-      cpLabel: 'CP™ - محترف معتمد',
-      scpLabel: 'SCP™ - محترف معتمد أول',
+      cpLabel: 'BDA-CP™ - محترف معتمد',
+      scpLabel: 'BDA-SCP™ - محترف معتمد أول',
       linkedQuiz: 'الاختبار المرتبط (اختياري)',
       linkedQuizPlaceholder: 'أي اختبار من هذا النوع',
       linkedQuizHelp: 'اتركه فارغاً للسماح بأي اختبار من نوع الشهادة المحدد',
@@ -251,9 +262,13 @@ export default function Vouchers() {
       cancel: 'إلغاء',
       bulkModalTitle: 'إصدار قسائم جماعي',
       bulkModalDescription: 'إصدار قسائم الامتحان لعدة مستخدمين دفعة واحدة',
-      emailAddresses: 'عناوين البريد الإلكتروني',
-      emailPlaceholder: 'أدخل عناوين البريد الإلكتروني (مفصولة بفواصل أو أسطر جديدة)\nمثال:\nuser1@example.com, user2@example.com\nuser3@example.com',
-      emailHelp: 'يجب أن يكون للمستخدمين حسابات موجودة في البوابة. افصل البريد الإلكتروني بفواصل أو أسطر جديدة.',
+      searchUsers: 'البحث عن المستخدمين',
+      searchUsersPlaceholder: 'البحث بالاسم أو البريد الإلكتروني...',
+      selectedUsers: 'المستخدمون المحددون',
+      noUsersSelected: 'لم يتم تحديد مستخدمين. ابحث وحدد المستخدمين أعلاه.',
+      searching: 'جارٍ البحث...',
+      noUsersFound: 'لم يتم العثور على مستخدمين',
+      selectAtLeastOneUser: 'يرجى تحديد مستخدم واحد على الأقل',
       cpLabelFull: 'محترف معتمد (CP)',
       scpLabelFull: 'محترف معتمد أول (SCP)',
       expiresAt: 'تاريخ الانتهاء',
@@ -275,7 +290,6 @@ export default function Vouchers() {
       revokeConfirm: 'إلغاء',
       voucherRevoked: 'تم إلغاء القسيمة بنجاح',
       failedToRevoke: 'فشل في إلغاء القسيمة',
-      enterEmail: 'يرجى إدخال عنوان بريد إلكتروني واحد على الأقل',
       selectExpiration: 'يرجى تحديد تاريخ انتهاء الصلاحية',
       vouchersCreated: 'تم إنشاء {count} قسيمة/قسائم بنجاح',
       failedEmails: 'فشل {count}',
@@ -315,11 +329,72 @@ export default function Vouchers() {
 
   // Bulk issuance modal state
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [bulkEmails, setBulkEmails] = useState('');
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<SelectedUser[]>([]);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [bulkCertType, setBulkCertType] = useState<CertificationType>('CP');
   const [bulkExamLanguage, setBulkExamLanguage] = useState<ExamLanguage>('en');
   const [bulkExpiresAt, setBulkExpiresAt] = useState('');
   const [bulkAdminNotes, setBulkAdminNotes] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // User search query for bulk modal
+  const { data: bulkSearchResults, isLoading: isBulkSearching } = useQuery({
+    queryKey: ['users-search-bulk-vouchers', userSearchQuery],
+    queryFn: async () => {
+      const { supabase } = await import('@/lib/supabase');
+      const searchLower = userSearchQuery.toLowerCase().trim();
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name')
+        .or(`email.ilike.%${searchLower}%,first_name.ilike.%${searchLower}%,last_name.ilike.%${searchLower}%`)
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: userSearchQuery.length >= 2 && showBulkModal,
+  });
+
+  // Filter out already selected users from search results
+  const filteredBulkSearchResults = useMemo(() => {
+    if (!bulkSearchResults) return [];
+    const selectedIds = new Set(selectedUsers.map(u => u.id));
+    return bulkSearchResults.filter(u => !selectedIds.has(u.id));
+  }, [bulkSearchResults, selectedUsers]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // User selection handlers
+  const handleSelectUser = (user: { id: string; email: string; first_name: string | null; last_name: string | null }) => {
+    setSelectedUsers(prev => [...prev, {
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+    }]);
+    setUserSearchQuery('');
+    setShowSearchDropdown(false);
+    searchInputRef.current?.focus();
+  };
+
+  const handleRemoveUser = (userId: string) => {
+    setSelectedUsers(prev => prev.filter(u => u.id !== userId));
+  };
 
   // Build filters
   const filters = {
@@ -445,10 +520,10 @@ export default function Vouchers() {
   };
 
   const handleBulkIssuance = async () => {
-    if (!bulkEmails.trim()) {
+    if (selectedUsers.length === 0) {
       toast({
         title: texts.error,
-        description: texts.enterEmail,
+        description: texts.selectAtLeastOneUser,
         variant: 'destructive',
       });
       return;
@@ -464,8 +539,11 @@ export default function Vouchers() {
     }
 
     try {
+      // Convert selected users to comma-separated emails
+      const emailsString = selectedUsers.map(u => u.email).join(',');
+
       const result = await createVouchersBulkMutation.mutateAsync({
-        emails: bulkEmails,
+        emails: emailsString,
         certification_type: bulkCertType,
         exam_language: bulkExamLanguage,
         expires_at: bulkExpiresAt,
@@ -514,7 +592,8 @@ export default function Vouchers() {
 
       // Reset form and close modal if any succeeded
       if (result.created > 0) {
-        setBulkEmails('');
+        setUserSearchQuery('');
+        setSelectedUsers([]);
         setBulkCertType('CP');
         setBulkExamLanguage('en');
         setBulkExpiresAt('');
@@ -594,7 +673,7 @@ export default function Vouchers() {
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 {texts.unused}
               </div>
-              <div className="text-2xl font-bold text-green-700">{stats.unused}</div>
+              <div className="text-2xl font-bold text-green-700">{stats.available + stats.assigned}</div>
             </CardContent>
           </Card>
           <Card>
@@ -621,7 +700,7 @@ export default function Vouchers() {
                 <Ban className="h-4 w-4 text-red-600" />
                 {texts.revoked}
               </div>
-              <div className="text-2xl font-bold text-red-700">{stats.revoked}</div>
+              <div className="text-2xl font-bold text-red-700">{stats.cancelled}</div>
             </CardContent>
           </Card>
         </div>
@@ -658,8 +737,8 @@ export default function Vouchers() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{texts.allTypes}</SelectItem>
-                  <SelectItem value="CP">CP™</SelectItem>
-                  <SelectItem value="SCP">SCP™</SelectItem>
+                  <SelectItem value="CP">BDA-CP™</SelectItem>
+                  <SelectItem value="SCP">BDA-SCP™</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1002,22 +1081,100 @@ export default function Vouchers() {
               </div>
 
               <div className="space-y-4">
-                {/* Email Input */}
+                {/* User Search */}
                 <div>
-                  <Label htmlFor="bulk-emails">
-                    {texts.emailAddresses} <span className="text-red-500">*</span>
-                  </Label>
-                  <Textarea
-                    id="bulk-emails"
-                    value={bulkEmails}
-                    onChange={(e) => setBulkEmails(e.target.value)}
-                    placeholder={texts.emailPlaceholder}
-                    rows={6}
-                    className="font-mono"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {texts.emailHelp}
-                  </p>
+                  <Label>{texts.searchUsers} <span className="text-red-500">*</span></Label>
+                  <div className="relative">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder={texts.searchUsersPlaceholder}
+                        value={userSearchQuery}
+                        onChange={(e) => {
+                          setUserSearchQuery(e.target.value);
+                          setShowSearchDropdown(true);
+                        }}
+                        onFocus={() => setShowSearchDropdown(true)}
+                        className="pl-10"
+                      />
+                    </div>
+
+                    {/* Search Results Dropdown */}
+                    {showSearchDropdown && userSearchQuery.length >= 2 && (
+                      <div
+                        ref={dropdownRef}
+                        className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                      >
+                        {isBulkSearching ? (
+                          <div className="p-3 text-center text-gray-500">
+                            <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                            {texts.searching}
+                          </div>
+                        ) : filteredBulkSearchResults.length === 0 ? (
+                          <div className="p-3 text-center text-gray-500">
+                            {texts.noUsersFound}
+                          </div>
+                        ) : (
+                          filteredBulkSearchResults.map((user) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => handleSelectUser(user)}
+                              className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="w-8 h-8 rounded-full bg-royal-100 flex items-center justify-center flex-shrink-0">
+                                <Users className="h-4 w-4 text-royal-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 truncate">
+                                  {user.first_name && user.last_name
+                                    ? `${user.first_name} ${user.last_name}`
+                                    : user.email}
+                                </div>
+                                {user.first_name && user.last_name && (
+                                  <div className="text-sm text-gray-500 truncate">{user.email}</div>
+                                )}
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Selected Users */}
+                <div>
+                  <Label>{texts.selectedUsers}</Label>
+                  {selectedUsers.length === 0 ? (
+                    <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500 text-sm">
+                      {texts.noUsersSelected}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2 max-h-48 overflow-y-auto p-2 bg-gray-50 rounded-lg">
+                      {selectedUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center justify-between gap-3 px-3 py-2 bg-blue-100 text-blue-800 rounded-lg"
+                        >
+                          <span className="text-sm">
+                            {user.firstName && user.lastName
+                              ? `${user.firstName} ${user.lastName} (${user.email})`
+                              : user.email}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveUser(user.id)}
+                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-200 rounded p-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Certification Type */}
@@ -1093,7 +1250,7 @@ export default function Vouchers() {
                 </Button>
                 <Button
                   onClick={handleBulkIssuance}
-                  disabled={createVouchersBulkMutation.isPending || !bulkEmails.trim() || !bulkExpiresAt}
+                  disabled={createVouchersBulkMutation.isPending || selectedUsers.length === 0 || !bulkExpiresAt}
                 >
                   {createVouchersBulkMutation.isPending ? (
                     <>

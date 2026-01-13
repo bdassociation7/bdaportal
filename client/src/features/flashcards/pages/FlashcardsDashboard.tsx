@@ -4,8 +4,8 @@
  * Requires language-based access (EN or AR)
  */
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useDecksWithProgress,
@@ -32,7 +32,6 @@ import {
   Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LanguageSelector } from '@/features/curriculum/components/LanguageSelector';
 
 interface DeckCardProps {
   deck: FlashcardDeckWithProgress;
@@ -178,8 +177,30 @@ function DeckCard({ deck, onClick }: DeckCardProps) {
 
 export function FlashcardsDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>('EN');
+
+  // Get language from URL params (passed from main Learning System dashboard)
+  // This ensures isolation - once user enters EN or AR system, they stay in that language
+  const langFromUrl = searchParams.get('lang') as Language | null;
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>(langFromUrl || 'EN');
+
+  // Sync with URL param changes
+  useEffect(() => {
+    if (langFromUrl && langFromUrl !== selectedLanguage) {
+      setSelectedLanguage(langFromUrl);
+    }
+  }, [langFromUrl]);
+
+  // Detect base path for navigation (ECP vs Individual learning system)
+  const basePath = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith('/ecp/learning-system')) {
+      return '/ecp/learning-system';
+    }
+    return '/learning-system';
+  }, [location.pathname]);
 
   // Get all user accesses to determine available languages
   const { data: accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(
@@ -198,36 +219,62 @@ export function FlashcardsDashboard() {
     isLoading: languageAccessLoading,
   } = useLanguageAccess(user?.id, selectedLanguage);
 
-  // Auto-select available language on first load
-  useEffect(() => {
-    if (accessSummary && !accessLoading) {
-      if (accessSummary.has_en && !accessSummary.has_ar && selectedLanguage !== 'EN') {
-        setSelectedLanguage('EN');
-      } else if (accessSummary.has_ar && !accessSummary.has_en && selectedLanguage !== 'AR') {
-        setSelectedLanguage('AR');
-      }
-    }
-  }, [accessSummary, selectedLanguage, accessLoading]);
-
   // Determine certification type from language access (or default to CP)
   const certificationType = languageAccess?.certification_type || 'CP';
 
-  // Get decks with progress
+  // Convert uppercase language to lowercase for database query
+  const dbLanguage = selectedLanguage.toLowerCase() as 'en' | 'ar';
+
+  // Get decks with progress (filtered by language)
   const { data: decks, isLoading: isLoadingDecks } = useDecksWithProgress(
     user?.id,
-    certificationType
+    certificationType,
+    dbLanguage
   );
 
-  // Get user stats
-  const { data: stats } = useFlashcardStats(user?.id, certificationType);
+  // Get user stats (filtered by language)
+  const { data: stats } = useFlashcardStats(user?.id, certificationType, dbLanguage);
 
-  // Group decks by section
-  const introDecks =
-    decks?.filter((d) => d.section_type === 'introduction') || [];
-  const knowledgeDecks =
-    decks?.filter((d) => d.section_type === 'knowledge') || [];
-  const behavioralDecks =
-    decks?.filter((d) => d.section_type === 'behavioral') || [];
+  // Group decks hierarchically: Section → Competency → Sub-lesson → Decks
+  // Also includes standalone decks that don't have full hierarchy linkage
+  const groupedDecks = useMemo(() => {
+    if (!decks) return { introduction: [], knowledge: {}, behavioral: {}, standalone: [] };
+
+    const introDecks: FlashcardDeckWithProgress[] = [];
+    const knowledge: Record<string, Record<string, FlashcardDeckWithProgress[]>> = {};
+    const behavioral: Record<string, Record<string, FlashcardDeckWithProgress[]>> = {};
+    const standalone: FlashcardDeckWithProgress[] = [];
+
+    decks.forEach((deck) => {
+      // Introduction decks (no hierarchy required)
+      if (deck.section_type === 'introduction') {
+        introDecks.push(deck);
+        return;
+      }
+
+      // Decks with competency and sub-lesson hierarchy
+      if (deck.competency && deck.sub_unit) {
+        const competencyId = deck.competency.id;
+        const subUnitId = deck.sub_unit.id;
+        const sectionType = deck.section_type;
+
+        if (sectionType === 'knowledge') {
+          if (!knowledge[competencyId]) knowledge[competencyId] = {};
+          if (!knowledge[competencyId][subUnitId]) knowledge[competencyId][subUnitId] = [];
+          knowledge[competencyId][subUnitId].push(deck);
+        } else if (sectionType === 'behavioral') {
+          if (!behavioral[competencyId]) behavioral[competencyId] = {};
+          if (!behavioral[competencyId][subUnitId]) behavioral[competencyId][subUnitId] = [];
+          behavioral[competencyId][subUnitId].push(deck);
+        }
+      } else {
+        // Decks without full hierarchy linkage go to standalone section
+        standalone.push(deck);
+      }
+    });
+
+    return { introduction: introDecks, knowledge, behavioral, standalone };
+  }, [decks]);
 
   // Loading states
   if (accessSummaryLoading || accessLoading || languageAccessLoading || isLoadingDecks) {
@@ -259,7 +306,7 @@ export function FlashcardsDashboard() {
             </p>
             <div className="space-y-3">
               <Button
-                onClick={() => navigate('/learning-system')}
+                onClick={() => navigate(basePath)}
                 className="w-full"
               >
                 Back to Learning System
@@ -286,7 +333,7 @@ export function FlashcardsDashboard() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/learning-system')}
+            onClick={() => navigate(basePath)}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -304,13 +351,6 @@ export function FlashcardsDashboard() {
             </div>
           </div>
         </div>
-
-        {/* Language Selector */}
-        <LanguageSelector
-          userId={user?.id}
-          selectedLanguage={selectedLanguage}
-          onLanguageChange={setSelectedLanguage}
-        />
 
         {/* Stats Overview */}
         {stats && (
@@ -387,30 +427,19 @@ export function FlashcardsDashboard() {
         {/* Cards Due Today Alert */}
         {stats && stats.cardsDueToday > 0 && (
           <div className="mb-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Flame className="w-6 h-6" />
-                  <h2 className="text-xl font-bold">Cards Due for Review</h2>
-                </div>
-                <p className="opacity-90">
-                  You have {stats.cardsDueToday} cards that need review today.
-                  Keep your streak going!
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                onClick={() => navigate('/learning-system/flashcards/review')}
-                className="bg-white text-orange-600 hover:bg-gray-100"
-              >
-                Review Now
-              </Button>
+            <div className="flex items-center gap-2 mb-2">
+              <Flame className="w-6 h-6" />
+              <h2 className="text-xl font-bold">Cards Due for Review</h2>
             </div>
+            <p className="opacity-90">
+              You have {stats.cardsDueToday} cards that need review today.
+              Click on any deck below to start studying and keep your streak going!
+            </p>
           </div>
         )}
 
         {/* Introduction Section */}
-        {introDecks.length > 0 && (
+        {groupedDecks.introduction.length > 0 && (
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -424,12 +453,12 @@ export function FlashcardsDashboard() {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {introDecks.map((deck) => (
+              {groupedDecks.introduction.map((deck) => (
                 <DeckCard
                   key={deck.id}
                   deck={deck}
                   onClick={() =>
-                    navigate(`/learning-system/flashcards/${deck.id}`)
+                    navigate(`${basePath}/flashcards/${deck.id}`)
                   }
                 />
               ))}
@@ -437,38 +466,8 @@ export function FlashcardsDashboard() {
           </div>
         )}
 
-        {/* Knowledge-Based Competencies */}
-        {knowledgeDecks.length > 0 && (
-          <div className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Brain className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  Knowledge-Based Competencies
-                </h2>
-                <p className="text-sm text-gray-600">
-                  {knowledgeDecks.length} decks covering technical knowledge
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {knowledgeDecks.map((deck) => (
-                <DeckCard
-                  key={deck.id}
-                  deck={deck}
-                  onClick={() =>
-                    navigate(`/learning-system/flashcards/${deck.id}`)
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Behavioral Competencies */}
-        {behavioralDecks.length > 0 && (
+        {/* Behavioral Competencies FIRST (per BDA BoCK structure) */}
+        {Object.keys(groupedDecks.behavioral).length > 0 && (
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -479,18 +478,148 @@ export function FlashcardsDashboard() {
                   Behavioral Competencies
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {behavioralDecks.length} decks covering soft skills
+                  Soft skills and professional behaviors
+                </p>
+              </div>
+            </div>
+
+            {/* Render each competency as an accordion group */}
+            <div className="space-y-6">
+              {Object.entries(groupedDecks.behavioral).map(([competencyId, subUnits]) => {
+                // Get competency name from any deck in this group
+                const sampleDeck = Object.values(subUnits)[0]?.[0];
+                const competencyName = selectedLanguage === 'AR'
+                  ? sampleDeck?.competency?.competency_name_ar || sampleDeck?.competency?.competency_name
+                  : sampleDeck?.competency?.competency_name;
+
+                return (
+                  <div key={competencyId} className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                    <div className="bg-purple-50 px-4 py-3 border-b">
+                      <h3 className="font-semibold text-purple-900" dir={selectedLanguage === 'AR' ? 'rtl' : 'ltr'}>
+                        {competencyName}
+                      </h3>
+                    </div>
+
+                    {/* Sub-lessons within competency */}
+                    <div className="divide-y">
+                      {Object.entries(subUnits).map(([subUnitId, subUnitDecks]) => {
+                        const subUnitTitle = selectedLanguage === 'AR'
+                          ? subUnitDecks[0]?.sub_unit?.title_ar || subUnitDecks[0]?.sub_unit?.title
+                          : subUnitDecks[0]?.sub_unit?.title;
+
+                        return (
+                          <div key={subUnitId} className="p-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-3" dir={selectedLanguage === 'AR' ? 'rtl' : 'ltr'}>
+                              {subUnitTitle}
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {subUnitDecks.map((deck) => (
+                                <DeckCard
+                                  key={deck.id}
+                                  deck={deck}
+                                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}`)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Knowledge-Based Competencies SECOND */}
+        {Object.keys(groupedDecks.knowledge).length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Brain className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Knowledge-Based Competencies
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Technical knowledge and expertise
+                </p>
+              </div>
+            </div>
+
+            {/* Render each competency as an accordion group */}
+            <div className="space-y-6">
+              {Object.entries(groupedDecks.knowledge).map(([competencyId, subUnits]) => {
+                // Get competency name from any deck in this group
+                const sampleDeck = Object.values(subUnits)[0]?.[0];
+                const competencyName = selectedLanguage === 'AR'
+                  ? sampleDeck?.competency?.competency_name_ar || sampleDeck?.competency?.competency_name
+                  : sampleDeck?.competency?.competency_name;
+
+                return (
+                  <div key={competencyId} className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                    <div className="bg-blue-50 px-4 py-3 border-b">
+                      <h3 className="font-semibold text-blue-900" dir={selectedLanguage === 'AR' ? 'rtl' : 'ltr'}>
+                        {competencyName}
+                      </h3>
+                    </div>
+
+                    {/* Sub-lessons within competency */}
+                    <div className="divide-y">
+                      {Object.entries(subUnits).map(([subUnitId, subUnitDecks]) => {
+                        const subUnitTitle = selectedLanguage === 'AR'
+                          ? subUnitDecks[0]?.sub_unit?.title_ar || subUnitDecks[0]?.sub_unit?.title
+                          : subUnitDecks[0]?.sub_unit?.title;
+
+                        return (
+                          <div key={subUnitId} className="p-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-3" dir={selectedLanguage === 'AR' ? 'rtl' : 'ltr'}>
+                              {subUnitTitle}
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {subUnitDecks.map((deck) => (
+                                <DeckCard
+                                  key={deck.id}
+                                  deck={deck}
+                                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}`)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Standalone Decks (not linked to competency hierarchy) */}
+        {groupedDecks.standalone.length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Star className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Additional Flashcards
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {groupedDecks.standalone.length} deck{groupedDecks.standalone.length !== 1 ? 's' : ''} available
                 </p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {behavioralDecks.map((deck) => (
+              {groupedDecks.standalone.map((deck) => (
                 <DeckCard
                   key={deck.id}
                   deck={deck}
-                  onClick={() =>
-                    navigate(`/learning-system/flashcards/${deck.id}`)
-                  }
+                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}`)}
                 />
               ))}
             </div>
@@ -508,7 +637,7 @@ export function FlashcardsDashboard() {
               Flashcard decks will appear here once they are published by the
               admin.
             </p>
-            <Button onClick={() => navigate('/learning-system')}>
+            <Button onClick={() => navigate(basePath)}>
               Back to Learning System
             </Button>
           </div>

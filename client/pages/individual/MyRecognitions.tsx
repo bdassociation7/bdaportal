@@ -26,7 +26,7 @@ const MOCK_RECOGNITIONS: Recognition[] = [
   {
     id: '1',
     title: 'Early Adopter',
-    description: 'One of the first professionals to earn the CP™ certification',
+    description: 'One of the first professionals to earn the BDA-CP™ certification',
     type: 'badge',
     earned_date: '2024-01-15',
     issuer: 'BDA Global',

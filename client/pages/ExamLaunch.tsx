@@ -2,7 +2,7 @@
  * Exam Launch Page
  *
  * Pre-launch checklist and exam access workflow
- * DEV MODE: Simplified for testing - bypasses all checks
+ * Uses database functions for proper voucher consumption and eligibility checks
  */
 
 import { useState, useEffect } from 'react';
@@ -21,6 +21,7 @@ import {
   Monitor,
   ChevronDown,
   ChevronUp,
+  RotateCcw,
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
 import TechCheckWidget, { TechCheckResult } from '@/components/TechCheckWidget';
@@ -28,6 +29,36 @@ import TechCheckWidget, { TechCheckResult } from '@/components/TechCheckWidget';
 // DEV MODE: Set to true to bypass all pre-launch checks for testing
 // WARNING: Set to false for production!
 const DEV_MODE_SKIP_ALL_CHECKS = false;
+
+// Time window constants for exam scheduling enforcement
+const EARLY_ACCESS_MINUTES = 15; // Can start 15 minutes before scheduled time
+const LATE_ACCESS_HOURS = 2; // Can start up to 2 hours after scheduled time
+
+interface SchedulingStatus {
+  canLaunch: boolean;
+  reason: string;
+  scheduledTime?: Date;
+  availableFrom?: Date;
+  availableUntil?: Date;
+  minutesUntilAvailable?: number;
+  isExpired?: boolean;
+}
+
+interface EligibilityResult {
+  eligible: boolean;
+  reason?: string;
+  voucher_id?: string;
+  voucher_source?: string;
+  has_existing_attempt?: boolean;
+  existing_attempt_id?: string;
+  existing_attempt_status?: string;
+  window_open?: boolean;
+  next_window_date?: string;
+  next_window_name?: string;
+  // Aliases for backward compatibility
+  has_active_attempt?: boolean;
+  attempt_id?: string;
+}
 
 export default function ExamLaunch() {
   const { user } = useAuthContext();
@@ -37,15 +68,75 @@ export default function ExamLaunch() {
 
   const bookingId = searchParams.get('booking_id');
   const quizId = searchParams.get('quiz_id');
+  const voucherIdFromUrl = searchParams.get('voucher_id');
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isLaunching, setIsLaunching] = useState(false);
   const [booking, setBooking] = useState<any>(null);
   const [quiz, setQuiz] = useState<any>(null);
   const [voucher, setVoucher] = useState<any>(null);
+  const [eligibility, setEligibility] = useState<EligibilityResult | null>(null);
   const [techCheckPassed, setTechCheckPassed] = useState(DEV_MODE_SKIP_ALL_CHECKS);
   const [techCheckCompleted, setTechCheckCompleted] = useState(DEV_MODE_SKIP_ALL_CHECKS);
   const [techCheckExpanded, setTechCheckExpanded] = useState(!DEV_MODE_SKIP_ALL_CHECKS);
   const [techCheckResults, setTechCheckResults] = useState<TechCheckResult[]>([]);
+  const [schedulingStatus, setSchedulingStatus] = useState<SchedulingStatus | null>(null);
+
+  // Check if current time is within the allowed scheduling window
+  const checkSchedulingWindow = (bookingData: any): SchedulingStatus => {
+    // If DEV MODE is enabled, allow any time
+    if (DEV_MODE_SKIP_ALL_CHECKS) {
+      return { canLaunch: true, reason: 'DEV MODE - scheduling checks bypassed' };
+    }
+
+    // If no booking or booking has no scheduled time, allow launch (direct access)
+    if (!bookingData || !bookingData.scheduled_start_time) {
+      return { canLaunch: true, reason: 'No scheduling restrictions' };
+    }
+
+    const now = new Date();
+    const scheduledTime = new Date(bookingData.scheduled_start_time);
+    const scheduledEndTime = new Date(bookingData.scheduled_end_time || scheduledTime.getTime() + 2 * 60 * 60 * 1000);
+
+    // Calculate available window
+    const availableFrom = new Date(scheduledTime.getTime() - EARLY_ACCESS_MINUTES * 60 * 1000);
+    const availableUntil = new Date(scheduledTime.getTime() + LATE_ACCESS_HOURS * 60 * 60 * 1000);
+
+    // Check if too early
+    if (now < availableFrom) {
+      const minutesUntilAvailable = Math.ceil((availableFrom.getTime() - now.getTime()) / (60 * 1000));
+      return {
+        canLaunch: false,
+        reason: `Your exam is not available yet. You can start ${EARLY_ACCESS_MINUTES} minutes before your scheduled time.`,
+        scheduledTime,
+        availableFrom,
+        availableUntil,
+        minutesUntilAvailable,
+        isExpired: false,
+      };
+    }
+
+    // Check if too late (window expired)
+    if (now > availableUntil) {
+      return {
+        canLaunch: false,
+        reason: `Your exam window has expired. The launch window was from ${availableFrom.toLocaleTimeString()} to ${availableUntil.toLocaleTimeString()}.`,
+        scheduledTime,
+        availableFrom,
+        availableUntil,
+        isExpired: true,
+      };
+    }
+
+    // Within the valid window
+    return {
+      canLaunch: true,
+      reason: 'Within scheduled window',
+      scheduledTime,
+      availableFrom,
+      availableUntil,
+    };
+  };
 
   useEffect(() => {
     loadData();
@@ -65,6 +156,14 @@ export default function ExamLaunch() {
   const loadData = async () => {
     setIsLoading(true);
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setIsLoading(false);
+        return;
+      }
+
+      let targetQuizId = quizId;
+
       // Load booking if provided
       if (bookingId) {
         const { data: bookingData, error: bookingError } = await supabase
@@ -76,14 +175,33 @@ export default function ExamLaunch() {
         if (!bookingError && bookingData) {
           setBooking(bookingData);
           setQuiz(bookingData.quiz);
+          targetQuizId = bookingData.quiz_id;
 
-          // Get voucher if linked
+          // Check scheduling window
+          const scheduleCheck = checkSchedulingWindow(bookingData);
+          setSchedulingStatus(scheduleCheck);
+
+          // Get voucher info for display (check both tables)
           if (bookingData.voucher_id) {
-            const { data: voucherData } = await supabase
+            // Try exam_vouchers first
+            let { data: voucherData } = await supabase
               .from('exam_vouchers')
               .select('*')
               .eq('id', bookingData.voucher_id)
               .single();
+
+            if (!voucherData) {
+              // Try ecp_vouchers
+              const { data: ecpVoucher } = await supabase
+                .from('ecp_vouchers')
+                .select('*')
+                .eq('id', bookingData.voucher_id)
+                .single();
+              if (ecpVoucher) {
+                voucherData = { ...ecpVoucher, source: 'ecp' };
+              }
+            }
+
             if (voucherData) setVoucher(voucherData);
           }
         }
@@ -99,6 +217,22 @@ export default function ExamLaunch() {
 
         if (!quizError && quizData) {
           setQuiz(quizData);
+          targetQuizId = quizData.id;
+        }
+      }
+
+      // Check eligibility using database function
+      if (targetQuizId) {
+        const { data: eligibilityData, error: eligibilityError } = await supabase
+          .rpc('check_exam_eligibility', {
+            p_user_id: authUser.id,
+            p_quiz_id: targetQuizId,
+          });
+
+        if (!eligibilityError && eligibilityData) {
+          // RPC returns a TABLE (array), extract first row
+          const result = Array.isArray(eligibilityData) ? eligibilityData[0] : eligibilityData;
+          setEligibility(result as EligibilityResult);
         }
       }
     } catch (error) {
@@ -120,7 +254,18 @@ export default function ExamLaunch() {
       return;
     }
 
-    // Create exam attempt
+    // Check scheduling window before allowing launch
+    if (booking && schedulingStatus && !schedulingStatus.canLaunch) {
+      toast({
+        title: schedulingStatus.isExpired ? 'Exam Window Expired' : 'Too Early',
+        description: schedulingStatus.reason,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLaunching(true);
+
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) {
@@ -129,44 +274,76 @@ export default function ExamLaunch() {
           description: 'You must be logged in to take the exam',
           variant: 'destructive',
         });
+        setIsLaunching(false);
         return;
       }
 
-      // Create the attempt
-      const { data: attempt, error: attemptError } = await supabase
-        .from('quiz_attempts')
-        .insert({
-          quiz_id: targetQuizId,
-          user_id: authUser.id,
-          exam_type: 'certification',
-          started_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (attemptError) throw attemptError;
-
-      // Update voucher status to 'used' if we have a voucher (can be 'available' or 'assigned')
-      if (voucher && (voucher.status === 'available' || voucher.status === 'assigned')) {
-        await supabase
-          .from('exam_vouchers')
-          .update({
-            status: 'used',
-            used_at: new Date().toISOString(),
-            attempt_id: attempt.id,
-          })
-          .eq('id', voucher.id);
+      // If user has an active attempt, resume it
+      if (eligibility?.has_existing_attempt && eligibility.existing_attempt_id) {
+        toast({
+          title: 'Resuming Exam',
+          description: 'Continuing your previous exam session...',
+        });
+        navigate(`/certification/exam/${targetQuizId}/attempt/${eligibility.existing_attempt_id}`);
+        return;
       }
 
-      // Update booking with attempt_id (keep status as scheduled until exam is completed)
-      if (booking) {
-        await supabase
-          .from('exam_bookings')
-          .update({
-            attempt_id: attempt.id,
-          })
-          .eq('id', booking.id);
+      // Check eligibility before starting
+      if (!eligibility?.eligible) {
+        toast({
+          title: 'Cannot Start Exam',
+          description: eligibility?.reason || 'You are not eligible to take this exam',
+          variant: 'destructive',
+        });
+        setIsLaunching(false);
+        return;
       }
+
+      // Determine voucher ID - use from eligibility, booking, or URL
+      const voucherId = eligibility?.voucher_id || booking?.voucher_id || voucherIdFromUrl;
+
+      if (!voucherId) {
+        toast({
+          title: 'No Valid Voucher',
+          description: 'A valid voucher is required to take the certification exam',
+          variant: 'destructive',
+        });
+        setIsLaunching(false);
+        return;
+      }
+
+      // Use the database function to properly start the exam and consume voucher
+      const { data: attempt, error: attemptError } = await supabase.rpc('start_certification_exam', {
+        p_user_id: authUser.id,
+        p_quiz_id: targetQuizId,
+        p_voucher_id: voucherId,
+        p_booking_id: bookingId || null,
+        p_ip_address: null, // Could capture if needed
+        p_user_agent: navigator.userAgent,
+        p_browser_info: {
+          platform: navigator.platform,
+          language: navigator.language,
+          screen: { width: screen.width, height: screen.height },
+        },
+      });
+
+      if (attemptError) {
+        console.error('Error starting exam:', attemptError);
+        toast({
+          title: 'Failed to Start Exam',
+          description: attemptError.message || 'An error occurred while starting the exam',
+          variant: 'destructive',
+        });
+        setIsLaunching(false);
+        return;
+      }
+
+      // Transition to in_progress state
+      await supabase.rpc('transition_exam_state', {
+        p_attempt_id: attempt.id,
+        p_new_status: 'in_progress',
+        p_event_data: { launched_from: 'exam_launch_page' },
+      });
 
       toast({
         title: 'Exam Started',
@@ -182,6 +359,7 @@ export default function ExamLaunch() {
         description: 'Failed to start exam. Please try again.',
         variant: 'destructive',
       });
+      setIsLaunching(false);
     }
   };
 
@@ -229,7 +407,7 @@ export default function ExamLaunch() {
           <CardHeader>
             <CardTitle>{quiz.title}</CardTitle>
             <CardDescription>
-              {quiz.certification_type}™ Certification Exam
+              BDA-{quiz.certification_type}™ Certification Exam
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -340,30 +518,151 @@ export default function ExamLaunch() {
           </Card>
         )}
 
-        {/* Ready Alert */}
-        <Alert className="mb-6">
-          <CheckCircle2 className="h-4 w-4" />
-          <AlertTitle>Ready to Begin</AlertTitle>
-          <AlertDescription>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-              <li>Ensure you have a stable internet connection</li>
-              <li>Find a quiet place free from distractions</li>
-              <li>The timer will start once you click "Launch Exam"</li>
-              <li>You cannot pause or restart the exam once started</li>
-            </ul>
-          </AlertDescription>
-        </Alert>
+        {/* Eligibility Status */}
+        {eligibility && !eligibility.eligible && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Cannot Take Exam</AlertTitle>
+            <AlertDescription>
+              {eligibility.reason || 'You are not eligible to take this exam. Please ensure you have a valid voucher.'}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Scheduling Window - Too Early */}
+        {booking && schedulingStatus && !schedulingStatus.canLaunch && !schedulingStatus.isExpired && (
+          <Alert className="mb-6 bg-blue-50 border-blue-200">
+            <Clock className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-800">Exam Not Available Yet</AlertTitle>
+            <AlertDescription className="text-blue-700">
+              <p>{schedulingStatus.reason}</p>
+              {schedulingStatus.scheduledTime && (
+                <div className="mt-2 p-3 bg-white rounded-lg border border-blue-100">
+                  <p className="font-semibold">
+                    Scheduled: {schedulingStatus.scheduledTime.toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })} at {schedulingStatus.scheduledTime.toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                  <p className="text-sm mt-1">
+                    Available from: {schedulingStatus.availableFrom?.toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                  {schedulingStatus.minutesUntilAvailable && (
+                    <p className="text-sm font-medium mt-2 text-blue-600">
+                      {schedulingStatus.minutesUntilAvailable >= 60
+                        ? `${Math.floor(schedulingStatus.minutesUntilAvailable / 60)} hours ${schedulingStatus.minutesUntilAvailable % 60} minutes until available`
+                        : `${schedulingStatus.minutesUntilAvailable} minutes until available`}
+                    </p>
+                  )}
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Scheduling Window - Expired */}
+        {booking && schedulingStatus && !schedulingStatus.canLaunch && schedulingStatus.isExpired && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Exam Window Expired</AlertTitle>
+            <AlertDescription>
+              <p>{schedulingStatus.reason}</p>
+              <p className="mt-2">
+                Please contact support or reschedule your exam to select a new time slot.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => navigate(`/schedule-exam?quiz_id=${quiz?.id}&voucher_id=${booking?.voucher_id}`)}
+              >
+                Reschedule Exam
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Active Attempt - Resume Option */}
+        {eligibility?.has_existing_attempt && (
+          <Alert className="mb-6 bg-yellow-50 border-yellow-200">
+            <RotateCcw className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-800">Exam In Progress</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              You have an active exam session. Click the button below to resume your exam.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Ready Alert - Only show if eligible, no active attempt, and scheduling window is valid */}
+        {eligibility?.eligible && !eligibility?.has_existing_attempt && (!booking || schedulingStatus?.canLaunch) && (
+          <Alert className="mb-6">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertTitle>Ready to Begin</AlertTitle>
+            <AlertDescription>
+              <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                <li>Ensure you have a stable internet connection</li>
+                <li>Find a quiet place free from distractions</li>
+                <li>The timer will start once you click "Launch Exam"</li>
+                <li>Your voucher will be consumed when you start the exam</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Action Buttons */}
         <div className="space-y-3">
-          <Button
-            onClick={handleLaunchExam}
-            className="w-full bg-green-600 hover:bg-green-700"
-            size="lg"
-          >
-            <PlayCircle className="mr-2 h-5 w-5" />
-            Launch Exam Now
-          </Button>
+          {eligibility?.has_existing_attempt ? (
+            <Button
+              onClick={handleLaunchExam}
+              className="w-full bg-yellow-600 hover:bg-yellow-700"
+              size="lg"
+              disabled={isLaunching}
+            >
+              {isLaunching ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <RotateCcw className="mr-2 h-5 w-5" />
+              )}
+              Resume Exam
+            </Button>
+          ) : eligibility?.eligible ? (
+            <Button
+              onClick={handleLaunchExam}
+              className="w-full bg-green-600 hover:bg-green-700"
+              size="lg"
+              disabled={isLaunching || (booking && schedulingStatus && !schedulingStatus.canLaunch)}
+            >
+              {isLaunching ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <PlayCircle className="mr-2 h-5 w-5" />
+              )}
+              {isLaunching
+                ? 'Starting Exam...'
+                : booking && schedulingStatus && !schedulingStatus.canLaunch
+                  ? schedulingStatus.isExpired
+                    ? 'Exam Window Expired'
+                    : 'Exam Not Available Yet'
+                  : 'Launch Exam Now'}
+            </Button>
+          ) : (
+            <Button
+              onClick={() => navigate('/exam-applications')}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              size="lg"
+            >
+              <ArrowLeft className="mr-2 h-5 w-5" />
+              Select a Valid Voucher
+            </Button>
+          )}
 
           <Button
             onClick={() => navigate('/certification-exams')}

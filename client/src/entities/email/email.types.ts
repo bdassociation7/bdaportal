@@ -12,9 +12,16 @@
 export type EmailStatus = 'pending' | 'sent' | 'failed' | 'retrying';
 
 export type EmailTemplateName =
+  | 'welcome'
   | 'booking_confirmation'
+  | 'exam_booking'
   | 'exam_reminder_48h'
-  | 'exam_reminder_24h';
+  | 'exam_reminder_24h'
+  | 'exam_reminder'
+  | 'password_reset'
+  | 'certification_issued'
+  | 'voucher_created'
+  | 'partner_approved';
 
 // ============================================================================
 // Email Queue Interface

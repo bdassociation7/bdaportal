@@ -50,9 +50,9 @@ export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps
         <Card className="max-w-md w-full p-8 text-center">
           <div className="mb-6">
             <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Lesson Completed!</h2>
+            <h2 className="text-2xl font-bold mb-2">Quiz Completed!</h2>
             <p className="text-muted-foreground">
-              You passed the quiz with a score of {progress.best_quiz_score}%
+              You achieved a score of {progress.best_quiz_score}%
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps
           <div className="space-y-3">
             <Button onClick={onBack} className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Module
+              Back to Lesson
             </Button>
           </div>
         </Card>
@@ -95,11 +95,16 @@ export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
             <Award className="h-8 w-8 text-blue-600" />
-            <h2 className="text-2xl font-bold">Validation Quiz</h2>
+            <h2 className="text-2xl font-bold">Practice Quiz (Optional)</h2>
           </div>
           <p className="text-muted-foreground">
-            Test your knowledge to validate this lesson
+            Test your knowledge and understanding of this lesson
           </p>
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> This quiz is optional and does not affect your progression to the next lesson
+            </p>
+          </div>
         </div>
 
         {/* Lesson Info */}
@@ -115,7 +120,7 @@ export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps
         {/* Quiz Requirements */}
         <div className="space-y-4 mb-6">
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium">Minimum required score</span>
+            <span className="text-sm font-medium">Passing score</span>
             <span className="text-lg font-bold text-blue-600">{passingScore}%</span>
           </div>
 
@@ -176,15 +181,14 @@ export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps
 
           <Button variant="ghost" onClick={onBack} className="w-full">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Lesson Content
+            Skip Quiz & Go Back
           </Button>
         </div>
 
         {/* Help Text */}
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <p className="text-xs text-muted-foreground">
-            <strong>Note:</strong> You can retake the quiz as many times as needed.
-            Only your best score will be saved.
+          <p className="text-sm text-muted-foreground">
+            You can retake this quiz as many times as you like. Only your best score will be saved. Completing this quiz is optional and won't block your progress.
           </p>
         </div>
       </Card>

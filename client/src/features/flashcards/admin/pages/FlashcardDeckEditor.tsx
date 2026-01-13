@@ -1,9 +1,13 @@
 /**
  * Flashcard Deck Editor - Admin Page
  * Manage individual flashcards within a deck
+ *
+ * IMPORTANT: Flashcards are language-specific based on the parent deck's exam_language.
+ * English decks only have English flashcards.
+ * Arabic decks only have Arabic flashcards.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   useFlashcardDeck,
@@ -18,6 +22,8 @@ import type {
   FlashcardInsert,
   FlashcardUpdate,
 } from '@/entities/flashcards';
+
+type ExamLanguage = 'en' | 'ar';
 import {
   ArrowLeft,
   Plus,
@@ -86,21 +92,31 @@ export function FlashcardDeckEditor() {
       difficultyFilter !== 'all' ? (difficultyFilter as any) : undefined,
   });
 
+  // Get exam language from deck
+  const examLanguage: ExamLanguage = (deck as any)?.exam_language || 'en';
+  const isArabic = examLanguage === 'ar';
+
   // Mutations
   const createFlashcard = useCreateFlashcard();
   const updateFlashcard = useUpdateFlashcard();
   const deleteFlashcard = useDeleteFlashcard();
   const bulkCreateFlashcards = useBulkCreateFlashcards();
 
-  // Filter cards
+  // Filter cards - search in the appropriate language
   const filteredCards = cards?.filter((card) => {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
+      if (isArabic) {
+        return (
+          card.front_text_ar?.toLowerCase().includes(search) ||
+          card.back_text_ar?.toLowerCase().includes(search) ||
+          card.front_text.toLowerCase().includes(search) ||
+          card.back_text.toLowerCase().includes(search)
+        );
+      }
       return (
         card.front_text.toLowerCase().includes(search) ||
-        card.back_text.toLowerCase().includes(search) ||
-        card.front_text_ar?.toLowerCase().includes(search) ||
-        card.back_text_ar?.toLowerCase().includes(search)
+        card.back_text.toLowerCase().includes(search)
       );
     }
     return true;
@@ -110,10 +126,10 @@ export function FlashcardDeckEditor() {
   const handleCreate = async (data: FlashcardInsert) => {
     try {
       await createFlashcard.mutateAsync(data);
-      toast.success('Flashcard created successfully');
+      toast.success(isArabic ? 'تم إنشاء البطاقة بنجاح' : 'Flashcard created successfully');
       setIsCreateDialogOpen(false);
     } catch (error) {
-      toast.error('Failed to create flashcard');
+      toast.error(isArabic ? 'فشل في إنشاء البطاقة' : 'Failed to create flashcard');
     }
   };
 
@@ -121,10 +137,10 @@ export function FlashcardDeckEditor() {
   const handleUpdate = async (cardId: string, data: FlashcardUpdate) => {
     try {
       await updateFlashcard.mutateAsync({ cardId, updates: data });
-      toast.success('Flashcard updated successfully');
+      toast.success(isArabic ? 'تم تحديث البطاقة بنجاح' : 'Flashcard updated successfully');
       setEditingCard(null);
     } catch (error) {
-      toast.error('Failed to update flashcard');
+      toast.error(isArabic ? 'فشل في تحديث البطاقة' : 'Failed to update flashcard');
     }
   };
 
@@ -132,10 +148,10 @@ export function FlashcardDeckEditor() {
   const handleDelete = async (cardId: string) => {
     try {
       await deleteFlashcard.mutateAsync({ cardId, deckId: deckId! });
-      toast.success('Flashcard deleted successfully');
+      toast.success(isArabic ? 'تم حذف البطاقة بنجاح' : 'Flashcard deleted successfully');
       setDeleteConfirmCard(null);
     } catch (error) {
-      toast.error('Failed to delete flashcard');
+      toast.error(isArabic ? 'فشل في حذف البطاقة' : 'Failed to delete flashcard');
     }
   };
 
@@ -147,17 +163,19 @@ export function FlashcardDeckEditor() {
         updates: { is_published: !card.is_published },
       });
       toast.success(
-        card.is_published ? 'Flashcard unpublished' : 'Flashcard published'
+        card.is_published
+          ? (isArabic ? 'تم إلغاء نشر البطاقة' : 'Flashcard unpublished')
+          : (isArabic ? 'تم نشر البطاقة' : 'Flashcard published')
       );
     } catch (error) {
-      toast.error('Failed to update publish status');
+      toast.error(isArabic ? 'فشل في تحديث حالة النشر' : 'Failed to update publish status');
     }
   };
 
   // Handle bulk import
   const handleBulkImport = async () => {
     // This would open a modal or file picker for CSV/JSON import
-    toast.info('Bulk import feature coming soon');
+    toast.info(isArabic ? 'ميزة الاستيراد الجماعي قريبًا' : 'Bulk import feature coming soon');
   };
 
   if (isLoadingDeck || isLoadingCards) {
@@ -168,8 +186,42 @@ export function FlashcardDeckEditor() {
     );
   }
 
+  // Language-specific labels
+  const labels = {
+    backToFlashcards: isArabic ? 'العودة إلى إدارة البطاقات' : 'Back to Flashcard Manager',
+    flashcards: isArabic ? 'بطاقة' : 'flashcards',
+    studyTime: isArabic ? 'دقيقة وقت الدراسة' : 'min study time',
+    noTimeEstimate: isArabic ? 'بدون تقدير زمني' : 'No time estimate',
+    importCards: isArabic ? 'استيراد البطاقات' : 'Import Cards',
+    exportCards: isArabic ? 'تصدير' : 'Export',
+    addFlashcard: isArabic ? 'إضافة بطاقة' : 'Add Flashcard',
+    totalCards: isArabic ? 'إجمالي البطاقات' : 'Total Cards',
+    published: isArabic ? 'منشور' : 'Published',
+    draft: isArabic ? 'مسودة' : 'Draft',
+    withHints: isArabic ? 'مع تلميحات' : 'With Hints',
+    searchFlashcards: isArabic ? 'البحث في البطاقات...' : 'Search flashcards...',
+    allDifficulties: isArabic ? 'جميع المستويات' : 'All Difficulties',
+    easy: isArabic ? 'سهل' : 'Easy',
+    medium: isArabic ? 'متوسط' : 'Medium',
+    hard: isArabic ? 'صعب' : 'Hard',
+    noFlashcardsFound: isArabic ? 'لم يتم العثور على بطاقات' : 'No flashcards found',
+    addFirstFlashcard: isArabic ? 'إضافة أول بطاقة' : 'Add First Flashcard',
+    createFlashcard: isArabic ? 'إنشاء بطاقة' : 'Create Flashcard',
+    editFlashcard: isArabic ? 'تعديل البطاقة' : 'Edit Flashcard',
+    deleteFlashcard: isArabic ? 'حذف البطاقة' : 'Delete Flashcard',
+    deleteConfirmation: isArabic
+      ? 'هل أنت متأكد من حذف هذه البطاقة؟ لا يمكن التراجع عن هذا الإجراء.'
+      : 'Are you sure you want to delete this flashcard? This action cannot be undone.',
+    cancel: isArabic ? 'إلغاء' : 'Cancel',
+    delete: isArabic ? 'حذف' : 'Delete',
+    preview: isArabic ? 'معاينة' : 'Preview',
+    edit: isArabic ? 'تعديل' : 'Edit',
+    flipCard: isArabic ? 'اقلب البطاقة' : 'Flip Card',
+    clickToFlip: isArabic ? 'انقر للقلب' : 'Click to flip',
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-8 max-w-7xl" dir={isArabic ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -179,34 +231,36 @@ export function FlashcardDeckEditor() {
             onClick={() => navigate('/admin/flashcards')}
             className="mb-2"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Flashcard Manager
+            <ArrowLeft className={`w-4 h-4 ${isArabic ? 'ml-2 rotate-180' : 'mr-2'}`} />
+            {labels.backToFlashcards}
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900">{deck?.title}</h1>
-          {deck?.title_ar && (
-            <p className="text-gray-500 mt-1" dir="rtl">
-              {deck.title_ar}
-            </p>
-          )}
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isArabic ? (deck?.title_ar || deck?.title) : deck?.title}
+            </h1>
+            <span className={`text-sm px-2 py-1 rounded ${isArabic ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+              {isArabic ? '🇸🇦 Arabic' : '🇬🇧 English'}
+            </span>
+          </div>
           <p className="text-gray-600 mt-1">
-            {cards?.length || 0} flashcards •{' '}
+            {cards?.length || 0} {labels.flashcards} •{' '}
             {deck?.estimated_study_time_minutes
-              ? `~${deck.estimated_study_time_minutes} min study time`
-              : 'No time estimate'}
+              ? `~${deck.estimated_study_time_minutes} ${labels.studyTime}`
+              : labels.noTimeEstimate}
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleBulkImport}>
-            <Upload className="w-4 h-4 mr-2" />
-            Import Cards
+            <Upload className={`w-4 h-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+            {labels.importCards}
           </Button>
           <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export
+            <Download className={`w-4 h-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+            {labels.exportCards}
           </Button>
           <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Flashcard
+            <Plus className={`w-4 h-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+            {labels.addFlashcard}
           </Button>
         </div>
       </div>
@@ -216,14 +270,14 @@ export function FlashcardDeckEditor() {
         <div className="bg-white rounded-lg shadow-sm p-4 border">
           <div className="flex items-center gap-2 text-purple-600 mb-1">
             <Layers className="w-4 h-4" />
-            <span className="text-sm font-medium">Total Cards</span>
+            <span className="text-sm font-medium">{labels.totalCards}</span>
           </div>
           <p className="text-2xl font-bold">{cards?.length || 0}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4 border">
           <div className="flex items-center gap-2 text-green-600 mb-1">
             <Eye className="w-4 h-4" />
-            <span className="text-sm font-medium">Published</span>
+            <span className="text-sm font-medium">{labels.published}</span>
           </div>
           <p className="text-2xl font-bold">
             {cards?.filter((c) => c.is_published).length || 0}
@@ -232,7 +286,7 @@ export function FlashcardDeckEditor() {
         <div className="bg-white rounded-lg shadow-sm p-4 border">
           <div className="flex items-center gap-2 text-gray-600 mb-1">
             <EyeOff className="w-4 h-4" />
-            <span className="text-sm font-medium">Draft</span>
+            <span className="text-sm font-medium">{labels.draft}</span>
           </div>
           <p className="text-2xl font-bold">
             {cards?.filter((c) => !c.is_published).length || 0}
@@ -241,10 +295,10 @@ export function FlashcardDeckEditor() {
         <div className="bg-white rounded-lg shadow-sm p-4 border">
           <div className="flex items-center gap-2 text-yellow-600 mb-1">
             <Star className="w-4 h-4" />
-            <span className="text-sm font-medium">With Hints</span>
+            <span className="text-sm font-medium">{labels.withHints}</span>
           </div>
           <p className="text-2xl font-bold">
-            {cards?.filter((c) => c.hint).length || 0}
+            {cards?.filter((c) => c.hint || c.hint_ar).length || 0}
           </p>
         </div>
       </div>
@@ -254,25 +308,26 @@ export function FlashcardDeckEditor() {
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
               <Input
-                placeholder="Search flashcards..."
+                placeholder={labels.searchFlashcards}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className={isArabic ? 'pr-10' : 'pl-10'}
+                dir={isArabic ? 'rtl' : 'ltr'}
               />
             </div>
           </div>
           <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
             <SelectTrigger className="w-[180px]">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Difficulty" />
+              <Filter className={`w-4 h-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+              <SelectValue placeholder={isArabic ? 'المستوى' : 'Difficulty'} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Difficulties</SelectItem>
-              <SelectItem value="easy">Easy</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="hard">Hard</SelectItem>
+              <SelectItem value="all">{labels.allDifficulties}</SelectItem>
+              <SelectItem value="easy">{labels.easy}</SelectItem>
+              <SelectItem value="medium">{labels.medium}</SelectItem>
+              <SelectItem value="hard">{labels.hard}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -285,6 +340,7 @@ export function FlashcardDeckEditor() {
             key={card.id}
             card={card}
             index={index + 1}
+            examLanguage={examLanguage}
             onEdit={() => setEditingCard(card)}
             onDelete={() => setDeleteConfirmCard(card)}
             onTogglePublish={() => handleTogglePublish(card)}
@@ -299,10 +355,10 @@ export function FlashcardDeckEditor() {
       {filteredCards?.length === 0 && (
         <div className="text-center py-12 bg-white rounded-lg border">
           <Layers className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-600 mb-4">No flashcards found</p>
+          <p className="text-gray-600 mb-4">{labels.noFlashcardsFound}</p>
           <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add First Flashcard
+            <Plus className={`w-4 h-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+            {labels.addFirstFlashcard}
           </Button>
         </div>
       )}
@@ -312,8 +368,9 @@ export function FlashcardDeckEditor() {
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onSubmit={(data) => handleCreate({ ...data, deck_id: deckId! })}
-        title="Create Flashcard"
+        title={labels.createFlashcard}
         nextOrderIndex={(cards?.length || 0) + 1}
+        examLanguage={examLanguage}
       />
 
       {/* Edit Dialog */}
@@ -321,8 +378,9 @@ export function FlashcardDeckEditor() {
         open={!!editingCard}
         onOpenChange={(open) => !open && setEditingCard(null)}
         onSubmit={(data) => editingCard && handleUpdate(editingCard.id, data)}
-        title="Edit Flashcard"
+        title={labels.editFlashcard}
         defaultValues={editingCard || undefined}
+        examLanguage={examLanguage}
       />
 
       {/* Preview Dialog */}
@@ -332,11 +390,12 @@ export function FlashcardDeckEditor() {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Card Preview</DialogTitle>
+            <DialogTitle>{labels.preview}</DialogTitle>
           </DialogHeader>
           <div
             className="relative w-full h-64 cursor-pointer perspective-1000"
             onClick={() => setPreviewFlipped(!previewFlipped)}
+            dir={isArabic ? 'rtl' : 'ltr'}
           >
             <div
               className={`absolute inset-0 transition-transform duration-500 preserve-3d ${
@@ -350,14 +409,9 @@ export function FlashcardDeckEditor() {
                 style={{ backfaceVisibility: 'hidden' }}
               >
                 <p className="text-lg font-medium text-center">
-                  {previewCard?.front_text}
+                  {isArabic ? (previewCard?.front_text_ar || previewCard?.front_text) : previewCard?.front_text}
                 </p>
-                {previewCard?.front_text_ar && (
-                  <p className="text-sm mt-2 opacity-90" dir="rtl">
-                    {previewCard.front_text_ar}
-                  </p>
-                )}
-                <p className="text-xs mt-4 opacity-75">Click to flip</p>
+                <p className="text-xs mt-4 opacity-75">{labels.clickToFlip}</p>
               </div>
 
               {/* Back */}
@@ -369,17 +423,12 @@ export function FlashcardDeckEditor() {
                 }}
               >
                 <p className="text-gray-900 text-center">
-                  {previewCard?.back_text}
+                  {isArabic ? (previewCard?.back_text_ar || previewCard?.back_text) : previewCard?.back_text}
                 </p>
-                {previewCard?.back_text_ar && (
-                  <p className="text-gray-600 text-sm mt-2" dir="rtl">
-                    {previewCard.back_text_ar}
-                  </p>
-                )}
-                {previewCard?.hint && (
+                {(isArabic ? (previewCard?.hint_ar || previewCard?.hint) : previewCard?.hint) && (
                   <div className="mt-4 p-2 bg-yellow-50 rounded text-sm text-yellow-700 flex items-center gap-2">
                     <Lightbulb className="w-4 h-4" />
-                    {previewCard.hint}
+                    {isArabic ? (previewCard?.hint_ar || previewCard?.hint) : previewCard?.hint}
                   </div>
                 )}
               </div>
@@ -391,8 +440,8 @@ export function FlashcardDeckEditor() {
               size="sm"
               onClick={() => setPreviewFlipped(!previewFlipped)}
             >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Flip Card
+              <RotateCcw className={`w-4 h-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+              {labels.flipCard}
             </Button>
           </div>
         </DialogContent>
@@ -405,15 +454,16 @@ export function FlashcardDeckEditor() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Flashcard</DialogTitle>
+            <DialogTitle>{labels.deleteFlashcard}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this flashcard? This action cannot
-              be undone.
+              {labels.deleteConfirmation}
             </DialogDescription>
           </DialogHeader>
-          <div className="p-4 bg-gray-50 rounded-lg">
+          <div className="p-4 bg-gray-50 rounded-lg" dir={isArabic ? 'rtl' : 'ltr'}>
             <p className="font-medium text-gray-900">
-              {deleteConfirmCard?.front_text}
+              {isArabic
+                ? (deleteConfirmCard?.front_text_ar || deleteConfirmCard?.front_text)
+                : deleteConfirmCard?.front_text}
             </p>
           </div>
           <DialogFooter>
@@ -421,7 +471,7 @@ export function FlashcardDeckEditor() {
               variant="outline"
               onClick={() => setDeleteConfirmCard(null)}
             >
-              Cancel
+              {labels.cancel}
             </Button>
             <Button
               variant="destructive"
@@ -429,7 +479,7 @@ export function FlashcardDeckEditor() {
                 deleteConfirmCard && handleDelete(deleteConfirmCard.id)
               }
             >
-              Delete
+              {labels.delete}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -442,6 +492,7 @@ export function FlashcardDeckEditor() {
 interface FlashcardCardProps {
   card: Flashcard;
   index: number;
+  examLanguage: ExamLanguage;
   onEdit: () => void;
   onDelete: () => void;
   onTogglePublish: () => void;
@@ -451,13 +502,39 @@ interface FlashcardCardProps {
 function FlashcardCard({
   card,
   index,
+  examLanguage,
   onEdit,
   onDelete,
   onTogglePublish,
   onPreview,
 }: FlashcardCardProps) {
+  const isArabic = examLanguage === 'ar';
+
+  // Get the appropriate text based on language
+  const frontText = isArabic ? (card.front_text_ar || card.front_text) : card.front_text;
+  const backText = isArabic ? (card.back_text_ar || card.back_text) : card.back_text;
+  const hint = isArabic ? (card.hint_ar || card.hint) : card.hint;
+
+  const labels = {
+    front: isArabic ? 'الأمام' : 'Front',
+    back: isArabic ? 'الخلف' : 'Back',
+    hasHint: isArabic ? 'يحتوي تلميح' : 'Has hint',
+    preview: isArabic ? 'معاينة' : 'Preview',
+    edit: isArabic ? 'تعديل' : 'Edit',
+    delete: isArabic ? 'حذف' : 'Delete',
+    easy: isArabic ? 'سهل' : 'easy',
+    medium: isArabic ? 'متوسط' : 'medium',
+    hard: isArabic ? 'صعب' : 'hard',
+  };
+
+  const difficultyLabel = card.difficulty_level === 'easy'
+    ? labels.easy
+    : card.difficulty_level === 'hard'
+    ? labels.hard
+    : labels.medium;
+
   return (
-    <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+    <div className="bg-white rounded-lg shadow-sm border overflow-hidden" dir={isArabic ? 'rtl' : 'ltr'}>
       {/* Header with gradient */}
       <div className="h-2 bg-gradient-to-r from-purple-500 to-indigo-600" />
 
@@ -477,7 +554,7 @@ function FlashcardCard({
                   : 'bg-yellow-100 text-yellow-700'
               }`}
             >
-              {card.difficulty_level}
+              {difficultyLabel}
             </span>
             <button
               onClick={onTogglePublish}
@@ -499,41 +576,36 @@ function FlashcardCard({
         {/* Front */}
         <div className="mb-3">
           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-            Front
+            {labels.front}
           </p>
           <p className="text-gray-900 font-medium line-clamp-2">
-            {card.front_text}
+            {frontText}
           </p>
-          {card.front_text_ar && (
-            <p className="text-sm text-gray-500 mt-1 line-clamp-1" dir="rtl">
-              {card.front_text_ar}
-            </p>
-          )}
         </div>
 
         {/* Back */}
         <div className="mb-3">
           <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-            Back
+            {labels.back}
           </p>
           <p className="text-gray-700 text-sm line-clamp-2">
-            {card.back_text}
+            {backText}
           </p>
         </div>
 
         {/* Hint indicator */}
-        {card.hint && (
+        {hint && (
           <div className="flex items-center gap-1 text-yellow-600 text-xs mb-3">
             <Lightbulb className="w-3 h-3" />
-            <span>Has hint</span>
+            <span>{labels.hasHint}</span>
           </div>
         )}
 
         {/* Actions */}
         <div className="flex items-center justify-between pt-3 border-t">
           <Button variant="ghost" size="sm" onClick={onPreview}>
-            <RotateCcw className="w-4 h-4 mr-1" />
-            Preview
+            <RotateCcw className={`w-4 h-4 ${isArabic ? 'ml-1' : 'mr-1'}`} />
+            {labels.preview}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -543,12 +615,12 @@ function FlashcardCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={onEdit}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
+                <Edit className={`w-4 h-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+                {labels.edit}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onDelete} className="text-red-600">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
+                <Trash2 className={`w-4 h-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+                {labels.delete}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -566,6 +638,7 @@ interface FlashcardDialogProps {
   title: string;
   defaultValues?: Partial<Flashcard>;
   nextOrderIndex?: number;
+  examLanguage: ExamLanguage;
 }
 
 function FlashcardDialog({
@@ -575,14 +648,46 @@ function FlashcardDialog({
   title,
   defaultValues,
   nextOrderIndex = 1,
+  examLanguage,
 }: FlashcardDialogProps) {
-  const [formData, setFormData] = useState<Partial<FlashcardInsert>>({
-    front_text: defaultValues?.front_text || '',
-    front_text_ar: defaultValues?.front_text_ar || '',
-    back_text: defaultValues?.back_text || '',
-    back_text_ar: defaultValues?.back_text_ar || '',
-    hint: defaultValues?.hint || '',
-    hint_ar: defaultValues?.hint_ar || '',
+  const isArabic = examLanguage === 'ar';
+
+  // For Arabic cards, we use _ar fields as primary; for English, standard fields
+  const getDefaultFrontText = () => {
+    if (isArabic) {
+      return defaultValues?.front_text_ar || defaultValues?.front_text || '';
+    }
+    return defaultValues?.front_text || '';
+  };
+
+  const getDefaultBackText = () => {
+    if (isArabic) {
+      return defaultValues?.back_text_ar || defaultValues?.back_text || '';
+    }
+    return defaultValues?.back_text || '';
+  };
+
+  const getDefaultHint = () => {
+    if (isArabic) {
+      return defaultValues?.hint_ar || defaultValues?.hint || '';
+    }
+    return defaultValues?.hint || '';
+  };
+
+  const [formData, setFormData] = useState<{
+    front_text: string;
+    back_text: string;
+    hint: string;
+    front_image_url: string;
+    back_image_url: string;
+    difficulty_level: string;
+    order_index: number;
+    tags: string[];
+    is_published: boolean;
+  }>({
+    front_text: getDefaultFrontText(),
+    back_text: getDefaultBackText(),
+    hint: getDefaultHint(),
     front_image_url: defaultValues?.front_image_url || '',
     back_image_url: defaultValues?.back_image_url || '',
     difficulty_level: defaultValues?.difficulty_level || 'medium',
@@ -592,173 +697,178 @@ function FlashcardDialog({
   });
 
   // Reset form when dialog opens with new values
-  useState(() => {
-    if (defaultValues) {
+  useEffect(() => {
+    if (open) {
       setFormData({
-        front_text: defaultValues.front_text || '',
-        front_text_ar: defaultValues.front_text_ar || '',
-        back_text: defaultValues.back_text || '',
-        back_text_ar: defaultValues.back_text_ar || '',
-        hint: defaultValues.hint || '',
-        hint_ar: defaultValues.hint_ar || '',
-        front_image_url: defaultValues.front_image_url || '',
-        back_image_url: defaultValues.back_image_url || '',
-        difficulty_level: defaultValues.difficulty_level || 'medium',
-        order_index: defaultValues.order_index || nextOrderIndex,
-        tags: defaultValues.tags || [],
-        is_published: defaultValues.is_published ?? true,
+        front_text: getDefaultFrontText(),
+        back_text: getDefaultBackText(),
+        hint: getDefaultHint(),
+        front_image_url: defaultValues?.front_image_url || '',
+        back_image_url: defaultValues?.back_image_url || '',
+        difficulty_level: defaultValues?.difficulty_level || 'medium',
+        order_index: defaultValues?.order_index || nextOrderIndex,
+        tags: defaultValues?.tags || [],
+        is_published: defaultValues?.is_published ?? true,
       });
     }
-  });
+  }, [open, defaultValues, nextOrderIndex, isArabic]);
 
   const handleSubmit = () => {
     if (!formData.front_text) {
-      toast.error('Front content is required');
+      toast.error(isArabic ? 'محتوى الأمام مطلوب' : 'Front content is required');
       return;
     }
     if (!formData.back_text) {
-      toast.error('Back content is required');
+      toast.error(isArabic ? 'محتوى الخلف مطلوب' : 'Back content is required');
       return;
     }
-    onSubmit(formData as FlashcardInsert);
+
+    // Build the data based on language
+    // For Arabic: store in _ar fields
+    // For English: store in standard fields
+    const submitData: FlashcardInsert = {
+      front_text: isArabic ? formData.front_text : formData.front_text,
+      front_text_ar: isArabic ? formData.front_text : null,
+      back_text: isArabic ? formData.back_text : formData.back_text,
+      back_text_ar: isArabic ? formData.back_text : null,
+      hint: isArabic ? null : (formData.hint || null),
+      hint_ar: isArabic ? (formData.hint || null) : null,
+      front_image_url: formData.front_image_url || null,
+      back_image_url: formData.back_image_url || null,
+      difficulty_level: formData.difficulty_level as any,
+      order_index: formData.order_index,
+      tags: formData.tags,
+      is_published: formData.is_published,
+    };
+
+    onSubmit(submitData);
+  };
+
+  // Language-specific labels
+  const labels = {
+    frontOfCard: isArabic ? 'أمام البطاقة' : 'Front of Card',
+    backOfCard: isArabic ? 'خلف البطاقة' : 'Back of Card',
+    frontContent: isArabic ? 'المحتوى (الأمام) *' : 'Content (Front) *',
+    frontPlaceholder: isArabic ? 'أدخل السؤال أو المصطلح' : 'Enter the question or term',
+    backContent: isArabic ? 'المحتوى (الخلف) *' : 'Content (Back) *',
+    backPlaceholder: isArabic ? 'أدخل الإجابة أو التعريف' : 'Enter the answer or definition',
+    imageUrl: isArabic ? 'رابط الصورة (اختياري)' : 'Image URL (optional)',
+    hint: isArabic ? 'تلميح (اختياري)' : 'Hint (optional)',
+    hintPlaceholder: isArabic ? 'تلميح مفيد...' : 'A helpful clue...',
+    difficulty: isArabic ? 'المستوى' : 'Difficulty',
+    easy: isArabic ? 'سهل' : 'Easy',
+    medium: isArabic ? 'متوسط' : 'Medium',
+    hard: isArabic ? 'صعب' : 'Hard',
+    order: isArabic ? 'الترتيب' : 'Order',
+    published: isArabic ? 'منشور' : 'Published',
+    cancel: isArabic ? 'إلغاء' : 'Cancel',
+    update: isArabic ? 'تحديث' : 'Update',
+    create: isArabic ? 'إنشاء' : 'Create',
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {title}
+            <span className={`text-sm px-2 py-1 rounded ${isArabic ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+              {isArabic ? '🇸🇦 Arabic' : '🇬🇧 English'}
+            </span>
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Front Content */}
+        <div className="space-y-4" dir={isArabic ? 'rtl' : 'ltr'}>
+          {/* Front Content - Single language */}
           <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
             <h4 className="font-medium text-purple-900 mb-3 flex items-center gap-2">
               <span className="w-6 h-6 bg-purple-600 text-white rounded flex items-center justify-center text-sm">
-                F
+                {isArabic ? 'أ' : 'F'}
               </span>
-              Front of Card
+              {labels.frontOfCard}
             </h4>
             <div className="space-y-3">
               <div>
-                <Label>Content (English) *</Label>
+                <Label>{labels.frontContent}</Label>
                 <Textarea
                   value={formData.front_text}
                   onChange={(e) =>
                     setFormData({ ...formData, front_text: e.target.value })
                   }
-                  placeholder="Enter the question or term"
+                  placeholder={labels.frontPlaceholder}
                   rows={2}
+                  dir={isArabic ? 'rtl' : 'ltr'}
                 />
               </div>
               <div>
-                <Label>Content (Arabic)</Label>
-                <Textarea
-                  value={formData.front_text_ar || ''}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      front_text_ar: e.target.value,
-                    })
-                  }
-                  placeholder="ادخل السؤال أو المصطلح"
-                  dir="rtl"
-                  rows={2}
-                />
-              </div>
-              <div>
-                <Label>Image URL (optional)</Label>
+                <Label>{labels.imageUrl}</Label>
                 <Input
                   value={formData.front_image_url || ''}
                   onChange={(e) =>
                     setFormData({ ...formData, front_image_url: e.target.value })
                   }
                   placeholder="https://..."
+                  dir="ltr"
                 />
               </div>
             </div>
           </div>
 
-          {/* Back Content */}
+          {/* Back Content - Single language */}
           <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
             <h4 className="font-medium text-indigo-900 mb-3 flex items-center gap-2">
               <span className="w-6 h-6 bg-indigo-600 text-white rounded flex items-center justify-center text-sm">
-                B
+                {isArabic ? 'خ' : 'B'}
               </span>
-              Back of Card
+              {labels.backOfCard}
             </h4>
             <div className="space-y-3">
               <div>
-                <Label>Content (English) *</Label>
+                <Label>{labels.backContent}</Label>
                 <Textarea
                   value={formData.back_text}
                   onChange={(e) =>
                     setFormData({ ...formData, back_text: e.target.value })
                   }
-                  placeholder="Enter the answer or definition"
+                  placeholder={labels.backPlaceholder}
                   rows={3}
+                  dir={isArabic ? 'rtl' : 'ltr'}
                 />
               </div>
               <div>
-                <Label>Content (Arabic)</Label>
-                <Textarea
-                  value={formData.back_text_ar || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, back_text_ar: e.target.value })
-                  }
-                  placeholder="ادخل الإجابة أو التعريف"
-                  dir="rtl"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label>Image URL (optional)</Label>
+                <Label>{labels.imageUrl}</Label>
                 <Input
                   value={formData.back_image_url || ''}
                   onChange={(e) =>
                     setFormData({ ...formData, back_image_url: e.target.value })
                   }
                   placeholder="https://..."
+                  dir="ltr"
                 />
               </div>
             </div>
           </div>
 
-          {/* Hint */}
+          {/* Hint - Single language */}
           <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
             <h4 className="font-medium text-yellow-900 mb-3 flex items-center gap-2">
               <Lightbulb className="w-5 h-5" />
-              Hint (optional)
+              {labels.hint}
             </h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Hint (English)</Label>
-                <Input
-                  value={formData.hint || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, hint: e.target.value })
-                  }
-                  placeholder="A helpful clue..."
-                />
-              </div>
-              <div>
-                <Label>Hint (Arabic)</Label>
-                <Input
-                  value={formData.hint_ar || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, hint_ar: e.target.value })
-                  }
-                  placeholder="تلميح مفيد..."
-                  dir="rtl"
-                />
-              </div>
-            </div>
+            <Input
+              value={formData.hint || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, hint: e.target.value })
+              }
+              placeholder={labels.hintPlaceholder}
+              dir={isArabic ? 'rtl' : 'ltr'}
+            />
           </div>
 
           {/* Metadata */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <Label>Difficulty</Label>
+              <Label>{labels.difficulty}</Label>
               <Select
                 value={formData.difficulty_level}
                 onValueChange={(value) =>
@@ -769,14 +879,14 @@ function FlashcardDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
+                  <SelectItem value="easy">{labels.easy}</SelectItem>
+                  <SelectItem value="medium">{labels.medium}</SelectItem>
+                  <SelectItem value="hard">{labels.hard}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Order Index</Label>
+              <Label>{labels.order}</Label>
               <Input
                 type="number"
                 value={formData.order_index}
@@ -796,7 +906,7 @@ function FlashcardDialog({
                     setFormData({ ...formData, is_published: checked })
                   }
                 />
-                <Label>Published</Label>
+                <Label>{labels.published}</Label>
               </div>
             </div>
           </div>
@@ -804,10 +914,10 @@ function FlashcardDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {labels.cancel}
           </Button>
           <Button onClick={handleSubmit}>
-            {defaultValues ? 'Update' : 'Create'}
+            {defaultValues ? labels.update : labels.create}
           </Button>
         </DialogFooter>
       </DialogContent>

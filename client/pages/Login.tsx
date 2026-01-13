@@ -5,19 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Globe } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUnifiedAuth } from '@/shared/hooks/useUnifiedAuth';
 import { useToast } from "@/hooks/use-toast";
 import { AuthStorageService } from "@/shared/utils/auth-storage";
 
 export default function Login() {
-  const { t, language, setLanguage, isRTL } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const { user, login, isLoading } = useUnifiedAuth();
-
-  const toggleLanguage = () => {
-    setLanguage(language === "en" ? "ar" : "en");
-  };
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -112,22 +107,13 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-2 relative">
-          {/* Language Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleLanguage}
-            className="absolute top-4 right-4 text-gray-600 hover:text-gray-900"
-          >
-            <Globe className="h-4 w-4 mr-1" />
-            {language === 'en' ? 'عربي' : 'EN'}
-          </Button>
-          <div className="mx-auto mb-4">
+        <CardHeader className="text-center space-y-3">
+          <div className="mx-auto mb-6 py-4">
             <img
               src="/bda-logo.png"
               alt="BDA Logo"
-              className="h-20 w-auto mx-auto"
+              className="h-40 w-auto mx-auto"
+              style={{ maxWidth: '100%', objectFit: 'contain' }}
             />
           </div>
           <CardTitle className="text-2xl font-bold text-gray-900">
@@ -169,20 +155,28 @@ export default function Login() {
               />
             </div>
 
-            {/* Remember email checkbox */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="remember-email"
-                checked={rememberEmail}
-                onCheckedChange={(checked) => setRememberEmail(checked as boolean)}
-                disabled={isLoading}
-              />
-              <Label
-                htmlFor="remember-email"
-                className="text-sm text-gray-600 cursor-pointer"
+            {/* Remember email & Forgot password */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remember-email"
+                  checked={rememberEmail}
+                  onCheckedChange={(checked) => setRememberEmail(checked as boolean)}
+                  disabled={isLoading}
+                />
+                <Label
+                  htmlFor="remember-email"
+                  className="text-sm text-gray-600 cursor-pointer"
+                >
+                  {t('auth.rememberEmail')}
+                </Label>
+              </div>
+              <Link
+                to="/forgot-password"
+                className="text-sm text-blue-600 hover:underline"
               >
-                {t('auth.rememberEmail')}
-              </Label>
+                {t('auth.forgotPassword')}
+              </Link>
             </div>
 
             <Button

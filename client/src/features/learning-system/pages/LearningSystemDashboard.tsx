@@ -4,14 +4,16 @@
  * 1. Training Kits (Main Curriculum)
  * 2. Question Bank (Practice Questions)
  * 3. Flashcards (Quick Revision)
+ *
+ * When user has BOTH EN and AR access, shows language selection page first.
+ * When user has only one language, goes directly to that language's dashboard.
  */
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
-import { useCurriculumAccess } from '@/entities/curriculum';
+import { useUserAccesses, useOverallProgress, type Language } from '@/entities/curriculum';
 import { useQuestionBankStats } from '@/entities/question-bank';
 import { useFlashcardStats } from '@/entities/flashcards';
-import { useLanguage } from '@/contexts/LanguageContext';
 import {
   BookOpen,
   HelpCircle,
@@ -22,9 +24,10 @@ import {
   Award,
   ChevronRight,
   Sparkles,
+  Globe,
+  ArrowLeft,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
 
 interface SectionCardProps {
   title: string;
@@ -127,128 +130,196 @@ function SectionCard({
   );
 }
 
+/**
+ * Language Selection Card for dual-language access
+ */
+interface LanguageCardProps {
+  language: 'EN' | 'AR';
+  title: string;
+  subtitle: string;
+  description: string;
+  expiryDate: Date | null;
+  daysRemaining: number;
+  onClick: () => void;
+}
+
+function LanguageCard({
+  language,
+  title,
+  subtitle,
+  description,
+  expiryDate,
+  daysRemaining,
+  onClick,
+}: LanguageCardProps) {
+  const isArabic = language === 'AR';
+  const flagEmoji = isArabic ? '🇸🇦' : '🇬🇧';
+  const bgGradient = isArabic
+    ? 'from-emerald-500 to-teal-600'
+    : 'from-blue-500 to-indigo-600';
+  const hoverGradient = isArabic
+    ? 'hover:from-emerald-600 hover:to-teal-700'
+    : 'hover:from-blue-600 hover:to-indigo-700';
+
+  return (
+    <button
+      onClick={onClick}
+      className={`group relative w-full bg-gradient-to-br ${bgGradient} ${hoverGradient} rounded-2xl p-8 text-white shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] text-left`}
+    >
+      <div className="flex items-start gap-4">
+        <div className="text-5xl">{flagEmoji}</div>
+        <div className="flex-1">
+          <h3 className="text-2xl font-bold mb-1">{title}</h3>
+          <p className="text-white/80 text-sm mb-3">{subtitle}</p>
+          <p className="text-white/70 text-sm">{description}</p>
+        </div>
+        <ChevronRight className="w-8 h-8 opacity-60 group-hover:opacity-100 transition-opacity" />
+      </div>
+
+      {expiryDate && (
+        <div className="mt-6 pt-4 border-t border-white/20">
+          <div className="flex items-center gap-2 text-sm text-white/80">
+            <Calendar className="w-4 h-4" />
+            <span>
+              Valid until {format(expiryDate, 'MMM d, yyyy')}
+              <span className="ml-2 text-white/60">
+                ({daysRemaining} days left)
+              </span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Decorative elements */}
+      <div className="absolute top-4 right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+      <div className="absolute bottom-4 left-4 w-16 h-16 bg-white/10 rounded-full blur-xl" />
+    </button>
+  );
+}
+
 export function LearningSystemDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
-  const { language } = useLanguage();
 
-  const t = {
-    en: {
-      // Loading & Access
-      loading: 'Loading your learning system...',
-      accessRequired: 'Access Required',
-      accessRequiredDesc: 'You need to purchase a certification program to access the Learning System. This includes Training Kits, Question Bank, and Flashcards.',
-      purchaseNow: 'Purchase Now',
-      // Header
-      title: 'Learning System',
-      subtitle: 'BDA Body of Competency Knowledge (BoCK) - Complete Learning Suite',
-      // Access Banner
-      accessValidUntil: 'Access valid until',
-      daysRemaining: 'days remaining',
-      considerRenewing: '- Consider renewing soon',
-      // Quick Stats
-      trainingProgress: 'Training Progress',
-      questionsPracticed: 'Questions Practiced',
-      cardsMastered: 'Cards Mastered',
-      studyTime: 'Study Time',
-      // Section Cards
-      trainingKits: 'Training Kits',
-      trainingKitsAr: 'حقائب تدريبية',
-      trainingKitsDesc: 'Complete curriculum content organized by competencies. Read comprehensive material with text and images to build your knowledge foundation.',
-      questionBank: 'Question Bank',
-      questionBankAr: 'بنك الأسئلة',
-      questionBankDesc: 'Practice with hundreds of multiple-choice questions. Get instant feedback and track your performance across all competencies.',
-      flashcards: 'Flashcards',
-      flashcardsAr: 'بطاقات المراجعة',
-      flashcardsDesc: 'Quick revision cards with spaced repetition. Master key concepts through active recall and efficient memorization techniques.',
-      // Stats Labels
-      modules: 'Modules',
-      lessons: 'Lessons',
-      completed: 'Completed',
-      totalQuestions: 'Total Questions',
-      attempted: 'Attempted',
-      avgScore: 'Avg Score',
-      totalCards: 'Total Cards',
-      dueToday: 'Due Today',
-      mastered: 'Mastered',
-      // Button Labels
-      startLearning: 'Start Learning',
-      practiceNow: 'Practice Now',
-      studyFlashcards: 'Study Flashcards',
-      // Learning Path
-      recommendedPath: 'Recommended Learning Path',
-      readContentFirst: 'Read the content first',
-      memorizeKeyConcepts: 'Memorize key concepts',
-      testYourKnowledge: 'Test your knowledge',
-      new: 'NEW',
-    },
-    ar: {
-      // Loading & Access
-      loading: 'جارٍ تحميل نظام التعلم...',
-      accessRequired: 'مطلوب صلاحية الوصول',
-      accessRequiredDesc: 'تحتاج إلى شراء برنامج شهادة للوصول إلى نظام التعلم. يتضمن ذلك حقائب التدريب وبنك الأسئلة وبطاقات المراجعة.',
-      purchaseNow: 'اشترِ الآن',
-      // Header
-      title: 'نظام التعلم',
-      subtitle: 'هيكل معارف كفاءات BDA (BoCK) - مجموعة التعلم الكاملة',
-      // Access Banner
-      accessValidUntil: 'الوصول صالح حتى',
-      daysRemaining: 'يوم متبقي',
-      considerRenewing: '- يُنصح بالتجديد قريباً',
-      // Quick Stats
-      trainingProgress: 'تقدم التدريب',
-      questionsPracticed: 'الأسئلة المُمارسة',
-      cardsMastered: 'البطاقات المُتقنة',
-      studyTime: 'وقت الدراسة',
-      // Section Cards
-      trainingKits: 'حقائب التدريب',
-      trainingKitsAr: 'Training Kits',
-      trainingKitsDesc: 'محتوى المنهج الكامل منظم حسب الكفاءات. اقرأ المواد الشاملة مع النصوص والصور لبناء أساس معرفتك.',
-      questionBank: 'بنك الأسئلة',
-      questionBankAr: 'Question Bank',
-      questionBankDesc: 'تدرب مع مئات أسئلة الاختيار المتعدد. احصل على ملاحظات فورية وتتبع أدائك عبر جميع الكفاءات.',
-      flashcards: 'بطاقات المراجعة',
-      flashcardsAr: 'Flashcards',
-      flashcardsDesc: 'بطاقات مراجعة سريعة مع التكرار المتباعد. أتقن المفاهيم الأساسية من خلال الاستذكار النشط وتقنيات الحفظ الفعالة.',
-      // Stats Labels
-      modules: 'الوحدات',
-      lessons: 'الدروس',
-      completed: 'مكتمل',
-      totalQuestions: 'إجمالي الأسئلة',
-      attempted: 'تمت المحاولة',
-      avgScore: 'متوسط الدرجة',
-      totalCards: 'إجمالي البطاقات',
-      dueToday: 'مستحقة اليوم',
-      mastered: 'متقنة',
-      // Button Labels
-      startLearning: 'ابدأ التعلم',
-      practiceNow: 'تدرب الآن',
-      studyFlashcards: 'ادرس البطاقات',
-      // Learning Path
-      recommendedPath: 'مسار التعلم المُوصى به',
-      readContentFirst: 'اقرأ المحتوى أولاً',
-      memorizeKeyConcepts: 'احفظ المفاهيم الأساسية',
-      testYourKnowledge: 'اختبر معرفتك',
-      new: 'جديد',
-    }
+  // Determine base path (works for both /learning-system and /ecp/learning-system)
+  const basePath = location.pathname.includes('/ecp/')
+    ? '/ecp/learning-system'
+    : '/learning-system';
+
+  // Get selected language from URL params
+  const selectedLang = searchParams.get('lang') as Language | null;
+
+  // Check curriculum access using language-aware hook
+  // This properly handles users with access to both EN and AR
+  const {
+    data: accessSummary,
+    isLoading: isLoadingAccess,
+  } = useUserAccesses(user?.id);
+
+  // Compute effective language early for stats hooks
+  // Use selectedLang from URL, or fallback to first available language
+  const statsLanguage: 'en' | 'ar' | undefined = selectedLang
+    ? (selectedLang.toLowerCase() as 'en' | 'ar')
+    : accessSummary?.has_en
+      ? 'en'
+      : accessSummary?.has_ar
+        ? 'ar'
+        : undefined;
+
+  // Get training/curriculum progress (with language filter)
+  const { data: trainingProgress } = useOverallProgress(user?.id, 'CP', statsLanguage);
+
+  // Get question bank stats (with language filter)
+  const { data: questionBankStats } = useQuestionBankStats(user?.id, 'CP', statsLanguage);
+
+  // Get flashcard stats (with language filter)
+  const { data: flashcardStats } = useFlashcardStats(user?.id, 'CP', statsLanguage);
+
+  // UI Labels - Always in English per requirement
+  // Only content (curriculum text, questions, flashcards) should be in Arabic when viewing Arabic content
+  const texts = {
+    // Loading & Access
+    loading: 'Loading your learning system...',
+    accessRequired: 'Access Required',
+    accessRequiredDesc: 'You need to purchase a certification program to access the Learning System. This includes Training Kits, Question Bank, and Flashcards.',
+    purchaseNow: 'Purchase Now',
+    // Header
+    title: 'Learning System',
+    subtitle: 'BDA Body of Competency Knowledge (BoCK) - Complete Learning Suite',
+    // Access Banner
+    accessValidUntil: 'Access valid until',
+    daysRemaining: 'days remaining',
+    considerRenewing: '- Consider renewing soon',
+    // Quick Stats
+    trainingProgress: 'Training Progress',
+    questionsPracticed: 'Questions Practiced',
+    cardsMastered: 'Cards Mastered',
+    studyTime: 'Study Time',
+    // Section Cards
+    trainingKits: 'Training Kits',
+    trainingKitsAr: 'حقائب تدريبية',
+    trainingKitsDesc: 'Complete curriculum content organized by competencies. Read comprehensive material with text and images to build your knowledge foundation.',
+    questionBank: 'Question Bank',
+    questionBankAr: 'بنك الأسئلة',
+    questionBankDesc: 'Practice with hundreds of multiple-choice questions. Get instant feedback and track your performance across all competencies.',
+    flashcards: 'Flashcards',
+    flashcardsAr: 'بطاقات المراجعة',
+    flashcardsDesc: 'Quick revision cards with spaced repetition. Master key concepts through active recall and efficient memorization techniques.',
+    // Stats Labels
+    modules: 'Modules',
+    lessons: 'Lessons',
+    completed: 'Completed',
+    totalQuestions: 'Total Questions',
+    attempted: 'Attempted',
+    avgScore: 'Avg Score',
+    totalCards: 'Total Cards',
+    dueToday: 'Due Today',
+    mastered: 'Mastered',
+    // Button Labels
+    startLearning: 'Start Learning',
+    practiceNow: 'Practice Now',
+    studyFlashcards: 'Study Flashcards',
+    // Learning Path
+    recommendedPath: 'Recommended Learning Path',
+    readContentFirst: 'Read the content first',
+    memorizeKeyConcepts: 'Memorize key concepts',
+    testYourKnowledge: 'Test your knowledge',
+    new: 'NEW',
+    // Language Selection
+    selectLanguage: 'Select Your Language',
+    selectLanguageDesc: 'You have access to both English and Arabic Learning Systems. Choose which language you would like to study in.',
+    englishTitle: 'Learning System (English)',
+    englishSubtitle: 'BDA Body of Competency Knowledge',
+    englishDesc: 'Complete curriculum, question bank, and flashcards in English',
+    arabicTitle: 'Learning System (Arabic)',
+    arabicSubtitle: 'هيكل معارف كفاءات BDA',
+    arabicDesc: 'Complete curriculum, question bank, and flashcards in Arabic',
+    switchLanguage: 'Switch Language',
+    currentlyViewing: 'Currently viewing',
   };
 
-  const texts = t[language];
+  // User has access if they have EN, AR, or both
+  const hasAccess = accessSummary?.has_en || accessSummary?.has_ar;
+  const hasBothLanguages = accessSummary?.has_en && accessSummary?.has_ar;
 
-  // Check curriculum access
-  const {
-    data: accessData,
-    isLoading: isLoadingAccess,
-  } = useCurriculumAccess(user?.id, user?.email, 'CP');
+  // Get access for specific language (for display purposes)
+  const getAccessForLanguage = (lang: Language) => {
+    return accessSummary?.accesses?.find(a => a.language === lang);
+  };
 
-  // Get question bank stats
-  const { data: questionBankStats } = useQuestionBankStats(user?.id, 'CP');
+  // Get the access for currently selected language, or first available
+  const access = selectedLang
+    ? getAccessForLanguage(selectedLang)
+    : accessSummary?.accesses?.[0];
 
-  // Get flashcard stats
-  const { data: flashcardStats } = useFlashcardStats(user?.id, 'CP');
-
-  const hasAccess = accessData?.hasAccess;
-  const access = accessData?.access;
+  // Helper to calculate days until expiry
+  const getDaysUntilExpiry = (expiresAt: string | undefined) => {
+    if (!expiresAt) return 0;
+    const expiry = new Date(expiresAt);
+    return Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  };
 
   // Loading state
   if (isLoadingAccess) {
@@ -287,27 +358,124 @@ export function LearningSystemDashboard() {
     );
   }
 
-  const expiryDate = access ? new Date(access.expires_at) : null;
+  // DUAL LANGUAGE SELECTION PAGE
+  // Show when user has both EN and AR access but hasn't selected a language yet
+  if (hasBothLanguages && !selectedLang) {
+    const enAccess = getAccessForLanguage('EN');
+    const arAccess = getAccessForLanguage('AR');
+    const enExpiry = enAccess?.expires_at ? new Date(enAccess.expires_at) : null;
+    const arExpiry = arAccess?.expires_at ? new Date(arAccess.expires_at) : null;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="container mx-auto px-4 py-12 max-w-4xl">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg mb-6">
+              <Globe className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              {texts.selectLanguage}
+            </h1>
+            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+              {texts.selectLanguageDesc}
+            </p>
+          </div>
+
+          {/* Language Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <LanguageCard
+              language="EN"
+              title={texts.englishTitle}
+              subtitle={texts.englishSubtitle}
+              description={texts.englishDesc}
+              expiryDate={enExpiry}
+              daysRemaining={getDaysUntilExpiry(enAccess?.expires_at)}
+              onClick={() => setSearchParams({ lang: 'EN' })}
+            />
+
+            <LanguageCard
+              language="AR"
+              title={texts.arabicTitle}
+              subtitle={texts.arabicSubtitle}
+              description={texts.arabicDesc}
+              expiryDate={arExpiry}
+              daysRemaining={getDaysUntilExpiry(arAccess?.expires_at)}
+              onClick={() => setSearchParams({ lang: 'AR' })}
+            />
+          </div>
+
+          {/* Info note */}
+          <div className="mt-8 text-center text-sm text-gray-500">
+            <p>You can switch between languages at any time from the dashboard.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // For single language users without URL param, determine which language they have
+  const effectiveLanguage: Language = selectedLang
+    || (accessSummary?.has_en ? 'EN' : 'AR');
+
+  // Get the access record for display (fallback to first available)
+  const displayAccess = access || accessSummary?.accesses?.[0];
+  const expiryDate = displayAccess?.expires_at ? new Date(displayAccess.expires_at) : null;
   const daysUntilExpiry = expiryDate
     ? Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : 0;
   const isExpiringSoon = daysUntilExpiry <= 30;
 
+  // Current language indicator
+  const currentLangLabel = effectiveLanguage === 'AR' ? 'Arabic' : 'English';
+  const otherLangLabel = effectiveLanguage === 'AR' ? 'English' : 'Arabic';
+  const otherLang: Language = effectiveLanguage === 'AR' ? 'EN' : 'AR';
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Header */}
+        {/* Header with language switcher */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {texts.title}
-          </h1>
-          <p className="text-gray-600">
-            {texts.subtitle}
-          </p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {texts.title}
+                <span className="ml-3 text-lg font-medium text-gray-500">
+                  ({currentLangLabel})
+                </span>
+              </h1>
+              <p className="text-gray-600">
+                {texts.subtitle}
+              </p>
+            </div>
+
+            {/* Language Switcher - only show when both languages available */}
+            {hasBothLanguages && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setSearchParams({ lang: otherLang })}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  <Globe className="w-4 h-4" />
+                  {texts.switchLanguage}: {otherLangLabel}
+                </button>
+                <button
+                  onClick={() => {
+                    searchParams.delete('lang');
+                    setSearchParams(searchParams);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+                  title="Back to language selection"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Access Banner */}
-        {access && expiryDate && (
+        {displayAccess && expiryDate && (
           <div
             className={`mb-6 p-4 rounded-lg border ${
               isExpiringSoon
@@ -324,7 +492,7 @@ export function LearningSystemDashboard() {
                 />
                 <div>
                   <p className="font-medium text-gray-900">
-                    {texts.accessValidUntil} {format(expiryDate, 'MMMM d, yyyy', { locale: language === 'ar' ? ar : undefined })}
+                    {texts.accessValidUntil} {format(expiryDate, 'MMMM d, yyyy')}
                   </p>
                   <p
                     className={`text-sm ${
@@ -349,7 +517,9 @@ export function LearningSystemDashboard() {
                 {texts.trainingProgress}
               </span>
             </div>
-            <p className="text-2xl font-bold text-blue-600">0%</p>
+            <p className="text-2xl font-bold text-blue-600">
+              {trainingProgress?.percentage || 0}%
+            </p>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-4 border">
@@ -384,7 +554,7 @@ export function LearningSystemDashboard() {
               </span>
             </div>
             <p className="text-2xl font-bold text-orange-600">
-              {Math.floor((flashcardStats?.totalStudyTimeMinutes || 0) / 60)}h
+              {Math.floor(((trainingProgress?.totalTimeSpent || 0) + (flashcardStats?.totalStudyTimeMinutes || 0)) / 60)}h
             </p>
           </div>
         </div>
@@ -394,7 +564,7 @@ export function LearningSystemDashboard() {
           {/* Training Kits Section */}
           <SectionCard
             title={texts.trainingKits}
-            titleAr={texts.trainingKitsAr}
+            titleAr={effectiveLanguage === 'AR' ? texts.trainingKitsAr : undefined}
             description={texts.trainingKitsDesc}
             icon={<BookOpen className="w-6 h-6" />}
             color="blue"
@@ -405,14 +575,14 @@ export function LearningSystemDashboard() {
             ]}
             primaryAction={{
               label: texts.startLearning,
-              onClick: () => navigate('/learning-system/training-kits'),
+              onClick: () => navigate(`${basePath}/training-kits?lang=${effectiveLanguage}`),
             }}
           />
 
           {/* Question Bank Section */}
           <SectionCard
             title={texts.questionBank}
-            titleAr={texts.questionBankAr}
+            titleAr={effectiveLanguage === 'AR' ? texts.questionBankAr : undefined}
             description={texts.questionBankDesc}
             icon={<HelpCircle className="w-6 h-6" />}
             color="green"
@@ -425,14 +595,14 @@ export function LearningSystemDashboard() {
             ]}
             primaryAction={{
               label: texts.practiceNow,
-              onClick: () => navigate('/learning-system/question-bank'),
+              onClick: () => navigate(`${basePath}/question-bank?lang=${effectiveLanguage}`),
             }}
           />
 
           {/* Flashcards Section */}
           <SectionCard
             title={texts.flashcards}
-            titleAr={texts.flashcardsAr}
+            titleAr={effectiveLanguage === 'AR' ? texts.flashcardsAr : undefined}
             description={texts.flashcardsDesc}
             icon={<Layers className="w-6 h-6" />}
             color="purple"
@@ -445,7 +615,7 @@ export function LearningSystemDashboard() {
             ]}
             primaryAction={{
               label: texts.studyFlashcards,
-              onClick: () => navigate('/learning-system/flashcards'),
+              onClick: () => navigate(`${basePath}/flashcards?lang=${effectiveLanguage}`),
             }}
           />
         </div>

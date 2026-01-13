@@ -364,13 +364,7 @@ export class AuthService {
    * Formater les messages d'erreur pour l'utilisateur
    */
   private static formatErrorMessage(errorMessage: string): string {
-    const errorMap: Record<string, string> = {
-      'Invalid login credentials': 'Email ou mot de passe incorrect',
-      'Email not confirmed': 'Veuillez confirmer votre email avant de vous connecter',
-      'Too many requests': 'Trop de tentatives. Veuillez réessayer dans quelques minutes',
-      'User not found': 'Aucun compte trouvé avec cet email',
-    };
-
-    return errorMap[errorMessage] || errorMessage;
+    // Return original English message - translation handled by i18n
+    return errorMessage;
   }
 }

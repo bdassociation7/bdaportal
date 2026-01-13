@@ -25,8 +25,11 @@ import {
 } from 'lucide-react';
 import {
   verifyCertificate,
+  searchCertificatesByName,
   type CertificateVerification,
+  type CertificateSearchResult,
 } from '@/entities/certificate';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // ============================================================================
 // Component
@@ -36,9 +39,13 @@ export default function VerifyCertificate() {
   const { credentialId: urlCredentialId } = useParams<{ credentialId?: string }>();
   const navigate = useNavigate();
 
+  const [searchMode, setSearchMode] = useState<'credential' | 'name'>('credential');
   const [credentialId, setCredentialId] = useState(urlCredentialId || '');
+  const [searchName, setSearchName] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [verification, setVerification] = useState<CertificateVerification | null>(null);
+  const [searchResults, setSearchResults] = useState<CertificateSearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
 
   // ========================================================================
@@ -94,15 +101,92 @@ export default function VerifyCertificate() {
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      handleVerify();
+      if (searchMode === 'credential') {
+        handleVerify();
+      } else {
+        handleSearchByName();
+      }
+    }
+  };
+
+  // ========================================================================
+  // Name Search Handler
+  // ========================================================================
+
+  const handleSearchByName = async () => {
+    if (!searchName.trim()) {
+      return;
+    }
+
+    setIsSearching(true);
+    setHasSearched(true);
+    setVerification(null);
+
+    try {
+      const result = await searchCertificatesByName(searchName.trim());
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      setSearchResults(result.data || []);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // ========================================================================
+  // View Certificate from Search Results
+  // ========================================================================
+
+  const handleViewCertificate = async (credId: string) => {
+    setIsVerifying(true);
+    setSearchResults([]);
+
+    try {
+      const result = await verifyCertificate(credId);
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      setVerification(result.data);
+      setCredentialId(credId);
+      setSearchMode('credential');
+      navigate(`/verify/${credId}`, { replace: true });
+    } catch (error) {
+      console.error('Verification error:', error);
+      setVerification({
+        is_valid: false,
+        status: 'error',
+        holder_name: null,
+        certification_type: null,
+        issued_date: null,
+        expiry_date: null,
+        message: error instanceof Error ? error.message : 'Verification failed',
+      });
+    } finally {
+      setIsVerifying(false);
     }
   };
 
   const handleReset = () => {
     setCredentialId('');
+    setSearchName('');
     setVerification(null);
+    setSearchResults([]);
     setHasSearched(false);
     navigate('/verify', { replace: true });
+  };
+
+  const handleModeChange = (mode: 'credential' | 'name') => {
+    setSearchMode(mode);
+    setVerification(null);
+    setSearchResults([]);
+    setHasSearched(false);
   };
 
   // ========================================================================
@@ -139,44 +223,166 @@ export default function VerifyCertificate() {
         {/* Search Card */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Enter Credential ID</CardTitle>
-            <CardDescription>
-              Enter the credential ID (e.g., CP-2025-0001 or SCP-2025-0001) to verify a
-              certification
-            </CardDescription>
+            <div className="space-y-4">
+              {/* Search Mode Tabs */}
+              <Tabs
+                value={searchMode}
+                onValueChange={(value) => handleModeChange(value as 'credential' | 'name')}
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="credential">Credential ID</TabsTrigger>
+                  <TabsTrigger value="name">Holder Name</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {/* Title and Description */}
+              <div>
+                <CardTitle>
+                  {searchMode === 'credential' ? 'Enter Credential ID' : 'Search by Name'}
+                </CardTitle>
+                <CardDescription>
+                  {searchMode === 'credential'
+                    ? 'Enter the credential ID (e.g., BDA-CP-2026-A7K2M9) to verify a certification'
+                    : 'Enter the certificate holder\'s name to find matching certificates'}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex gap-3">
               <div className="flex-1">
-                <Input
-                  placeholder="CP-2025-0001"
-                  value={credentialId}
-                  onChange={(e) => setCredentialId(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={isVerifying}
-                  className="text-lg font-mono"
-                />
+                {searchMode === 'credential' ? (
+                  <Input
+                    placeholder="BDA-CP-2026-A7K2M9"
+                    value={credentialId}
+                    onChange={(e) => setCredentialId(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    disabled={isVerifying}
+                    className="text-lg font-mono"
+                  />
+                ) : (
+                  <Input
+                    placeholder="John Doe"
+                    value={searchName}
+                    onChange={(e) => setSearchName(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    disabled={isSearching}
+                    className="text-lg"
+                  />
+                )}
               </div>
               <Button
-                onClick={handleVerify}
-                disabled={!credentialId.trim() || isVerifying}
+                onClick={searchMode === 'credential' ? handleVerify : handleSearchByName}
+                disabled={
+                  searchMode === 'credential'
+                    ? !credentialId.trim() || isVerifying
+                    : !searchName.trim() || isSearching
+                }
                 size="lg"
               >
-                {isVerifying ? (
+                {isVerifying || isSearching ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verifying...
+                    {searchMode === 'credential' ? 'Verifying...' : 'Searching...'}
                   </>
                 ) : (
                   <>
                     <Search className="mr-2 h-4 w-4" />
-                    Verify
+                    {searchMode === 'credential' ? 'Verify' : 'Search'}
                   </>
                 )}
               </Button>
             </div>
           </CardContent>
         </Card>
+
+        {/* Search Results for Name Search */}
+        {searchMode === 'name' && hasSearched && searchResults.length > 0 && !verification && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>
+                Search Results ({searchResults.length} certificate{searchResults.length !== 1 ? 's' : ''} found)
+              </CardTitle>
+              <CardDescription>
+                Click on a certificate to view full verification details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {searchResults.map((result, index) => (
+                  <div
+                    key={`${result.credential_id}-${index}`}
+                    className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => handleViewCertificate(result.credential_id)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-3">
+                          <h4 className="text-lg font-semibold text-gray-900">
+                            {result.holder_name}
+                          </h4>
+                          <Badge
+                            variant={result.is_valid ? 'default' : 'secondary'}
+                            className={result.is_valid ? 'bg-green-600' : ''}
+                          >
+                            {result.is_valid ? (
+                              <>
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Active
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="mr-1 h-3 w-3" />
+                                {result.status === 'expired' ? 'Expired' : 'Inactive'}
+                              </>
+                            )}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-600">Credential ID: </span>
+                            <span className="font-mono font-medium text-gray-900">
+                              {result.credential_id}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Type: </span>
+                            <span className="font-medium text-gray-900">
+                              BDA-{result.certification_type}™
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Issued: </span>
+                            <span className="text-gray-900">
+                              {formatDate(result.issued_date)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <ExternalLink className="h-5 w-5 text-gray-400 ml-4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* No Results Message for Name Search */}
+        {searchMode === 'name' && hasSearched && searchResults.length === 0 && !verification && (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>No certificates found</AlertTitle>
+                <AlertDescription>
+                  No certificates were found matching "{searchName}". Please check the spelling and
+                  try again.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Verification Results */}
         {verification && hasSearched && (
@@ -230,8 +436,8 @@ export default function VerifyCertificate() {
                         </div>
                         <p className="text-lg font-semibold text-gray-900">
                           {verification.certification_type === 'CP'
-                            ? 'Certified Professional (CP™)'
-                            : 'Senior Certified Professional (SCP™)'}
+                            ? 'BDA Certified Professional (BDA-CP™)'
+                            : 'BDA Senior Certified Professional (BDA-SCP™)'}
                         </p>
                       </div>
 
@@ -306,7 +512,7 @@ export default function VerifyCertificate() {
                         <div className="space-y-1">
                           <p className="text-sm text-gray-600">Certification Type</p>
                           <p className="text-base font-medium text-gray-900">
-                            {verification.certification_type}
+                            BDA-{verification.certification_type}™
                           </p>
                         </div>
                         {verification.issued_date && (
@@ -356,11 +562,11 @@ export default function VerifyCertificate() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-semibold text-gray-900 mb-2">What is a Credential ID?</h4>
+              <h4 className="font-semibold text-gray-900 mb-2">Two Ways to Verify</h4>
               <p className="text-sm text-gray-600">
-                Every BDA Association certification is issued with a unique Credential ID (e.g.,
-                CP-2025-0001). This ID can be found on the certificate and is used for
-                verification.
+                You can verify certificates by entering the <strong>Credential ID</strong> (e.g., BDA-CP-2026-A7K2M9)
+                or by searching for the <strong>certificate holder's name</strong>. Name search supports
+                partial matches and will show up to 50 matching certificates.
               </p>
             </div>
             <div>

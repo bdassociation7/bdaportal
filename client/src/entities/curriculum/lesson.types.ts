@@ -18,6 +18,8 @@ export interface Lesson extends LessonRow {
     competency_name_ar?: string | null;
     section_type: 'knowledge_based' | 'behavioral';
     certification_type: 'CP' | 'SCP';
+    order_index?: number;
+    exam_language?: 'en' | 'ar';
   };
   quiz?: {
     id: string;
@@ -43,6 +45,7 @@ export interface CreateLessonDTO {
   quiz_required?: boolean;
   quiz_passing_score?: number;
   is_published?: boolean;
+  exam_language?: 'en' | 'ar';
 }
 
 // Update lesson DTO
@@ -63,6 +66,9 @@ export interface UpdateLessonDTO {
   is_published?: boolean;
 }
 
+// Exam language type
+export type ExamLanguage = 'en' | 'ar';
+
 // Lesson filters
 export interface LessonFilters {
   module_id?: string;
@@ -71,6 +77,7 @@ export interface LessonFilters {
   is_published?: boolean;
   order_index?: 1 | 2 | 3;
   has_quiz?: boolean;
+  exam_language?: ExamLanguage;
 }
 
 // Lesson with progress (for user-facing)
