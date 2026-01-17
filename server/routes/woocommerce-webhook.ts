@@ -261,6 +261,7 @@ export async function handleWooCommerceOrderWebhook(
             {
               p_user_id: userId,
               p_membership_type: mapping.membership_type,
+              p_duration_months: mapping.duration_months || 12,
               p_woocommerce_order_id: order.id.toString(),
               p_woocommerce_product_id: item.product_id.toString(),
             }

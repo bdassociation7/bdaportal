@@ -40,7 +40,7 @@ type ExamStatus = 'has_voucher' | 'scheduled' | 'ready' | 'certified';
 
 // DEV MODE: Set to true to bypass exam time window check for testing
 // WARNING: Set to false for production!
-const DEV_MODE_SKIP_TIME_CHECK = true;
+const DEV_MODE_SKIP_TIME_CHECK = false;
 
 interface ExamWithStatus extends CertificationExam {
   userStatus: ExamStatus;
@@ -256,7 +256,7 @@ export default function TakeCertificationExam() {
     enabled: !!selectedVoucher && selectedVoucher.displayInfo.canUse,
   });
 
-  // Fetch user's exam bookings
+  // Fetch user's exam bookings (only future bookings with valid status)
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
     queryKey: ['user-exam-bookings'],
     queryFn: async () => {
@@ -264,7 +264,9 @@ export default function TakeCertificationExam() {
         .from('exam_bookings')
         .select('*')
         .eq('user_id', user?.id)
-        .in('status', ['scheduled', 'rescheduled']);
+        .in('status', ['scheduled', 'rescheduled', 'confirmed'])
+        .gte('scheduled_start_time', new Date().toISOString())
+        .order('scheduled_start_time', { ascending: true });
 
       if (error) throw error;
       return data || [];
@@ -292,7 +294,7 @@ export default function TakeCertificationExam() {
 
     // Check if user has a booking for this exam
     const booking = bookings?.find(
-      (b: any) => b.quiz_id === exam.id && ['scheduled', 'rescheduled'].includes(b.status)
+      (b: any) => b.quiz_id === exam.id && ['scheduled', 'rescheduled', 'confirmed'].includes(b.status)
     );
 
     if (booking) {
@@ -673,25 +675,18 @@ export default function TakeCertificationExam() {
                     )}
 
                     {exam.userStatus === 'has_voucher' && (
-                      examWindowStatus?.is_open ? (
-                        <Button
-                          onClick={() => handleScheduleExam(exam)}
-                          className={`w-full ${
-                            exam.certification_type === 'CP'
-                              ? 'bg-green-600 hover:bg-green-700'
-                              : 'bg-purple-600 hover:bg-purple-700'
-                          }`}
-                        >
-                          <Calendar className="w-4 h-4 mr-2" />
-                          {texts.scheduleExam}
-                          <ArrowRight className="w-4 h-4 ml-2" />
-                        </Button>
-                      ) : (
-                        <Button disabled variant="secondary" className="w-full">
-                          <CalendarX className="w-4 h-4 mr-2" />
-                          {texts.registrationClosed}
-                        </Button>
-                      )
+                      <Button
+                        onClick={() => handleScheduleExam(exam)}
+                        className={`w-full ${
+                          exam.certification_type === 'CP'
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : 'bg-purple-600 hover:bg-purple-700'
+                        }`}
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        {texts.scheduleExam}
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
                     )}
 
                     {exam.userStatus === 'scheduled' && (

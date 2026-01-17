@@ -795,6 +795,7 @@ export function QuestionBankManager() {
 
       {/* Create Dialog */}
       <QuestionSetDialog
+        key={`create-${createLanguage}`}
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onSubmit={handleCreate}

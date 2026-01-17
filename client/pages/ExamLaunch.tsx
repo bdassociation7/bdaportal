@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   RotateCcw,
+  Clock,
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
 import TechCheckWidget, { TechCheckResult } from '@/components/TechCheckWidget';
@@ -207,8 +208,8 @@ export default function ExamLaunch() {
         }
       }
 
-      // Load quiz if provided directly
-      if (quizId && !quiz) {
+      // Load quiz if provided directly (no booking_id)
+      if (quizId && !booking) {
         const { data: quizData, error: quizError } = await supabase
           .from('quizzes')
           .select('*')
@@ -218,6 +219,56 @@ export default function ExamLaunch() {
         if (!quizError && quizData) {
           setQuiz(quizData);
           targetQuizId = quizData.id;
+
+          // ENFORCEMENT: Check if user has an existing booking for this quiz
+          // This prevents bypassing scheduled windows by going directly to exam-launch
+          const { data: existingBookings } = await supabase
+            .from('exam_bookings')
+            .select('*, quiz:quizzes(*)')
+            .eq('user_id', authUser.id)
+            .eq('quiz_id', quizId)
+            .in('status', ['scheduled', 'rescheduled', 'confirmed'])
+            .gte('scheduled_start_time', new Date().toISOString())
+            .order('scheduled_start_time', { ascending: true });
+
+          if (existingBookings && existingBookings.length > 0) {
+            // User has existing booking(s) - enforce the scheduled window
+            const activeBooking = existingBookings[0];
+            setBooking(activeBooking);
+
+            // Check scheduling window for the existing booking
+            const scheduleCheck = checkSchedulingWindow(activeBooking);
+            setSchedulingStatus(scheduleCheck);
+
+            // Load voucher info if available
+            if (activeBooking.voucher_id) {
+              let { data: voucherData } = await supabase
+                .from('exam_vouchers')
+                .select('*')
+                .eq('id', activeBooking.voucher_id)
+                .single();
+
+              if (!voucherData) {
+                const { data: ecpVoucher } = await supabase
+                  .from('ecp_vouchers')
+                  .select('*')
+                  .eq('id', activeBooking.voucher_id)
+                  .single();
+                if (ecpVoucher) {
+                  voucherData = { ...ecpVoucher, source: 'ecp' };
+                }
+              }
+              if (voucherData) setVoucher(voucherData);
+            }
+          } else {
+            // No existing booking - user must schedule first
+            // Set a status that blocks launch and prompts scheduling
+            setSchedulingStatus({
+              canLaunch: false,
+              reason: 'You must schedule your exam before taking it. Please book an exam time slot.',
+              isExpired: false,
+            });
+          }
         }
       }
 
@@ -590,6 +641,25 @@ export default function ExamLaunch() {
           </Alert>
         )}
 
+        {/* No Booking - Must Schedule First */}
+        {!booking && schedulingStatus && !schedulingStatus.canLaunch && (
+          <Alert className="mb-6 bg-orange-50 border-orange-200">
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+            <AlertTitle className="text-orange-800">Scheduling Required</AlertTitle>
+            <AlertDescription className="text-orange-700">
+              <p>{schedulingStatus.reason}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 border-orange-300 text-orange-700 hover:bg-orange-100"
+                onClick={() => navigate(`/schedule-exam?quiz_id=${quiz?.id}${voucherIdFromUrl ? `&voucher_id=${voucherIdFromUrl}` : ''}`)}
+              >
+                Schedule Your Exam
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Active Attempt - Resume Option */}
         {eligibility?.has_existing_attempt && (
           <Alert className="mb-6 bg-yellow-50 border-yellow-200">
@@ -602,7 +672,7 @@ export default function ExamLaunch() {
         )}
 
         {/* Ready Alert - Only show if eligible, no active attempt, and scheduling window is valid */}
-        {eligibility?.eligible && !eligibility?.has_existing_attempt && (!booking || schedulingStatus?.canLaunch) && (
+        {eligibility?.eligible && !eligibility?.has_existing_attempt && schedulingStatus?.canLaunch && (
           <Alert className="mb-6">
             <CheckCircle2 className="h-4 w-4" />
             <AlertTitle>Ready to Begin</AlertTitle>
@@ -638,7 +708,7 @@ export default function ExamLaunch() {
               onClick={handleLaunchExam}
               className="w-full bg-green-600 hover:bg-green-700"
               size="lg"
-              disabled={isLaunching || (booking && schedulingStatus && !schedulingStatus.canLaunch)}
+              disabled={isLaunching || (schedulingStatus && !schedulingStatus.canLaunch)}
             >
               {isLaunching ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -647,10 +717,12 @@ export default function ExamLaunch() {
               )}
               {isLaunching
                 ? 'Starting Exam...'
-                : booking && schedulingStatus && !schedulingStatus.canLaunch
-                  ? schedulingStatus.isExpired
-                    ? 'Exam Window Expired'
-                    : 'Exam Not Available Yet'
+                : schedulingStatus && !schedulingStatus.canLaunch
+                  ? !booking
+                    ? 'Schedule Required'
+                    : schedulingStatus.isExpired
+                      ? 'Exam Window Expired'
+                      : 'Exam Not Available Yet'
                   : 'Launch Exam Now'}
             </Button>
           ) : (

@@ -198,7 +198,7 @@ export default function ScheduleExam() {
         .select('id, scheduled_start_time, scheduled_end_time, timezone, status, confirmation_code, created_at')
         .eq('user_id', authUser.id)
         .eq('quiz_id', quizId)
-        .in('status', ['scheduled', 'rescheduled'])
+        .in('status', ['scheduled', 'rescheduled', 'confirmed'])
         .gte('scheduled_start_time', new Date().toISOString())
         .order('scheduled_start_time', { ascending: true })
         .limit(1);
@@ -694,16 +694,16 @@ export default function ScheduleExam() {
           </Alert>
         )}
 
-        {/* Exam Window Closed Warning */}
+        {/* Exam Window Info - Show warning if closed */}
         {examWindowStatus && !examWindowStatus.is_open && (
-          <Alert variant="destructive" className="mb-6 border-red-200 bg-red-50">
-            <CalendarX className="h-4 w-4 text-red-600" />
-            <AlertTitle className="text-red-800">Exam Registration Closed</AlertTitle>
-            <AlertDescription className="text-red-700">
-              <p>Exam scheduling is currently not available. The registration window is closed.</p>
+          <Alert className="mb-6 border-orange-200 bg-orange-50">
+            <CalendarX className="h-4 w-4 text-orange-600" />
+            <AlertTitle className="text-orange-800">Exam Window Information</AlertTitle>
+            <AlertDescription className="text-orange-700">
+              <p>You can schedule your exam, but please note: the exam can only be taken during open exam windows.</p>
               {examWindowStatus.next_window_date ? (
                 <p className="mt-2 font-medium">
-                  Next registration window opens:{' '}
+                  Next exam window opens:{' '}
                   {new Date(examWindowStatus.next_window_date).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -714,14 +714,13 @@ export default function ScheduleExam() {
                   )}
                 </p>
               ) : (
-                <p className="mt-2">Please check back later for exam scheduling availability.</p>
+                <p className="mt-2">Please contact support for information about upcoming exam windows.</p>
               )}
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Scheduling Form - Only show if window is open */}
-        {(!examWindowStatus || examWindowStatus.is_open) && (
+        {/* Scheduling Form - Always shown to allow scheduling */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -844,7 +843,6 @@ export default function ScheduleExam() {
             </Button>
           </CardContent>
         </Card>
-        )}
 
         {/* Back Button */}
         <div className="mt-6 text-center">

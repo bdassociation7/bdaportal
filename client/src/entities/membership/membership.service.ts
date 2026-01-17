@@ -382,14 +382,14 @@ export class MembershipService {
   ): Promise<MembershipResult<UserMembership>> {
     try {
       const durationMonths = params.duration_months || 12;
-      const startDate = new Date();
-      const expiryDate = new Date();
-      expiryDate.setMonth(expiryDate.getMonth() + durationMonths);
 
-      // Call the activate_membership function
+      // Call the activate_membership function with duration
       const { data, error } = await supabase.rpc('activate_membership', {
         p_user_id: params.user_id,
         p_membership_type: params.membership_type,
+        p_duration_months: durationMonths,
+        p_admin_user_id: adminId,
+        p_notes: params.notes || null,
         p_woocommerce_order_id: null,
         p_woocommerce_product_id: null,
       });

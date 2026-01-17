@@ -487,6 +487,7 @@ export function FlashcardManager() {
 
       {/* Create Dialog */}
       <DeckDialog
+        key={`create-${createLanguage}`}
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onSubmit={handleCreate}
