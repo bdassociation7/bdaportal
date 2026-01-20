@@ -143,18 +143,30 @@ export default function ScheduleExam() {
     return { minDate, maxDate };
   }, [examWindowStatus]);
 
-  // Generate quick select dates (next 5 available dates)
+  // Generate quick select dates (5 dates centered around selected date, or first 5 if none selected)
   const quickSelectDates = useMemo(() => {
     const dates: Date[] = [];
-    let currentDate = dateConstraints.minDate;
 
+    // Determine starting point: if date selected, center around it; otherwise start from min
+    let startDate: Date;
+    if (selectedDate) {
+      // Start 2 days before selected date, but not before minDate
+      const twoBefore = addDays(selectedDate, -2);
+      startDate = isBefore(twoBefore, dateConstraints.minDate)
+        ? dateConstraints.minDate
+        : twoBefore;
+    } else {
+      startDate = dateConstraints.minDate;
+    }
+
+    let currentDate = startDate;
     while (dates.length < 5 && !isAfter(currentDate, dateConstraints.maxDate)) {
       dates.push(currentDate);
       currentDate = addDays(currentDate, 1);
     }
 
     return dates;
-  }, [dateConstraints]);
+  }, [dateConstraints, selectedDate]);
 
   // Check if a date is within the allowed range
   const isDateDisabled = (date: Date) => {
