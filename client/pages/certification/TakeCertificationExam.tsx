@@ -264,7 +264,7 @@ export default function TakeCertificationExam() {
         .from('exam_bookings')
         .select('*')
         .eq('user_id', user?.id)
-        .in('status', ['scheduled', 'rescheduled', 'confirmed'])
+        .in('status', ['scheduled', 'rescheduled'])
         .gte('scheduled_start_time', new Date().toISOString())
         .order('scheduled_start_time', { ascending: true });
 
@@ -294,7 +294,7 @@ export default function TakeCertificationExam() {
 
     // Check if user has a booking for this exam
     const booking = bookings?.find(
-      (b: any) => b.quiz_id === exam.id && ['scheduled', 'rescheduled', 'confirmed'].includes(b.status)
+      (b: any) => b.quiz_id === exam.id && ['scheduled', 'rescheduled'].includes(b.status)
     );
 
     if (booking) {

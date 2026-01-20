@@ -198,7 +198,7 @@ export default function ScheduleExam() {
         .select('id, scheduled_start_time, scheduled_end_time, timezone, status, confirmation_code, created_at')
         .eq('user_id', authUser.id)
         .eq('quiz_id', quizId)
-        .in('status', ['scheduled', 'rescheduled', 'confirmed'])
+        .in('status', ['scheduled', 'rescheduled'])
         .gte('scheduled_start_time', new Date().toISOString())
         .order('scheduled_start_time', { ascending: true })
         .limit(1);
