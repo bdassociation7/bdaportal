@@ -454,6 +454,7 @@ export default function TakeCertificationExam() {
   });
 
   // Fetch user's exam bookings (only future bookings with valid status)
+  // Always fetch regardless of voucher context so we can show scheduled exam banner
   const { data: bookings, isLoading: bookingsLoading } = useQuery({
     queryKey: ['user-exam-bookings'],
     queryFn: async () => {
@@ -468,7 +469,23 @@ export default function TakeCertificationExam() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user?.id && hasVoucherContext,
+    enabled: !!user?.id,
+  });
+
+  // Fetch quiz info for scheduled bookings (for banner display when no voucher context)
+  const { data: scheduledExamInfo } = useQuery({
+    queryKey: ['scheduled-exam-info', bookings?.[0]?.quiz_id],
+    queryFn: async () => {
+      if (!bookings || bookings.length === 0) return null;
+      const booking = bookings[0];
+      const { data: quiz } = await supabase
+        .from('quizzes')
+        .select('id, title, title_ar, certification_type')
+        .eq('id', booking.quiz_id)
+        .single();
+      return { booking, quiz };
+    },
+    enabled: !!bookings && bookings.length > 0,
   });
 
   // Fetch user attempt history
@@ -548,6 +565,17 @@ export default function TakeCertificationExam() {
     return texts.hard;
   };
 
+  // Helper: Check if a booking is ready to launch
+  const isBookingReady = (booking: any) => {
+    if (!booking) return false;
+    if (DEV_MODE_SKIP_TIME_CHECK) return true;
+    const now = new Date();
+    const examStart = new Date(booking.scheduled_start_time);
+    const examEnd = new Date(booking.scheduled_end_time);
+    const windowStart = new Date(examStart.getTime() - 15 * 60 * 1000);
+    return now >= windowStart && now <= examEnd;
+  };
+
   // =========================================================================
   // MODE B: No voucher context - Show prompt to select voucher
   // =========================================================================
@@ -562,6 +590,22 @@ export default function TakeCertificationExam() {
           </h1>
           <p className="mt-2 opacity-90">{texts.subtitle}</p>
         </div>
+
+        {/* Scheduled Exam Banner (shows even without voucher context) */}
+        {scheduledExamInfo && scheduledExamInfo.booking && (
+          <ScheduledExamBanner
+            booking={scheduledExamInfo.booking}
+            examTitle={language === 'ar' && scheduledExamInfo.quiz?.title_ar
+              ? scheduledExamInfo.quiz.title_ar
+              : scheduledExamInfo.quiz?.title || 'Certification Exam'}
+            onLaunch={() => {
+              if (isBookingReady(scheduledExamInfo.booking)) {
+                navigate(`/exam-launch?booking_id=${scheduledExamInfo.booking.id}`);
+              }
+            }}
+            language={language as 'en' | 'ar'}
+          />
+        )}
 
         {/* No Voucher Selected Card */}
         <Card className="border-orange-200 bg-orange-50">
