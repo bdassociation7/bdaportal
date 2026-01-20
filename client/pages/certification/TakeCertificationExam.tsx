@@ -7,7 +7,7 @@
  * 2. No voucher context: Shows prompt to select a voucher first
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthContext } from '@/app/providers/AuthProvider';
@@ -33,8 +33,205 @@ import {
   ArrowLeft,
   Lock,
   Play,
+  Timer,
+  Sparkles,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+
+// ============================================================================
+// Countdown Hook & Component
+// ============================================================================
+
+interface CountdownTime {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  total: number;
+  isReady: boolean;
+}
+
+function useCountdown(targetDate: string | Date): CountdownTime {
+  const [countdown, setCountdown] = useState<CountdownTime>(() => calculateCountdown(targetDate));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCountdown(calculateCountdown(targetDate));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  return countdown;
+}
+
+function calculateCountdown(targetDate: string | Date): CountdownTime {
+  const now = new Date().getTime();
+  const target = new Date(targetDate).getTime();
+  const windowStart = target - 15 * 60 * 1000; // 15 min before
+  const difference = target - now;
+  const isReady = now >= windowStart;
+
+  if (difference <= 0) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, total: 0, isReady: true };
+  }
+
+  return {
+    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+    hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+    minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+    seconds: Math.floor((difference % (1000 * 60)) / 1000),
+    total: difference,
+    isReady,
+  };
+}
+
+interface ScheduledExamBannerProps {
+  booking: any;
+  examTitle: string;
+  onLaunch: () => void;
+  language: 'en' | 'ar';
+}
+
+function ScheduledExamBanner({ booking, examTitle, onLaunch, language }: ScheduledExamBannerProps) {
+  const countdown = useCountdown(booking.scheduled_start_time);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString(language === 'ar' ? 'ar-SA' : 'en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const texts = language === 'ar' ? {
+    yourExamScheduled: 'امتحانك المجدول',
+    startsIn: 'يبدأ خلال',
+    days: 'يوم',
+    hours: 'ساعة',
+    minutes: 'دقيقة',
+    seconds: 'ثانية',
+    confirmationCode: 'رمز التأكيد',
+    examReadyNow: 'الامتحان جاهز الآن!',
+    youCanLaunch: 'يمكنك بدء الامتحان الآن',
+    launchExam: 'ابدأ الامتحان',
+    at: 'في',
+  } : {
+    yourExamScheduled: 'Your Exam is Scheduled',
+    startsIn: 'Starts in',
+    days: 'days',
+    hours: 'hours',
+    minutes: 'min',
+    seconds: 'sec',
+    confirmationCode: 'Confirmation Code',
+    examReadyNow: 'Exam Ready Now!',
+    youCanLaunch: 'You can launch your exam now',
+    launchExam: 'Launch Exam',
+    at: 'at',
+  };
+
+  if (countdown.isReady) {
+    // Ready to launch - green animated banner
+    return (
+      <Card className="mb-6 border-2 border-green-400 bg-gradient-to-r from-green-50 via-emerald-50 to-green-50 shadow-lg overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-green-400/10 via-emerald-400/10 to-green-400/10 animate-pulse" />
+        <CardContent className="relative py-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-100 rounded-full animate-bounce">
+                <Sparkles className="h-8 w-8 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-green-800 flex items-center gap-2">
+                  {texts.examReadyNow}
+                </h3>
+                <p className="text-green-700 font-medium">{examTitle}</p>
+                <p className="text-sm text-green-600">{texts.youCanLaunch}</p>
+              </div>
+            </div>
+            <Button
+              size="lg"
+              onClick={onLaunch}
+              className="bg-green-600 hover:bg-green-700 text-white shadow-lg animate-pulse"
+            >
+              <Play className="mr-2 h-5 w-5" />
+              {texts.launchExam}
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Countdown banner - blue gradient
+  return (
+    <Card className="mb-6 border-2 border-blue-300 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 shadow-lg">
+      <CardContent className="py-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          {/* Left: Exam Info */}
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-blue-100 rounded-full">
+              <CalendarCheck className="h-8 w-8 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-blue-900">{texts.yourExamScheduled}</h3>
+              <p className="text-blue-800 font-medium">{examTitle}</p>
+              <p className="text-sm text-blue-700">
+                {formatDate(booking.scheduled_start_time)} {texts.at} {formatTime(booking.scheduled_start_time)}
+              </p>
+              <div className="mt-2">
+                <span className="text-xs text-blue-600">{texts.confirmationCode}: </span>
+                <span className="font-mono font-bold text-blue-800">{booking.confirmation_code}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Countdown */}
+          <div className="flex flex-col items-center">
+            <p className="text-sm text-blue-700 mb-2 font-medium">{texts.startsIn}</p>
+            <div className="flex gap-3">
+              {countdown.days > 0 && (
+                <div className="flex flex-col items-center">
+                  <div className="bg-blue-600 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
+                    <span className="text-2xl font-bold">{countdown.days}</span>
+                  </div>
+                  <span className="text-xs text-blue-600 mt-1">{texts.days}</span>
+                </div>
+              )}
+              <div className="flex flex-col items-center">
+                <div className="bg-blue-600 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
+                  <span className="text-2xl font-bold">{String(countdown.hours).padStart(2, '0')}</span>
+                </div>
+                <span className="text-xs text-blue-600 mt-1">{texts.hours}</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="bg-blue-600 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
+                  <span className="text-2xl font-bold">{String(countdown.minutes).padStart(2, '0')}</span>
+                </div>
+                <span className="text-xs text-blue-600 mt-1">{texts.minutes}</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="bg-blue-500 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
+                  <span className="text-2xl font-bold">{String(countdown.seconds).padStart(2, '0')}</span>
+                </div>
+                <span className="text-xs text-blue-600 mt-1">{texts.seconds}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 type ExamStatus = 'has_voucher' | 'scheduled' | 'ready' | 'certified';
 
@@ -519,6 +716,22 @@ export default function TakeCertificationExam() {
           </CardContent>
         </Card>
       )}
+
+      {/* Scheduled Exam Banner with Countdown */}
+      {examsWithStatus?.map((exam) => {
+        if ((exam.userStatus === 'scheduled' || exam.userStatus === 'ready') && exam.booking) {
+          return (
+            <ScheduledExamBanner
+              key={exam.id}
+              booking={exam.booking}
+              examTitle={language === 'ar' && exam.title_ar ? exam.title_ar : exam.title}
+              onLaunch={() => handleLaunchExam(exam)}
+              language={language as 'en' | 'ar'}
+            />
+          );
+        }
+        return null;
+      })}
 
       {/* Exam Window Status - Only show for users who need to schedule (not for ready/scheduled exams) */}
       {examWindowStatus &&

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -9,7 +10,11 @@ import {
   ClipboardCheck,
   AlertCircle,
   ArrowRight,
-  CheckCircle
+  CheckCircle,
+  CalendarCheck,
+  Play,
+  Sparkles,
+  Timer,
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useUserCertifications, useCertificationStats } from "@/entities/certifications";
@@ -18,6 +23,156 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+// ============================================================================
+// Scheduled Exam Widget with Countdown
+// ============================================================================
+
+interface CountdownTime {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  isReady: boolean;
+}
+
+function useCountdown(targetDate: string): CountdownTime {
+  const [countdown, setCountdown] = useState<CountdownTime>(() => calculateCountdown(targetDate));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCountdown(calculateCountdown(targetDate));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  return countdown;
+}
+
+function calculateCountdown(targetDate: string): CountdownTime {
+  const now = new Date().getTime();
+  const target = new Date(targetDate).getTime();
+  const windowStart = target - 15 * 60 * 1000;
+  const difference = target - now;
+
+  if (difference <= 0 || now >= windowStart) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, isReady: now >= windowStart };
+  }
+
+  return {
+    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+    hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+    minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+    seconds: Math.floor((difference % (1000 * 60)) / 1000),
+    isReady: false,
+  };
+}
+
+interface ScheduledExamWidgetProps {
+  booking: any;
+  quiz: any;
+  onLaunch: () => void;
+  language: string;
+}
+
+function ScheduledExamWidget({ booking, quiz, onLaunch, language }: ScheduledExamWidgetProps) {
+  const countdown = useCountdown(booking.scheduled_start_time);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString(language === 'ar' ? 'ar-SA' : 'en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const texts = language === 'ar' ? {
+    upcomingExam: 'الامتحان القادم',
+    startsIn: 'يبدأ خلال',
+    days: 'يوم',
+    hours: 'ساعة',
+    min: 'د',
+    sec: 'ث',
+    readyNow: 'جاهز الآن!',
+    launchExam: 'ابدأ الامتحان',
+    viewDetails: 'عرض التفاصيل',
+    at: 'في',
+  } : {
+    upcomingExam: 'Upcoming Exam',
+    startsIn: 'Starts in',
+    days: 'd',
+    hours: 'h',
+    min: 'm',
+    sec: 's',
+    readyNow: 'Ready Now!',
+    launchExam: 'Launch Exam',
+    viewDetails: 'View Details',
+    at: 'at',
+  };
+
+  if (countdown.isReady) {
+    return (
+      <Card className="border-2 border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg animate-pulse">
+        <CardContent className="py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-full animate-bounce">
+                <Sparkles className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-green-600 font-medium">{texts.readyNow}</p>
+                <p className="font-bold text-green-900">{quiz?.title || 'Certification Exam'}</p>
+              </div>
+            </div>
+            <Button onClick={onLaunch} className="bg-green-600 hover:bg-green-700">
+              <Play className="mr-2 h-4 w-4" />
+              {texts.launchExam}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-2 border-blue-300 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md">
+      <CardContent className="py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-full">
+              <CalendarCheck className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm text-blue-600 font-medium">{texts.upcomingExam}</p>
+              <p className="font-bold text-blue-900">{quiz?.title || 'Certification Exam'}</p>
+              <p className="text-xs text-blue-700">
+                {formatDate(booking.scheduled_start_time)} {texts.at} {formatTime(booking.scheduled_start_time)}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-sm">
+              <Timer className="h-4 w-4 text-blue-600" />
+              <span className="text-blue-800 font-mono font-bold">
+                {countdown.days > 0 && `${countdown.days}${texts.days} `}
+                {String(countdown.hours).padStart(2, '0')}{texts.hours}
+                {String(countdown.minutes).padStart(2, '0')}{texts.min}
+                {String(countdown.seconds).padStart(2, '0')}{texts.sec}
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 const WP_API_BASE_URL = import.meta.env.VITE_WP_API_BASE_URL || 'http://localhost:8080/wp-json';
 
@@ -89,7 +244,41 @@ export default function IndividualDashboard() {
     enabled: !!user?.id,
   });
 
+  // Fetch upcoming scheduled exam
+  const { data: scheduledExam } = useQuery({
+    queryKey: ['scheduled-exam', user?.id],
+    queryFn: async () => {
+      // Get the next upcoming booking
+      const { data: bookings, error: bookingError } = await supabase
+        .from('exam_bookings')
+        .select('*')
+        .eq('user_id', user?.id || '')
+        .in('status', ['scheduled', 'rescheduled'])
+        .gte('scheduled_start_time', new Date().toISOString())
+        .order('scheduled_start_time', { ascending: true })
+        .limit(1);
+
+      if (bookingError || !bookings || bookings.length === 0) {
+        return null;
+      }
+
+      const booking = bookings[0];
+
+      // Get the quiz info
+      const { data: quiz } = await supabase
+        .from('quizzes')
+        .select('id, title, title_ar, certification_type')
+        .eq('id', booking.quiz_id)
+        .single();
+
+      return { booking, quiz };
+    },
+    enabled: !!user?.id,
+    refetchInterval: 60000, // Refresh every minute
+  });
+
   const certStats = certStatsResult?.data;
+  const { language } = useLanguage();
 
   // Calculate PDC progress (assuming 60 credits over 3 years)
   const pdcProgress = pdcStats ? Math.min(100, (pdcStats.total_approved / 60) * 100) : 0;
@@ -153,6 +342,16 @@ export default function IndividualDashboard() {
           {t('dashboard.individual.subtitle')}
         </p>
       </div>
+
+      {/* Scheduled Exam Widget */}
+      {scheduledExam && scheduledExam.booking && (
+        <ScheduledExamWidget
+          booking={scheduledExam.booking}
+          quiz={scheduledExam.quiz}
+          onLaunch={() => navigate(`/exam-launch?booking_id=${scheduledExam.booking.id}`)}
+          language={language}
+        />
+      )}
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
