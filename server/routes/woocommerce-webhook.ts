@@ -124,6 +124,17 @@ export async function handleWooCommerceOrderWebhook(
       throw partnershipError;
     }
 
+    // Get Certification product mappings from database (for exam vouchers)
+    const { data: certificationProducts, error: certificationError } = await supabase
+      .from('certification_products')
+      .select('*')
+      .eq('is_active', true);
+
+    if (certificationError) {
+      console.error('Error fetching certification products:', certificationError);
+      throw certificationError;
+    }
+
     // Create maps for quick lookup
     const productMap = new Map(
       productMappings.map((p) => [p.woocommerce_product_id.toString(), p])
@@ -137,14 +148,19 @@ export async function handleWooCommerceOrderWebhook(
       (partnershipProducts || []).map((p) => [p.woocommerce_product_id.toString(), p])
     );
 
+    const certificationProductMap = new Map(
+      (certificationProducts || []).map((p) => [p.woocommerce_product_id.toString(), p])
+    );
+
     // Process each line item
     for (const item of order.line_items) {
       const mapping = productMap.get(item.product_id.toString());
       const learningProduct = learningProductMap.get(item.product_id.toString());
       const partnershipProduct = partnershipProductMap.get(item.product_id.toString());
+      const certificationProduct = certificationProductMap.get(item.product_id.toString());
 
       // Skip if none of the product types match
-      if (!mapping && !learningProduct && !partnershipProduct) {
+      if (!mapping && !learningProduct && !partnershipProduct && !certificationProduct) {
         continue;
       }
 
@@ -412,6 +428,88 @@ export async function handleWooCommerceOrderWebhook(
           );
         }
       }
+
+      // Process Certification Exam Voucher creation
+      if (certificationProduct) {
+        console.log(
+          `Processing Certification Voucher: ${certificationProduct.certification_type} (${certificationProduct.exam_language || 'en'}) for ${email}`
+        );
+
+        try {
+          const { data: voucherResults, error: voucherError } = await supabase.rpc(
+            'create_exam_voucher_from_purchase',
+            {
+              p_user_id: userId,
+              p_certification_product_id: certificationProduct.id,
+              p_woocommerce_order_id: order.id,
+              p_woocommerce_product_id: item.product_id,
+              p_quantity: item.quantity || 1,
+            }
+          );
+
+          if (voucherError) {
+            console.error('Error creating exam voucher:', voucherError);
+            await logVoucherError(
+              userId,
+              order.id.toString(),
+              item.product_id.toString(),
+              certificationProduct.id,
+              voucherError.message,
+              { certification_type: certificationProduct.certification_type }
+            );
+            continue;
+          }
+
+          // Log results - voucherResults is an array of created vouchers
+          const results = voucherResults || [];
+          const successCount = results.filter((r: any) => r.success).length;
+          const failedResults = results.filter((r: any) => !r.success);
+
+          if (successCount > 0) {
+            console.log(
+              `Successfully created ${successCount} exam voucher(s) for ${email} (${certificationProduct.certification_type})`
+            );
+
+            // Log successful activation
+            for (const result of results.filter((r: any) => r.success && r.voucher_id)) {
+              await supabase.from('voucher_activation_logs').insert({
+                user_id: userId,
+                voucher_id: result.voucher_id,
+                action: 'created',
+                triggered_by: 'webhook',
+                woocommerce_order_id: order.id,
+                woocommerce_product_id: item.product_id,
+                certification_product_id: certificationProduct.id,
+                notes: `Voucher ${result.voucher_code} created from order #${order.id}`,
+              });
+            }
+          }
+
+          // Log any failures
+          for (const failedResult of failedResults) {
+            if (failedResult.error_message && !failedResult.error_message.includes('already exist')) {
+              await logVoucherError(
+                userId,
+                order.id.toString(),
+                item.product_id.toString(),
+                certificationProduct.id,
+                failedResult.error_message,
+                { certification_type: certificationProduct.certification_type }
+              );
+            }
+          }
+        } catch (error: any) {
+          console.error('Certification voucher creation error:', error);
+          await logVoucherError(
+            userId,
+            order.id.toString(),
+            item.product_id.toString(),
+            certificationProduct.id,
+            error.message,
+            { certification_type: certificationProduct.certification_type }
+          );
+        }
+      }
     }
 
     res.status(200).json({ success: true, message: 'Webhook processed' });
@@ -499,6 +597,33 @@ async function logPartnershipError(
     });
   } catch (logError) {
     console.error('Failed to log Partnership error:', logError);
+  }
+}
+
+/**
+ * Log Certification Voucher creation errors for admin review
+ */
+async function logVoucherError(
+  userId: string | null,
+  orderId: string,
+  productId: string,
+  certificationProductId: string,
+  errorMessage: string,
+  details: Record<string, any>
+): Promise<void> {
+  try {
+    await supabase.from('voucher_activation_logs').insert({
+      user_id: userId,
+      action: 'failed',
+      triggered_by: 'webhook',
+      woocommerce_order_id: parseInt(orderId),
+      woocommerce_product_id: parseInt(productId),
+      certification_product_id: certificationProductId,
+      error_message: errorMessage,
+      notes: JSON.stringify(details),
+    });
+  } catch (logError) {
+    console.error('Failed to log Voucher error:', logError);
   }
 }
 

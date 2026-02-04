@@ -59,12 +59,15 @@ const CERTIFICATION_LABELS: Record<CertificationType, string> = {
 
 type FormMode = 'create' | 'edit' | null;
 
+type ExamLanguage = 'en' | 'ar';
+
 interface ProductFormData {
   id?: string;
   woocommerce_product_id: string;
   woocommerce_product_name: string;
   woocommerce_product_sku: string;
   certification_type: CertificationType;
+  exam_language: ExamLanguage;
   quiz_id: string;
   vouchers_per_purchase: string;
   voucher_validity_months: string;
@@ -75,6 +78,7 @@ const emptyFormData: ProductFormData = {
   woocommerce_product_name: '',
   woocommerce_product_sku: '',
   certification_type: 'CP',
+  exam_language: 'en',
   quiz_id: '',
   vouchers_per_purchase: '1',
   voucher_validity_months: '6',
@@ -151,6 +155,10 @@ export default function CertificationProducts() {
       confirmDelete: 'Delete',
       cpLabel: 'BDA-CP™ - BDA Certified Professional',
       scpLabel: 'BDA-SCP™ - BDA Senior Certified Professional',
+      examLanguage: 'Exam Language',
+      examLanguageHelp: 'Language of the exam voucher (English or Arabic)',
+      english: 'English',
+      arabic: 'Arabic',
     },
     ar: {
       title: 'منتجات الشهادات',
@@ -217,6 +225,10 @@ export default function CertificationProducts() {
       confirmDelete: 'حذف',
       cpLabel: 'BDA-CP™ - محترف معتمد',
       scpLabel: 'BDA-SCP™ - محترف معتمد أول',
+      examLanguage: 'لغة الامتحان',
+      examLanguageHelp: 'لغة قسيمة الامتحان (الإنجليزية أو العربية)',
+      english: 'الإنجليزية',
+      arabic: 'العربية',
     }
   };
 
@@ -261,6 +273,7 @@ export default function CertificationProducts() {
       woocommerce_product_name: product.woocommerce_product_name,
       woocommerce_product_sku: product.woocommerce_product_sku || '',
       certification_type: product.certification_type,
+      exam_language: (product as any).exam_language || 'en',
       quiz_id: product.quiz_id || '',
       vouchers_per_purchase: product.vouchers_per_purchase.toString(),
       voucher_validity_months: product.voucher_validity_months.toString(),
@@ -324,10 +337,11 @@ export default function CertificationProducts() {
           woocommerce_product_name: formData.woocommerce_product_name,
           woocommerce_product_sku: formData.woocommerce_product_sku || undefined,
           certification_type: formData.certification_type,
+          exam_language: formData.exam_language,
           quiz_id: formData.quiz_id || undefined,
           vouchers_per_purchase: vouchersPerPurchase,
           voucher_validity_months: validityMonths,
-        };
+        } as any;
 
         await createMutation.mutateAsync(dto);
         toast({
@@ -338,10 +352,11 @@ export default function CertificationProducts() {
         const dto: UpdateCertificationProductDTO = {
           woocommerce_product_name: formData.woocommerce_product_name,
           woocommerce_product_sku: formData.woocommerce_product_sku || undefined,
+          exam_language: formData.exam_language,
           quiz_id: formData.quiz_id || undefined,
           vouchers_per_purchase: vouchersPerPurchase,
           voucher_validity_months: validityMonths,
-        };
+        } as any;
 
         await updateMutation.mutateAsync({ id: formData.id, dto });
         toast({
@@ -539,11 +554,18 @@ export default function CertificationProducts() {
                     </div>
 
                     {/* Details */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <div className="text-xs text-gray-600 mb-1">{texts.certification}</div>
                         <Badge variant="outline">
-                          {product.certification_type === 'CP' ? texts.cpLabel : texts.scpLabel}
+                          {product.certification_type === 'CP' ? 'BDA-CP™' : 'BDA-SCP™'}
+                        </Badge>
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="text-xs text-gray-600 mb-1">{texts.examLanguage}</div>
+                        <Badge variant="outline" className={(product as any).exam_language === 'ar' ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-blue-50 text-blue-700 border-blue-300'}>
+                          {(product as any).exam_language === 'ar' ? texts.arabic : texts.english}
                         </Badge>
                       </div>
 
@@ -693,6 +715,30 @@ export default function CertificationProducts() {
                   <SelectItem value="SCP">{texts.scpLabel}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Exam Language */}
+            <div>
+              <Label htmlFor="exam-lang">
+                {texts.examLanguage} <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.exam_language}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, exam_language: value as ExamLanguage })
+                }
+              >
+                <SelectTrigger id="exam-lang">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">{texts.english}</SelectItem>
+                  <SelectItem value="ar">{texts.arabic}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                {texts.examLanguageHelp}
+              </p>
             </div>
 
             {/* Quiz Link */}
