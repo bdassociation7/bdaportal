@@ -754,7 +754,7 @@ export default function CertificationProducts() {
                 <SelectContent>
                   <SelectItem value="none">{texts.none}</SelectItem>
                   {quizzes
-                    ?.filter((q) => q.certification_type === formData.certification_type)
+                    ?.filter((q) => q.certification_type === formData.certification_type && q.exam_language === formData.exam_language)
                     .map((quiz) => (
                       <SelectItem key={quiz.id} value={quiz.id}>
                         {quiz.title}
