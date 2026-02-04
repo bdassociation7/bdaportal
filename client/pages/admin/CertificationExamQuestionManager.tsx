@@ -56,6 +56,28 @@ const BABOK_KNOWLEDGE_AREAS = [
   { value: 'techniques', label: 'Techniques' },
 ];
 
+// BDA BoCK Competency Areas for fail-only feedback
+const BDA_COMPETENCIES = {
+  behavioral: [
+    { value: 'Strategic Leadership', label: 'Strategic Leadership' },
+    { value: 'Effective Communication', label: 'Effective Communication' },
+    { value: 'Business Acumen', label: 'Business Acumen' },
+    { value: 'Emotional Intelligence (EQ)', label: 'Emotional Intelligence (EQ)' },
+    { value: 'Critical Thinking & Problem Solving', label: 'Critical Thinking & Problem Solving' },
+    { value: 'Consultative Mindset', label: 'Consultative Mindset' },
+    { value: 'Negotiation & Relationship Management', label: 'Negotiation & Relationship Management' },
+  ],
+  knowledge_based: [
+    { value: 'Growth & Expansion Strategies', label: 'Growth & Expansion Strategies' },
+    { value: 'Market & Competitive Analysis', label: 'Market & Competitive Analysis' },
+    { value: 'Innovation in Business Development', label: 'Innovation in Business Development' },
+    { value: 'Business Project Management', label: 'Business Project Management' },
+    { value: 'Financial & Pricing Models', label: 'Financial & Pricing Models' },
+    { value: 'Marketing & Sales Strategies', label: 'Marketing & Sales Strategies' },
+    { value: 'Legal & Compliance in Business Development', label: 'Legal & Compliance in Business Development' },
+  ],
+};
+
 export default function CertificationExamQuestionManager() {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
@@ -85,6 +107,8 @@ export default function CertificationExamQuestionManager() {
     question_text_ar: string;
     question_type: 'multiple_choice' | 'true_false' | 'multi_select';
     bock_domain: string;
+    competency_section: 'behavioral' | 'knowledge_based' | '';
+    competency_name: string;
     difficulty: 'easy' | 'medium' | 'hard';
     points: number;
     order_index: number;
@@ -96,6 +120,8 @@ export default function CertificationExamQuestionManager() {
     question_text_ar: '',
     question_type: 'multiple_choice',
     bock_domain: '',
+    competency_section: '',
+    competency_name: '',
     difficulty: 'medium',
     points: 1,
     order_index: 0,
@@ -115,6 +141,8 @@ export default function CertificationExamQuestionManager() {
       question_text_ar: '',
       question_type: 'multiple_choice',
       bock_domain: '',
+      competency_section: '',
+      competency_name: '',
       difficulty: 'medium',
       points: 1,
       order_index: questions.length,
@@ -139,6 +167,8 @@ export default function CertificationExamQuestionManager() {
       question_text_ar: question.question_text_ar || '',
       question_type: question.question_type || 'multiple_choice',
       bock_domain: question.bock_domain || '',
+      competency_section: ((question as any).competency_section || '') as 'behavioral' | 'knowledge_based' | '',
+      competency_name: (question as any).competency_name || '',
       difficulty: question.difficulty || 'medium',
       points: question.points || 1,
       order_index: question.order_index || questionIndex,
@@ -243,6 +273,8 @@ export default function CertificationExamQuestionManager() {
         question_text_ar: questionForm.question_text_ar || undefined,
         question_type: questionForm.question_type,
         bock_domain: questionForm.bock_domain || undefined,
+        competency_section: questionForm.competency_section || undefined,
+        competency_name: questionForm.competency_name || undefined,
         difficulty: questionForm.difficulty,
         points: questionForm.points,
         order_index: questionForm.order_index,
@@ -540,6 +572,94 @@ export default function CertificationExamQuestionManager() {
               <p className="text-xs text-gray-500">
                 Select the BABOK knowledge area this question relates to
               </p>
+            </div>
+
+            {/* BDA Competency Tagging - For fail-only competency feedback */}
+            <div className="space-y-4 p-4 bg-indigo-50/50 rounded-lg border border-indigo-200">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center">
+                  <span className="text-indigo-600 text-sm">📊</span>
+                </div>
+                <Label className="text-indigo-800 font-semibold">BDA Competency Tagging</Label>
+              </div>
+              <p className="text-xs text-indigo-700 -mt-2 mb-3">
+                Tag questions with BDA BoCK competencies for fail-only feedback analysis
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Competency Section */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Competency Section</Label>
+                  <Select
+                    value={questionForm.competency_section || undefined}
+                    onValueChange={(value: 'behavioral' | 'knowledge_based') => {
+                      setQuestionForm((prev) => ({
+                        ...prev,
+                        competency_section: value,
+                        competency_name: '', // Reset competency name when section changes
+                      }));
+                    }}
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Select section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="behavioral">
+                        <span className="flex items-center gap-2">
+                          <span className="text-amber-600">●</span>
+                          Behavioral (45%)
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="knowledge_based">
+                        <span className="flex items-center gap-2">
+                          <span className="text-blue-600">●</span>
+                          Knowledge-Based (55%)
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Competency Name - Filtered by section */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Competency Name</Label>
+                  <Select
+                    value={questionForm.competency_name || undefined}
+                    onValueChange={(value) =>
+                      setQuestionForm((prev) => ({ ...prev, competency_name: value }))
+                    }
+                    disabled={!questionForm.competency_section}
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder={questionForm.competency_section ? "Select competency" : "Select section first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {questionForm.competency_section &&
+                        BDA_COMPETENCIES[questionForm.competency_section].map((comp) => (
+                          <SelectItem key={comp.value} value={comp.value}>
+                            {comp.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Selected Competency Display */}
+              {questionForm.competency_section && questionForm.competency_name && (
+                <div className={cn(
+                  "mt-2 p-2 rounded-md text-sm flex items-center gap-2",
+                  questionForm.competency_section === 'behavioral'
+                    ? "bg-amber-100 text-amber-800 border border-amber-200"
+                    : "bg-blue-100 text-blue-800 border border-blue-200"
+                )}>
+                  <span>{questionForm.competency_section === 'behavioral' ? '🧠' : '📚'}</span>
+                  <span className="font-medium">
+                    {questionForm.competency_section === 'behavioral' ? 'Behavioral:' : 'Knowledge-Based:'}
+                  </span>
+                  <span>{questionForm.competency_name}</span>
+                </div>
+              )}
             </div>
 
             {/* Answer Selection Type */}
@@ -1036,6 +1156,18 @@ export default function CertificationExamQuestionManager() {
                         {question.bock_domain && (
                           <Badge variant="outline" className="bg-purple-50 border-purple-300 text-purple-700">
                             {BABOK_KNOWLEDGE_AREAS.find(a => a.value === question.bock_domain)?.label.substring(0, 30) || question.bock_domain}
+                          </Badge>
+                        )}
+                        {(question as any).competency_name && (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              (question as any).competency_section === 'behavioral'
+                                ? "bg-amber-50 border-amber-300 text-amber-700"
+                                : "bg-indigo-50 border-indigo-300 text-indigo-700"
+                            )}
+                          >
+                            {(question as any).competency_section === 'behavioral' ? '🧠' : '📚'} {(question as any).competency_name}
                           </Badge>
                         )}
                       </div>

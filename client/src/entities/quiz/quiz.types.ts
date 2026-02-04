@@ -72,6 +72,11 @@ export interface Quiz {
 }
 
 /**
+ * Competency section for BDA BoCK
+ */
+export type CompetencySection = 'behavioral' | 'knowledge_based';
+
+/**
  * Quiz Question from database
  */
 export interface QuizQuestion {
@@ -81,6 +86,8 @@ export interface QuizQuestion {
   question_text_ar: string | null;
   question_type: QuestionType;
   bock_domain: string | null;
+  competency_section: CompetencySection | null;
+  competency_name: string | null;
   difficulty: DifficultyLevel;
   points: number;
   order_index: number;
@@ -323,6 +330,8 @@ export interface CreateQuestionDTO {
   question_text_ar?: string;
   question_type: QuestionType;
   bock_domain?: string;
+  competency_section?: CompetencySection;
+  competency_name?: string;
   difficulty: DifficultyLevel;
   points?: number;
   order_index: number;
@@ -337,6 +346,8 @@ export interface UpdateQuestionDTO {
   question_text_ar?: string;
   question_type?: QuestionType;
   bock_domain?: string;
+  competency_section?: CompetencySection;
+  competency_name?: string;
   difficulty?: DifficultyLevel;
   points?: number;
   order_index?: number;
