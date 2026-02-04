@@ -1,3 +1,4 @@
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -10,6 +11,8 @@ import {
   FileText,
   Loader2,
   AlertCircle,
+  BarChart3,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +57,9 @@ interface AttemptAnswer {
     question_text: string;
     question_text_ar: string | null;
     points: number;
+    bock_domain: string | null;
+    competency_name: string | null;
+    competency_section: string | null;
   };
 }
 
@@ -82,7 +88,7 @@ export default function ExamResults() {
     enabled: !!attemptId,
   });
 
-  // Fetch attempt answers with question info
+  // Fetch attempt answers with question info (including competency fields for feedback)
   const { data: answers, isLoading: answersLoading } = useQuery({
     queryKey: ['certification-attempt-answers', attemptId],
     queryFn: async () => {
@@ -92,7 +98,7 @@ export default function ExamResults() {
         .from('quiz_attempt_answers')
         .select(`
           *,
-          question:quiz_questions(id, question_text, question_text_ar, points)
+          question:quiz_questions(id, question_text, question_text_ar, points, bock_domain, competency_name, competency_section)
         `)
         .eq('attempt_id', attemptId);
 
@@ -101,6 +107,36 @@ export default function ExamResults() {
     },
     enabled: !!attemptId,
   });
+
+  // Calculate weak competency areas for failed candidates (qualitative only, no numeric data)
+  const weakCompetencyAreas: string[] = React.useMemo(() => {
+    if (!answers || answers.length === 0) return [];
+
+    // Group answers by competency_name
+    const competencyMap = new Map<string, { correct: number; total: number }>();
+
+    answers.forEach((answer) => {
+      const competency = answer.question?.competency_name;
+      if (!competency) return; // Skip if no competency assigned
+
+      const current = competencyMap.get(competency) || { correct: 0, total: 0 };
+      current.total += 1;
+      if (answer.is_correct) {
+        current.correct += 1;
+      }
+      competencyMap.set(competency, current);
+    });
+
+    // Find competencies where performance is below target (< 50%)
+    // Return only the names, no numeric data
+    return Array.from(competencyMap.entries())
+      .filter(([_, stats]) => {
+        const percentage = (stats.correct / stats.total) * 100;
+        return percentage < 50; // Below target threshold
+      })
+      .map(([competency]) => competency)
+      .sort(); // Alphabetical order
+  }, [answers]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -166,7 +202,6 @@ export default function ExamResults() {
   const totalPointsPossible = attempt.total_points_possible ?? 0;
   const passingScore = attempt.quiz?.passing_score_percentage ?? 70;
   const certificationType = attempt.quiz?.certification_type || 'CP';
-  const isCP = certificationType === 'CP';
   const isSCP = certificationType === 'SCP';
 
   // Calculate time spent if not stored
@@ -333,46 +368,53 @@ export default function ExamResults() {
         </CardContent>
       </Card>
 
-      {/* Questions Breakdown */}
-      {answers && answers.length > 0 && (
-        <Card>
+      {/* Competency Feedback - Only shown to failed candidates */}
+      {!passed && weakCompetencyAreas.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50">
           <CardHeader>
-            <CardTitle>Question Summary</CardTitle>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-amber-600" />
+              <CardTitle className="text-amber-900">Areas for Improvement</CardTitle>
+            </div>
+            <p className="text-sm text-amber-700 mt-1">
+              Based on your exam performance, improvement is recommended in the following competency areas:
+            </p>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {answers.map((answer, index) => (
-              <div
-                key={answer.id}
-                className={cn(
-                  'p-4 rounded-lg border-2',
-                  answer.is_correct ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-                )}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {answer.is_correct ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-600" />
-                      )}
-                      <span className="font-semibold text-gray-900">
-                        Question {index + 1}
-                      </span>
-                    </div>
-                    <p className="text-gray-700 line-clamp-2">
-                      {answer.question?.question_text || 'Question text not available'}
-                    </p>
-                  </div>
-                  <div className="text-sm font-semibold whitespace-nowrap">
-                    {answer.points_earned}/{answer.question?.points || 1} pts
-                  </div>
-                </div>
-              </div>
-            ))}
+          <CardContent>
+            <ul className="space-y-2">
+              {weakCompetencyAreas.map((competency) => (
+                <li
+                  key={competency}
+                  className="flex items-center gap-2 text-amber-800"
+                >
+                  <span className="w-2 h-2 bg-amber-500 rounded-full flex-shrink-0" />
+                  <span className="font-medium">{competency}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-sm text-amber-700 mt-4">
+              We encourage you to review these competency areas through the BDA Learning System before your next attempt.
+            </p>
           </CardContent>
         </Card>
       )}
+
+      {/* Exam Integrity Notice */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-blue-900 text-sm">Exam Content Protection</h4>
+              <p className="text-sm text-blue-700 mt-1">
+                To maintain exam integrity and validity, detailed question-level feedback,
+                correct answers, and explanations are not provided for official certification exams.
+                This policy aligns with international certification best practices.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Next Steps */}
       {passed ? (
