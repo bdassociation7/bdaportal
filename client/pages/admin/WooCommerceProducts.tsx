@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useWooCommerceProducts } from '@/entities/woocommerce';
 import { useActiveQuizzes, useCreateCertificationProduct, type CertificationType } from '@/entities/quiz';
+import type { ExamLanguage } from '@/entities/certification-exam/certification-exam.service';
 import type { WooCommerceProduct } from '@/entities/woocommerce';
 
 export default function WooCommerceProducts() {
@@ -21,6 +22,7 @@ export default function WooCommerceProducts() {
   const [selectedProduct, setSelectedProduct] = useState<WooCommerceProduct | null>(null);
   const [linkForm, setLinkForm] = useState({
     certification_type: 'CP' as CertificationType,
+    exam_language: 'en' as ExamLanguage,
     quiz_id: '',
     vouchers_per_purchase: '1',
     voucher_validity_months: '6',
@@ -30,6 +32,7 @@ export default function WooCommerceProducts() {
     setSelectedProduct(product);
     setLinkForm({
       certification_type: 'CP',
+      exam_language: 'en',
       quiz_id: '',
       vouchers_per_purchase: '1',
       voucher_validity_months: '6',
@@ -45,6 +48,7 @@ export default function WooCommerceProducts() {
         woocommerce_product_name: selectedProduct.name,
         woocommerce_product_sku: selectedProduct.sku || undefined,
         certification_type: linkForm.certification_type,
+        exam_language: linkForm.exam_language,
         quiz_id: linkForm.quiz_id || undefined,
         vouchers_per_purchase: parseInt(linkForm.vouchers_per_purchase),
         voucher_validity_months: parseInt(linkForm.voucher_validity_months),
@@ -139,15 +143,27 @@ export default function WooCommerceProducts() {
                 </div>
               </div>
 
-              <div>
-                <Label>Certification Type</Label>
-                <Select value={linkForm.certification_type} onValueChange={(v) => setLinkForm({ ...linkForm, certification_type: v as CertificationType })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CP">BDA-CP™</SelectItem>
-                    <SelectItem value="SCP">BDA-SCP™</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Certification Type</Label>
+                  <Select value={linkForm.certification_type} onValueChange={(v) => setLinkForm({ ...linkForm, certification_type: v as CertificationType, quiz_id: '' })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CP">BDA-CP™</SelectItem>
+                      <SelectItem value="SCP">BDA-SCP™</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Exam Language</Label>
+                  <Select value={linkForm.exam_language} onValueChange={(v) => setLinkForm({ ...linkForm, exam_language: v as ExamLanguage, quiz_id: '' })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="ar">Arabic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div>
@@ -156,7 +172,7 @@ export default function WooCommerceProducts() {
                   <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {quizzes?.filter(q => q.certification_type === linkForm.certification_type).map(q => (
+                    {quizzes?.filter(q => q.certification_type === linkForm.certification_type && q.exam_language === linkForm.exam_language).map(q => (
                       <SelectItem key={q.id} value={q.id}>{q.title}</SelectItem>
                     ))}
                   </SelectContent>
