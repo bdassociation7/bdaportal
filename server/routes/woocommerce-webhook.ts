@@ -135,6 +135,17 @@ export async function handleWooCommerceOrderWebhook(
       throw certificationError;
     }
 
+    // Get Mock Exam product mappings from database
+    const { data: mockExamProducts, error: mockExamError } = await supabase
+      .from('mock_exam_products')
+      .select('*')
+      .eq('is_active', true);
+
+    if (mockExamError) {
+      console.error('Error fetching mock exam products:', mockExamError);
+      throw mockExamError;
+    }
+
     // Create maps for quick lookup
     const productMap = new Map(
       productMappings.map((p) => [p.woocommerce_product_id.toString(), p])
@@ -152,15 +163,20 @@ export async function handleWooCommerceOrderWebhook(
       (certificationProducts || []).map((p) => [p.woocommerce_product_id.toString(), p])
     );
 
+    const mockExamProductMap = new Map(
+      (mockExamProducts || []).map((p) => [p.woocommerce_product_id.toString(), p])
+    );
+
     // Process each line item
     for (const item of order.line_items) {
       const mapping = productMap.get(item.product_id.toString());
       const learningProduct = learningProductMap.get(item.product_id.toString());
       const partnershipProduct = partnershipProductMap.get(item.product_id.toString());
       const certificationProduct = certificationProductMap.get(item.product_id.toString());
+      const mockExamProduct = mockExamProductMap.get(item.product_id.toString());
 
       // Skip if none of the product types match
-      if (!mapping && !learningProduct && !partnershipProduct && !certificationProduct) {
+      if (!mapping && !learningProduct && !partnershipProduct && !certificationProduct && !mockExamProduct) {
         continue;
       }
 
@@ -510,6 +526,93 @@ export async function handleWooCommerceOrderWebhook(
           );
         }
       }
+
+      // Process Mock Exam access grant
+      if (mockExamProduct) {
+        console.log(
+          `Processing Mock Exam access: ${mockExamProduct.product_name} (${mockExamProduct.certification_type || 'any'} ${mockExamProduct.exam_language || 'any'}) for ${email}`
+        );
+
+        try {
+          const { data: grantResult, error: grantError } = await supabase.rpc(
+            'grant_mock_exam_access',
+            {
+              p_user_id: userId,
+              p_woocommerce_order_id: order.id,
+              p_woocommerce_product_id: item.product_id,
+              p_quantity: item.quantity || 1,
+            }
+          );
+
+          if (grantError) {
+            console.error('Error granting mock exam access:', grantError);
+            await logMockExamError(
+              userId,
+              order.id.toString(),
+              item.product_id.toString(),
+              mockExamProduct.id,
+              grantError.message,
+              {
+                product_name: mockExamProduct.product_name,
+                certification_type: mockExamProduct.certification_type,
+                exam_language: mockExamProduct.exam_language,
+              }
+            );
+            continue;
+          }
+
+          // Check the result
+          const result = grantResult as any;
+          if (result?.success) {
+            if (result.duplicate) {
+              console.log(`Mock exam access already granted for order #${order.id}`);
+            } else if (result.warning) {
+              console.warn(`Mock exam access granted with warning: ${result.warning}`);
+            } else {
+              console.log(
+                `Successfully granted ${result.exams_granted || result.exams_remaining || 0} mock exam(s) for ${email}`
+              );
+            }
+
+            // Log successful activation
+            await supabase.from('membership_activation_logs').insert({
+              user_id: userId,
+              action: 'mock_exam_granted',
+              triggered_by: 'webhook',
+              woocommerce_order_id: order.id,
+              notes: `Mock Exam: ${mockExamProduct.product_name} - Granted: ${result.exams_granted || 0}, Remaining: ${result.exams_remaining || 0}`,
+            });
+          } else {
+            console.error(`Mock exam grant failed: ${result?.error || 'Unknown error'}`);
+            await logMockExamError(
+              userId,
+              order.id.toString(),
+              item.product_id.toString(),
+              mockExamProduct.id,
+              result?.error || 'Unknown error',
+              {
+                product_name: mockExamProduct.product_name,
+                certification_type: mockExamProduct.certification_type,
+                exam_language: mockExamProduct.exam_language,
+              }
+            );
+          }
+        } catch (error: any) {
+          console.error('Mock exam access error:', error);
+          await logMockExamError(
+            userId,
+            order.id.toString(),
+            item.product_id.toString(),
+            mockExamProduct.id,
+            error.message,
+            {
+              product_name: mockExamProduct.product_name,
+              certification_type: mockExamProduct.certification_type,
+              exam_language: mockExamProduct.exam_language,
+            }
+          );
+        }
+      }
     }
 
     res.status(200).json({ success: true, message: 'Webhook processed' });
@@ -624,6 +727,31 @@ async function logVoucherError(
     });
   } catch (logError) {
     console.error('Failed to log Voucher error:', logError);
+  }
+}
+
+/**
+ * Log Mock Exam access errors for admin review
+ */
+async function logMockExamError(
+  userId: string | null,
+  orderId: string,
+  productId: string,
+  mockExamProductId: string,
+  errorMessage: string,
+  details: Record<string, any>
+): Promise<void> {
+  try {
+    await supabase.from('membership_activation_logs').insert({
+      user_id: userId,
+      action: 'mock_exam_grant_failed',
+      triggered_by: 'webhook',
+      woocommerce_order_id: parseInt(orderId),
+      error_message: errorMessage,
+      notes: `Mock Exam Product ID: ${mockExamProductId} - ${JSON.stringify(details)}`,
+    });
+  } catch (logError) {
+    console.error('Failed to log Mock Exam error:', logError);
   }
 }
 
