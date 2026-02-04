@@ -7,9 +7,9 @@
 -- STEP 1: ADD COLUMNS TO mock_exam_products
 -- =============================================================================
 
--- Add certification_type column
+-- Add certification_type column (using existing certification_type enum: 'CP', 'SCP')
 ALTER TABLE public.mock_exam_products
-ADD COLUMN IF NOT EXISTS certification_type certification_type_enum;
+ADD COLUMN IF NOT EXISTS certification_type certification_type;
 
 -- Add exam_language column
 ALTER TABLE public.mock_exam_products
@@ -297,7 +297,7 @@ Supports three modes:
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public.get_mock_exam_pool_count(
-    p_certification_type certification_type_enum,
+    p_certification_type certification_type,
     p_exam_language exam_language,
     p_user_id UUID DEFAULT NULL
 )
@@ -331,7 +331,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
-GRANT EXECUTE ON FUNCTION public.get_mock_exam_pool_count(certification_type_enum, exam_language, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_mock_exam_pool_count(certification_type, exam_language, UUID) TO authenticated;
 
 COMMENT ON FUNCTION public.get_mock_exam_pool_count IS
 'Returns count of mock exams in pool for given certification type and language.
