@@ -44,18 +44,6 @@ import type {
  * Manage questions and answers for a certification exam
  */
 
-// BABOK Knowledge Areas for BOK Domain
-const BABOK_KNOWLEDGE_AREAS = [
-  { value: 'business_analysis_planning_and_monitoring', label: 'Business Analysis Planning and Monitoring' },
-  { value: 'elicitation_and_collaboration', label: 'Elicitation and Collaboration' },
-  { value: 'requirements_lifecycle_management', label: 'Requirements Life Cycle Management' },
-  { value: 'strategy_analysis', label: 'Strategy Analysis' },
-  { value: 'requirements_analysis_and_design_definition', label: 'Requirements Analysis and Design Definition' },
-  { value: 'solution_evaluation', label: 'Solution Evaluation' },
-  { value: 'underlying_competencies', label: 'Underlying Competencies' },
-  { value: 'techniques', label: 'Techniques' },
-];
-
 // BDA BoCK Competency Areas for fail-only feedback
 const BDA_COMPETENCIES = {
   behavioral: [
@@ -548,31 +536,6 @@ export default function CertificationExamQuestionManager() {
                 />
               </div>
             )}
-
-            {/* BOK Domain */}
-            <div className="space-y-2">
-              <Label>BABOK Knowledge Area (BOK Domain)</Label>
-              <Select
-                value={questionForm.bock_domain || undefined}
-                onValueChange={(value) =>
-                  setQuestionForm((prev) => ({ ...prev, bock_domain: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select knowledge area (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BABOK_KNOWLEDGE_AREAS.map((area) => (
-                    <SelectItem key={area.value} value={area.value}>
-                      {area.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500">
-                Select the BABOK knowledge area this question relates to
-              </p>
-            </div>
 
             {/* BDA Competency Tagging - For fail-only competency feedback */}
             <div className="space-y-4 p-4 bg-indigo-50/50 rounded-lg border border-indigo-200">
@@ -1151,11 +1114,6 @@ export default function CertificationExamQuestionManager() {
                             )}
                           >
                             {question.difficulty}
-                          </Badge>
-                        )}
-                        {question.bock_domain && (
-                          <Badge variant="outline" className="bg-purple-50 border-purple-300 text-purple-700">
-                            {BABOK_KNOWLEDGE_AREAS.find(a => a.value === question.bock_domain)?.label.substring(0, 30) || question.bock_domain}
                           </Badge>
                         )}
                         {(question as any).competency_name && (
