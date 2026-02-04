@@ -52,8 +52,16 @@ const COMMON_TIMEZONES = [
   { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
 ];
 
-// Time slots (every hour from 8 AM to 8 PM)
+// Time slots (24h availability - online exam, any timezone)
 const TIME_SLOTS = [
+  { value: '00:00', label: '12:00 AM' },
+  { value: '01:00', label: '1:00 AM' },
+  { value: '02:00', label: '2:00 AM' },
+  { value: '03:00', label: '3:00 AM' },
+  { value: '04:00', label: '4:00 AM' },
+  { value: '05:00', label: '5:00 AM' },
+  { value: '06:00', label: '6:00 AM' },
+  { value: '07:00', label: '7:00 AM' },
   { value: '08:00', label: '8:00 AM' },
   { value: '09:00', label: '9:00 AM' },
   { value: '10:00', label: '10:00 AM' },
@@ -67,6 +75,9 @@ const TIME_SLOTS = [
   { value: '18:00', label: '6:00 PM' },
   { value: '19:00', label: '7:00 PM' },
   { value: '20:00', label: '8:00 PM' },
+  { value: '21:00', label: '9:00 PM' },
+  { value: '22:00', label: '10:00 PM' },
+  { value: '23:00', label: '11:00 PM' },
 ];
 
 // DEV MODE: Set to true to disable date restrictions for testing
@@ -84,6 +95,7 @@ interface ExistingBooking {
 
 interface ExamWindowStatus {
   is_open: boolean;
+  can_schedule: boolean;
   current_window_id: string | null;
   current_window_name: string | null;
   current_window_start: string | null;
@@ -91,6 +103,13 @@ interface ExamWindowStatus {
   next_window_date: string | null;
   next_window_name: string | null;
   message: string;
+}
+
+interface SchedulableWindow {
+  window_id: string;
+  window_name: string;
+  start_date: string;
+  end_date: string;
 }
 
 export default function ScheduleExam() {
@@ -108,6 +127,7 @@ export default function ScheduleExam() {
   const [voucherInfo, setVoucherInfo] = useState<any>(null);
   const [existingBooking, setExistingBooking] = useState<ExistingBooking | null>(null);
   const [examWindowStatus, setExamWindowStatus] = useState<ExamWindowStatus | null>(null);
+  const [schedulableWindows, setSchedulableWindows] = useState<SchedulableWindow[]>([]);
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>('');
@@ -116,32 +136,30 @@ export default function ScheduleExam() {
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingDetails, setBookingDetails] = useState<any>(null);
 
-  // Calculate date constraints based on exam window
+  // Calculate date constraints based on all schedulable windows (current + future)
   const dateConstraints = useMemo(() => {
     const today = startOfDay(new Date());
 
     // Default min: 2 days from now (or today in DEV_MODE)
     let minDate = DEV_MODE_SKIP_DATE_VALIDATION ? today : addDays(today, 2);
 
-    // Default max: 6 months from now (fallback if no window)
+    // Default max: 6 months from now (fallback if no windows)
     let maxDate = addDays(today, 180);
 
-    // If exam window is open, constrain to window dates
-    if (examWindowStatus?.is_open) {
-      if (examWindowStatus.current_window_start) {
-        const windowStart = startOfDay(new Date(examWindowStatus.current_window_start));
-        if (isAfter(windowStart, minDate)) {
-          minDate = windowStart;
-        }
+    if (schedulableWindows.length > 0) {
+      // Min date: earliest window start (but not before 2 days from now)
+      const earliestStart = startOfDay(new Date(schedulableWindows[0].start_date));
+      if (isAfter(earliestStart, minDate)) {
+        minDate = earliestStart;
       }
 
-      if (examWindowStatus.current_window_end) {
-        maxDate = startOfDay(new Date(examWindowStatus.current_window_end));
-      }
+      // Max date: latest window end
+      const latestEnd = startOfDay(new Date(schedulableWindows[schedulableWindows.length - 1].end_date));
+      maxDate = latestEnd;
     }
 
     return { minDate, maxDate };
-  }, [examWindowStatus]);
+  }, [schedulableWindows]);
 
   // Generate quick select dates (5 dates centered around selected date, or first 5 if none selected)
   const quickSelectDates = useMemo(() => {
@@ -168,10 +186,26 @@ export default function ScheduleExam() {
     return dates;
   }, [dateConstraints, selectedDate]);
 
-  // Check if a date is within the allowed range
+  // Check if a date is disabled: must be within at least one schedulable window
   const isDateDisabled = (date: Date) => {
     const dayStart = startOfDay(date);
-    return isBefore(dayStart, dateConstraints.minDate) || isAfter(dayStart, dateConstraints.maxDate);
+
+    // Must be at least minDate
+    if (isBefore(dayStart, dateConstraints.minDate)) return true;
+    // Must not exceed maxDate
+    if (isAfter(dayStart, dateConstraints.maxDate)) return true;
+
+    // If we have windows, date must fall within at least one
+    if (schedulableWindows.length > 0) {
+      const inAnyWindow = schedulableWindows.some((w) => {
+        const wStart = startOfDay(new Date(w.start_date));
+        const wEnd = startOfDay(new Date(w.end_date));
+        return isWithinInterval(dayStart, { start: wStart, end: wEnd });
+      });
+      return !inAnyWindow;
+    }
+
+    return false;
   };
 
   // Detect user's timezone
@@ -202,7 +236,7 @@ export default function ScheduleExam() {
       // Load exam info
       const { data: exam, error: examError } = await supabase
         .from('quizzes')
-        .select('id, title, title_ar, certification_type, time_limit_minutes, passing_score_percentage')
+        .select('id, title, title_ar, certification_type, exam_language, time_limit_minutes, passing_score_percentage')
         .eq('id', quizId)
         .single();
 
@@ -216,6 +250,33 @@ export default function ScheduleExam() {
       if (!windowError && windowStatus) {
         const result = Array.isArray(windowStatus) ? windowStatus[0] : windowStatus;
         setExamWindowStatus(result as ExamWindowStatus);
+      }
+
+      // Fetch only the NEXT upcoming exam window (not all future windows)
+      // Candidates can only schedule for the next window to avoid content changes between windows
+      const today = new Date().toISOString().split('T')[0];
+
+      let windowsQuery = supabase
+        .from('certification_exam_windows')
+        .select('id, name, start_date, end_date')
+        .eq('is_active', true)
+        .gte('end_date', today) // Window must not have ended
+        .order('start_date', { ascending: true })
+        .limit(1); // Only the next upcoming window
+
+      if (exam?.certification_type) {
+        // Include windows with no specific type OR matching type
+        windowsQuery = windowsQuery.or(`certification_type.is.null,certification_type.ilike.${exam.certification_type}`);
+      }
+
+      const { data: windows } = await windowsQuery;
+      if (windows && Array.isArray(windows)) {
+        setSchedulableWindows(windows.map(w => ({
+          window_id: w.id,
+          window_name: w.name,
+          start_date: w.start_date,
+          end_date: w.end_date,
+        })));
       }
 
       // Check for existing scheduled booking
@@ -237,14 +298,14 @@ export default function ScheduleExam() {
       if (voucherId) {
         let { data: voucher, error: voucherError } = await supabase
           .from('exam_vouchers')
-          .select('id, code, certification_type, expires_at, status')
+          .select('id, code, certification_type, exam_language, expires_at, status')
           .eq('id', voucherId)
           .single();
 
         if (voucherError || !voucher) {
           const { data: ecpVoucher } = await supabase
             .from('ecp_vouchers')
-            .select('id, code, certification_type, valid_until, status')
+            .select('id, code, certification_type, exam_language, valid_until, status')
             .eq('id', voucherId)
             .single();
 
@@ -253,6 +314,7 @@ export default function ScheduleExam() {
               id: ecpVoucher.id,
               code: ecpVoucher.code,
               certification_type: ecpVoucher.certification_type,
+              exam_language: ecpVoucher.exam_language || 'en',
               expires_at: ecpVoucher.valid_until,
               status: ecpVoucher.status === 'assigned' ? 'available' : ecpVoucher.status,
             };
@@ -283,6 +345,14 @@ export default function ScheduleExam() {
             toast({
               title: 'Voucher Type Mismatch',
               description: `This is a ${voucher.certification_type} voucher but the exam requires ${exam.certification_type}.`,
+              variant: 'destructive',
+            });
+          } else if (exam && voucher.exam_language && exam.exam_language && voucher.exam_language !== exam.exam_language) {
+            // Language-specific validation: voucher language must match exam language
+            const langLabels = { en: 'English', ar: 'Arabic' };
+            toast({
+              title: 'Voucher Language Mismatch',
+              description: `This voucher is for ${langLabels[voucher.exam_language as 'en' | 'ar'] || voucher.exam_language} exams but the selected exam is in ${langLabels[exam.exam_language as 'en' | 'ar'] || exam.exam_language}.`,
               variant: 'destructive',
             });
           } else {
@@ -622,10 +692,14 @@ export default function ScheduleExam() {
     );
   }
 
-  // Check if window is closed - block scheduling
-  const isWindowClosed = examWindowStatus && !examWindowStatus.is_open;
+  // Only block scheduling if there are NO schedulable windows at all
+  // Use schedulableWindows (direct query) as primary check, fall back to can_schedule from RPC
+  const noWindowsAvailable = examWindowStatus
+    && schedulableWindows.length === 0
+    && !examWindowStatus.is_open
+    && (examWindowStatus.can_schedule === false || examWindowStatus.can_schedule === undefined);
 
-  if (isWindowClosed) {
+  if (noWindowsAvailable) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 py-12 px-4">
         <div className="max-w-2xl mx-auto">
@@ -636,7 +710,7 @@ export default function ScheduleExam() {
                   <CalendarX className="h-12 w-12 text-orange-600" />
                 </div>
               </div>
-              <CardTitle className="text-2xl text-orange-800">Exam Window Closed</CardTitle>
+              <CardTitle className="text-2xl text-orange-800">No Exam Windows Available</CardTitle>
               <CardDescription className="text-orange-600">
                 Scheduling is currently not available
               </CardDescription>
@@ -644,9 +718,9 @@ export default function ScheduleExam() {
             <CardContent className="space-y-6 pt-6">
               <Alert className="border-orange-200 bg-orange-50">
                 <AlertCircle className="h-4 w-4 text-orange-600" />
-                <AlertTitle className="text-orange-800">No Active Exam Window</AlertTitle>
+                <AlertTitle className="text-orange-800">No Upcoming Exam Windows</AlertTitle>
                 <AlertDescription className="text-orange-700">
-                  <p>Exams can only be scheduled during designated exam windows.</p>
+                  <p>There are no active or upcoming exam windows available for scheduling.</p>
                   {examWindowStatus?.next_window_date ? (
                     <div className="mt-4 p-4 bg-white rounded-lg border border-orange-200">
                       <p className="text-sm text-gray-600">Next exam window opens:</p>
@@ -729,33 +803,47 @@ export default function ScheduleExam() {
         </div>
 
         {/* Exam Window Status Banner */}
-        {examWindowStatus?.is_open && (
+        {schedulableWindows.length > 0 && (
           <Card className="mb-6 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
             <CardContent className="py-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-full">
-                    <CalendarCheck className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-green-800">
-                        {examWindowStatus.current_window_name || 'Exam Window'}
-                      </span>
-                      <Badge className="bg-green-600">OPEN</Badge>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 rounded-full">
+                      <CalendarCheck className="h-6 w-6 text-green-600" />
                     </div>
-                    <p className="text-sm text-green-700">
-                      {examWindowStatus.current_window_start && examWindowStatus.current_window_end && (
-                        <>
-                          {format(new Date(examWindowStatus.current_window_start), 'MMM d')} - {format(new Date(examWindowStatus.current_window_end), 'MMM d, yyyy')}
-                        </>
-                      )}
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-green-800">
+                          {examWindowStatus?.is_open
+                            ? (examWindowStatus.current_window_name || 'Current Exam Window')
+                            : 'Exam Scheduling Available'}
+                        </span>
+                        {examWindowStatus?.is_open && <Badge className="bg-green-600">OPEN NOW</Badge>}
+                      </div>
+                      <p className="text-sm text-green-700">
+                        {examWindowStatus?.is_open
+                          ? `Schedule for any date within the current window`
+                          : `Schedule your exam for the next available window`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-green-700">
+                    <Sparkles className="h-4 w-4" />
+                    <span>Select a date within an available window</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-green-700">
-                  <Sparkles className="h-4 w-4" />
-                  <span>You can schedule your exam now</span>
+                {/* Show available windows */}
+                <div className="flex flex-wrap gap-2 ml-14">
+                  {schedulableWindows.map((w) => (
+                    <Badge
+                      key={w.window_id}
+                      variant="outline"
+                      className="border-green-300 text-green-700 bg-white"
+                    >
+                      {w.window_name}: {format(new Date(w.start_date), 'MMM d')} - {format(new Date(w.end_date), 'MMM d, yyyy')}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             </CardContent>
@@ -890,7 +978,7 @@ export default function ScheduleExam() {
                 <CardDescription>Choose your preferred exam time</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {TIME_SLOTS.map((slot) => (
                     <Button
                       key={slot.value}

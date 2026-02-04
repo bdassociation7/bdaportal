@@ -439,13 +439,15 @@ export default function TakeCertificationExam() {
     enabled: !!selectedVoucher && selectedVoucher.displayInfo.canUse,
   });
 
-  // Fetch exams matching the voucher's certification type
+  // Fetch exams matching the voucher's certification type AND language
+  // Language-specific filtering is required: EN voucher → EN exams only, AR voucher → AR exams only
   const { data: exams, isLoading: examsLoading } = useQuery({
-    queryKey: ['certification-exams-for-voucher', selectedVoucher?.certification_type],
+    queryKey: ['certification-exams-for-voucher', selectedVoucher?.certification_type, selectedVoucher?.exam_language],
     queryFn: async () => {
       if (!selectedVoucher) return [];
       const result = await CertificationExamService.getAvailableCertificationExams(
-        selectedVoucher.certification_type
+        selectedVoucher.certification_type,
+        selectedVoucher.exam_language // Pass language filter to enforce language-specific exams
       );
       if (result.error) throw result.error;
       return result.data || [];

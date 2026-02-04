@@ -317,9 +317,12 @@ export class CertificationExamService {
 
   /**
    * Obtenir les examens de certification disponibles pour l'utilisateur
+   * @param certificationType - Filter by certification type (CP or SCP)
+   * @param examLanguage - Filter by exam language (en or ar) - REQUIRED for voucher-based filtering
    */
   static async getAvailableCertificationExams(
-    certificationType?: CertificationExamType
+    certificationType?: CertificationExamType,
+    examLanguage?: ExamLanguage
   ): Promise<{ data: CertificationExam[] | null; error: any }> {
     try {
       let query = supabase
@@ -330,6 +333,11 @@ export class CertificationExamService {
 
       if (certificationType) {
         query = query.eq('certification_type', certificationType);
+      }
+
+      // Language-specific filtering: vouchers are language-specific, so exams must match
+      if (examLanguage) {
+        query = query.eq('exam_language', examLanguage);
       }
 
       const { data, error } = await query;
