@@ -29,6 +29,7 @@ import {
   ShieldAlert,
   Square,
   CheckSquare,
+  Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -72,6 +73,14 @@ export default function TakeCertificationExamAttempt() {
 
   // Storage key for this specific attempt
   const storageKey = `${STORAGE_KEY_PREFIX}${attemptId}`;
+
+  // Hide sidebar for full-screen exam mode
+  useEffect(() => {
+    document.body.classList.add('exam-fullscreen-mode');
+    return () => {
+      document.body.classList.remove('exam-fullscreen-mode');
+    };
+  }, []);
 
   // Fetch exam data
   const { data: exam, isLoading: examLoading } = useQuery({
@@ -297,6 +306,7 @@ export default function TakeCertificationExamAttempt() {
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
+  const isRTL = exam?.exam_language === 'ar';
 
   // Determine if question allows multiple answers
   const isMultiSelect = (questionType: string | undefined) => {
@@ -346,10 +356,20 @@ export default function TakeCertificationExamAttempt() {
 
       if (unansweredCount > 0) {
         const confirmed = await confirm({
-          title: 'Submit Exam',
-          description: `You have ${unansweredCount} unanswered question(s). Submit anyway?`,
-          confirmText: 'Submit',
-          cancelText: 'Review',
+          title: 'Finalize Exam Attempt',
+          description: `You have ${unansweredCount} unanswered question(s). Submitting now will finalize your attempt and you cannot continue after submitting. Do you want to submit?`,
+          confirmText: 'Submit Exam',
+          cancelText: 'Review Questions',
+          variant: 'destructive',
+        });
+        if (!confirmed) return;
+      } else {
+        // All questions answered, still confirm
+        const confirmed = await confirm({
+          title: 'Finalize Exam Attempt',
+          description: 'You are about to submit your certification exam. This will finalize your attempt and you cannot continue after submitting. Do you want to proceed?',
+          confirmText: 'Submit Exam',
+          cancelText: 'Review Questions',
           variant: 'default',
         });
         if (!confirmed) return;
@@ -594,7 +614,7 @@ export default function TakeCertificationExamAttempt() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Top Bar - Sticky */}
       <div
         className={`sticky top-0 z-50 shadow-md ${
@@ -647,6 +667,25 @@ export default function TakeCertificationExamAttempt() {
               <div className="text-sm">
                 Question {currentQuestionIndex + 1} / {questions.length}
               </div>
+
+              {/* Submit Button - Always visible in header */}
+              <Button
+                onClick={() => handleSubmitExam(false)}
+                disabled={isSubmitting}
+                className="bg-white text-green-700 hover:bg-green-50 font-semibold"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="h-4 w-4 mr-2 border-2 border-green-700 border-t-transparent rounded-full animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Submit Exam
+                  </>
+                )}
+              </Button>
             </div>
           </div>
 
@@ -697,14 +736,14 @@ export default function TakeCertificationExamAttempt() {
                       ⚠️ This question has multiple correct answers. Select all that apply.
                     </p>
                   )}
-                  <h2 className="text-xl font-semibold text-gray-900 leading-relaxed">
-                    {currentQuestion?.question_text}
+                  <h2 className={cn(
+                    "text-xl font-semibold text-gray-900 leading-relaxed",
+                    isRTL && "text-right"
+                  )}>
+                    {isRTL && currentQuestion?.question_text_ar
+                      ? currentQuestion.question_text_ar
+                      : currentQuestion?.question_text}
                   </h2>
-                  {currentQuestion?.question_text_ar && (
-                    <p className="text-lg text-gray-700 mt-3 text-right" dir="rtl">
-                      {currentQuestion.question_text_ar}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
@@ -721,14 +760,21 @@ export default function TakeCertificationExamAttempt() {
                     key={answer.id}
                     onClick={() => handleAnswerSelect(answer.id)}
                     className={cn(
-                      'w-full text-left p-4 rounded-lg border-2 transition-all',
+                      'w-full p-4 rounded-lg border-2 transition-all',
+                      isRTL ? 'text-right' : 'text-left',
                       isSelected
                         ? 'border-blue-500 bg-blue-50 shadow-md'
                         : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'
                     )}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "flex items-start gap-3",
+                      isRTL && "flex-row-reverse"
+                    )}>
+                      <div className={cn(
+                        "flex items-center gap-3",
+                        isRTL && "flex-row-reverse"
+                      )}>
                         <span
                           className={cn(
                             'flex-shrink-0 w-8 h-8 flex items-center justify-center font-bold text-sm',
@@ -752,12 +798,11 @@ export default function TakeCertificationExamAttempt() {
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="text-gray-900">{answer.answer_text}</p>
-                        {answer.answer_text_ar && (
-                          <p className="text-gray-700 text-sm mt-1 text-right" dir="rtl">
-                            {answer.answer_text_ar}
-                          </p>
-                        )}
+                        <p className="text-gray-900">
+                          {isRTL && answer.answer_text_ar
+                            ? answer.answer_text_ar
+                            : answer.answer_text}
+                        </p>
                       </div>
                     </div>
                   </button>
@@ -801,7 +846,17 @@ export default function TakeCertificationExamAttempt() {
                   disabled={isSubmitting}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+                  {isSubmitting ? (
+                    <>
+                      <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Submit Exam
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -850,7 +905,17 @@ export default function TakeCertificationExamAttempt() {
             size="lg"
             className="bg-green-600 hover:bg-green-700"
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+            {isSubmitting ? (
+              <>
+                <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Submit Exam
+              </>
+            )}
           </Button>
         </div>
       </div>
