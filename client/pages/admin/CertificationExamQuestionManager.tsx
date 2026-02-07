@@ -1094,13 +1094,14 @@ export default function CertificationExamQuestionManager() {
                         <span className="text-lg font-bold text-gray-900">Q{index + 1}.</span>
                         <Badge
                           variant={
-                            question.question_type === 'multiple_choice' ? 'default' : 'secondary'
+                            question.question_type === 'multi_select' ? 'secondary' : 'default'
                           }
+                          className={question.question_type === 'multi_select' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}
                         >
                           {question.question_type === 'multiple_choice'
-                            ? 'Multiple Choice'
+                            ? 'Single Answer'
                             : question.question_type === 'multi_select'
-                            ? 'Multi Select'
+                            ? 'Multiple Answers'
                             : 'True/False'}
                         </Badge>
                         <Badge variant="outline">{question.points || 1} pts</Badge>
