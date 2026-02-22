@@ -358,7 +358,7 @@ export default function MyBooks() {
             <p className="text-sm text-gray-500 mb-4">
               {texts.noBooksDesc}
             </p>
-            <Button onClick={() => window.open('/store', '_blank')}>
+            <Button onClick={() => window.open('https://bda-global.org/en/store/', '_blank')}>
               {texts.visitStore}
             </Button>
           </CardContent>

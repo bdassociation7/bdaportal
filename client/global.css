@@ -117,3 +117,40 @@
     font-family: "Cairo", sans-serif;
   }
 }
+
+/* Exam fullscreen mode - hides sidebar for distraction-free exam experience */
+body.exam-fullscreen-mode {
+  /* Hide the sidebar completely */
+  .fixed.inset-y-0.w-64,
+  .fixed.inset-y-0.z-50.w-64 {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+
+/* Remove padding/margin that accounts for sidebar width */
+body.exam-fullscreen-mode .lg\:pl-64 {
+  padding-left: 0 !important;
+}
+
+body.exam-fullscreen-mode .lg\:pr-64 {
+  padding-right: 0 !important;
+}
+
+body.exam-fullscreen-mode .lg\:ml-64 {
+  margin-left: 0 !important;
+}
+
+body.exam-fullscreen-mode .lg\:mr-64 {
+  margin-right: 0 !important;
+}
+
+/* Hide mobile menu button in exam mode */
+body.exam-fullscreen-mode button[class*="lg:hidden"] {
+  display: none !important;
+}
+
+/* Hide the top navigation bar in exam mode for cleaner UI */
+body.exam-fullscreen-mode .sticky.top-0.z-40.flex.h-16 {
+  display: none !important;
+}

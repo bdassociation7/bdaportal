@@ -264,15 +264,32 @@ export class AuthService {
   }
 
   /**
-   * Vérifier si un utilisateur existe (version simplifiée)
+   * Vérifier si un utilisateur existe dans public.users
+   * This checks the public.users table which is accessible without authentication
    */
   static async checkUserExists(email: string): Promise<{ exists: boolean; userData?: any }> {
     try {
-      // Pour l'instant, on suppose que l'utilisateur n'existe pas
-      // La vérification se fera lors de la tentative de signup
+      // Check if user exists in public.users table
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name, role, wp_user_id')
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle();
+
+      if (error) {
+        // RLS might block this query for anonymous users - that's OK
+        // We'll handle it during signup attempt
+        console.log('[checkUserExists] Query error (might be RLS):', error.code);
+        return { exists: false };
+      }
+
+      if (data) {
+        return { exists: true, userData: data };
+      }
+
       return { exists: false };
     } catch (error) {
-      console.error('Error checking user existence:', error);
+      console.error('[checkUserExists] Error:', error);
       return { exists: false };
     }
   }

@@ -11,6 +11,8 @@ import type {
   ExtendMembershipParams,
   DeactivateMembershipParams,
   BulkActivateMembershipsParams,
+  CreateMembershipProductMappingDTO,
+  UpdateMembershipProductMappingDTO,
 } from './membership.types';
 
 // ============================================
@@ -230,6 +232,62 @@ export const useBulkActivateMemberships = () => {
       queryClient.invalidateQueries({ queryKey: ['membership-stats'] });
       queryClient.invalidateQueries({ queryKey: ['user-membership'] });
       queryClient.invalidateQueries({ queryKey: ['user-membership-status'] });
+    },
+  });
+};
+
+// ============================================
+// PRODUCT MAPPING HOOKS
+// ============================================
+
+export const useMembershipProductMappings = () => {
+  return useQuery({
+    queryKey: ['membership-product-mappings'],
+    queryFn: async () => {
+      const result = await MembershipService.getAllProductMappings();
+      if (result.error) throw result.error;
+      return result.data!;
+    },
+  });
+};
+
+export const useCreateMembershipProductMapping = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: CreateMembershipProductMappingDTO) => {
+      const result = await MembershipService.createProductMapping(dto);
+      if (result.error) throw result.error;
+      return result.data!;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['membership-product-mappings'] });
+    },
+  });
+};
+
+export const useUpdateMembershipProductMapping = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dto }: { id: string; dto: UpdateMembershipProductMappingDTO }) => {
+      const result = await MembershipService.updateProductMapping(id, dto);
+      if (result.error) throw result.error;
+      return result.data!;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['membership-product-mappings'] });
+    },
+  });
+};
+
+export const useDeleteMembershipProductMapping = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const result = await MembershipService.deleteProductMapping(id);
+      if (result.error) throw result.error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['membership-product-mappings'] });
     },
   });
 };

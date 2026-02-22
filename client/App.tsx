@@ -103,6 +103,7 @@ import MembershipBenefitBooks from "./pages/admin/MembershipBenefitBooks";
 import BookProducts from "./pages/admin/BookProducts";
 import GrantBookAccess from "./pages/admin/GrantBookAccess";
 import PartnershipProducts from "./pages/admin/PartnershipProducts";
+import MembershipProducts from "./pages/admin/MembershipProducts";
 import CertificationExamsAdmin from "./pages/admin/CertificationExams";
 import CertificationExamQuestionManager from "./pages/admin/CertificationExamQuestionManager";
 import Vouchers from "./pages/admin/Vouchers";
@@ -132,7 +133,10 @@ import AdminManagement from "./pages/admin/AdminManagement";
 import BulkUserUpload from "./pages/admin/BulkUserUpload";
 import TrainingBatchManagement from "./pages/admin/TrainingBatchManagement";
 import ExamSchedulingAdmin from "./pages/admin/ExamSchedulingAdmin";
+import ExamBookingsAdmin from "./pages/admin/ExamBookingsAdmin";
+import ExamBookingDetail from "./pages/admin/ExamBookingDetail";
 import ExamWindows from "./pages/admin/ExamWindows";
+import ImpersonationBanner from "./components/ImpersonationBanner";
 import ReportsAnalytics from "./pages/admin/ReportsAnalytics";
 import FinanceTransactions from "./pages/admin/FinanceTransactions";
 import Communications from "./pages/admin/Communications";
@@ -140,6 +144,7 @@ import SystemSettings from "./pages/admin/SystemSettings";
 import SecurityLogs from "./pages/admin/SecurityLogs";
 import TrainerManagement from "./pages/admin/TrainerManagement";
 import LearningSystemProducts from "./pages/admin/LearningSystemProducts";
+import CertificateDesigner from "./pages/admin/CertificateDesigner";
 
 // Profile Completion pages
 import IndividualCompleteProfile from "./pages/individual/CompleteProfile";
@@ -298,6 +303,7 @@ const App = () => (
             <BrowserRouter>
               <SessionExpiryMonitor />
               <HealthCheckMonitor />
+              <ImpersonationBanner />
               <Routes>
                 {/* Public verification route - no auth required */}
                 <Route path="/verify" element={<VerifyCertificate />} />
@@ -483,6 +489,7 @@ const App = () => (
                   <Route path="/admin/book-products" element={<BookProducts />} />
                   <Route path="/admin/grant-book-access" element={<GrantBookAccess />} />
                   <Route path="/admin/partnership-products" element={<PartnershipProducts />} />
+                  <Route path="/admin/membership-products" element={<MembershipProducts />} />
                   <Route path="/admin/vouchers" element={<Vouchers />} />
                   <Route path="/admin/customers-vouchers" element={<CustomersVouchers />} />
                   <Route path="/admin/role-mapping" element={<RoleMappingSettings />} />
@@ -530,6 +537,8 @@ const App = () => (
                   <Route path="/admin/pdp-reports" element={<PDPAnnualReportsAdmin />} />
                   <Route path="/admin/training-batches" element={<TrainingBatchManagement />} />
                   <Route path="/admin/exam-scheduling" element={<ExamSchedulingAdmin />} />
+                  <Route path="/admin/exam-bookings" element={<ExamBookingsAdmin />} />
+                  <Route path="/admin/exam-bookings/:id" element={<ExamBookingDetail />} />
                   <Route path="/admin/exam-windows" element={<ExamWindows />} />
                   <Route path="/admin/admins" element={<AdminManagement />} />
                   <Route path="/admin/finance" element={<FinanceTransactions />} />
@@ -537,6 +546,7 @@ const App = () => (
                   <Route path="/admin/communications" element={<Communications />} />
                   <Route path="/admin/settings" element={<SystemSettings />} />
                   <Route path="/admin/security" element={<SecurityLogs />} />
+                  <Route path="/admin/certificate-designer" element={<CertificateDesigner />} />
                 </Route>
 
               {/* Default redirect */}

@@ -174,6 +174,8 @@ export function useAuth() {
             break;
 
           case 'SIGNED_OUT':
+            // Don't reset state during impersonation session swap
+            if (localStorage.getItem('bda-portal-impersonation-backup')) break;
             setState({
               user: null,
               isLoading: false,

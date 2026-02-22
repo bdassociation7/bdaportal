@@ -390,7 +390,8 @@ export function useDeleteExam() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => MockExamService.deleteExam(id),
+    mutationFn: ({ id, force = false }: { id: string; force?: boolean }) =>
+      MockExamService.deleteExam(id, force),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: mockExamKeys.admin() });
       queryClient.invalidateQueries({ queryKey: mockExamKeys.lists() });

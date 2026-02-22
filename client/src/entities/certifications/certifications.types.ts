@@ -15,6 +15,7 @@ export interface UserCertification {
   expiry_date: string;
   status: CertificationStatus;
   certificate_url?: string;
+  certificate_available_date?: string; // Date when PDF download becomes available (14 days after issue)
   renewal_count: number;
   last_renewed_at?: string;
   pdc_credits_earned: number;

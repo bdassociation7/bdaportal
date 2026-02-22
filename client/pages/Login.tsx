@@ -2,13 +2,11 @@ import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUnifiedAuth } from '@/shared/hooks/useUnifiedAuth';
 import { useToast } from "@/hooks/use-toast";
 import { AuthStorageService } from "@/shared/utils/auth-storage";
+import { Mail, Lock } from "lucide-react";
 
 export default function Login() {
   const { t, isRTL } = useLanguage();
@@ -51,14 +49,12 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberEmail, setRememberEmail] = useState(true);
 
   // Load saved email on mount
   React.useEffect(() => {
     const savedEmail = AuthStorageService.getLastEmail();
     if (savedEmail) {
       setEmail(savedEmail);
-      setRememberEmail(true);
     }
   }, []);
 
@@ -79,12 +75,8 @@ export default function Login() {
     try {
       await login(email, password);
 
-      // Save email if remember is enabled (only after successful login)
-      if (rememberEmail) {
-        AuthStorageService.saveLastEmail(email);
-      } else {
-        AuthStorageService.clearLastEmail();
-      }
+      // Save email for next login
+      AuthStorageService.saveLastEmail(email);
 
       toast({
         title: t('common.success'),
@@ -105,117 +97,125 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-3">
-          <div className="mx-auto mb-6 py-4">
+    <div className="min-h-screen flex">
+      {/* Left side - Background image */}
+      <div
+        className="hidden lg:block lg:w-1/2 xl:w-3/5 relative"
+      >
+        <img
+          src="/login-bg.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1c4a8b]/60 to-transparent z-[1]" />
+
+        {/* Content on image */}
+        <div className="absolute inset-0 z-[2] flex flex-col justify-end p-12 text-white">
+          <h2 className="text-3xl font-bold mb-4">
+            {t('auth.joinProfessionals')}
+          </h2>
+          <p className="text-lg opacity-90">
+            {t('auth.shapingFuture')}
+          </p>
+        </div>
+      </div>
+
+      {/* Right side - Login form */}
+      <div className="w-full lg:w-1/2 xl:w-2/5 flex items-center justify-center p-8 bg-white">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="text-center mb-2">
             <img
-              src="/bda-logo.png"
-              alt="BDA Logo"
-              className="h-40 w-auto mx-auto"
-              style={{ maxWidth: '100%', objectFit: 'contain' }}
+              src="/bda-logo.png?v=5"
+              alt="BDA - Business Development Association"
+              className="w-[75%] h-auto mx-auto"
             />
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">
-            {t('auth.bdaCertification')}
-          </CardTitle>
-          <p className="text-sm font-semibold text-blue-600">
-            BDA-CP | BDA-SCP
+
+          {/* Register link */}
+          <p className="text-center text-sm text-gray-600 mb-6">
+            {t('auth.noAccount')}{' '}
+            <Link to="/signup" className="text-blue-600 hover:underline font-medium">
+              {t('auth.registerFree')}
+            </Link>
           </p>
-          <p className="text-sm text-gray-600">
-            {t('auth.globalAuthority')}
-          </p>
-        </CardHeader>
-        <CardContent>
+
+          {/* Login form */}
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">{t('common.email')}</Label>
+            {/* Email field */}
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={t('auth.emailPlaceholder')}
+                placeholder={t('common.email')}
                 required
-                className="w-full"
+                className="pl-10 h-12 bg-gray-50 border-gray-200 focus:bg-white"
                 disabled={isLoading}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">{t('common.password')}</Label>
+
+            {/* Password field */}
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={t('auth.passwordPlaceholder')}
+                placeholder={t('common.password')}
                 required
-                className="w-full"
+                className="pl-10 h-12 bg-gray-50 border-gray-200 focus:bg-white"
                 disabled={isLoading}
               />
             </div>
 
-            {/* Remember email & Forgot password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember-email"
-                  checked={rememberEmail}
-                  onCheckedChange={(checked) => setRememberEmail(checked as boolean)}
-                  disabled={isLoading}
-                />
-                <Label
-                  htmlFor="remember-email"
-                  className="text-sm text-gray-600 cursor-pointer"
-                >
-                  {t('auth.rememberEmail')}
-                </Label>
-              </div>
-              <Link
-                to="/forgot-password"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                {t('auth.forgotPassword')}
-              </Link>
-            </div>
-
+            {/* Login button */}
             <Button
               type="submit"
-              className="w-full bg-primary hover:bg-primary/90"
+              className="w-full h-12 bg-[#1c4a8b] hover:bg-[#163a6e] text-white font-medium text-base"
               disabled={isLoading}
             >
               {isLoading ? t('auth.signingIn') : t('auth.signIn')}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              {t('auth.noAccount')}{' '}
-              <Link to="/signup" className="text-blue-600 hover:underline font-medium">
-                {t('auth.createAccount')}
-              </Link>
-            </p>
-            <p className="text-xs text-gray-500 mt-2">
-              {t('auth.needHelp')}{" "}
-              <a
-                href="https://bda-global.org"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                bda-global.org
-              </a>
-            </p>
+          {/* Forgot password */}
+          <div className="text-center mt-4">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-blue-600 hover:underline"
+            >
+              {t('auth.forgotPassword')}
+            </Link>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-            <p className="text-xs text-gray-500">
-              {t('auth.joinProfessionals')}<br />
-              <strong>{t('auth.shapingFuture')}</strong>
-            </p>
+          {/* Help text */}
+          <p className="text-center text-xs text-gray-500 mt-8 leading-relaxed">
+            {t('auth.usernameIsEmail')}{' '}
+            {t('auth.troubleAccessing')}{' '}
+            <a
+              href="mailto:info@bda-global.org"
+              className="text-blue-600 hover:underline"
+            >
+              info@bda-global.org
+            </a>
+          </p>
+
+          {/* Back to website link */}
+          <div className="text-center mt-4">
+            <a
+              href="https://bda-global.org"
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              ← {t('auth.backToWebsite')}
+            </a>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

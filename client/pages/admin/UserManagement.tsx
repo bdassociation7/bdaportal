@@ -39,8 +39,9 @@ import {
   Building2,
   GraduationCap,
   Upload,
+  Eye,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   useUsers,
   useUserStats,
@@ -48,6 +49,9 @@ import {
   useToggleUserStatus,
   useCountryCodes,
 } from '@/entities/users';
+import { useAuthContext } from '@/app/providers/AuthProvider';
+import { useConfirm } from '@/contexts/ConfirmDialogContext';
+import { impersonationService } from '@/services/impersonation.service';
 import type {
   User,
   UserFilters,
@@ -76,6 +80,9 @@ const ROLE_COLORS: Record<string, string> = {
 
 export default function UserManagement() {
   const { t } = useLanguage();
+  const { user: currentUser } = useAuthContext();
+  const { confirm } = useConfirm();
+  const navigate = useNavigate();
 
   // Get role label translation
   const getRoleLabel = (role: string): string => {
@@ -100,6 +107,26 @@ export default function UserManagement() {
 
   const updateMutation = useUpdateUser();
   const toggleStatusMutation = useToggleUserStatus();
+
+  const handleImpersonate = async (targetUser: User) => {
+    const confirmed = await confirm({
+      title: t('impersonation.confirmTitle'),
+      description: `${t('impersonation.confirmDescription')} ${targetUser.first_name || ''} ${targetUser.last_name || ''} (${targetUser.email})`,
+      confirmText: t('impersonation.start'),
+      variant: 'warning',
+    });
+    if (!confirmed || !currentUser) return;
+    try {
+      await impersonationService.startImpersonation(
+        { id: targetUser.id, email: targetUser.email, first_name: targetUser.first_name, last_name: targetUser.last_name },
+        { id: currentUser.id, email: currentUser.email || '', first_name: currentUser.profile?.first_name, last_name: currentUser.profile?.last_name }
+      );
+      // Auth state change will route to the target user's dashboard
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Impersonation failed:', err);
+    }
+  };
 
   const [editForm, setEditForm] = useState<UpdateUserDTO>({});
 
@@ -409,6 +436,16 @@ export default function UserManagement() {
                                 <UserCheck className="h-4 w-4 text-green-600" />
                               )}
                             </Button>
+                            {['admin', 'super_admin'].includes(currentUser?.profile?.role || '') && !['admin', 'super_admin'].includes(user.role) && user.is_active && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleImpersonate(user)}
+                                title={t('userMgmt.impersonate')}
+                              >
+                                <Eye className="h-4 w-4 text-amber-600" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

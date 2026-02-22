@@ -1,0 +1,433 @@
+-- ============================================================================
+-- BDA Portal - Branded Email Templates
+-- Updates email templates with BDA branding (logo, colors, professional layout)
+-- ============================================================================
+
+-- First, let's create a base layout function that wraps content
+-- This isn't a real function, just documentation for the template structure
+
+-- Base template variables available:
+-- {{user_name}} - Recipient's name
+-- {{content}} - Main email content (for wrapper templates)
+-- {{password_reset_link}} - Password reset/setup link
+-- {{portal_url}} - Portal URL (https://portal.bda-global.org)
+-- {{current_year}} - Current year for copyright
+
+-- ============================================================================
+-- Update bulk_import_welcome template with BDA branding
+-- ============================================================================
+
+UPDATE email_templates
+SET
+  subject = 'Welcome to BDA Certification Portal - Set Up Your Account',
+  html_body = '<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to BDA Portal</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: ''Segoe UI'', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7fa;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+
+          <!-- Header with Logo -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px 40px; text-align: center; border-radius: 12px 12px 0 0;">
+              <img src="https://bda-global.org/wp-content/uploads/2024/01/BDA-Logo-White.png" alt="BDA Logo" style="height: 60px; width: auto;" />
+              <h1 style="color: #ffffff; margin: 20px 0 0 0; font-size: 24px; font-weight: 600;">Business Data Analytics</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Global Certification Authority</p>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="background-color: #ffffff; padding: 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+              <h2 style="color: #1e3a5f; margin: 0 0 20px 0; font-size: 22px;">Welcome, {{user_name}}!</h2>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Your account has been created on the BDA Certification Portal. To get started, please set up your password by clicking the button below.
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{password_reset_link}}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.25);">
+                      Set Up Your Password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                This link will expire in 24 hours. If you didn''t request this account, please ignore this email or contact our support team.
+              </p>
+
+              <!-- Divider -->
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
+
+              <!-- What''s Next Section -->
+              <h3 style="color: #1e3a5f; margin: 0 0 15px 0; font-size: 16px;">What''s Next?</h3>
+              <ul style="color: #374151; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                <li>Complete your profile information</li>
+                <li>Explore BDA-CP and BDA-SCP certification tracks</li>
+                <li>Access learning materials and resources</li>
+                <li>Schedule your certification exam</li>
+              </ul>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px 40px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="text-align: center;">
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0;">
+                      <strong>BDA - Business Data Analytics</strong>
+                    </p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0 0 15px 0;">
+                      The Global Authority for Business Data Analytics Certification
+                    </p>
+                    <p style="margin: 0;">
+                      <a href="https://bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Website</a>
+                      <span style="color: #d1d5db;">|</span>
+                      <a href="https://portal.bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Portal</a>
+                      <span style="color: #d1d5db;">|</span>
+                      <a href="mailto:support@bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Support</a>
+                    </p>
+                    <p style="color: #9ca3af; font-size: 11px; margin: 20px 0 0 0;">
+                      &copy; 2024 Business Data Analytics. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>',
+  updated_at = NOW()
+WHERE template_key = 'bulk_import_welcome';
+
+-- ============================================================================
+-- Insert additional branded templates
+-- ============================================================================
+
+-- Password Reset template
+INSERT INTO email_templates (template_key, name, description, subject, html_body, is_active)
+VALUES (
+  'password_reset',
+  'Password Reset',
+  'Sent when a user requests to reset their password',
+  'Reset Your BDA Portal Password',
+  '<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your Password</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: ''Segoe UI'', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7fa;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+
+          <!-- Header with Logo -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px 40px; text-align: center; border-radius: 12px 12px 0 0;">
+              <img src="https://bda-global.org/wp-content/uploads/2024/01/BDA-Logo-White.png" alt="BDA Logo" style="height: 60px; width: auto;" />
+              <h1 style="color: #ffffff; margin: 20px 0 0 0; font-size: 24px; font-weight: 600;">Password Reset</h1>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="background-color: #ffffff; padding: 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+              <h2 style="color: #1e3a5f; margin: 0 0 20px 0; font-size: 22px;">Hello, {{user_name}}</h2>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                We received a request to reset your password for your BDA Portal account. Click the button below to create a new password.
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{password_reset_link}}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.25);">
+                      Reset Password
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                This link will expire in 1 hour. If you didn''t request a password reset, you can safely ignore this email.
+              </p>
+
+              <!-- Security Notice -->
+              <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-top: 25px; border-radius: 0 8px 8px 0;">
+                <p style="color: #92400e; font-size: 13px; margin: 0;">
+                  <strong>Security Tip:</strong> Never share your password or this link with anyone. BDA will never ask for your password via email.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px 40px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="text-align: center;">
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0;">
+                      <strong>BDA - Business Data Analytics</strong>
+                    </p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0 0 15px 0;">
+                      The Global Authority for Business Data Analytics Certification
+                    </p>
+                    <p style="margin: 0;">
+                      <a href="https://bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Website</a>
+                      <span style="color: #d1d5db;">|</span>
+                      <a href="https://portal.bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Portal</a>
+                      <span style="color: #d1d5db;">|</span>
+                      <a href="mailto:support@bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Support</a>
+                    </p>
+                    <p style="color: #9ca3af; font-size: 11px; margin: 20px 0 0 0;">
+                      &copy; 2024 Business Data Analytics. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>',
+  true
+) ON CONFLICT (template_key) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  subject = EXCLUDED.subject,
+  html_body = EXCLUDED.html_body,
+  updated_at = NOW();
+
+-- Welcome Email (for regular signups)
+INSERT INTO email_templates (template_key, name, description, subject, html_body, is_active)
+VALUES (
+  'welcome',
+  'Welcome Email',
+  'Sent when a new user signs up',
+  'Welcome to BDA Certification Portal!',
+  '<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to BDA</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: ''Segoe UI'', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7fa;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+
+          <!-- Header with Logo -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px 40px; text-align: center; border-radius: 12px 12px 0 0;">
+              <img src="https://bda-global.org/wp-content/uploads/2024/01/BDA-Logo-White.png" alt="BDA Logo" style="height: 60px; width: auto;" />
+              <h1 style="color: #ffffff; margin: 20px 0 0 0; font-size: 24px; font-weight: 600;">Welcome to BDA!</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Your journey to certification begins here</p>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="background-color: #ffffff; padding: 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+              <h2 style="color: #1e3a5f; margin: 0 0 20px 0; font-size: 22px;">Hello, {{user_name}}!</h2>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Thank you for joining the BDA Certification Portal. You''re now part of a global community of business data analytics professionals.
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="https://portal.bda-global.org/dashboard" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.25);">
+                      Go to Dashboard
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Certification Tracks -->
+              <h3 style="color: #1e3a5f; margin: 30px 0 15px 0; font-size: 16px;">Explore Our Certification Tracks</h3>
+
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 15px; background-color: #eff6ff; border-radius: 8px; margin-bottom: 10px;">
+                    <p style="color: #1e40af; font-weight: 600; margin: 0 0 5px 0;">BDA-CP (Certified Professional)</p>
+                    <p style="color: #3b82f6; font-size: 13px; margin: 0;">Foundation level certification for business data analytics</p>
+                  </td>
+                </tr>
+                <tr><td style="height: 10px;"></td></tr>
+                <tr>
+                  <td style="padding: 15px; background-color: #f0fdf4; border-radius: 8px;">
+                    <p style="color: #166534; font-weight: 600; margin: 0 0 5px 0;">BDA-SCP (Senior Certified Professional)</p>
+                    <p style="color: #22c55e; font-size: 13px; margin: 0;">Advanced certification for experienced professionals</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px 40px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="text-align: center;">
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0;">
+                      <strong>BDA - Business Data Analytics</strong>
+                    </p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0 0 15px 0;">
+                      The Global Authority for Business Data Analytics Certification
+                    </p>
+                    <p style="margin: 0;">
+                      <a href="https://bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Website</a>
+                      <span style="color: #d1d5db;">|</span>
+                      <a href="https://portal.bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Portal</a>
+                      <span style="color: #d1d5db;">|</span>
+                      <a href="mailto:support@bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Support</a>
+                    </p>
+                    <p style="color: #9ca3af; font-size: 11px; margin: 20px 0 0 0;">
+                      &copy; 2024 Business Data Analytics. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>',
+  true
+) ON CONFLICT (template_key) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  subject = EXCLUDED.subject,
+  html_body = EXCLUDED.html_body,
+  updated_at = NOW();
+
+-- Email Verification template
+INSERT INTO email_templates (template_key, name, description, subject, html_body, is_active)
+VALUES (
+  'email_verification',
+  'Email Verification',
+  'Sent to verify email address',
+  'Verify Your Email - BDA Portal',
+  '<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: ''Segoe UI'', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7fa;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+
+          <!-- Header with Logo -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 30px 40px; text-align: center; border-radius: 12px 12px 0 0;">
+              <img src="https://bda-global.org/wp-content/uploads/2024/01/BDA-Logo-White.png" alt="BDA Logo" style="height: 60px; width: auto;" />
+              <h1 style="color: #ffffff; margin: 20px 0 0 0; font-size: 24px; font-weight: 600;">Verify Your Email</h1>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="background-color: #ffffff; padding: 40px; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+              <h2 style="color: #1e3a5f; margin: 0 0 20px 0; font-size: 22px;">Almost there, {{user_name}}!</h2>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Please verify your email address to complete your BDA Portal registration. Click the button below to confirm your email.
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{verification_link}}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.25);">
+                      Verify Email Address
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                This link will expire in 24 hours. If you didn''t create a BDA Portal account, please ignore this email.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px 40px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="text-align: center;">
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0;">
+                      <strong>BDA - Business Data Analytics</strong>
+                    </p>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0 0 15px 0;">
+                      The Global Authority for Business Data Analytics Certification
+                    </p>
+                    <p style="margin: 0;">
+                      <a href="https://bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Website</a>
+                      <span style="color: #d1d5db;">|</span>
+                      <a href="https://portal.bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Portal</a>
+                      <span style="color: #d1d5db;">|</span>
+                      <a href="mailto:support@bda-global.org" style="color: #2563eb; text-decoration: none; font-size: 12px; margin: 0 10px;">Support</a>
+                    </p>
+                    <p style="color: #9ca3af; font-size: 11px; margin: 20px 0 0 0;">
+                      &copy; 2024 Business Data Analytics. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>',
+  true
+) ON CONFLICT (template_key) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  subject = EXCLUDED.subject,
+  html_body = EXCLUDED.html_body,
+  updated_at = NOW();

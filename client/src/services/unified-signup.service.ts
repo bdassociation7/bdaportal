@@ -137,32 +137,19 @@ export class UnifiedSignupService {
 
   /**
    * Vérification compte Portal
+   * Checks if a user exists in the Portal (Supabase public.users table)
    */
   private static async checkPortalAccount(email: string) {
     try {
-      // Utiliser l'API Supabase pour vérifier l'existence
+      // Check if user exists in public.users table
       const response = await AuthService.checkUserExists(email);
 
-      // Si on trouve dans public.users
       if (response.exists && response.userData) {
         console.log('✅ [checkPortalAccount] Found user in public.users:', response.userData);
         return response.userData;
       }
 
-      // Double-check en essayant de se connecter avec un faux mot de passe
-      const { supabase } = await import('@/shared/config/supabase.config');
-      const authCheck = await supabase.auth.signInWithPassword({
-        email: email,
-        password: 'dummy-check-12345'
-      });
-
-      // Si on a "Invalid login credentials", l'utilisateur existe dans auth.users
-      if (authCheck.error?.message?.includes('Invalid login credentials')) {
-        console.warn('⚠️ [checkPortalAccount] User exists in auth.users but NOT in public.users!', email);
-        // On retourne null pour forcer une tentative de création
-        return null;
-      }
-
+      // User not found in public.users
       return null;
     } catch (error) {
       console.error('❌ [checkPortalAccount] Error:', error);
@@ -325,6 +312,9 @@ export class UnifiedSignupService {
         const portalAccount = await AuthService.signUp(signupData);
         console.log('✅ [createNewAccounts] AuthService.signUp response:', portalAccount);
 
+        // Send welcome email (fire and forget)
+        this.sendWelcomeEmail(request.email, request.firstName, portalAccount?.user?.id);
+
         const result = {
           success: true,
           action: 'created',
@@ -381,6 +371,9 @@ export class UnifiedSignupService {
       console.log('✅ [createNewAccounts] UnifiedAuthService.signUp response:', result);
 
       if (result.success) {
+        // Send welcome email (fire and forget)
+        this.sendWelcomeEmail(request.email, request.firstName, result.user?.id);
+
         const finalResult = {
           success: true,
           action: 'created' as const,
@@ -687,6 +680,9 @@ export class UnifiedSignupService {
         user: supabaseResult.data.user
       };
 
+      // Send welcome email (fire and forget)
+      this.sendWelcomeEmail(request.email, request.firstName, portalResult.user?.id);
+
       return {
         success: true,
         action: 'created',
@@ -967,6 +963,54 @@ export class UnifiedSignupService {
         message: 'An error occurred while resolving conflicts. Please try again.',
         nextStep: 'confirm_data'
       };
+    }
+  }
+
+  /**
+   * Send welcome email to new user via Edge Function
+   * This is called after successful account creation
+   */
+  private static async sendWelcomeEmail(
+    email: string,
+    firstName: string,
+    userId?: string
+  ): Promise<void> {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.warn('[sendWelcomeEmail] Supabase config not available, skipping email');
+        return;
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'apikey': supabaseAnonKey
+        },
+        body: JSON.stringify({
+          type: 'welcome',
+          to: email,
+          user_id: userId,
+          data: {
+            user_name: firstName || email.split('@')[0],
+            email: email
+          }
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('✉️ [sendWelcomeEmail] Welcome email sent:', result.resend_id);
+      } else {
+        console.warn('[sendWelcomeEmail] Failed to send welcome email:', result.error);
+      }
+    } catch (error) {
+      // Don't fail signup if email fails
+      console.warn('[sendWelcomeEmail] Error sending welcome email:', error);
     }
   }
 }

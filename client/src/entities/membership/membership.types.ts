@@ -43,10 +43,25 @@ export interface MembershipBenefit {
 
 export interface MembershipProductMapping {
   id: string;
-  woocommerce_product_id: string;
+  woocommerce_product_id: number;
   membership_type: MembershipType;
   duration_months: number;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateMembershipProductMappingDTO {
+  woocommerce_product_id: number;
+  membership_type: MembershipType;
+  duration_months?: number;
+  is_active?: boolean;
+}
+
+export interface UpdateMembershipProductMappingDTO {
+  membership_type?: MembershipType;
+  duration_months?: number;
+  is_active?: boolean;
 }
 
 export interface MembershipActivationLog {
@@ -97,6 +112,7 @@ export interface CreateMembershipParams {
   membership_type: MembershipType;
   duration_months?: number; // Default 12
   notes?: string;
+  start_date?: string; // Optional: YYYY-MM-DD format for backdating (admin only)
 }
 
 export interface ExtendMembershipParams {

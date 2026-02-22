@@ -40,17 +40,58 @@ import { format, addDays, isWithinInterval, startOfDay, isBefore, isAfter } from
 // Common timezones
 const COMMON_TIMEZONES = [
   { value: 'UTC', label: 'UTC (GMT+0)' },
+  { value: 'Pacific/Auckland', label: 'New Zealand (NZDT)' },
+  { value: 'Australia/Sydney', label: 'Australia Eastern (AEDT)' },
+  { value: 'Australia/Perth', label: 'Australia Western (AWST)' },
+  { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
+  { value: 'Asia/Shanghai', label: 'China Standard Time (CST)' },
+  { value: 'Asia/Singapore', label: 'Singapore (SGT)' },
+  { value: 'Asia/Kolkata', label: 'India Standard Time (IST)' },
+  { value: 'Asia/Dubai', label: 'Dubai (GST)' },
+  { value: 'Asia/Riyadh', label: 'Saudi Arabia (AST)' },
+  { value: 'Africa/Cairo', label: 'Eastern European Time (EET)' },
+  { value: 'Africa/Lagos', label: 'West Africa Time (WAT)' },
+  { value: 'Europe/Istanbul', label: 'Turkey Time (TRT)' },
+  { value: 'Europe/Paris', label: 'Central European Time (CET)' },
+  { value: 'Europe/London', label: 'London (GMT)' },
+  { value: 'America/Sao_Paulo', label: 'Brasilia Time (BRT)' },
   { value: 'America/New_York', label: 'Eastern Time (ET)' },
   { value: 'America/Chicago', label: 'Central Time (CT)' },
   { value: 'America/Denver', label: 'Mountain Time (MT)' },
   { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
-  { value: 'Europe/London', label: 'London (GMT)' },
-  { value: 'Europe/Paris', label: 'Central European Time (CET)' },
-  { value: 'Asia/Dubai', label: 'Dubai (GST)' },
-  { value: 'Asia/Riyadh', label: 'Saudi Arabia (AST)' },
-  { value: 'Asia/Shanghai', label: 'China Standard Time (CST)' },
-  { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
 ];
+
+// Get UTC offset for a timezone in minutes
+function getTimezoneOffsetMinutes(timezone: string, date: Date): number {
+  const utcStr = date.toLocaleString('en-US', { timeZone: 'UTC' });
+  const tzStr = date.toLocaleString('en-US', { timeZone: timezone });
+  const utcDate = new Date(utcStr);
+  const tzDate = new Date(tzStr);
+  return (tzDate.getTime() - utcDate.getTime()) / 60000;
+}
+
+// Format a UTC date in the user's selected timezone
+function formatInTimezone(utcDate: Date, timezone: string, formatStr: string): string {
+  // Use Intl to format in the target timezone
+  if (formatStr === 'EEEE, MMMM d, yyyy') {
+    return utcDate.toLocaleDateString('en-US', {
+      timeZone: timezone,
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+  if (formatStr === 'h:mm a') {
+    return utcDate.toLocaleTimeString('en-US', {
+      timeZone: timezone,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  }
+  return utcDate.toLocaleString('en-US', { timeZone: timezone });
+}
 
 // Time slots (24h availability - online exam, any timezone)
 const TIME_SLOTS = [
@@ -212,7 +253,7 @@ export default function ScheduleExam() {
   useEffect(() => {
     const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const match = COMMON_TIMEZONES.find(tz => tz.value === detectedTimezone);
-    setSelectedTimezone(match ? detectedTimezone : 'Asia/Riyadh');
+    setSelectedTimezone(match ? detectedTimezone : 'UTC');
   }, []);
 
   // Load exam and voucher info
@@ -391,7 +432,16 @@ export default function ScheduleExam() {
       return;
     }
 
-    const selectedDateTime = new Date(`${format(selectedDate, 'yyyy-MM-dd')}T${selectedTime}:00`);
+    // Build the date-time in the selected timezone, then convert to UTC
+    // User selected a date + time meaning "this time in the selected timezone"
+    const localDateStr = `${format(selectedDate, 'yyyy-MM-dd')}T${selectedTime}:00`;
+    const naiveDate = new Date(localDateStr); // interpreted as browser-local
+    // Calculate the offset difference between browser timezone and selected timezone
+    const browserOffsetMin = -naiveDate.getTimezoneOffset(); // browser offset from UTC in minutes
+    const selectedOffsetMin = getTimezoneOffsetMinutes(selectedTimezone, naiveDate);
+    const offsetDiffMs = (browserOffsetMin - selectedOffsetMin) * 60000;
+    // Adjust so the stored UTC corresponds to the selected timezone's time
+    const selectedDateTime = new Date(naiveDate.getTime() + offsetDiffMs);
 
     if (!DEV_MODE_SKIP_DATE_VALIDATION) {
       const minAllowed = addDays(new Date(), 2);
@@ -507,10 +557,10 @@ export default function ScheduleExam() {
                   <div>
                     <p className="text-sm text-gray-500">Date & Time</p>
                     <p className="font-semibold">
-                      {format(scheduledDate, 'EEEE, MMMM d, yyyy')}
+                      {formatInTimezone(scheduledDate, selectedTimezone, 'EEEE, MMMM d, yyyy')}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {format(scheduledDate, 'h:mm a')} ({COMMON_TIMEZONES.find(tz => tz.value === selectedTimezone)?.label || selectedTimezone})
+                      {formatInTimezone(scheduledDate, selectedTimezone, 'h:mm a')} ({COMMON_TIMEZONES.find(tz => tz.value === selectedTimezone)?.label || selectedTimezone})
                     </p>
                   </div>
                 </div>
@@ -625,10 +675,10 @@ export default function ScheduleExam() {
                   <div>
                     <p className="text-sm text-gray-500">Date & Time</p>
                     <p className="font-semibold">
-                      {format(scheduledDate, 'EEEE, MMMM d, yyyy')}
+                      {formatInTimezone(scheduledDate, bookingTimezone, 'EEEE, MMMM d, yyyy')}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {format(scheduledDate, 'h:mm a')} ({COMMON_TIMEZONES.find(tz => tz.value === bookingTimezone)?.label || bookingTimezone})
+                      {formatInTimezone(scheduledDate, bookingTimezone, 'h:mm a')} ({COMMON_TIMEZONES.find(tz => tz.value === bookingTimezone)?.label || bookingTimezone})
                     </p>
                   </div>
                 </div>

@@ -15,6 +15,7 @@ import {
   Ticket,
   Calendar,
   CalendarClock,
+  CalendarCheck,
   UserCheck,
   BarChart3,
   FileText,
@@ -41,7 +42,8 @@ import {
   CircleHelp,
   Crown,
   Handshake,
-  BookPlus
+  BookPlus,
+  FileImage
 } from 'lucide-react';
 import { NavigationConfig } from '@/types/navigation';
 
@@ -117,6 +119,7 @@ export const navigationConfig: NavigationConfig = {
     // Exams Section
     { id: 'certification-exams', label: 'nav.admin.certificationExams', path: '/admin/certification-exams', icon: FileCheck, section: 'nav.admin.section.examinations' },
     { id: 'exam-scheduling', label: 'nav.admin.examScheduling', path: '/admin/exam-scheduling', icon: Calendar },
+    { id: 'exam-bookings', label: 'nav.admin.examBookings', path: '/admin/exam-bookings', icon: CalendarCheck },
     { id: 'exam-windows', label: 'nav.admin.examWindows', path: '/admin/exam-windows', icon: CalendarClock },
     { id: 'certifications', label: 'nav.admin.certifications', path: '/admin/certifications', icon: Award },
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
@@ -137,6 +140,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'book-products', label: 'nav.admin.bookProducts', path: '/admin/book-products', icon: BookMarked },
     { id: 'grant-book-access', label: 'nav.admin.grantBookAccess', path: '/admin/grant-book-access', icon: BookPlus },
     { id: 'partnership-products', label: 'nav.admin.partnershipProducts', path: '/admin/partnership-products', icon: Handshake },
+    { id: 'membership-products', label: 'nav.admin.membershipProducts', path: '/admin/membership-products', icon: Crown },
     { id: 'customers-vouchers', label: 'nav.admin.customersVouchers', path: '/admin/customers-vouchers', icon: Users },
     { id: 'vouchers', label: 'nav.admin.allVouchers', path: '/admin/vouchers', icon: Ticket },
 
@@ -145,6 +149,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'pdcs', label: 'nav.admin.pdcValidation', path: '/admin/pdcs', icon: CheckSquare },
     { id: 'content', label: 'nav.admin.contentResources', path: '/admin/content', icon: FolderOpen },
     { id: 'toolkit', label: 'nav.admin.toolkit', path: '/admin/toolkit', icon: Package },
+    { id: 'certificate-designer', label: 'nav.admin.certificateDesigner', path: '/admin/certificate-designer', icon: FileImage },
     { id: 'finance', label: 'nav.admin.financeTransactions', path: '/admin/finance', icon: CreditCard },
     { id: 'communications', label: 'nav.admin.communications', path: '/admin/communications', icon: Mail },
     { id: 'reports', label: 'nav.admin.reportsAnalytics', path: '/admin/reports', icon: BarChart3 },
@@ -177,6 +182,7 @@ export const navigationConfig: NavigationConfig = {
     // Exams Section
     { id: 'certification-exams', label: 'nav.admin.certificationExams', path: '/admin/certification-exams', icon: FileCheck, section: 'nav.admin.section.examinations' },
     { id: 'exam-scheduling', label: 'nav.admin.examScheduling', path: '/admin/exam-scheduling', icon: Calendar },
+    { id: 'exam-bookings', label: 'nav.admin.examBookings', path: '/admin/exam-bookings', icon: CalendarCheck },
     { id: 'exam-windows', label: 'nav.admin.examWindows', path: '/admin/exam-windows', icon: CalendarClock },
     { id: 'certifications', label: 'nav.admin.certifications', path: '/admin/certifications', icon: Award },
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
@@ -197,6 +203,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'book-products', label: 'nav.admin.bookProducts', path: '/admin/book-products', icon: BookMarked },
     { id: 'grant-book-access', label: 'nav.admin.grantBookAccess', path: '/admin/grant-book-access', icon: BookPlus },
     { id: 'partnership-products', label: 'nav.admin.partnershipProducts', path: '/admin/partnership-products', icon: Handshake },
+    { id: 'membership-products', label: 'nav.admin.membershipProducts', path: '/admin/membership-products', icon: Crown },
     { id: 'customers-vouchers', label: 'nav.admin.customersVouchers', path: '/admin/customers-vouchers', icon: Users },
     { id: 'vouchers', label: 'nav.admin.allVouchers', path: '/admin/vouchers', icon: Ticket },
 
@@ -205,6 +212,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'pdcs', label: 'nav.admin.pdcValidation', path: '/admin/pdcs', icon: CheckSquare },
     { id: 'content', label: 'nav.admin.contentResources', path: '/admin/content', icon: FolderOpen },
     { id: 'toolkit', label: 'nav.admin.toolkit', path: '/admin/toolkit', icon: Package },
+    { id: 'certificate-designer', label: 'nav.admin.certificateDesigner', path: '/admin/certificate-designer', icon: FileImage },
     { id: 'finance', label: 'nav.admin.financeTransactions', path: '/admin/finance', icon: CreditCard },
     { id: 'communications', label: 'nav.admin.communications', path: '/admin/communications', icon: Mail },
     { id: 'reports', label: 'nav.admin.reportsAnalytics', path: '/admin/reports', icon: BarChart3 },

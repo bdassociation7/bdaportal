@@ -39,6 +39,7 @@ import {
   XCircle,
   Clock,
   Info,
+  HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -77,6 +78,7 @@ const translations = {
     certificationRequiredCard: 'The PDC module is available exclusively to certified BDA professionals. Earn your BDA-CP™ or BDA-SCP™ certification to access this feature.',
     learnAboutCertification: 'Learn About Certification',
     // Submit button & dialog
+    howToEnterPdcs: 'How to Enter PDCs',
     submitPdc: 'Submit PDC',
     submitPdcEntry: 'Submit PDC Entry',
     submitPdcDesc: 'Submit your professional development activity for credit approval',
@@ -170,6 +172,7 @@ const translations = {
     certificationRequiredCard: 'وحدة PDC متاحة حصرياً لمحترفي BDA المعتمدين. احصل على شهادة BDA-CP™ أو BDA-SCP™ للوصول إلى هذه الميزة.',
     learnAboutCertification: 'تعرف على الشهادة',
     // Submit button & dialog
+    howToEnterPdcs: 'كيفية إدخال PDCs',
     submitPdc: 'تقديم PDC',
     submitPdcEntry: 'تقديم إدخال PDC',
     submitPdcDesc: 'قدم نشاط التطوير المهني الخاص بك للموافقة على النقاط',
@@ -535,7 +538,7 @@ export default function PDCs() {
             </p>
             <Button
               size="lg"
-              onClick={() => window.open('https://bda-global.org/certification', '_blank')}
+              onClick={() => window.open('https://bda-global.org/en/certifications/', '_blank')}
             >
               {texts.learnAboutCertification}
             </Button>
@@ -559,14 +562,24 @@ export default function PDCs() {
               </p>
             </div>
           </div>
-          <Dialog open={isSubmitOpen} onOpenChange={setIsSubmitOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg" variant="secondary" onClick={resetForm} disabled={!hasActiveCertification}>
-                <Plus className="h-5 w-5 mr-2" />
-                {texts.submitPdc}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center gap-3">
+            <Button
+              size="lg"
+              variant="outline"
+              className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+              onClick={() => window.open('https://bda-global.org/en/certifications/recertification/how-to-enter-pdcs/', '_blank')}
+            >
+              <HelpCircle className="h-5 w-5 mr-2" />
+              {texts.howToEnterPdcs}
+            </Button>
+            <Dialog open={isSubmitOpen} onOpenChange={setIsSubmitOpen}>
+              <DialogTrigger asChild>
+                <Button size="lg" variant="secondary" onClick={resetForm} disabled={!hasActiveCertification}>
+                  <Plus className="h-5 w-5 mr-2" />
+                  {texts.submitPdc}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{texts.submitPdcEntry}</DialogTitle>
                 <DialogDescription>
@@ -783,6 +796,7 @@ export default function PDCs() {
           </Dialog>
         </div>
       </div>
+    </div>
 
       {/* US4: PDC Progress Bar */}
       <Card className={needsRecertification ? 'border-2 border-green-500' : ''}>

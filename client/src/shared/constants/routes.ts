@@ -74,6 +74,7 @@ export const ROUTES = {
     COMMUNICATIONS: '/admin/communications',
     SETTINGS: '/admin/settings',
     SECURITY: '/admin/security',
+    CERTIFICATE_DESIGNER: '/admin/certificate-designer',
 
     // Quiz Management
     QUIZZES: '/admin/quizzes',

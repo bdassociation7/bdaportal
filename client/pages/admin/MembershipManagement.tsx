@@ -103,6 +103,7 @@ export default function MembershipManagement() {
     membership_type: 'basic' as MembershipType,
     duration_months: 12,
     notes: '',
+    start_date: '', // Optional: for backdating memberships
   });
 
   // US2: Bulk activation state
@@ -193,6 +194,7 @@ export default function MembershipManagement() {
           membership_type: createForm.membership_type,
           duration_months: createForm.duration_months,
           notes: createForm.notes || undefined,
+          start_date: createForm.start_date || undefined, // Pass start_date for backdating
         },
         adminId: currentUser.id,
       });
@@ -201,7 +203,7 @@ export default function MembershipManagement() {
 
       toast.success('Membership created successfully');
       setIsCreateOpen(false);
-      setCreateForm({ user_email: '', membership_type: 'basic', duration_months: 12, notes: '' });
+      setCreateForm({ user_email: '', membership_type: 'basic', duration_months: 12, notes: '', start_date: '' });
     } catch (error: any) {
       toast.error(error.message || 'Failed to create membership');
     }
@@ -777,6 +779,18 @@ export default function MembershipManagement() {
                   <SelectItem value="24">{t('membership.twentyFourMonths')}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label>{t('membership.startDate')} ({t('common.optional')})</Label>
+              <Input
+                type="date"
+                value={createForm.start_date}
+                onChange={(e) => setCreateForm({ ...createForm, start_date: e.target.value })}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {t('membership.startDateHint') || 'Leave empty for today. Use this to backdate memberships.'}
+              </p>
             </div>
 
             <div>

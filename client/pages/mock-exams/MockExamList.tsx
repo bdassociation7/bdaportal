@@ -14,6 +14,7 @@ import {
   Globe,
   ExternalLink,
   RotateCcw,
+  ShoppingBag,
 } from 'lucide-react';
 import { useActiveExams } from '@/entities/mock-exam';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -92,6 +93,9 @@ const translations = {
     exams: 'exams',
     exam: 'exam',
     free: 'free',
+    // Purchase CTA
+    getPremiumExams: 'Get Premium Mock Exams',
+    getPremiumExamsDesc: 'Purchase premium mock exams from our store to enhance your exam preparation',
   },
   ar: {
     // Header
@@ -144,6 +148,9 @@ const translations = {
     exams: 'امتحانات',
     exam: 'امتحان',
     free: 'مجاني',
+    // Purchase CTA
+    getPremiumExams: 'احصل على الامتحانات التجريبية المميزة',
+    getPremiumExamsDesc: 'اشترِ الامتحانات التجريبية المميزة من متجرنا لتعزيز استعدادك للامتحان',
   }
 };
 
@@ -183,7 +190,12 @@ function ExamCard({
         {/* Exam Info */}
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <h3 className="text-xl font-bold text-gray-900">{exam.title}</h3>
+            <h3
+              className="text-xl font-bold text-gray-900"
+              dir={exam.language === 'ar' ? 'rtl' : 'ltr'}
+            >
+              {exam.language === 'ar' && exam.title_ar ? exam.title_ar : exam.title}
+            </h3>
             <StatusBadge variant={getDifficultyVariant(exam.difficulty)} size="sm">
               {EXAM_DIFFICULTY_LABELS[exam.difficulty]}
             </StatusBadge>
@@ -209,7 +221,12 @@ function ExamCard({
             )}
           </div>
 
-          <p className="text-gray-600 mb-4">{exam.description}</p>
+          <p
+            className="text-gray-600 mb-4"
+            dir={exam.language === 'ar' ? 'rtl' : 'ltr'}
+          >
+            {exam.language === 'ar' && exam.description_ar ? exam.description_ar : exam.description}
+          </p>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
             <div className="flex items-center gap-1">
@@ -574,6 +591,27 @@ export default function MockExamList() {
             {freeExams.length} {texts.free}, {premiumExams.length} {texts.premium})
           </div>
         )}
+
+        {/* Premium Purchase CTA */}
+        <div className="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="p-3 bg-amber-100 rounded-full">
+              <ShoppingBag className="h-6 w-6 text-amber-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">{texts.getPremiumExams}</h3>
+            <p className="text-sm text-gray-600 max-w-md">{texts.getPremiumExamsDesc}</p>
+            <a
+              href="https://bda-global.org/en/store/bda-mock-exams/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors"
+            >
+              <ShoppingBag className="h-5 w-5" />
+              {texts.visitStore}
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

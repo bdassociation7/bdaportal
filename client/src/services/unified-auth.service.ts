@@ -32,7 +32,7 @@ export interface AuthResult {
   success: boolean;
   user?: UnifiedUser;
   error?: AuthError;
-  action_taken?: 'login' | 'created_portal' | 'created_store' | 'linked_accounts';
+  action_taken?: 'login' | 'created_portal' | 'recovered_portal' | 'created_store' | 'linked_accounts';
 }
 
 export class UnifiedAuthService {
@@ -394,6 +394,7 @@ export class UnifiedAuthService {
 
   /**
    * Create Portal account from existing Store user
+   * Uses Edge Function to bypass email confirmation (user already verified in WordPress)
    */
   private static async createPortalFromStore(
     email: string,
@@ -421,39 +422,107 @@ export class UnifiedAuthService {
         console.log('⚠️ [UnifiedAuthService] No WordPress role provided, using bda_role:', portalRole);
       }
 
-      // Create Supabase account
-      const supabaseResult = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
+      // Call Edge Function to create user with auto-confirmed email
+      // This bypasses email confirmation since user is already verified in WordPress
+      console.log('🚀 [UnifiedAuthService] Calling migrate-store-user Edge Function...');
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/migrate-store-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            email: email.toLowerCase().trim(),
+            password,
             wp_user_id: wpUserData.wp_user_id,
             first_name: wpUserData.first_name,
             last_name: wpUserData.last_name,
+            wordpress_role: wpUserData.wordpress_role,
             bda_role: portalRole,
             organization: wpUserData.bda_organization,
-            created_from: 'store'
-          }
+          }),
         }
-      });
+      );
 
-      if (supabaseResult.error) {
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error('❌ [UnifiedAuthService] Edge Function failed:', result.error);
+
+        // Recovery strategy: Try to sign in (user might already exist)
+        if (result.action === 'linked_existing' || response.status === 409) {
+          console.log('🔄 [UnifiedAuthService] User already exists, attempting sign in...');
+        }
+
+        // Try to sign in with the credentials (user may already exist in auth.users)
+        const recoverySignIn = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (recoverySignIn.data.user) {
+          console.log('✅ [UnifiedAuthService] Recovery successful - signed in existing user');
+
+          // Update metadata to ensure linking with WordPress
+          await supabase.auth.updateUser({
+            data: {
+              wp_user_id: wpUserData.wp_user_id,
+              first_name: wpUserData.first_name,
+              last_name: wpUserData.last_name,
+              bda_role: portalRole,
+              organization: wpUserData.bda_organization,
+              created_from: 'store'
+            }
+          });
+
+          // Ensure public.users is linked with wp_user_id
+          const { error: upsertError } = await supabase
+            .from('users')
+            .upsert({
+              id: recoverySignIn.data.user.id,
+              email: email.toLowerCase().trim(),
+              first_name: wpUserData.first_name,
+              last_name: wpUserData.last_name,
+              role: portalRole,
+              wp_user_id: wpUserData.wp_user_id,
+              wp_sync_status: 'synced',
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'id'
+            });
+
+          if (upsertError) {
+            console.warn('⚠️ [UnifiedAuthService] Failed to upsert public.users (non-blocking):', upsertError);
+          }
+
+          // Build and return unified user
+          const profile = await AuthService.loadUserProfile(recoverySignIn.data.user.id);
+          const user = await this.buildUnifiedUser(recoverySignIn.data.user, profile.profile);
+
+          return {
+            success: true,
+            user,
+            action_taken: 'recovered_portal'
+          };
+        }
+
         return {
           success: false,
           error: {
-            code: supabaseResult.error.message,
+            code: result.error || 'EDGE_FUNCTION_FAILED',
             message: 'Error creating portal account'
           }
         };
       }
 
-      // Notify WordPress that portal account was created
-      await WordPressAPIService.createPortalUser(
-        wpUserData.wp_user_id,
-        { portal_user_id: supabaseResult.data.user?.id }
-      );
+      console.log('✅ [UnifiedAuthService] Edge Function success:', result.action);
 
-      // Sign in the newly created user
+      // Sign in the newly created/linked user
       const signInResult = await AuthService.signIn(email, password);
 
       if (signInResult.user) {
@@ -510,24 +579,34 @@ export class UnifiedAuthService {
 
   /**
    * Check if user exists in any system
+   * Uses database queries instead of failed login attempts to avoid console errors
    */
   private static async checkExistingUser(email: string): Promise<{ exists: boolean; where?: string[] }> {
-    const checks = await Promise.allSettled([
-      // Check Supabase
-      supabase.auth.signInWithPassword({ email, password: 'dummy-check' }),
-      // Check WordPress (this will fail but we can see error type)
-      WordPressAPIService.verifyCredentials(email, 'dummy-check')
-    ]);
-
     const exists: string[] = [];
 
-    // Check Supabase result
-    const [supabaseCheck] = checks;
-    if (supabaseCheck.status === 'fulfilled' && supabaseCheck.value.error) {
-      // If error is NOT "Invalid login credentials", user exists
-      if (!supabaseCheck.value.error.message?.includes('Invalid login credentials')) {
+    try {
+      // Check Supabase public.users table
+      const { data: portalUser } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle();
+
+      if (portalUser) {
         exists.push('supabase');
       }
+
+      // Check WordPress using the checkUserExists method
+      try {
+        const wpCheck = await WordPressAPIService.checkUserExists(email);
+        if (wpCheck.success && wpCheck.data) {
+          exists.push('wordpress');
+        }
+      } catch {
+        // WordPress check failed - user likely doesn't exist there
+      }
+    } catch (error) {
+      console.log('[checkExistingUser] Error checking user existence:', error);
     }
 
     return {

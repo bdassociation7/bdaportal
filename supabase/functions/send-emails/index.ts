@@ -27,7 +27,7 @@ const corsHeaders = {
 // Configuration
 const BATCH_SIZE = 10
 const FROM_EMAIL = 'noreply@bda-global.org'
-const FROM_NAME = 'BDA Association'
+const FROM_NAME = 'The Business Development Association (BDA®)'
 
 interface EmailQueueItem {
   id: string

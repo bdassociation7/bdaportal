@@ -27,11 +27,11 @@ import { useAuth } from '@/app/providers/AuthProvider';
 import {
   useUserMembershipStatus,
   useMembershipBenefits,
-  MembershipService,
 } from '@/entities/membership';
 import type { MembershipStatus, MembershipType } from '@/entities/membership';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { downloadMembershipCertificate } from '@/services/certificate-generator.service';
 
 /**
  * My Membership Page
@@ -192,45 +192,36 @@ export default function MyMembership() {
   const professionalBenefits = professionalBenefitsResult?.data || [];
 
   const handleDownloadCertificate = async () => {
-    if (!membershipStatus?.membership?.id) return;
+    const membership = membershipStatus?.membership;
+    if (!membership?.id) return;
 
     setIsDownloading(true);
     try {
-      const result = await MembershipService.getMembershipCertificateUrl(
-        membershipStatus.membership.id
-      );
-      if (result.error) throw result.error;
+      // Get user's full name
+      const firstName = user?.profile?.first_name || '';
+      const lastName = user?.profile?.last_name || '';
+      const fullName = [firstName, lastName].filter(Boolean).join(' ') || user?.email || 'Member';
 
-      if (result.data) {
-        window.open(result.data, '_blank');
-        toast.success(texts.downloadingCertificate);
-      }
+      // Generate certificate client-side
+      await downloadMembershipCertificate({
+        membership_id: membership.membership_id,
+        user_full_name: fullName,
+        membership_type: 'professional',
+        start_date: membership.start_date,
+        end_date: membership.expiry_date,
+      });
+
+      toast.success(texts.downloadingCertificate);
     } catch (error: any) {
+      console.error('Certificate generation error:', error);
       toast.error(error.message || texts.downloadFailed);
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const handleGenerateCertificate = async () => {
-    if (!membershipStatus?.membership?.id) return;
-
-    setIsGenerating(true);
-    try {
-      const result = await MembershipService.generateMembershipCertificate(
-        membershipStatus.membership.id
-      );
-      if (result.error) throw result.error;
-
-      toast.success(texts.certificateGenerated);
-      // Refetch membership status to get updated certificate_url
-      refetch();
-    } catch (error: any) {
-      toast.error(error.message || texts.certificateGenerationFailed);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+  // Certificate is now generated client-side, no need for separate generate function
+  const handleGenerateCertificate = handleDownloadCertificate;
 
   const getStatusBadge = (status: MembershipStatus) => {
     switch (status) {
@@ -333,7 +324,7 @@ export default function MyMembership() {
             <div className="flex justify-center gap-4">
               <Button
                 size="lg"
-                onClick={() => window.open('https://bda-global.org/membership', '_blank')}
+                onClick={() => window.open('https://bda-global.org/en/memberships/', '_blank')}
               >
                 <Crown className="h-5 w-5 mr-2" />
                 {texts.becomeMember}
@@ -432,7 +423,7 @@ export default function MyMembership() {
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => window.open('https://bda-global.org/membership', '_blank')}
+              onClick={() => window.open('https://bda-global.org/en/memberships/', '_blank')}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               {texts.renewNow}
@@ -454,7 +445,7 @@ export default function MyMembership() {
               variant="outline"
               size="sm"
               className="border-orange-300 text-orange-700 hover:bg-orange-100"
-              onClick={() => window.open('https://bda-global.org/membership', '_blank')}
+              onClick={() => window.open('https://bda-global.org/en/memberships/', '_blank')}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               {texts.renewNow}
@@ -653,7 +644,7 @@ export default function MyMembership() {
                 <Button
                   variant="default"
                   className="bg-royal-600 hover:bg-royal-700"
-                  onClick={() => window.open('https://bda-global.org/membership/upgrade', '_blank')}
+                  onClick={() => window.open('https://bda-global.org/en/product/professional-membership/', '_blank')}
                 >
                   <Crown className="h-4 w-4 mr-2" />
                   {texts.upgradeNow}

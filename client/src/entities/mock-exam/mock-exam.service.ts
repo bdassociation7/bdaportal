@@ -1130,7 +1130,10 @@ export class MockExamService {
           : null;
 
         const { mock_exam_questions, mock_exam_attempts, ...examData } = exam;
-        const totalQuestions = Array.isArray(mock_exam_questions) ? mock_exam_questions.length : 0;
+        // mock_exam_questions(count) returns [{count: N}], not an array of questions
+        const totalQuestions = Array.isArray(mock_exam_questions) && mock_exam_questions.length > 0
+          ? (mock_exam_questions[0]?.count ?? 0)
+          : 0;
 
         return {
           ...examData,

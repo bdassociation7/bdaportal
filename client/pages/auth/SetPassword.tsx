@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 export default function SetPassword() {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ export default function SetPassword() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
@@ -26,12 +27,32 @@ export default function SetPassword() {
         const hash = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
 
+        // Check for error parameters first (e.g., expired link)
+        const urlError = params.get('error');
+        const urlErrorCode = params.get('error_code');
+        const urlErrorDescription = params.get('error_description');
+
+        if (urlError || urlErrorCode) {
+          // Handle specific error codes
+          let errorMessage = urlErrorDescription?.replace(/\+/g, ' ') || 'An error occurred with your link.';
+
+          if (urlErrorCode === 'otp_expired') {
+            errorMessage = 'This password reset link has expired. Please request a new one.';
+          } else if (urlErrorCode === 'access_denied') {
+            errorMessage = 'Access denied. The link may be invalid or has already been used.';
+          }
+
+          setError(errorMessage);
+          setErrorCode(urlErrorCode);
+          setLoading(false);
+          return;
+        }
+
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
-        const type = params.get('type');
 
         if (!accessToken) {
-          setError('Invalid or missing invitation link. Please request a new invite.');
+          setError('Invalid or missing invitation link. Please request a new one.');
           setLoading(false);
           return;
         }
@@ -44,7 +65,7 @@ export default function SetPassword() {
 
         if (sessionError) {
           console.error('Session error:', sessionError);
-          setError('Your invitation link has expired or is invalid. Please request a new invite.');
+          setError('Your invitation link has expired or is invalid. Please request a new one.');
           setLoading(false);
           return;
         }
@@ -104,25 +125,37 @@ export default function SetPassword() {
     }
   };
 
+  // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 via-white to-indigo-50">
+      <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-4" />
-            <p className="text-gray-600">Verifying your invitation...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-gray-600">Verifying your link...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  // Success state
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 via-white to-indigo-50">
+      <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <CheckCircle className="h-12 w-12 text-green-600 mb-4" />
+          <CardHeader className="text-center space-y-3">
+            <div className="mx-auto mb-4 py-4">
+              <img
+                src="/bda-logo.png"
+                alt="BDA Logo"
+                className="h-32 w-auto mx-auto"
+                style={{ maxWidth: '100%', objectFit: 'contain' }}
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Password Set Successfully!</h2>
             <p className="text-gray-600 text-center">
               Redirecting you to the dashboard...
@@ -133,21 +166,91 @@ export default function SetPassword() {
     );
   }
 
+  // Error state (expired/invalid link)
+  if (error && !userEmail) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center space-y-3">
+            <div className="mx-auto mb-4 py-4">
+              <img
+                src="/bda-logo.png"
+                alt="BDA Logo"
+                className="h-32 w-auto mx-auto"
+                style={{ maxWidth: '100%', objectFit: 'contain' }}
+              />
+            </div>
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              Link Expired
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <p className="text-gray-600 mb-2">{error}</p>
+              {errorCode && (
+                <p className="text-xs text-gray-400">Error code: {errorCode}</p>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <Link to="/forgot-password" className="block">
+                <Button className="w-full bg-primary hover:bg-primary/90">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Request New Link
+                </Button>
+              </Link>
+              <Link to="/login" className="block">
+                <Button variant="outline" className="w-full">
+                  Back to Login
+                </Button>
+              </Link>
+            </div>
+
+            <div className="pt-4 border-t border-gray-200 text-center">
+              <p className="text-xs text-gray-500">
+                Need help?{' '}
+                <a
+                  href="https://bda-global.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  Contact support
+                </a>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Normal form state
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 via-white to-indigo-50 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-sky-500 via-indigo-600 to-navy-800 rounded-2xl flex items-center justify-center mb-4">
-            <span className="text-white text-xl font-bold">BDA</span>
+        <CardHeader className="text-center space-y-3">
+          <div className="mx-auto mb-4 py-4">
+            <img
+              src="/bda-logo.png"
+              alt="BDA Logo"
+              className="h-32 w-auto mx-auto"
+              style={{ maxWidth: '100%', objectFit: 'contain' }}
+            />
           </div>
-          <CardTitle className="text-2xl">Set Your Password</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl font-bold text-gray-900">
+            Set Your Password
+          </CardTitle>
+          <p className="text-sm text-gray-600">
             {userEmail ? (
               <>Welcome! Create a password for <strong>{userEmail}</strong></>
             ) : (
               'Create a secure password for your account'
             )}
-          </CardDescription>
+          </p>
         </CardHeader>
         <CardContent>
           {error && (
@@ -197,7 +300,7 @@ export default function SetPassword() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800"
+              className="w-full bg-primary hover:bg-primary/90"
               disabled={submitting}
             >
               {submitting ? (
@@ -210,6 +313,20 @@ export default function SetPassword() {
               )}
             </Button>
           </form>
+
+          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+            <p className="text-xs text-gray-500">
+              Need help?{' '}
+              <a
+                href="https://bda-global.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                bda-global.org
+              </a>
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

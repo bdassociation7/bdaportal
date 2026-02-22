@@ -574,11 +574,16 @@ export class BulkUploadService {
     validatedRows: ValidatedRow[],
     sendWelcomeEmail: boolean = true,
     activateContent: boolean = false,
-    userRole: 'individual' | 'ecp' | 'pdp' = 'individual'
+    userRole: 'individual' | 'ecp' | 'pdp' = 'individual',
+    resendToExisting: boolean = false
   ): Promise<{ job_id: string; error?: string }> {
     const validRows = validatedRows.filter((r) => r.status === 'valid');
+    const existingRows = validatedRows.filter((r) => r.status === 'existing');
 
-    if (validRows.length === 0) {
+    // Check if there are rows to process (valid rows, or existing rows when resend is enabled)
+    const hasRowsToProcess = validRows.length > 0 || (resendToExisting && existingRows.length > 0);
+
+    if (!hasRowsToProcess) {
       return { job_id: '', error: 'No valid rows to process' };
     }
 
@@ -589,7 +594,9 @@ export class BulkUploadService {
     }
 
     // Prepare items for the Edge Function
-    const items = validRows.map((row) => ({
+    // Include both valid rows (new users) and existing rows (when resend is enabled)
+    const rowsToProcess = resendToExisting ? [...validRows, ...existingRows] : validRows;
+    const items = rowsToProcess.map((row) => ({
       row_number: row.row_number,
       email: row.data.email,
       full_name: row.data.full_name,
@@ -599,7 +606,7 @@ export class BulkUploadService {
       certification_track: row.data.certification_track,
     }));
 
-    console.log('[BulkUpload] Starting job upload with', items.length, 'items');
+    console.log('[BulkUpload] Starting job upload with', items.length, 'items (valid:', validRows.length, ', existing to resend:', resendToExisting ? existingRows.length : 0, ')');
 
     // Call Edge Function with new items format
     const { data, error } = await supabase.functions.invoke('bulk-create-users', {
@@ -608,6 +615,7 @@ export class BulkUploadService {
         send_welcome_email: sendWelcomeEmail,
         activate_content: activateContent,
         user_role: userRole,
+        resend_to_existing: resendToExisting,
       },
     });
 

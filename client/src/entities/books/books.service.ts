@@ -9,7 +9,87 @@ import { supabase } from '@/shared/config/supabase.config';
 
 const WP_API_BASE_URL = import.meta.env.VITE_WP_API_BASE_URL || 'http://localhost:8080/wp-json';
 
+// Cache for product covers to avoid repeated API calls
+const coverImageCache: Map<number, string | null> = new Map();
+
 export class BooksService {
+  /**
+   * Fetch cover image from WooCommerce for a product
+   */
+  private static async fetchCoverFromStore(productId: number): Promise<string | null> {
+    // Check cache first
+    if (coverImageCache.has(productId)) {
+      return coverImageCache.get(productId) || null;
+    }
+
+    try {
+      const response = await fetch(
+        `${WP_API_BASE_URL}/bda-portal/v1/woocommerce/product-cover/${productId}`
+      );
+
+      if (!response.ok) {
+        coverImageCache.set(productId, null);
+        return null;
+      }
+
+      const result = await response.json();
+      const coverImage = result.success ? result.cover_image : null;
+      coverImageCache.set(productId, coverImage);
+      return coverImage;
+    } catch (error) {
+      console.warn(`Failed to fetch cover for product ${productId}:`, error);
+      coverImageCache.set(productId, null);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch cover images for multiple products from WooCommerce
+   */
+  private static async fetchCoversFromStore(productIds: number[]): Promise<Map<number, string>> {
+    const covers = new Map<number, string>();
+
+    // Filter out products we already have cached
+    const uncachedIds = productIds.filter(id => !coverImageCache.has(id));
+
+    if (uncachedIds.length === 0) {
+      // Return from cache
+      productIds.forEach(id => {
+        const cached = coverImageCache.get(id);
+        if (cached) covers.set(id, cached);
+      });
+      return covers;
+    }
+
+    try {
+      const response = await fetch(
+        `${WP_API_BASE_URL}/bda-portal/v1/woocommerce/product-covers?product_ids=${uncachedIds.join(',')}`
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          result.data.forEach((item: { product_id: number; cover_image: string | null }) => {
+            coverImageCache.set(item.product_id, item.cover_image);
+            if (item.cover_image) {
+              covers.set(item.product_id, item.cover_image);
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to fetch covers from store:', error);
+    }
+
+    // Return all covers (from cache and newly fetched)
+    productIds.forEach(id => {
+      const cached = coverImageCache.get(id);
+      if (cached) covers.set(id, cached);
+    });
+
+    return covers;
+  }
+
   /**
    * Get non-book product IDs (memberships, learning systems, partnerships)
    * These should be excluded from My Books display
@@ -163,6 +243,21 @@ export class BooksService {
           const expiryDate = new Date(book.expires_at);
           const isExpired = expiryDate < now;
           return filters.expired ? isExpired : !isExpired;
+        });
+      }
+
+      // Fetch missing cover images from WooCommerce store
+      const booksWithoutCovers = books.filter((book: UserBook) => !book.cover_image && book.product_id);
+      if (booksWithoutCovers.length > 0) {
+        const productIds = booksWithoutCovers.map((book: UserBook) => book.product_id);
+        const covers = await this.fetchCoversFromStore(productIds);
+
+        // Update books with fetched covers
+        books = books.map((book: UserBook) => {
+          if (!book.cover_image && book.product_id && covers.has(book.product_id)) {
+            return { ...book, cover_image: covers.get(book.product_id) };
+          }
+          return book;
         });
       }
 

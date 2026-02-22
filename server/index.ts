@@ -9,6 +9,7 @@ import {
   handleWordPressSyncWebhook,
   handleWordPressSyncHealth,
 } from "./routes/wordpress-sync-webhook";
+import { handleGenerateCertificate } from "./routes/certificate-generate";
 
 export function createServer() {
   const app = express();
@@ -36,6 +37,9 @@ export function createServer() {
   app.post("/api/webhooks/wordpress/sync", handleWordPressSyncWebhook);
   // Health check for WordPress sync webhook
   app.get("/api/webhooks/wordpress/health", handleWordPressSyncHealth);
+
+  // Certificate generation - generates PDF on-the-fly and returns it
+  app.get("/api/certificates/generate/:credentialId", handleGenerateCertificate);
 
   return app;
 }

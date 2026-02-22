@@ -1,0 +1,153 @@
+-- Migration: Fix voucher status check in eligibility function
+-- Date: 2026-01-03
+-- Description: Allow 'assigned' vouchers in addition to 'available'
+--              When a booking is made, voucher status changes to 'assigned',
+--              but user should still be able to launch the exam with that voucher
+
+DROP FUNCTION IF EXISTS check_exam_eligibility(UUID, UUID);
+
+CREATE OR REPLACE FUNCTION check_exam_eligibility(
+    p_user_id UUID,
+    p_quiz_id UUID
+)
+RETURNS TABLE (
+    eligible BOOLEAN,
+    reason TEXT,
+    voucher_id UUID,
+    voucher_source TEXT,
+    has_existing_attempt BOOLEAN,
+    existing_attempt_id UUID,
+    existing_attempt_status TEXT,
+    window_open BOOLEAN,
+    next_window_date DATE,
+    next_window_name VARCHAR
+) AS $$
+DECLARE
+    v_quiz RECORD;
+    v_voucher RECORD;
+    v_attempt RECORD;
+    v_window RECORD;
+    v_certification_type TEXT;
+BEGIN
+    -- Get quiz info
+    SELECT q.id, q.title, q.certification_type::TEXT
+    INTO v_quiz
+    FROM public.quizzes q
+    WHERE q.id = p_quiz_id;
+
+    IF v_quiz.id IS NULL THEN
+        RETURN QUERY SELECT
+            false, 'Quiz not found'::TEXT, NULL::UUID, NULL::TEXT,
+            false, NULL::UUID, NULL::TEXT,
+            false, NULL::DATE, NULL::VARCHAR;
+        RETURN;
+    END IF;
+
+    v_certification_type := v_quiz.certification_type;
+
+    -- Check exam window (only for certification exams)
+    IF v_certification_type IS NOT NULL THEN
+        SELECT * INTO v_window FROM check_exam_window_open(v_certification_type);
+        IF NOT v_window.is_open THEN
+            RETURN QUERY SELECT
+                false, v_window.message,
+                NULL::UUID, NULL::TEXT,
+                false, NULL::UUID, NULL::TEXT,
+                false, v_window.next_window_date, v_window.next_window_name;
+            RETURN;
+        END IF;
+    END IF;
+
+    -- Check for existing in-progress attempt
+    -- IMPORTANT: Also verify completed_at IS NULL to avoid stale states
+    SELECT qa.id, qa.status::TEXT
+    INTO v_attempt
+    FROM public.quiz_attempts qa
+    WHERE qa.user_id = p_user_id
+      AND qa.quiz_id = p_quiz_id
+      AND qa.status IN ('in_progress', 'paused')
+      AND qa.completed_at IS NULL  -- Prevents stale "completed but in_progress" attempts
+    ORDER BY qa.started_at DESC
+    LIMIT 1;
+
+    IF v_attempt.id IS NOT NULL THEN
+        RETURN QUERY SELECT
+            true, 'Resume existing attempt'::TEXT, NULL::UUID, NULL::TEXT,
+            true, v_attempt.id, v_attempt.status,
+            true, NULL::DATE, NULL::VARCHAR;
+        RETURN;
+    END IF;
+
+    -- For certification exams, check voucher
+    IF v_certification_type IS NOT NULL THEN
+        -- Check exam_vouchers first
+        -- Accept both 'available' AND 'assigned' status
+        -- 'assigned' means the voucher is linked to a booking but not yet used
+        SELECT ev.id, 'exam_vouchers'::TEXT as source
+        INTO v_voucher
+        FROM public.exam_vouchers ev
+        WHERE ev.user_id = p_user_id
+          AND UPPER(ev.certification_type::TEXT) = UPPER(v_certification_type)
+          AND ev.status IN ('available', 'assigned')  -- Accept both statuses
+          AND ev.used_at IS NULL  -- Not yet used for an attempt
+          AND (ev.expires_at IS NULL OR ev.expires_at > NOW())
+        LIMIT 1;
+
+        -- Check ecp_vouchers (assigned by trainee_id)
+        IF v_voucher.id IS NULL THEN
+            SELECT ecv.id, 'ecp_vouchers'::TEXT as source
+            INTO v_voucher
+            FROM public.ecp_vouchers ecv
+            WHERE ecv.trainee_id = p_user_id
+              AND UPPER(ecv.certification_type::TEXT) = UPPER(v_certification_type)
+              AND ecv.status IN ('assigned', 'available')  -- Accept both statuses
+              AND ecv.used_at IS NULL  -- Not yet used
+              AND (ecv.valid_until IS NULL OR ecv.valid_until > NOW())
+            LIMIT 1;
+        END IF;
+
+        -- Check ecp_vouchers by email
+        IF v_voucher.id IS NULL THEN
+            SELECT ecv.id, 'ecp_vouchers'::TEXT as source
+            INTO v_voucher
+            FROM public.ecp_vouchers ecv
+            JOIN public.users u ON LOWER(u.email) = LOWER(ecv.assigned_to_email)
+            WHERE u.id = p_user_id
+              AND UPPER(ecv.certification_type::TEXT) = UPPER(v_certification_type)
+              AND ecv.status IN ('assigned', 'available')  -- Accept both statuses
+              AND ecv.used_at IS NULL  -- Not yet used
+              AND (ecv.valid_until IS NULL OR ecv.valid_until > NOW())
+            LIMIT 1;
+        END IF;
+
+        IF v_voucher.id IS NULL THEN
+            RETURN QUERY SELECT
+                false, 'No valid voucher found for this certification type.'::TEXT,
+                NULL::UUID, NULL::TEXT,
+                false, NULL::UUID, NULL::TEXT,
+                true, NULL::DATE, NULL::VARCHAR;
+            RETURN;
+        END IF;
+
+        -- User has voucher and window is open
+        RETURN QUERY SELECT
+            true, 'Eligible to start exam'::TEXT,
+            v_voucher.id, v_voucher.source,
+            false, NULL::UUID, NULL::TEXT,
+            true, NULL::DATE, NULL::VARCHAR;
+        RETURN;
+    END IF;
+
+    -- For non-certification quizzes, always eligible
+    RETURN QUERY SELECT
+        true, 'Eligible'::TEXT,
+        NULL::UUID, NULL::TEXT,
+        false, NULL::UUID, NULL::TEXT,
+        true, NULL::DATE, NULL::VARCHAR;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant permissions
+GRANT EXECUTE ON FUNCTION check_exam_eligibility TO authenticated;
+
+SELECT '✅ Fixed: Now accepts vouchers with status "available" OR "assigned"' as status;

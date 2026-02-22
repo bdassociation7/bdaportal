@@ -93,6 +93,8 @@ interface ValidationPreviewProps {
   onProceed: () => void;
   onCancel: () => void;
   isUploading: boolean;
+  resendToExisting?: boolean;
+  sendWelcomeEmail?: boolean;
 }
 
 const ValidationPreview: React.FC<ValidationPreviewProps> = ({
@@ -100,30 +102,43 @@ const ValidationPreview: React.FC<ValidationPreviewProps> = ({
   onProceed,
   onCancel,
   isUploading,
+  resendToExisting = false,
+  sendWelcomeEmail = true,
 }) => {
   const [showAll, setShowAll] = useState(false);
   const displayRows = showAll ? validation.rows : validation.rows.slice(0, 10);
 
+  // Calculate how many existing users will receive resend emails
+  const resendCount = resendToExisting && sendWelcomeEmail ? validation.existing_count : 0;
+  // Calculate actual skip count (exclude existing users if resending)
+  const skipCount = validation.duplicate_count + (resendToExisting ? 0 : validation.existing_count);
+  // Total users that will be processed (new + resend)
+  const totalToProcess = validation.valid_count + resendCount;
+
   return (
     <div className="space-y-4">
       {/* Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 gap-4 ${resendCount > 0 ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
         <div className="bg-blue-50 rounded-lg p-4">
           <p className="text-2xl font-bold text-blue-700">{validation.total_rows}</p>
           <p className="text-sm text-blue-600">Total Rows</p>
         </div>
         <div className="bg-green-50 rounded-lg p-4">
           <p className="text-2xl font-bold text-green-700">{validation.valid_count}</p>
-          <p className="text-sm text-green-600">Valid</p>
+          <p className="text-sm text-green-600">New Users</p>
         </div>
+        {resendCount > 0 && (
+          <div className="bg-purple-50 rounded-lg p-4">
+            <p className="text-2xl font-bold text-purple-700">{resendCount}</p>
+            <p className="text-sm text-purple-600">Will Resend</p>
+          </div>
+        )}
         <div className="bg-red-50 rounded-lg p-4">
           <p className="text-2xl font-bold text-red-700">{validation.error_count}</p>
           <p className="text-sm text-red-600">Errors</p>
         </div>
         <div className="bg-yellow-50 rounded-lg p-4">
-          <p className="text-2xl font-bold text-yellow-700">
-            {validation.duplicate_count + validation.existing_count}
-          </p>
+          <p className="text-2xl font-bold text-yellow-700">{skipCount}</p>
           <p className="text-sm text-yellow-600">Will Skip</p>
         </div>
       </div>
@@ -143,7 +158,10 @@ const ValidationPreview: React.FC<ValidationPreviewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y">
-              {displayRows.map((row) => (
+              {displayRows.map((row) => {
+                // Determine if this existing user will receive a resend email
+                const willResend = row.status === 'existing' && resendToExisting;
+                return (
                 <tr
                   key={row.row_number}
                   className={
@@ -151,7 +169,9 @@ const ValidationPreview: React.FC<ValidationPreviewProps> = ({
                       ? 'bg-green-50'
                       : row.status === 'error'
                         ? 'bg-red-50'
-                        : 'bg-yellow-50'
+                        : willResend
+                          ? 'bg-purple-50'
+                          : 'bg-yellow-50'
                   }
                 >
                   <td className="px-4 py-2">{row.row_number}</td>
@@ -175,10 +195,17 @@ const ValidationPreview: React.FC<ValidationPreviewProps> = ({
                       </span>
                     )}
                     {row.status === 'existing' && (
-                      <span className="flex items-center gap-1 text-yellow-700">
-                        <AlertTriangle className="h-4 w-4" />
-                        Exists
-                      </span>
+                      willResend ? (
+                        <span className="flex items-center gap-1 text-purple-700">
+                          <RefreshCw className="h-4 w-4" />
+                          Resend
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-yellow-700">
+                          <AlertTriangle className="h-4 w-4" />
+                          Exists
+                        </span>
+                      )
                     )}
                   </td>
                   <td className="px-4 py-2">{row.data.full_name}</td>
@@ -188,7 +215,8 @@ const ValidationPreview: React.FC<ValidationPreviewProps> = ({
                     {row.errors.join('; ')}
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -216,7 +244,8 @@ const ValidationPreview: React.FC<ValidationPreviewProps> = ({
       {/* Actions */}
       <div className="flex justify-between items-center pt-4 border-t">
         <p className="text-sm text-gray-600">
-          {validation.valid_count} users will be created.{' '}
+          {validation.valid_count > 0 && <>{validation.valid_count} users will be created. </>}
+          {resendCount > 0 && <span className="text-purple-600">{resendCount} existing users will receive emails. </span>}
           {validation.error_count > 0 && (
             <span className="text-red-600">
               {validation.error_count} rows have errors and will be skipped.
@@ -233,7 +262,7 @@ const ValidationPreview: React.FC<ValidationPreviewProps> = ({
           </button>
           <button
             onClick={onProceed}
-            disabled={validation.valid_count === 0 || isUploading}
+            disabled={totalToProcess === 0 || isUploading}
             className="px-4 py-2 bg-royal-600 text-white rounded-lg hover:bg-royal-700 disabled:opacity-50 flex items-center gap-2"
           >
             {isUploading ? (
@@ -244,7 +273,11 @@ const ValidationPreview: React.FC<ValidationPreviewProps> = ({
             ) : (
               <>
                 <Users className="h-4 w-4" />
-                Create {validation.valid_count} Users
+                {validation.valid_count > 0 && resendCount > 0
+                  ? `Create ${validation.valid_count} + Resend ${resendCount}`
+                  : validation.valid_count > 0
+                    ? `Create ${validation.valid_count} Users`
+                    : `Resend to ${resendCount} Users`}
               </>
             )}
           </button>
@@ -465,7 +498,7 @@ interface UploadResultsProps {
 }
 
 const UploadResults: React.FC<UploadResultsProps> = ({ job, items: initialItems, onReset }) => {
-  const [activeTab, setActiveTab] = useState<'created' | 'skipped' | 'errors'>('created');
+  const [activeTab, setActiveTab] = useState<'created' | 'resent' | 'skipped' | 'errors'>('created');
   const [items, setItems] = useState(initialItems);
   const [resendingIds, setResendingIds] = useState<Set<string>>(new Set());
 
@@ -474,9 +507,25 @@ const UploadResults: React.FC<UploadResultsProps> = ({ job, items: initialItems,
     setItems(initialItems);
   }, [initialItems]);
 
-  const createdItems = items.filter(i => i.status === 'success');
+  // Distinguish between newly created users and resent emails
+  const allSuccessItems = items.filter(i => i.status === 'success');
+  const createdItems = allSuccessItems.filter(i => !i.error_message?.includes('email resent'));
+  const resentItems = allSuccessItems.filter(i => i.error_message?.includes('email resent'));
   const skippedItems = items.filter(i => i.status === 'skipped');
   const errorItems = items.filter(i => i.status === 'error');
+
+  // Auto-select the appropriate default tab
+  useEffect(() => {
+    if (createdItems.length > 0) {
+      setActiveTab('created');
+    } else if (resentItems.length > 0) {
+      setActiveTab('resent');
+    } else if (skippedItems.length > 0) {
+      setActiveTab('skipped');
+    } else if (errorItems.length > 0) {
+      setActiveTab('errors');
+    }
+  }, [createdItems.length, resentItems.length, skippedItems.length, errorItems.length]);
 
   // Items that need email resend (failed email or error status)
   const failedEmailItems = items.filter(i =>
@@ -485,6 +534,7 @@ const UploadResults: React.FC<UploadResultsProps> = ({ job, items: initialItems,
   );
 
   const displayItems = activeTab === 'created' ? createdItems :
+                       activeTab === 'resent' ? resentItems :
                        activeTab === 'skipped' ? skippedItems : errorItems;
 
   // Handle resend invite
@@ -528,11 +578,29 @@ const UploadResults: React.FC<UploadResultsProps> = ({ job, items: initialItems,
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="h-10 w-10 text-green-500" />
         </div>
-        <h2 className="text-2xl font-bold text-green-800 mb-2">Upload Complete!</h2>
+        <h2 className="text-2xl font-bold text-green-800 mb-2">
+          {createdItems.length > 0 && resentItems.length > 0
+            ? 'Upload Complete!'
+            : createdItems.length > 0
+              ? 'Upload Complete!'
+              : resentItems.length > 0
+                ? 'Emails Sent!'
+                : 'Processing Complete!'}
+        </h2>
         <p className="text-green-700">
-          Successfully created {job.success_count} user account{job.success_count !== 1 ? 's' : ''}
+          {createdItems.length > 0 && (
+            <>Created {createdItems.length} user account{createdItems.length !== 1 ? 's' : ''}. </>
+          )}
+          {resentItems.length > 0 && (
+            <span className="text-purple-700">
+              Resent emails to {resentItems.length} existing user{resentItems.length !== 1 ? 's' : ''}.
+            </span>
+          )}
+          {createdItems.length === 0 && resentItems.length === 0 && (
+            <>No new users created.</>
+          )}
         </p>
-        {job.send_welcome_email && job.success_count > 0 && (
+        {job.send_welcome_email && (job.email_sent_count || 0) > 0 && (
           <div className="mt-3 inline-flex items-center gap-2 bg-cyan-50 text-cyan-700 px-4 py-2 rounded-full">
             <Mail className="h-4 w-4" />
             <span className="text-sm font-medium">
@@ -543,7 +611,7 @@ const UploadResults: React.FC<UploadResultsProps> = ({ job, items: initialItems,
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className={`grid gap-4 ${resentItems.length > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <button
           onClick={() => setActiveTab('created')}
           className={`rounded-lg p-4 text-center transition-all ${
@@ -552,9 +620,22 @@ const UploadResults: React.FC<UploadResultsProps> = ({ job, items: initialItems,
               : 'bg-green-50 hover:bg-green-100'
           }`}
         >
-          <p className="text-3xl font-bold text-green-700">{job.success_count}</p>
+          <p className="text-3xl font-bold text-green-700">{createdItems.length}</p>
           <p className="text-sm text-green-600">Created</p>
         </button>
+        {resentItems.length > 0 && (
+          <button
+            onClick={() => setActiveTab('resent')}
+            className={`rounded-lg p-4 text-center transition-all ${
+              activeTab === 'resent'
+                ? 'bg-purple-100 ring-2 ring-purple-400'
+                : 'bg-purple-50 hover:bg-purple-100'
+            }`}
+          >
+            <p className="text-3xl font-bold text-purple-700">{resentItems.length}</p>
+            <p className="text-sm text-purple-600">Resent</p>
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('skipped')}
           className={`rounded-lg p-4 text-center transition-all ${
@@ -589,7 +670,7 @@ const UploadResults: React.FC<UploadResultsProps> = ({ job, items: initialItems,
                   <th className="px-4 py-2 text-left">Row</th>
                   <th className="px-4 py-2 text-left">Email</th>
                   <th className="px-4 py-2 text-left">Name</th>
-                  {activeTab === 'created' && (
+                  {(activeTab === 'created' || activeTab === 'resent') && (
                     <th className="px-4 py-2 text-left">Email Status</th>
                   )}
                   {(activeTab === 'skipped' || activeTab === 'errors') && (
@@ -606,7 +687,7 @@ const UploadResults: React.FC<UploadResultsProps> = ({ job, items: initialItems,
                     <td className="px-4 py-2 font-medium">{item.row_number}</td>
                     <td className="px-4 py-2 font-mono text-xs">{item.email}</td>
                     <td className="px-4 py-2">{item.full_name}</td>
-                    {activeTab === 'created' && (
+                    {(activeTab === 'created' || activeTab === 'resent') && (
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
                           {item.email_status === 'sent' ? (
@@ -745,6 +826,7 @@ const BulkUserUpload: React.FC = () => {
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
   const [activateContent, setActivateContent] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'individual' | 'ecp' | 'pdp'>('individual');
+  const [resendToExisting, setResendToExisting] = useState(false);
 
   // Cleanup subscription on unmount
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -828,7 +910,8 @@ const BulkUserUpload: React.FC = () => {
         validation.rows,
         sendWelcomeEmail,
         activateContent,
-        selectedRole
+        selectedRole,
+        resendToExisting
       );
 
       if (error || !job_id) {
@@ -896,7 +979,7 @@ const BulkUserUpload: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [validation, sendWelcomeEmail, activateContent, selectedRole]);
+  }, [validation, sendWelcomeEmail, activateContent, selectedRole, resendToExisting]);
 
   const handleReset = useCallback(() => {
     // Cleanup subscription
@@ -1024,6 +1107,20 @@ const BulkUserUpload: React.FC = () => {
                     <span className="text-gray-700">Send welcome emails with password setup links</span>
                   </div>
                 </label>
+                {sendWelcomeEmail && (
+                  <label className="flex items-center gap-3 cursor-pointer ml-6">
+                    <input
+                      type="checkbox"
+                      checked={resendToExisting}
+                      onChange={(e) => setResendToExisting(e.target.checked)}
+                      className="w-4 h-4 text-royal-600 rounded"
+                    />
+                    <div className="flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-700">Resend email to users that already exist</span>
+                    </div>
+                  </label>
+                )}
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -1064,6 +1161,8 @@ const BulkUserUpload: React.FC = () => {
               onProceed={handleProceed}
               onCancel={handleReset}
               isUploading={isProcessing}
+              resendToExisting={resendToExisting}
+              sendWelcomeEmail={sendWelcomeEmail}
             />
           )}
 

@@ -114,12 +114,14 @@ END:VCALENDAR`;
     const date = new Date(dateString);
     return {
       date: date.toLocaleDateString('en-US', {
+        timeZone: timezone,
         weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       }),
       time: date.toLocaleTimeString('en-US', {
+        timeZone: timezone,
         hour: '2-digit',
         minute: '2-digit',
         timeZoneName: 'short',

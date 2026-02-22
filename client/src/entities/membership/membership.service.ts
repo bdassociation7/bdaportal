@@ -17,6 +17,9 @@ import type {
   BulkActivateMembershipsParams,
   BulkActivationResult,
   MembershipActivationLog,
+  MembershipProductMapping,
+  CreateMembershipProductMappingDTO,
+  UpdateMembershipProductMappingDTO,
 } from './membership.types';
 
 export class MembershipService {
@@ -383,7 +386,7 @@ export class MembershipService {
     try {
       const durationMonths = params.duration_months || 12;
 
-      // Call the activate_membership function with duration
+      // Call the activate_membership function with duration and optional start_date
       const { data, error } = await supabase.rpc('activate_membership', {
         p_user_id: params.user_id,
         p_membership_type: params.membership_type,
@@ -392,6 +395,7 @@ export class MembershipService {
         p_notes: params.notes || null,
         p_woocommerce_order_id: null,
         p_woocommerce_product_id: null,
+        p_start_date: params.start_date || null, // Allow admin to backdate
       });
 
       if (error) throw error;
@@ -769,6 +773,81 @@ export class MembershipService {
       return { data: data as MembershipActivationLog[], error: null };
     } catch (error) {
       console.error('Error fetching membership logs:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  // ============================================
+  // PRODUCT MAPPING METHODS
+  // ============================================
+
+  static async getAllProductMappings(): Promise<MembershipResult<MembershipProductMapping[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('membership_product_mapping')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return { data: data as MembershipProductMapping[], error: null };
+    } catch (error) {
+      console.error('Error fetching product mappings:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  static async createProductMapping(dto: CreateMembershipProductMappingDTO): Promise<MembershipResult<MembershipProductMapping>> {
+    try {
+      const { data, error } = await supabase
+        .from('membership_product_mapping')
+        .insert({
+          woocommerce_product_id: dto.woocommerce_product_id,
+          membership_type: dto.membership_type,
+          duration_months: dto.duration_months ?? 12,
+          is_active: dto.is_active ?? true,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: data as MembershipProductMapping, error: null };
+    } catch (error) {
+      console.error('Error creating product mapping:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  static async updateProductMapping(id: string, dto: UpdateMembershipProductMappingDTO): Promise<MembershipResult<MembershipProductMapping>> {
+    try {
+      const { data, error } = await supabase
+        .from('membership_product_mapping')
+        .update({
+          ...dto,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data: data as MembershipProductMapping, error: null };
+    } catch (error) {
+      console.error('Error updating product mapping:', error);
+      return { data: null, error: error as Error };
+    }
+  }
+
+  static async deleteProductMapping(id: string): Promise<MembershipResult<void>> {
+    try {
+      const { error } = await supabase
+        .from('membership_product_mapping')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return { data: undefined as unknown as void, error: null };
+    } catch (error) {
+      console.error('Error deleting product mapping:', error);
       return { data: null, error: error as Error };
     }
   }

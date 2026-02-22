@@ -191,7 +191,12 @@ export default function ExamDetail() {
           <div className="flex items-start gap-3 mb-4">
             <BookOpen className="h-8 w-8 text-blue-600 flex-shrink-0" />
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{exam.title}</h1>
+              <h1
+                className="text-3xl font-bold text-gray-900 mb-2"
+                dir={exam.language === 'ar' ? 'rtl' : 'ltr'}
+              >
+                {exam.language === 'ar' && exam.title_ar ? exam.title_ar : exam.title}
+              </h1>
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge variant={getDifficultyVariant(exam.difficulty)} size="sm">
                   {EXAM_DIFFICULTY_LABELS[exam.difficulty]}
@@ -209,7 +214,12 @@ export default function ExamDetail() {
             </div>
           </div>
 
-          <p className="text-gray-700 leading-relaxed">{exam.description}</p>
+          <p
+            className="text-gray-700 leading-relaxed"
+            dir={exam.language === 'ar' ? 'rtl' : 'ltr'}
+          >
+            {exam.language === 'ar' && exam.description_ar ? exam.description_ar : exam.description}
+          </p>
         </div>
 
         {/* Exam Info Grid */}

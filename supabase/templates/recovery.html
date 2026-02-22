@@ -1,108 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reset Your Password - BDA Association</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc;">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden;">
-
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #0ea5e9 0%, #4f46e5 50%, #1e3a5f 100%); padding: 40px 40px 30px; text-align: center;">
-              <div style="width: 70px; height: 70px; background-color: rgba(255,255,255,0.15); border-radius: 50%; display: inline-block; line-height: 70px; margin-bottom: 16px;">
-                <span style="font-size: 32px;">&#128272;</span>
-              </div>
-              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 700;">
-                Reset Your Password
-              </h1>
-              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 15px;">
-                Secure access to your BDA account
-              </p>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px;">
-              <p style="margin: 0 0 20px; color: #334155; font-size: 16px; line-height: 1.6;">
-                Hi {{ if .Data.first_name }}{{ .Data.first_name }}{{ else }}there{{ end }},
-              </p>
-
-              <p style="margin: 0 0 28px; color: #334155; font-size: 16px; line-height: 1.6;">
-                We received a request to reset your password for your <strong>BDA Association</strong> account. Click the button below to create a new password:
-              </p>
-
-              <!-- CTA Button -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding: 8px 0 32px;">
-                    <a href="{{ .ConfirmationURL }}"
-                       style="display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px 0 rgba(220, 38, 38, 0.4);">
-                      Reset Password
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Security Warning -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef3c7; border-radius: 12px; border-left: 4px solid #f59e0b; margin-bottom: 24px;">
-                <tr>
-                  <td style="padding: 16px 20px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="width: 32px; vertical-align: top;">
-                          <span style="font-size: 18px;">&#9888;</span>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background-color: #ffffff; padding: 30px 40px; text-align: center; border-bottom: 3px solid #2563eb;">
+                            <img src="https://portal.bda-global.org/bda-logo.png" alt="BDA Logo" style="height: 80px; width: auto;">
                         </td>
-                        <td style="color: #92400e; font-size: 14px; line-height: 1.5;">
-                          <strong>Security Alert:</strong> This link expires in 1 hour. If you didn't request a password reset, please ignore this email or contact support if you're concerned.
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h1 style="color: #1e3a5f; font-size: 24px; margin: 0 0 20px 0;">Reset Your Password</h1>
+                            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                We received a request to reset your BDA Portal password.
+                            </p>
+                            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+                                Click the button below to set a new password:
+                            </p>
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 0;">
+                                        <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">Reset Password</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px 20px; margin: 20px 0; border-radius: 0 6px 6px 0;">
+                                <p style="color: #92400e; font-size: 14px; margin: 0;">
+                                    <strong>Security Notice:</strong> If you didn't request this password reset, please ignore this email. Your password will remain unchanged.
+                                </p>
+                            </div>
+                            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 15px 0 0 0;">
+                                This link will expire in 1 hour for security reasons.
+                            </p>
                         </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Tips -->
-              <p style="margin: 0 0 12px; color: #64748b; font-size: 14px; font-weight: 600;">
-                Password Tips:
-              </p>
-              <ul style="margin: 0 0 24px; padding-left: 20px; color: #64748b; font-size: 14px; line-height: 1.8;">
-                <li>Use at least 8 characters</li>
-                <li>Mix letters, numbers, and symbols</li>
-                <li>Avoid using personal information</li>
-                <li>Don't reuse passwords from other sites</li>
-              </ul>
-
-              <p style="margin: 0; color: #94a3b8; font-size: 13px; line-height: 1.5;">
-                If the button doesn't work, copy this link:<br>
-                <a href="{{ .ConfirmationURL }}" style="color: #6366f1; word-break: break-all;">{{ .ConfirmationURL }}</a>
-              </p>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 30px 40px; border-top: 1px solid #e5e7eb;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                        <p style="margin: 0 0 10px 0;"><strong>The Business Development Association (BDA&reg;)</strong></p>
+                                        <p style="margin: 0 0 5px 0;">
+                                            <a href="https://bda-global.org" style="color: #2563eb; text-decoration: none;">Website</a> |
+                                            <a href="https://portal.bda-global.org" style="color: #2563eb; text-decoration: none;">Portal</a> |
+                                            <a href="mailto:support@bda-global.org" style="color: #2563eb; text-decoration: none;">Support</a>
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
             </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #1e3a5f; padding: 28px 40px; text-align: center;">
-              <p style="margin: 0 0 4px; color: #ffffff; font-size: 15px; font-weight: 600;">
-                BDA Association
-              </p>
-              <p style="margin: 0 0 12px; color: rgba(255,255,255,0.6); font-size: 13px;">
-                Advancing Excellence in Business Data Analytics
-              </p>
-              <p style="margin: 0; color: rgba(255,255,255,0.5); font-size: 12px;">
-                Need help? Contact <a href="mailto:support@bda-global.org" style="color: rgba(255,255,255,0.7);">support@bda-global.org</a>
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
+        </tr>
+    </table>
 </body>
 </html>

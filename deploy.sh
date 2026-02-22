@@ -4,6 +4,13 @@ set -e
 # BDA Portal Deployment Script
 # Usage: ./deploy.sh [portal|wordpress|supabase|all]
 
+# Load production environment variables for build
+if [ -f .env.production ]; then
+    set -a
+    source .env.production
+    set +a
+fi
+
 # Load credentials from .env.deploy (not committed to git)
 if [ -f .env.deploy ]; then
     source .env.deploy

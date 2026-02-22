@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Award, Download, Clock, AlertCircle, CheckCircle, XCircle, Calendar, TrendingUp, ExternalLink, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { downloadCertificate } from '@/services/certificate-generator.service';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -59,6 +59,8 @@ const translations = {
     // Actions
     downloadCertificate: 'Download Certificate',
     certificatePending: 'Certificate Pending',
+    certificateAvailableIn: (days: number) => `Certificate available in ${days} day${days > 1 ? 's' : ''}`,
+    certificateAvailableOn: (date: string) => `Available for download on ${date}`,
     verify: 'Verify',
     renewNow: 'Renew Now',
     // Revocation
@@ -102,6 +104,8 @@ const translations = {
     // Actions
     downloadCertificate: 'تحميل الشهادة',
     certificatePending: 'الشهادة قيد الإعداد',
+    certificateAvailableIn: (days: number) => `الشهادة متاحة خلال ${days} ${days > 1 ? 'أيام' : 'يوم'}`,
+    certificateAvailableOn: (date: string) => `متاحة للتحميل في ${date}`,
     verify: 'تحقق',
     renewNow: 'جدد الآن',
     // Revocation
@@ -136,50 +140,35 @@ export default function MyCertifications() {
 
   const [generatingCerts, setGeneratingCerts] = useState<Set<string>>(new Set());
 
-  const handleDownloadCertificate = async (certId: string, credentialId: string, hasUrl: boolean) => {
+  const handleDownloadCertificate = async (cert: {
+    credential_id: string;
+    certification_type: 'CP' | 'SCP';
+    issued_date: string;
+  }) => {
     try {
-      // If certificate URL exists, download directly
-      if (hasUrl) {
-        const result = await CertificationsService.getCertificateUrl(certId);
-        if (result.error) throw result.error;
-
-        if (result.data) {
-          window.open(result.data, '_blank');
-          toast.success(texts.downloading(credentialId));
-        }
-        return;
-      }
-
-      // Request certificate generation
-      setGeneratingCerts(prev => new Set(prev).add(credentialId));
+      setGeneratingCerts(prev => new Set(prev).add(cert.credential_id));
       toast.info(language === 'ar' ? 'جارٍ إنشاء الشهادة...' : 'Generating certificate...');
 
-      const { data, error } = await supabase.rpc('request_certificate_generation', {
-        p_credential_id: credentialId,
+      // Generate PDF client-side
+      const firstName = user?.profile?.first_name || '';
+      const lastName = user?.profile?.last_name || '';
+      const fullName = [firstName, lastName].filter(Boolean).join(' ') || user?.email || 'Certificate Holder';
+
+      await downloadCertificate({
+        credential_id: cert.credential_id,
+        user_full_name: fullName,
+        certification_type: cert.certification_type,
+        issued_date: cert.issued_date,
       });
 
-      if (error) throw error;
-
-      const response = data as { success: boolean; status: string; certificate_url?: string; message?: string };
-
-      if (response.status === 'ready' && response.certificate_url) {
-        // Certificate is ready, download it
-        const urlResult = await CertificationsService.getCertificateUrl(certId);
-        if (urlResult.data) {
-          window.open(urlResult.data, '_blank');
-          toast.success(texts.downloading(credentialId));
-        }
-      } else if (response.status === 'queued' || response.status === 'generating') {
-        toast.info(response.message || (language === 'ar'
-          ? 'تم طلب إنشاء الشهادة. يرجى المحاولة مرة أخرى بعد قليل.'
-          : 'Certificate generation requested. Please try again shortly.'));
-      }
+      toast.success(texts.downloading(cert.credential_id));
     } catch (error: any) {
+      console.error('Certificate generation error:', error);
       toast.error(error.message || texts.downloadFailed);
     } finally {
       setGeneratingCerts(prev => {
         const next = new Set(prev);
-        next.delete(credentialId);
+        next.delete(cert.credential_id);
         return next;
       });
     }
@@ -434,20 +423,49 @@ export default function MyCertifications() {
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
-                    <Button
-                      className="flex-1"
-                      disabled={generatingCerts.has(cert.credential_id)}
-                      onClick={() => handleDownloadCertificate(cert.id, cert.credential_id, !!cert.certificate_url)}
-                    >
-                      {generatingCerts.has(cert.credential_id) ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4 mr-2" />
-                      )}
-                      {generatingCerts.has(cert.credential_id)
-                        ? (language === 'ar' ? 'جارٍ الإنشاء...' : 'Generating...')
-                        : texts.downloadCertificate}
-                    </Button>
+                    {(() => {
+                      const availableDate = cert.certificate_available_date
+                        ? new Date(cert.certificate_available_date)
+                        : null;
+                      const now = new Date();
+                      const isAvailable = !availableDate || availableDate <= now;
+
+                      if (!isAvailable && availableDate) {
+                        const daysLeft = Math.ceil((availableDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                        return (
+                          <div className="flex-1">
+                            <Button
+                              className="w-full"
+                              variant="outline"
+                              disabled
+                            >
+                              <Clock className="h-4 w-4 mr-2" />
+                              {texts.certificateAvailableIn(daysLeft)}
+                            </Button>
+                            <p className="text-xs text-gray-500 mt-1 text-center">
+                              {texts.certificateAvailableOn(formatDate(cert.certificate_available_date!))}
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <Button
+                          className="flex-1"
+                          disabled={generatingCerts.has(cert.credential_id)}
+                          onClick={() => handleDownloadCertificate(cert)}
+                        >
+                          {generatingCerts.has(cert.credential_id) ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4 mr-2" />
+                          )}
+                          {generatingCerts.has(cert.credential_id)
+                            ? (language === 'ar' ? 'جارٍ الإنشاء...' : 'Generating...')
+                            : texts.downloadCertificate}
+                        </Button>
+                      );
+                    })()}
                     <Button
                       variant="outline"
                       onClick={() => window.open(`/verify/${cert.credential_id}`, '_blank')}

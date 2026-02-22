@@ -24,6 +24,7 @@ import {
   Star,
   TrendingUp,
   ArrowRight,
+  Clock,
 } from 'lucide-react';
 import Confetti from 'react-confetti';
 import { getUserCertificates, type UserCertificate } from '@/entities/certificate';
@@ -162,7 +163,10 @@ export default function ExamComplete() {
               <Trophy className="h-12 w-12 text-green-600" />
             </div>
             <h1 className="text-5xl font-bold text-gray-900 mb-4">Congratulations!</h1>
-            <p className="text-2xl text-gray-700">You passed the exam!</p>
+            <p className="text-2xl text-gray-700">You have passed the exam!</p>
+            <p className="text-base text-gray-500 mt-2">
+              Your digital certificate will be available for download after 14 days.
+            </p>
           </div>
 
           {/* Score Card */}
@@ -211,61 +215,101 @@ export default function ExamComplete() {
           </Card>
 
           {/* Certificate Card */}
-          {certificate && (
-            <Card className="mb-6 border-2 border-blue-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-6 w-6 text-blue-600" />
-                  Your Certificate
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Alert className="bg-blue-50 border-blue-200">
-                  <CheckCircle className="h-4 w-4 text-blue-600" />
-                  <AlertTitle className="text-blue-900">
-                    Certificate Generated Successfully!
-                  </AlertTitle>
-                  <AlertDescription className="text-blue-800">
-                    Your official certification has been issued with credential ID:{' '}
-                    <strong className="font-mono">{certificate.credential_id}</strong>
-                  </AlertDescription>
-                </Alert>
+          {certificate && (() => {
+            const availableDate = certificate.certificate_available_date
+              ? new Date(certificate.certificate_available_date)
+              : null;
+            const now = new Date();
+            const isDownloadAvailable = !availableDate || availableDate <= now;
+            const daysLeft = availableDate
+              ? Math.ceil((availableDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+              : 0;
+            const formattedAvailableDate = availableDate
+              ? availableDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+              : '';
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Certification Type</p>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {certificate.certification_type === 'CP'
-                        ? 'BDA Certified Professional (BDA-CP™)'
-                        : 'BDA Senior Certified Professional (BDA-SCP™)'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Credential ID</p>
-                    <p className="text-lg font-mono font-semibold text-gray-900">
-                      {certificate.credential_id}
-                    </p>
-                  </div>
-                </div>
+            return (
+              <Card className="mb-6 border-2 border-blue-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="h-6 w-6 text-blue-600" />
+                    Your Certificate
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Alert className="bg-green-50 border-green-200">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertTitle className="text-green-900">
+                      You Are Now Certified!
+                    </AlertTitle>
+                    <AlertDescription className="text-green-800">
+                      Your official certification has been issued with credential ID:{' '}
+                      <strong className="font-mono">{certificate.credential_id}</strong>
+                    </AlertDescription>
+                  </Alert>
 
-                <div className="flex gap-3 pt-4">
-                  <Button onClick={handleViewCertificate} className="flex-1" size="lg">
-                    <Award className="mr-2 h-5 w-5" />
-                    View Certificate
-                  </Button>
-                  <Button
-                    onClick={handleDownloadCertificate}
-                    variant="outline"
-                    size="lg"
-                    disabled={!certificate.certificate_url}
-                  >
-                    <Download className="mr-2 h-5 w-5" />
-                    Download PDF
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                  {!isDownloadAvailable && (
+                    <Alert className="bg-amber-50 border-amber-200">
+                      <Clock className="h-4 w-4 text-amber-600" />
+                      <AlertTitle className="text-amber-900">
+                        Certificate Download Available Soon
+                      </AlertTitle>
+                      <AlertDescription className="text-amber-800">
+                        Congratulations on passing the exam! Your digital certificate will be
+                        available for download on{' '}
+                        <strong>{formattedAvailableDate}</strong> ({daysLeft} day{daysLeft > 1 ? 's' : ''} remaining).
+                        Your certification is already active and verifiable.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Certification Type</p>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {certificate.certification_type === 'CP'
+                          ? 'BDA Certified Professional (BDA-CP™)'
+                          : 'BDA Senior Certified Professional (BDA-SCP™)'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Credential ID</p>
+                      <p className="text-lg font-mono font-semibold text-gray-900">
+                        {certificate.credential_id}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button onClick={handleViewCertificate} className="flex-1" size="lg">
+                      <Award className="mr-2 h-5 w-5" />
+                      View My Certifications
+                    </Button>
+                    {isDownloadAvailable ? (
+                      <Button
+                        onClick={handleDownloadCertificate}
+                        variant="outline"
+                        size="lg"
+                        disabled={!certificate.certificate_url}
+                      >
+                        <Download className="mr-2 h-5 w-5" />
+                        Download PDF
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        disabled
+                      >
+                        <Clock className="mr-2 h-5 w-5" />
+                        Available in {daysLeft} day{daysLeft > 1 ? 's' : ''}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Next Steps */}
           <Card className="mb-6">
@@ -278,10 +322,10 @@ export default function ExamComplete() {
                   <span className="text-blue-600 font-bold">1</span>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Download Your Certificate</h4>
+                  <h4 className="font-semibold text-gray-900 mb-1">Your Certificate Is Being Prepared</h4>
                   <p className="text-sm text-gray-600">
-                    Your official PDF certificate is ready. Download it and add it to your
-                    professional portfolio.
+                    Your digital certificate will be available for download in 14 days.
+                    You will find it in your My Certifications page.
                   </p>
                 </div>
               </div>
@@ -293,7 +337,8 @@ export default function ExamComplete() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-1">Share Your Achievement</h4>
                   <p className="text-sm text-gray-600">
-                    Add your certification to LinkedIn, your resume, and share it with employers.
+                    Your certification is already active and verifiable. Add it to LinkedIn,
+                    your resume, and share it with employers.
                   </p>
                 </div>
               </div>

@@ -26,6 +26,7 @@ export interface Certificate {
   expiry_date: string; // ISO date string
   status: CertificationStatus;
   certificate_url: string | null;
+  certificate_available_date: string | null; // Date when PDF download becomes available
   renewal_count: number;
   last_renewed_at: string | null;
   pdc_credits_earned: number;
@@ -68,6 +69,7 @@ export interface UserCertificate {
   issued_date: string;
   expiry_date: string;
   certificate_url: string | null;
+  certificate_available_date: string | null;
   exam_title: string | null;
   exam_score: number | null;
   is_expiring_soon: boolean;

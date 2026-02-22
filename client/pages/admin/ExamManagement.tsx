@@ -284,19 +284,41 @@ export default function ExamManagement() {
       : 0;
 
   // Handlers
-  const handleDelete = async (id: string, title: string) => {
+  const handleDelete = async (id: string, title: string, force: boolean = false) => {
+    const confirmMessage = force
+      ? t('examMgmt.forceDeleteConfirmDesc').replace('{title}', title)
+      : t('examMgmt.deleteConfirmDesc').replace('{title}', title);
+
     const confirmed = await confirm({
-      title: t('examMgmt.deleteExam'),
-      description: t('examMgmt.deleteConfirmDesc').replace('{title}', title),
-      confirmText: t('common.delete'),
+      title: force ? t('examMgmt.forceDeleteExam') : t('examMgmt.deleteExam'),
+      description: confirmMessage,
+      confirmText: force ? t('examMgmt.forceDelete') : t('common.delete'),
       variant: 'destructive',
     });
 
     if (!confirmed) return;
 
-    const { error } = await deleteExamMutation.mutateAsync(id);
+    const { error } = await deleteExamMutation.mutateAsync({ id, force });
 
     if (error) {
+      // Check if the error is because exam has attempts
+      if (error.type === 'HAS_ATTEMPTS') {
+        const forceConfirmed = await confirm({
+          title: t('examMgmt.examHasAttempts'),
+          description: t('examMgmt.examHasAttemptsDesc')
+            .replace('{count}', String(error.attemptCount))
+            .replace('{title}', title),
+          confirmText: t('examMgmt.forceDelete'),
+          variant: 'destructive',
+        });
+
+        if (forceConfirmed) {
+          // Retry with force delete
+          await handleDelete(id, title, true);
+        }
+        return;
+      }
+
       toast({
         title: t('common.error'),
         description: t('examMgmt.deleteError'),
@@ -614,7 +636,9 @@ export default function ExamManagement() {
                       <td className="px-4 py-3">
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-gray-900">{exam.title}</p>
+                            <p className="font-medium text-gray-900" dir={exam.language === 'ar' ? 'rtl' : 'ltr'}>
+                              {exam.language === 'ar' && exam.title_ar ? exam.title_ar : exam.title}
+                            </p>
                             {exam.is_sample_exam && (
                               <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
                                 <Gift className="h-3 w-3 mr-1" />

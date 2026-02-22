@@ -1,9 +1,8 @@
 // Supabase Edge Function: bulk-create-users
-// Creates multiple users using Supabase's built-in invite system
-// Emails are sent automatically via Supabase's configured SMTP (Inbucket for local dev)
+// Creates multiple users and sends welcome emails via our custom email system
+// Uses createUser() + generateLink() + send-email Edge Function
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,14 +24,15 @@ interface RequestBody {
   send_welcome_email?: boolean
   activate_content?: boolean
   user_role?: 'individual' | 'ecp' | 'pdp'
+  resend_to_existing?: boolean  // If true, send email to users that already exist
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   console.log('bulk-create-users: Request received', req.method)
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { status: 204, headers: corsHeaders })
   }
 
   try {
@@ -93,7 +93,7 @@ serve(async (req) => {
 
     // Parse request body
     const body: RequestBody = await req.json()
-    const { items, send_welcome_email = true, activate_content = false, user_role = 'individual' } = body
+    const { items, send_welcome_email = true, activate_content = false, user_role = 'individual', resend_to_existing = false } = body
 
     if (!items || items.length === 0) {
       return new Response(
@@ -145,35 +145,42 @@ serve(async (req) => {
     let skippedCount = 0
     let emailSentCount = 0
 
-    // Helper function to delay between emails (Mailtrap free: ~1 email/sec on sandbox)
+    // Helper function to delay between operations
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-    // Helper function to send invite with retry on rate limit
-    const sendInviteWithRetry = async (email: string, metadata: any, redirectTo: string, maxRetries = 2) => {
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        const { data, error } = await adminClient.auth.admin.inviteUserByEmail(email, {
-          data: metadata,
-          redirectTo,
+    // Helper function to send welcome email via our email system
+    const sendWelcomeEmail = async (
+      email: string,
+      userName: string,
+      passwordResetLink: string,
+      userId?: string
+    ): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'bulk_import_welcome',
+            to: email,
+            user_id: userId,
+            data: {
+              user_name: userName,
+              password_reset_link: passwordResetLink,
+            },
+          }),
         })
 
-        if (!error) {
-          return { data, error: null }
+        const result = await response.json()
+        if (!response.ok || !result.success) {
+          return { success: false, error: result.error || 'Email send failed' }
         }
-
-        // Check if it's a rate limit error
-        const isRateLimit = error.message.includes('Too many') ||
-                           error.message.includes('rate limit') ||
-                           error.message.includes('sending invite email')
-
-        if (isRateLimit && attempt < maxRetries) {
-          console.log(`[bulk-create] Rate limited for ${email}, retrying in ${(attempt + 1) * 3}s...`)
-          await delay((attempt + 1) * 3000) // Exponential backoff: 3s, 6s
-          continue
-        }
-
-        return { data: null, error }
+        return { success: true }
+      } catch (err: any) {
+        return { success: false, error: err.message }
       }
-      return { data: null, error: new Error('Max retries exceeded') }
     }
 
     for (let idx = 0; idx < items.length; idx++) {
@@ -203,136 +210,207 @@ serve(async (req) => {
 
         let userId: string
 
+        // Always create user with createUser() - more control than inviteUserByEmail()
+        console.log('[bulk-create] Creating user:', item.email, `(${idx + 1}/${items.length})`)
+
+        const tempPassword = generateTempPassword()
+        const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
+          email: item.email,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            first_name: firstName,
+            last_name: lastName,
+            full_name: item.full_name,
+            bda_role: user_role,
+            source: 'bulk_upload',
+          },
+        })
+
+        if (createError) {
+          if (createError.message.includes('already been registered') ||
+              createError.message.includes('already registered')) {
+            console.log('[bulk-create] User already exists:', item.email)
+
+            // If resend_to_existing is enabled, send email to existing user
+            if (resend_to_existing && send_welcome_email) {
+              console.log('[bulk-create] Resending email to existing user:', item.email)
+
+              await adminClient
+                .from('bulk_upload_items')
+                .update({ status: 'processing', email_status: 'sending' })
+                .eq('job_id', jobId)
+                .eq('email', item.email)
+
+              // Generate password reset link for existing user
+              const isLocal = supabaseUrl.includes('127.0.0.1') || supabaseUrl.includes('localhost') || supabaseUrl.includes('kong:')
+              const siteUrl = isLocal
+                ? 'http://localhost:8082'
+                : (Deno.env.get('SITE_URL') || 'https://portal.bda-global.org')
+              const redirectUrl = `${siteUrl}/auth/set-password`
+
+              const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+                type: 'recovery',
+                email: item.email,
+                options: {
+                  redirectTo: redirectUrl,
+                },
+              })
+
+              if (linkError) {
+                console.error('[bulk-create] Failed to generate reset link for existing user:', item.email, linkError.message)
+                skippedCount++
+                await adminClient
+                  .from('bulk_upload_items')
+                  .update({
+                    status: 'skipped',
+                    error_message: 'User exists - failed to generate reset link',
+                    email_status: 'failed'
+                  })
+                  .eq('job_id', jobId)
+                  .eq('email', item.email)
+              } else {
+                // Send email to existing user
+                const emailResult = await sendWelcomeEmail(
+                  item.email,
+                  item.full_name,
+                  linkData.properties.action_link
+                )
+
+                if (emailResult.success) {
+                  emailSentCount++
+                  successCount++ // Count as success since email was sent
+                  await adminClient
+                    .from('bulk_upload_items')
+                    .update({
+                      status: 'success',
+                      error_message: 'User exists - email resent',
+                      email_status: 'sent'
+                    })
+                    .eq('job_id', jobId)
+                    .eq('email', item.email)
+                  console.log('[bulk-create] Email resent to existing user:', item.email)
+                } else {
+                  skippedCount++
+                  await adminClient
+                    .from('bulk_upload_items')
+                    .update({
+                      status: 'skipped',
+                      error_message: 'User exists - email failed: ' + emailResult.error,
+                      email_status: 'failed'
+                    })
+                    .eq('job_id', jobId)
+                    .eq('email', item.email)
+                }
+              }
+
+              await adminClient
+                .from('bulk_upload_jobs')
+                .update({
+                  processed_count: successCount + errorCount + skippedCount,
+                  success_count: successCount,
+                  error_count: errorCount,
+                  skipped_count: skippedCount,
+                  email_sent_count: emailSentCount,
+                })
+                .eq('id', jobId)
+
+              // Small delay before next
+              if (idx < items.length - 1) await delay(500)
+              continue
+            }
+
+            // Default: just skip existing users
+            skippedCount++
+            await adminClient
+              .from('bulk_upload_items')
+              .update({
+                status: 'skipped',
+                error_message: 'User already exists',
+                email_queued: false,
+                email_status: 'skipped',
+              })
+              .eq('job_id', jobId)
+              .eq('email', item.email)
+
+            await adminClient
+              .from('bulk_upload_jobs')
+              .update({
+                processed_count: successCount + errorCount + skippedCount,
+                success_count: successCount,
+                error_count: errorCount,
+                skipped_count: skippedCount,
+                email_sent_count: emailSentCount,
+              })
+              .eq('id', jobId)
+            continue
+          }
+          throw createError
+        }
+
+        userId = createData.user.id
+
+        // Send welcome email if requested
         if (send_welcome_email) {
-          // Update status to show we're sending email
           await adminClient
             .from('bulk_upload_items')
             .update({ email_status: 'sending' })
             .eq('job_id', jobId)
             .eq('email', item.email)
 
-          console.log('[bulk-create] Inviting user:', item.email, `(${idx + 1}/${items.length})`)
-
-          // Determine redirect URL based on environment
-          // Edge Runtime uses internal Docker URL (kong:8000), so check for that too
+          // Generate password reset link
           const isLocal = supabaseUrl.includes('127.0.0.1') || supabaseUrl.includes('localhost') || supabaseUrl.includes('kong:')
           const siteUrl = isLocal
             ? 'http://localhost:8082'
-            : (Deno.env.get('SITE_URL') || 'https://bda-global.org')
+            : (Deno.env.get('SITE_URL') || 'https://portal.bda-global.org')
           const redirectUrl = `${siteUrl}/auth/set-password`
 
-          const { data: inviteData, error: inviteError } = await sendInviteWithRetry(
-            item.email,
-            {
-              first_name: firstName,
-              last_name: lastName,
-              full_name: item.full_name,
-              bda_role: user_role,
-              source: 'bulk_upload',
-            },
-            redirectUrl
-          )
-
-          if (inviteError) {
-            if (inviteError.message.includes('already been registered') ||
-                inviteError.message.includes('already registered')) {
-              console.log('[bulk-create] User already exists:', item.email)
-              skippedCount++
-              await adminClient
-                .from('bulk_upload_items')
-                .update({
-                  status: 'skipped',
-                  error_message: 'User already exists',
-                  email_queued: false,
-                  email_status: 'skipped',
-                })
-                .eq('job_id', jobId)
-                .eq('email', item.email)
-
-              // Update job progress
-              await adminClient
-                .from('bulk_upload_jobs')
-                .update({
-                  processed_count: successCount + errorCount + skippedCount,
-                  success_count: successCount,
-                  error_count: errorCount,
-                  skipped_count: skippedCount,
-                  email_sent_count: emailSentCount,
-                })
-                .eq('id', jobId)
-              continue
-            }
-
-            // Email sending failed
-            await adminClient
-              .from('bulk_upload_items')
-              .update({ email_status: 'failed' })
-              .eq('job_id', jobId)
-              .eq('email', item.email)
-
-            throw inviteError
-          }
-
-          userId = inviteData.user.id
-          emailSentCount++
-
-          // Mark email as sent
-          await adminClient
-            .from('bulk_upload_items')
-            .update({ email_status: 'sent' })
-            .eq('job_id', jobId)
-            .eq('email', item.email)
-
-          console.log('[bulk-create] Email sent for:', item.email, `(${emailSentCount} emails sent)`)
-
-        } else {
-          // Create user without invite email
-          console.log('[bulk-create] Creating user (no email):', item.email)
-
-          const tempPassword = generateTempPassword()
-          const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
+          const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+            type: 'recovery',
             email: item.email,
-            password: tempPassword,
-            email_confirm: true,
-            user_metadata: {
-              first_name: firstName,
-              last_name: lastName,
-              full_name: item.full_name,
-              bda_role: user_role,
-              source: 'bulk_upload',
+            options: {
+              redirectTo: redirectUrl,
             },
           })
 
-          if (createError) {
-            if (createError.message.includes('already been registered') ||
-                createError.message.includes('already registered')) {
-              skippedCount++
+          if (linkError) {
+            console.error('[bulk-create] Failed to generate reset link for:', item.email, linkError.message)
+            await adminClient
+              .from('bulk_upload_items')
+              .update({ email_status: 'failed', error_message: 'Failed to generate password link' })
+              .eq('job_id', jobId)
+              .eq('email', item.email)
+          } else {
+            // Send welcome email via our email system
+            const emailResult = await sendWelcomeEmail(
+              item.email,
+              item.full_name,
+              linkData.properties.action_link,
+              userId
+            )
+
+            if (emailResult.success) {
+              emailSentCount++
               await adminClient
                 .from('bulk_upload_items')
-                .update({
-                  status: 'skipped',
-                  error_message: 'User already exists',
-                  email_status: 'skipped',
-                })
+                .update({ email_status: 'sent' })
                 .eq('job_id', jobId)
                 .eq('email', item.email)
-
+              console.log('[bulk-create] Welcome email sent for:', item.email, `(${emailSentCount} emails sent)`)
+            } else {
+              console.error('[bulk-create] Email failed for:', item.email, emailResult.error)
               await adminClient
-                .from('bulk_upload_jobs')
-                .update({
-                  processed_count: successCount + errorCount + skippedCount,
-                  success_count: successCount,
-                  error_count: errorCount,
-                  skipped_count: skippedCount,
-                  email_sent_count: emailSentCount,
-                })
-                .eq('id', jobId)
-              continue
+                .from('bulk_upload_items')
+                .update({ email_status: 'failed', error_message: emailResult.error })
+                .eq('job_id', jobId)
+                .eq('email', item.email)
             }
-            throw createError
           }
 
-          userId = createData.user.id
+          // Small delay between emails to avoid rate limiting
+          if (idx < items.length - 1) {
+            await delay(500)
+          }
         }
 
         // Update user profile in public.users table
@@ -438,8 +516,8 @@ serve(async (req) => {
         error_count: errorCount,
         skipped_count: skippedCount,
         message: send_welcome_email
-          ? 'Users created. Invite emails sent via Supabase (check Inbucket for local dev).'
-          : 'Users created without invite emails.',
+          ? 'Users created. Welcome emails sent via BDA email system.'
+          : 'Users created without welcome emails.',
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
