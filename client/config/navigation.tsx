@@ -43,7 +43,8 @@ import {
   Crown,
   Handshake,
   BookPlus,
-  FileImage
+  FileImage,
+  SlidersHorizontal
 } from 'lucide-react';
 import { NavigationConfig } from '@/types/navigation';
 
@@ -121,6 +122,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'exam-scheduling', label: 'nav.admin.examScheduling', path: '/admin/exam-scheduling', icon: Calendar },
     { id: 'exam-bookings', label: 'nav.admin.examBookings', path: '/admin/exam-bookings', icon: CalendarCheck },
     { id: 'exam-windows', label: 'nav.admin.examWindows', path: '/admin/exam-windows', icon: CalendarClock },
+    { id: 'eco-blueprint', label: 'nav.admin.ecoBlueprint', path: '/admin/exams/eco-blueprint', icon: SlidersHorizontal },
     { id: 'certifications', label: 'nav.admin.certifications', path: '/admin/certifications', icon: Award },
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
 
@@ -184,6 +186,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'exam-scheduling', label: 'nav.admin.examScheduling', path: '/admin/exam-scheduling', icon: Calendar },
     { id: 'exam-bookings', label: 'nav.admin.examBookings', path: '/admin/exam-bookings', icon: CalendarCheck },
     { id: 'exam-windows', label: 'nav.admin.examWindows', path: '/admin/exam-windows', icon: CalendarClock },
+    { id: 'eco-blueprint', label: 'nav.admin.ecoBlueprint', path: '/admin/exams/eco-blueprint', icon: SlidersHorizontal },
     { id: 'certifications', label: 'nav.admin.certifications', path: '/admin/certifications', icon: Award },
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
 
