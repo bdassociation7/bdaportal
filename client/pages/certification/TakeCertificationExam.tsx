@@ -96,8 +96,11 @@ interface ScheduledExamBannerProps {
 function ScheduledExamBanner({ booking, examTitle, onLaunch, language }: ScheduledExamBannerProps) {
   const countdown = useCountdown(booking.scheduled_start_time);
 
+  const tz = booking.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', {
+      timeZone: tz,
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -107,6 +110,7 @@ function ScheduledExamBanner({ booking, examTitle, onLaunch, language }: Schedul
 
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString(language === 'ar' ? 'ar-SA' : 'en-US', {
+      timeZone: tz,
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -554,8 +558,10 @@ export default function TakeCertificationExam() {
     navigate('/exam-applications');
   };
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: string, timezone?: string) => {
+    const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
     return new Date(dateString).toLocaleString(language === 'ar' ? 'ar-SA' : 'en-US', {
+      timeZone: tz,
       dateStyle: 'medium',
       timeStyle: 'short',
     });
@@ -909,7 +915,7 @@ export default function TakeCertificationExam() {
                       <Calendar className="h-4 w-4 text-yellow-600" />
                       <AlertDescription className="text-yellow-800">
                         <strong>{texts.scheduledFor}</strong>{' '}
-                        {formatDateTime(exam.booking.scheduled_start_time)}
+                        {formatDateTime(exam.booking.scheduled_start_time, exam.booking.timezone)}
                       </AlertDescription>
                     </Alert>
                   )}

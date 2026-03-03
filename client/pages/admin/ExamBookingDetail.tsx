@@ -15,6 +15,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { supabase } from '@/shared/config/supabase.config';
 import { format, isPast, addDays, parseISO } from 'date-fns';
+import { fromZonedTime } from 'date-fns-tz';
+import { getTimezoneLabel } from '@/shared/constants/timezones';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +54,7 @@ import {
   RefreshCw,
   AlertTriangle,
   Award,
+  Globe,
 } from 'lucide-react';
 
 // ============================================================================
@@ -108,10 +111,12 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
 };
 
 const TIME_SLOTS = [
-  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-  '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-  '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
+  '00:00', '01:00', '02:00', '03:00', '04:00', '05:00',
+  '06:00', '07:00', '08:00', '08:30', '09:00', '09:30',
+  '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
+  '19:00', '19:30', '20:00', '21:00', '22:00', '23:00',
 ];
 
 // ============================================================================
@@ -271,15 +276,15 @@ export default function ExamBookingDetail() {
     mutationFn: async () => {
       if (!booking || !rescheduleDate) throw new Error('Missing required data');
 
-      const scheduledStart = new Date(rescheduleDate);
-      const [hours, minutes] = rescheduleTime.split(':').map(Number);
-      scheduledStart.setHours(hours, minutes, 0, 0);
+      // Convert admin-selected date+time directly to UTC using the candidate's timezone
+      const dateTimeStr = `${format(rescheduleDate, 'yyyy-MM-dd')}T${rescheduleTime}:00`;
+      const scheduledStart = fromZonedTime(dateTimeStr, booking.timezone || 'UTC');
 
       const duration = booking.quiz?.duration_minutes || 120;
       const scheduledEnd = new Date(scheduledStart.getTime() + duration * 60 * 1000);
 
       // Build audit trail
-      const auditEntry = `[${format(new Date(), 'yyyy-MM-dd HH:mm')}] Admin ${adminUser?.email} rescheduled from ${format(parseISO(booking.scheduled_start_time), 'PPp')} to ${format(scheduledStart, 'PPp')}. Reason: ${rescheduleReason}`;
+      const auditEntry = `[${format(new Date(), 'yyyy-MM-dd HH:mm')}] Admin ${adminUser?.email} rescheduled from ${candidateDateTime(booking.scheduled_start_time, booking.timezone)} to ${candidateDateTime(scheduledStart.toISOString(), booking.timezone)} (${booking.timezone}). Reason: ${rescheduleReason}`;
       const newAdminNotes = booking.booking_notes
         ? `${booking.booking_notes}\n${auditEntry}`
         : auditEntry;
@@ -311,8 +316,8 @@ export default function ExamBookingDetail() {
             template_data: {
               candidate_name: booking.user.first_name,
               exam_title: booking.quiz?.title,
-              old_date: format(parseISO(booking.scheduled_start_time), 'PPPp'),
-              new_date: format(scheduledStart, 'PPPp'),
+              old_date: candidateDateTime(booking.scheduled_start_time, booking.timezone),
+              new_date: candidateDateTime(scheduledStart.toISOString(), booking.timezone),
               confirmation_code: booking.confirmation_code,
               reason: rescheduleReason,
             },
@@ -407,7 +412,7 @@ export default function ExamBookingDetail() {
             template_data: {
               candidate_name: booking.user.first_name,
               exam_title: booking.quiz?.title,
-              scheduled_date: format(parseISO(booking.scheduled_start_time), 'PPPp'),
+              scheduled_date: candidateDateTime(booking.scheduled_start_time, booking.timezone),
               confirmation_code: booking.confirmation_code,
               reason: cancelReason,
               voucher_restored: restoreVoucher,
@@ -780,6 +785,15 @@ export default function ExamBookingDetail() {
                     </Alert>
                   ) : (
                     <>
+                      <Alert className="border-blue-200 bg-blue-50">
+                        <Globe className="h-4 w-4 text-blue-600" />
+                        <AlertTitle className="text-blue-800">Candidate's Timezone</AlertTitle>
+                        <AlertDescription className="text-blue-700">
+                          {getTimezoneLabel(booking.timezone || 'UTC')}
+                          <span className="block text-xs mt-1">The date and time you select below will be interpreted in the candidate's timezone.</span>
+                        </AlertDescription>
+                      </Alert>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <Label className="mb-2 block">Select New Date</Label>
@@ -835,9 +849,14 @@ export default function ExamBookingDetail() {
                       {rescheduleDate && (
                         <Alert>
                           <CalendarCheck className="h-4 w-4" />
-                          <AlertTitle>New Schedule</AlertTitle>
-                          <AlertDescription>
-                            {format(rescheduleDate, 'PPPP')} at {rescheduleTime}
+                          <AlertTitle>New Schedule Preview</AlertTitle>
+                          <AlertDescription className="space-y-1">
+                            <p className="font-medium">
+                              Candidate: {format(rescheduleDate, 'PPPP')} at {rescheduleTime} ({booking.timezone || 'UTC'})
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Your local time: {candidateDateTime(fromZonedTime(`${format(rescheduleDate, 'yyyy-MM-dd')}T${rescheduleTime}:00`, booking.timezone || 'UTC').toISOString(), Intl.DateTimeFormat().resolvedOptions().timeZone)}
+                            </p>
                           </AlertDescription>
                         </Alert>
                       )}

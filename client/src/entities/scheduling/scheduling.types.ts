@@ -180,20 +180,7 @@ export const BOOKING_STATUS_COLORS: Record<ExamBookingStatus, string> = {
 };
 
 // ============================================================================
-// Timezone Helpers
+// Timezone Helpers (re-exported from shared constants)
 // ============================================================================
 
-export const COMMON_TIMEZONES = [
-  { value: 'UTC', label: 'UTC (GMT+0)' },
-  { value: 'America/New_York', label: 'Eastern Time (ET)' },
-  { value: 'America/Chicago', label: 'Central Time (CT)' },
-  { value: 'America/Denver', label: 'Mountain Time (MT)' },
-  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
-  { value: 'Europe/London', label: 'London (GMT)' },
-  { value: 'Europe/Paris', label: 'Central European Time (CET)' },
-  { value: 'Europe/Berlin', label: 'Berlin (CET)' },
-  { value: 'Asia/Dubai', label: 'Dubai (GST)' },
-  { value: 'Asia/Shanghai', label: 'China Standard Time (CST)' },
-  { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
-  { value: 'Australia/Sydney', label: 'Australian Eastern Time (AET)' },
-];
+export { COMMON_TIMEZONES, TIMEZONE_LIST, getTimezoneLabel, detectAndResolveTimezone } from '@/shared/constants/timezones';

@@ -12,19 +12,15 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
+import { TimezoneCombobox } from '@/components/ui/timezone-combobox';
+import { TIMEZONE_LIST, detectAndResolveTimezone, getTimezoneLabel } from '@/shared/constants/timezones';
 import {
   Calendar as CalendarIcon,
   Clock,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   Info,
   MapPin,
@@ -36,62 +32,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
 import { format, addDays, isWithinInterval, startOfDay, isBefore, isAfter } from 'date-fns';
-
-// Common timezones
-const COMMON_TIMEZONES = [
-  { value: 'UTC', label: 'UTC (GMT+0)' },
-  { value: 'Pacific/Auckland', label: 'New Zealand (NZDT)' },
-  { value: 'Australia/Sydney', label: 'Australia Eastern (AEDT)' },
-  { value: 'Australia/Perth', label: 'Australia Western (AWST)' },
-  { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)' },
-  { value: 'Asia/Shanghai', label: 'China Standard Time (CST)' },
-  { value: 'Asia/Singapore', label: 'Singapore (SGT)' },
-  { value: 'Asia/Kolkata', label: 'India Standard Time (IST)' },
-  { value: 'Asia/Dubai', label: 'Dubai (GST)' },
-  { value: 'Asia/Riyadh', label: 'Saudi Arabia (AST)' },
-  { value: 'Africa/Cairo', label: 'Eastern European Time (EET)' },
-  { value: 'Africa/Lagos', label: 'West Africa Time (WAT)' },
-  { value: 'Europe/Istanbul', label: 'Turkey Time (TRT)' },
-  { value: 'Europe/Paris', label: 'Central European Time (CET)' },
-  { value: 'Europe/London', label: 'London (GMT)' },
-  { value: 'America/Sao_Paulo', label: 'Brasilia Time (BRT)' },
-  { value: 'America/New_York', label: 'Eastern Time (ET)' },
-  { value: 'America/Chicago', label: 'Central Time (CT)' },
-  { value: 'America/Denver', label: 'Mountain Time (MT)' },
-  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
-];
-
-// Get UTC offset for a timezone in minutes
-function getTimezoneOffsetMinutes(timezone: string, date: Date): number {
-  const utcStr = date.toLocaleString('en-US', { timeZone: 'UTC' });
-  const tzStr = date.toLocaleString('en-US', { timeZone: timezone });
-  const utcDate = new Date(utcStr);
-  const tzDate = new Date(tzStr);
-  return (tzDate.getTime() - utcDate.getTime()) / 60000;
-}
-
-// Format a UTC date in the user's selected timezone
-function formatInTimezone(utcDate: Date, timezone: string, formatStr: string): string {
-  // Use Intl to format in the target timezone
-  if (formatStr === 'EEEE, MMMM d, yyyy') {
-    return utcDate.toLocaleDateString('en-US', {
-      timeZone: timezone,
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
-  if (formatStr === 'h:mm a') {
-    return utcDate.toLocaleTimeString('en-US', {
-      timeZone: timezone,
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  }
-  return utcDate.toLocaleString('en-US', { timeZone: timezone });
-}
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 
 // Time slots (24h availability - online exam, any timezone)
 const TIME_SLOTS = [
@@ -249,11 +190,10 @@ export default function ScheduleExam() {
     return false;
   };
 
-  // Detect user's timezone
+  // Detect user's timezone (never falls back to UTC silently)
   useEffect(() => {
-    const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const match = COMMON_TIMEZONES.find(tz => tz.value === detectedTimezone);
-    setSelectedTimezone(match ? detectedTimezone : 'UTC');
+    const detected = detectAndResolveTimezone();
+    setSelectedTimezone(detected.value);
   }, []);
 
   // Load exam and voucher info
@@ -339,7 +279,7 @@ export default function ScheduleExam() {
       if (voucherId) {
         let { data: voucher, error: voucherError } = await supabase
           .from('exam_vouchers')
-          .select('id, code, certification_type, exam_language, expires_at, status')
+          .select('id, code, certification_type, exam_language, expires_at, status, no_show_count')
           .eq('id', voucherId)
           .single();
 
@@ -397,7 +337,27 @@ export default function ScheduleExam() {
               variant: 'destructive',
             });
           } else {
-            setVoucherInfo(voucher);
+            // Check no-show eligibility if voucher has prior no-shows
+            if ((voucher.no_show_count || 0) > 0) {
+              const { data: rescheduleCheck } = await supabase.rpc('can_reschedule_exam', {
+                p_voucher_id: voucher.id,
+              });
+
+              if (rescheduleCheck && !rescheduleCheck.can_reschedule) {
+                toast({
+                  title: 'Voucher Not Available',
+                  description: rescheduleCheck.reason || 'This voucher cannot be used for scheduling.',
+                  variant: 'destructive',
+                });
+              } else {
+                setVoucherInfo({
+                  ...voucher,
+                  is_final_attempt: rescheduleCheck?.is_final_attempt || false,
+                });
+              }
+            } else {
+              setVoucherInfo(voucher);
+            }
           }
         }
       }
@@ -432,16 +392,9 @@ export default function ScheduleExam() {
       return;
     }
 
-    // Build the date-time in the selected timezone, then convert to UTC
-    // User selected a date + time meaning "this time in the selected timezone"
-    const localDateStr = `${format(selectedDate, 'yyyy-MM-dd')}T${selectedTime}:00`;
-    const naiveDate = new Date(localDateStr); // interpreted as browser-local
-    // Calculate the offset difference between browser timezone and selected timezone
-    const browserOffsetMin = -naiveDate.getTimezoneOffset(); // browser offset from UTC in minutes
-    const selectedOffsetMin = getTimezoneOffsetMinutes(selectedTimezone, naiveDate);
-    const offsetDiffMs = (browserOffsetMin - selectedOffsetMin) * 60000;
-    // Adjust so the stored UTC corresponds to the selected timezone's time
-    const selectedDateTime = new Date(naiveDate.getTime() + offsetDiffMs);
+    // Convert user-selected date+time in their chosen timezone directly to UTC
+    const dateTimeStr = `${format(selectedDate, 'yyyy-MM-dd')}T${selectedTime}:00`;
+    const selectedDateTime = fromZonedTime(dateTimeStr, selectedTimezone);
 
     if (!DEV_MODE_SKIP_DATE_VALIDATION) {
       const minAllowed = addDays(new Date(), 2);
@@ -557,10 +510,10 @@ export default function ScheduleExam() {
                   <div>
                     <p className="text-sm text-gray-500">Date & Time</p>
                     <p className="font-semibold">
-                      {formatInTimezone(scheduledDate, selectedTimezone, 'EEEE, MMMM d, yyyy')}
+                      {formatInTimeZone(scheduledDate, selectedTimezone, 'EEEE, MMMM d, yyyy')}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {formatInTimezone(scheduledDate, selectedTimezone, 'h:mm a')} ({COMMON_TIMEZONES.find(tz => tz.value === selectedTimezone)?.label || selectedTimezone})
+                      {formatInTimeZone(scheduledDate, selectedTimezone, 'h:mm a')} ({getTimezoneLabel(selectedTimezone)})
                     </p>
                   </div>
                 </div>
@@ -675,10 +628,10 @@ export default function ScheduleExam() {
                   <div>
                     <p className="text-sm text-gray-500">Date & Time</p>
                     <p className="font-semibold">
-                      {formatInTimezone(scheduledDate, bookingTimezone, 'EEEE, MMMM d, yyyy')}
+                      {formatInTimeZone(scheduledDate, bookingTimezone, 'EEEE, MMMM d, yyyy')}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {formatInTimezone(scheduledDate, bookingTimezone, 'h:mm a')} ({COMMON_TIMEZONES.find(tz => tz.value === bookingTimezone)?.label || bookingTimezone})
+                      {formatInTimeZone(scheduledDate, bookingTimezone, 'h:mm a')} ({getTimezoneLabel(bookingTimezone)})
                     </p>
                   </div>
                 </div>
@@ -926,6 +879,17 @@ export default function ScheduleExam() {
           </Alert>
         )}
 
+        {/* Final Attempt Warning (after a no-show) */}
+        {voucherInfo?.is_final_attempt && (
+          <Alert className="mb-6 border-orange-300 bg-orange-50">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertTitle className="text-orange-800">Final Attempt</AlertTitle>
+            <AlertDescription className="text-orange-700">
+              This is your last chance to take this exam. If you miss this appointment, your voucher will be <strong>permanently revoked</strong> and cannot be recovered.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Invalid Voucher Warning */}
         {voucherId && !voucherInfo && !isLoading && (
           <Alert variant="destructive" className="mb-6">
@@ -1003,18 +967,10 @@ export default function ScheduleExam() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Select value={selectedTimezone} onValueChange={setSelectedTimezone}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COMMON_TIMEZONES.map((tz) => (
-                      <SelectItem key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TimezoneCombobox
+                  value={selectedTimezone}
+                  onValueChange={setSelectedTimezone}
+                />
               </CardContent>
             </Card>
 
@@ -1065,7 +1021,7 @@ export default function ScheduleExam() {
                         {TIME_SLOTS.find(s => s.value === selectedTime)?.label}
                       </p>
                       <p className="text-sm text-gray-600">
-                        {COMMON_TIMEZONES.find(tz => tz.value === selectedTimezone)?.label}
+                        {getTimezoneLabel(selectedTimezone)}
                       </p>
                     </div>
                   </div>

@@ -45,10 +45,26 @@ Deno.serve(async (req) => {
       : null;
 
     const body = await req.json();
-    const { type, to, user_id, data } = body;
+    // Accept both payload formats:
+    // Format 1 (direct): { type, to, user_id, data }
+    // Format 2 (from DB governance functions): { template_key, user_id, variables }
+    const type = body.type || body.template_key;
+    const data = body.data || body.variables || {};
+    const user_id = body.user_id || null;
+    let to = body.to;
+
+    // If no 'to' email but user_id provided, look up from users table
+    if (!to && user_id && supabase) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('email')
+        .eq('id', user_id)
+        .single();
+      to = userData?.email;
+    }
 
     if (!type || !to) {
-      throw new Error('Missing required fields: type, to');
+      throw new Error('Missing required fields: type and to (or user_id for lookup)');
     }
 
     console.log('Processing email: type=' + type + ', to=' + to);
@@ -112,24 +128,28 @@ Deno.serve(async (req) => {
 
     console.log('Email sent: ' + result.id);
 
-    // Log to database
+    // Log to database (non-blocking - don't fail if table doesn't exist)
     let logId = null;
     if (supabase) {
-      const { data: logData } = await supabase
-        .from('email_logs')
-        .insert({
-          email_type: type,
-          recipient_email: to,
-          recipient_user_id: user_id || null,
-          subject: subject,
-          status: 'sent',
-          resend_id: result.id,
-          template_data: data || {},
-          sent_at: new Date().toISOString(),
-        })
-        .select('id')
-        .single();
-      logId = logData?.id;
+      try {
+        const { data: logData } = await supabase
+          .from('email_logs')
+          .insert({
+            email_type: type,
+            recipient_email: to,
+            recipient_user_id: user_id || null,
+            subject: subject,
+            status: 'sent',
+            resend_id: result.id,
+            template_data: data || {},
+            sent_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+        logId = logData?.id;
+      } catch (e) {
+        console.warn('Could not log email:', e);
+      }
     }
 
     return new Response(
