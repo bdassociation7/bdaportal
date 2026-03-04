@@ -521,6 +521,14 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
 
       if (error) throw error;
 
+      // Transition to in_progress — sets started_at and starts the timer,
+      // exactly as ExamLaunch does for real candidates
+      await supabase.rpc('transition_exam_state', {
+        p_attempt_id: attempt.id,
+        p_new_status: 'in_progress',
+        p_event_data: { launched_from: 'admin_blueprint_test' },
+      });
+
       toast({
         title: 'Test attempt created',
         description: `BDA-${certType} ${lang.toUpperCase()} — opening exam…`,
