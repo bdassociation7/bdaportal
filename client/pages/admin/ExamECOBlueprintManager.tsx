@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuthContext } from '@/app/providers/AuthProvider';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +17,23 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, RotateCcw, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Save,
+  RotateCcw,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  FlaskConical,
+  Play,
+  XCircle,
+} from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -40,6 +58,16 @@ interface BlueprintRow {
   order_index: number;
 }
 
+interface SimResultRow {
+  competency_name: string;
+  domain: Domain;
+  requested: number;
+  available_en: number;
+  available_ar: number;
+  drawn: number;
+  shortfall: number;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook: load pool sizes + existing config for one cert type
 // ─────────────────────────────────────────────────────────────────────────────
@@ -56,7 +84,7 @@ function useECOData(certType: CertType) {
         .eq('is_active', true);
 
       if (quizzesError) throw quizzesError;
-      if (!quizzes || quizzes.length === 0) return { pool: [], config: [] };
+      if (!quizzes || quizzes.length === 0) return { pool: [], config: [], enQuizId: null, arQuizId: null };
 
       const enQuiz = quizzes.find(q => q.exam_language === 'en');
       const arQuiz = quizzes.find(q => q.exam_language === 'ar');
@@ -124,9 +152,133 @@ function useECOData(certType: CertType) {
 
       if (configError) throw configError;
 
-      return { pool, config: config || [] };
+      return {
+        pool,
+        config: config || [],
+        enQuizId: enQuiz?.id || null,
+        arQuizId: arQuiz?.id || null,
+      };
     },
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Simulation modal
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SimulateModal({
+  open,
+  onClose,
+  certType,
+  results,
+}: {
+  open: boolean;
+  onClose: () => void;
+  certType: CertType;
+  results: SimResultRow[];
+}) {
+  const total = results.reduce((s, r) => s + r.drawn, 0);
+  const totalRequested = results.reduce((s, r) => s + r.requested, 0);
+  const allOk = results.every(r => r.shortfall === 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Draw Simulation — BDA-{certType}</DialogTitle>
+          <DialogDescription>
+            Simulates one exam attempt using the current saved blueprint.
+            No attempt is created — this is read-only.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 mt-2">
+          {/* Summary badge */}
+          <div className="flex items-center gap-3">
+            {allOk ? (
+              <Badge className="bg-green-100 text-green-800 border-green-300">
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                All {total} questions would be drawn correctly
+              </Badge>
+            ) : (
+              <Badge variant="destructive">
+                <XCircle className="h-3.5 w-3.5 mr-1" />
+                Some competencies have shortfalls
+              </Badge>
+            )}
+            <span className="text-sm text-muted-foreground">
+              Total: {total} / {totalRequested} requested
+            </span>
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Competency</TableHead>
+                <TableHead className="text-center w-20">Req.</TableHead>
+                <TableHead className="text-center w-20">Pool EN</TableHead>
+                <TableHead className="text-center w-20">Pool AR</TableHead>
+                <TableHead className="text-center w-20">Drawn</TableHead>
+                <TableHead className="text-center w-24">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {results.map(row => (
+                <TableRow key={row.competency_name}>
+                  <TableCell className="font-medium text-sm">{row.competency_name}</TableCell>
+                  <TableCell className="text-center text-sm">{row.requested}</TableCell>
+                  <TableCell className="text-center text-sm">
+                    <span className={row.available_en < row.requested ? 'text-amber-600 font-medium' : ''}>
+                      {row.available_en}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-center text-sm">
+                    <span className={row.available_ar > 0 && row.available_ar < row.requested ? 'text-amber-600 font-medium' : ''}>
+                      {row.available_ar > 0 ? row.available_ar : '—'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-center text-sm font-semibold">{row.drawn}</TableCell>
+                  <TableCell className="text-center">
+                    {row.shortfall === 0 ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
+                    ) : (
+                      <div className="flex items-center justify-center gap-1 text-destructive text-xs">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        -{row.shortfall}
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {/* Total row */}
+              <TableRow className="bg-muted/30 font-semibold">
+                <TableCell className="text-right text-sm text-muted-foreground" colSpan={4}>
+                  Total
+                </TableCell>
+                <TableCell className="text-center">{total}</TableCell>
+                <TableCell className="text-center">
+                  {total === 120 && allOk ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 text-destructive mx-auto" />
+                  )}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              "Drawn" = min(Requested, Pool EN) — the number of questions the engine would successfully
+              pull. In production, Pool AR must also be satisfied for Arabic-language attempts.
+              Random selection is done by the database at attempt creation time.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -137,12 +289,22 @@ const EXAM_TOTAL = 120;
 
 function BlueprintPanel({ certType }: { certType: CertType }) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuthContext();
   const { data, isLoading, error } = useECOData(certType);
 
   // Local editable state: map competency_name → question_count
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [dirty, setDirty] = useState(false);
+
+  // Simulation state
+  const [simOpen, setSimOpen] = useState(false);
+  const [simResults, setSimResults] = useState<SimResultRow[]>([]);
+  const [simLoading, setSimLoading] = useState(false);
+
+  // Test attempt state
+  const [startingAttempt, setStartingAttempt] = useState(false);
 
   // Initialise counts from loaded data
   useEffect(() => {
@@ -215,6 +377,97 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
     setDirty(true);
   };
 
+  // ── Option 1: Simulate Draw ───────────────────────────────────────────────
+
+  const handleSimulate = async () => {
+    if (!data) return;
+    setSimLoading(true);
+    try {
+      // Load saved blueprint from DB (not dirty local state — sim uses what's actually saved)
+      const { data: savedConfig } = await supabase
+        .from('eco_blueprint_config')
+        .select('competency_name, question_count')
+        .eq('certification_type', certType);
+
+      if (!savedConfig || savedConfig.length === 0) {
+        toast({
+          title: 'No blueprint saved',
+          description: 'Save the blueprint first before running a simulation.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const configMap = Object.fromEntries(savedConfig.map(c => [c.competency_name, c.question_count]));
+
+      // Build simulation results using pool data already loaded
+      const results: SimResultRow[] = data.pool
+        .filter(r => (configMap[r.competency_name] ?? 0) > 0)
+        .map(r => {
+          const requested = configMap[r.competency_name];
+          const drawn = Math.min(requested, r.pool_en); // EN is limiting factor (blueprint must satisfy EN)
+          return {
+            competency_name: r.competency_name,
+            domain: r.competency_section,
+            requested,
+            available_en: r.pool_en,
+            available_ar: r.pool_ar,
+            drawn,
+            shortfall: requested - drawn,
+          };
+        });
+
+      setSimResults(results);
+      setSimOpen(true);
+    } finally {
+      setSimLoading(false);
+    }
+  };
+
+  // ── Option 2: Start Test Attempt ─────────────────────────────────────────
+
+  const handleStartTestAttempt = async () => {
+    if (!data?.enQuizId || !user?.id) return;
+
+    const confirmed = window.confirm(
+      `This will create a real exam attempt under your account (BDA-${certType} EN).\n\nThe attempt will appear in your quiz history. You can abandon it at any time.\n\nContinue?`
+    );
+    if (!confirmed) return;
+
+    setStartingAttempt(true);
+    try {
+      const { data: attempt, error } = await supabase.rpc('start_certification_exam', {
+        p_user_id: user.id,
+        p_quiz_id: data.enQuizId,
+        p_voucher_id: null,
+        p_booking_id: null,
+        p_ip_address: null,
+        p_user_agent: navigator.userAgent,
+        p_browser_info: null,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Test attempt created',
+        description: `Attempt ID: ${attempt.id} — opening exam…`,
+        duration: 3000,
+      });
+
+      navigate(`/certification/exam/${data.enQuizId}/attempt/${attempt.id}`);
+    } catch (err: any) {
+      toast({
+        title: 'Failed to start test attempt',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setStartingAttempt(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   if (isLoading) return <div className="py-8 text-center text-muted-foreground">Loading…</div>;
   if (error) return (
     <Alert variant="destructive">
@@ -235,6 +488,8 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
   const behavioralTotal = behavioralRows.reduce((s, r) => s + (counts[r.competency_name] || 0), 0);
   const knowledgeTotal = knowledgeRows.reduce((s, r) => s + (counts[r.competency_name] || 0), 0);
   const totalOk = total === EXAM_TOTAL;
+
+  const hasSavedBlueprint = data.config.length > 0;
 
   const renderRows = (rows: PoolRow[]) =>
     rows.map(row => {
@@ -305,6 +560,33 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
           {totalOk && <Badge variant="outline" className="text-green-700 border-green-300 text-xs">Ready to save</Badge>}
         </div>
         <div className="flex gap-2">
+          {/* Option 1: Simulate Draw */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSimulate}
+            disabled={simLoading || !hasSavedBlueprint}
+            title={!hasSavedBlueprint ? 'Save a blueprint first' : 'Simulate a draw using the saved blueprint'}
+          >
+            <FlaskConical className="h-4 w-4 mr-1" />
+            {simLoading ? 'Simulating…' : 'Simulate Draw'}
+          </Button>
+
+          {/* Option 2: Start Test Attempt */}
+          {data.enQuizId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleStartTestAttempt}
+              disabled={startingAttempt || !hasSavedBlueprint}
+              title={!hasSavedBlueprint ? 'Save a blueprint first' : `Open a real BDA-${certType} EN exam attempt under your account`}
+              className="text-blue-600 border-blue-300 hover:bg-blue-50"
+            >
+              <Play className="h-4 w-4 mr-1" />
+              {startingAttempt ? 'Starting…' : 'Start Test Attempt'}
+            </Button>
+          )}
+
           <Button variant="outline" size="sm" onClick={handleReset} disabled={!dirty}>
             <RotateCcw className="h-4 w-4 mr-1" />
             Reset
@@ -392,8 +674,20 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
           <strong>Pool EN / Pool AR</strong> = number of questions available in each language bank.
           Draw Count must not exceed either pool. Once saved, new exam attempts will draw exactly
           this many questions per competency, randomly selected.
+          {hasSavedBlueprint && (
+            <> Use <strong>Simulate Draw</strong> to verify the blueprint without creating an attempt,
+            or <strong>Start Test Attempt</strong> to open a real exam and inspect the drawn questions.</>
+          )}
         </AlertDescription>
       </Alert>
+
+      {/* Simulation results modal */}
+      <SimulateModal
+        open={simOpen}
+        onClose={() => setSimOpen(false)}
+        certType={certType}
+        results={simResults}
+      />
     </div>
   );
 }
