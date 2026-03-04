@@ -120,7 +120,7 @@ export default function TakeCertificationExamAttempt() {
   });
 
   // Fetch attempt-specific question set (ECO weighted randomization)
-  const { data: attemptQuestionSet } = useQuery({
+  const { data: attemptQuestionSet, isLoading: questionSetLoading } = useQuery({
     queryKey: ['exam-attempt-question-set', attemptId],
     queryFn: async () => {
       if (!attemptId) return null;
@@ -583,7 +583,7 @@ export default function TakeCertificationExamAttempt() {
   };
 
   // Loading state
-  if (examLoading || attemptLoading) {
+  if (examLoading || attemptLoading || questionSetLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

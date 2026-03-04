@@ -107,6 +107,26 @@ function useECOData(certType: CertType) {
           : { data: [] },
       ]);
 
+      // 2b. Count untagged questions per language (competency_name IS NULL)
+      const untaggedCounts = await Promise.all([
+        enQuiz
+          ? supabase
+              .from('quiz_questions')
+              .select('id', { count: 'exact', head: true })
+              .eq('quiz_id', enQuiz.id)
+              .is('competency_name', null)
+          : { count: 0 },
+        arQuiz
+          ? supabase
+              .from('quiz_questions')
+              .select('id', { count: 'exact', head: true })
+              .eq('quiz_id', arQuiz.id)
+              .is('competency_name', null)
+          : { count: 0 },
+      ]);
+      const untaggedEn = untaggedCounts[0].count ?? 0;
+      const untaggedAr = untaggedCounts[1].count ?? 0;
+
       const enQuestions = poolQueries[0].data || [];
       const arQuestions = poolQueries[1].data || [];
 
@@ -157,6 +177,8 @@ function useECOData(certType: CertType) {
         config: config || [],
         enQuizId: enQuiz?.id || null,
         arQuizId: arQuiz?.id || null,
+        untaggedEn,
+        untaggedAr,
       };
     },
   });
@@ -673,6 +695,22 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             Total must equal exactly {EXAM_TOTAL} questions. Current total: {total}.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {((data.untaggedEn ?? 0) > 0 || (data.untaggedAr ?? 0) > 0) && (
+        <Alert className="border-amber-300 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800 text-sm">
+            <strong>Untagged questions detected:</strong>{' '}
+            {(data.untaggedEn ?? 0) > 0 && (
+              <span>EN bank: <strong>{data.untaggedEn}</strong> question{data.untaggedEn !== 1 ? 's' : ''} missing a competency. </span>
+            )}
+            {(data.untaggedAr ?? 0) > 0 && (
+              <span>AR bank: <strong>{data.untaggedAr}</strong> question{data.untaggedAr !== 1 ? 's' : ''} missing a competency. </span>
+            )}
+            These questions will not be drawn by the blueprint engine. Assign them a competency in the question bank to include them.
           </AlertDescription>
         </Alert>
       )}
