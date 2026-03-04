@@ -64,8 +64,8 @@ interface SimResultRow {
   requested: number;
   available_en: number;
   available_ar: number;
-  drawn: number;
-  shortfall: number;
+  drawn_en: number;          // min(requested, pool_en)
+  drawn_ar: number | null;   // min(requested, pool_ar), null if no AR bank
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -177,87 +177,134 @@ function SimulateModal({
   certType: CertType;
   results: SimResultRow[];
 }) {
-  const total = results.reduce((s, r) => s + r.drawn, 0);
   const totalRequested = results.reduce((s, r) => s + r.requested, 0);
-  const allOk = results.every(r => r.shortfall === 0);
+  const totalDrawnEn = results.reduce((s, r) => s + r.drawn_en, 0);
+  const totalDrawnAr = results.some(r => r.drawn_ar !== null)
+    ? results.reduce((s, r) => s + (r.drawn_ar ?? 0), 0)
+    : null;
+
+  const hasArBank = results.some(r => r.drawn_ar !== null);
+  const enOk = results.every(r => r.drawn_en === r.requested);
+  const arOk = !hasArBank || results.every(r => r.drawn_ar === null || r.drawn_ar === r.requested);
+  const allOk = enOk && arOk;
+
+  const rowStatus = (row: SimResultRow) => {
+    const enShortfall = row.requested - row.drawn_en;
+    const arShortfall = row.drawn_ar !== null ? row.requested - row.drawn_ar : 0;
+    if (enShortfall === 0 && arShortfall === 0) return 'ok';
+    if (enShortfall > 0 && arShortfall > 0) return `EN −${enShortfall} / AR −${arShortfall}`;
+    if (enShortfall > 0) return `EN −${enShortfall}`;
+    return `AR −${arShortfall}`;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Draw Simulation — BDA-{certType}</DialogTitle>
           <DialogDescription>
-            Simulates one exam attempt using the current saved blueprint.
-            No attempt is created — this is read-only.
+            Verifies whether the saved blueprint can be satisfied by both the EN and AR question banks.
+            No attempt is created — read-only.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
-          {/* Summary badge */}
-          <div className="flex items-center gap-3">
-            {allOk ? (
-              <Badge className="bg-green-100 text-green-800 border-green-300">
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                All {total} questions would be drawn correctly
-              </Badge>
-            ) : (
-              <Badge variant="destructive">
-                <XCircle className="h-3.5 w-3.5 mr-1" />
-                Some competencies have shortfalls
+          {/* Summary */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <Badge className={enOk ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300'}>
+              {enOk ? <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> : <XCircle className="h-3.5 w-3.5 mr-1" />}
+              EN: {totalDrawnEn} / {totalRequested}
+            </Badge>
+            {hasArBank && (
+              <Badge className={arOk ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300'}>
+                {arOk ? <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> : <XCircle className="h-3.5 w-3.5 mr-1" />}
+                AR: {totalDrawnAr} / {totalRequested}
               </Badge>
             )}
-            <span className="text-sm text-muted-foreground">
-              Total: {total} / {totalRequested} requested
-            </span>
+            {allOk && (
+              <span className="text-sm text-green-700 font-medium">Blueprint is valid for all language banks.</span>
+            )}
           </div>
 
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Competency</TableHead>
-                <TableHead className="text-center w-20">Req.</TableHead>
+                <TableHead className="text-center w-16">Req.</TableHead>
                 <TableHead className="text-center w-20">Pool EN</TableHead>
+                <TableHead className="text-center w-20">Drawn EN</TableHead>
                 <TableHead className="text-center w-20">Pool AR</TableHead>
-                <TableHead className="text-center w-20">Drawn</TableHead>
-                <TableHead className="text-center w-24">Status</TableHead>
+                <TableHead className="text-center w-20">Drawn AR</TableHead>
+                <TableHead className="text-center w-28">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {results.map(row => (
-                <TableRow key={row.competency_name}>
-                  <TableCell className="font-medium text-sm">{row.competency_name}</TableCell>
-                  <TableCell className="text-center text-sm">{row.requested}</TableCell>
-                  <TableCell className="text-center text-sm">
-                    <span className={row.available_en < row.requested ? 'text-amber-600 font-medium' : ''}>
-                      {row.available_en}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-center text-sm">
-                    <span className={row.available_ar > 0 && row.available_ar < row.requested ? 'text-amber-600 font-medium' : ''}>
-                      {row.available_ar > 0 ? row.available_ar : '—'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-center text-sm font-semibold">{row.drawn}</TableCell>
-                  <TableCell className="text-center">
-                    {row.shortfall === 0 ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
-                    ) : (
-                      <div className="flex items-center justify-center gap-1 text-destructive text-xs">
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        -{row.shortfall}
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {results.map(row => {
+                const status = rowStatus(row);
+                return (
+                  <TableRow key={row.competency_name}>
+                    <TableCell className="font-medium text-sm">{row.competency_name}</TableCell>
+                    <TableCell className="text-center text-sm">{row.requested}</TableCell>
+                    {/* EN */}
+                    <TableCell className="text-center text-sm">
+                      <span className={row.available_en < row.requested ? 'text-destructive font-medium' : ''}>
+                        {row.available_en}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center text-sm font-semibold">
+                      <span className={row.drawn_en < row.requested ? 'text-destructive' : 'text-green-700'}>
+                        {row.drawn_en}
+                      </span>
+                    </TableCell>
+                    {/* AR */}
+                    <TableCell className="text-center text-sm">
+                      {row.available_ar > 0 ? (
+                        <span className={row.available_ar < row.requested ? 'text-destructive font-medium' : ''}>
+                          {row.available_ar}
+                        </span>
+                      ) : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell className="text-center text-sm font-semibold">
+                      {row.drawn_ar !== null ? (
+                        <span className={row.drawn_ar < row.requested ? 'text-destructive' : 'text-green-700'}>
+                          {row.drawn_ar}
+                        </span>
+                      ) : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    {/* Status */}
+                    <TableCell className="text-center">
+                      {status === 'ok' ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
+                      ) : (
+                        <div className="flex items-center justify-center gap-1 text-destructive text-xs whitespace-nowrap">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                          {status}
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {/* Total row */}
               <TableRow className="bg-muted/30 font-semibold">
-                <TableCell className="text-right text-sm text-muted-foreground" colSpan={4}>
+                <TableCell className="text-right text-sm text-muted-foreground" colSpan={3}>
                   Total
                 </TableCell>
-                <TableCell className="text-center">{total}</TableCell>
                 <TableCell className="text-center">
-                  {total === 120 && allOk ? (
+                  <span className={totalDrawnEn === totalRequested ? 'text-green-700' : 'text-destructive'}>
+                    {totalDrawnEn}
+                  </span>
+                </TableCell>
+                <TableCell />
+                <TableCell className="text-center">
+                  {totalDrawnAr !== null ? (
+                    <span className={totalDrawnAr === totalRequested ? 'text-green-700' : 'text-destructive'}>
+                      {totalDrawnAr}
+                    </span>
+                  ) : <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell className="text-center">
+                  {allOk ? (
                     <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
                   ) : (
                     <AlertTriangle className="h-4 w-4 text-destructive mx-auto" />
@@ -270,9 +317,9 @@ function SimulateModal({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription className="text-sm">
-              "Drawn" = min(Requested, Pool EN) — the number of questions the engine would successfully
-              pull. In production, Pool AR must also be satisfied for Arabic-language attempts.
-              Random selection is done by the database at attempt creation time.
+              <strong>Drawn EN / Drawn AR</strong> = min(Requested, Pool) per language.
+              Both must equal Requested for the blueprint to work for all candidates.
+              Actual question selection is random per attempt — only the counts are fixed.
             </AlertDescription>
           </Alert>
         </div>
@@ -405,15 +452,14 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
         .filter(r => (configMap[r.competency_name] ?? 0) > 0)
         .map(r => {
           const requested = configMap[r.competency_name];
-          const drawn = Math.min(requested, r.pool_en); // EN is limiting factor (blueprint must satisfy EN)
           return {
             competency_name: r.competency_name,
             domain: r.competency_section,
             requested,
             available_en: r.pool_en,
             available_ar: r.pool_ar,
-            drawn,
-            shortfall: requested - drawn,
+            drawn_en: Math.min(requested, r.pool_en),
+            drawn_ar: r.pool_ar > 0 ? Math.min(requested, r.pool_ar) : null,
           };
         });
 
@@ -459,7 +505,9 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
         duration: 3000,
       });
 
-      navigate(`/certification/exam/${quizId}/attempt/${attempt.id}`);
+      navigate(`/certification/exam/${quizId}/attempt/${attempt.id}`, {
+        state: { adminReturnPath: '/admin/exams/eco-blueprint' },
+      });
     } catch (err: any) {
       toast({
         title: 'Failed to start test attempt',

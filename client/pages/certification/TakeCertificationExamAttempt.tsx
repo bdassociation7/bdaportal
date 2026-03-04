@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QuizService } from '@/entities/quiz';
 import { CertificationService } from '@/entities/user-certifications';
@@ -30,6 +30,8 @@ import {
   Square,
   CheckSquare,
   Send,
+  FlaskConical,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -53,6 +55,7 @@ interface AttemptState {
 export default function TakeCertificationExamAttempt() {
   const { examId, attemptId } = useParams<{ examId: string; attemptId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { user } = useAuthContext();
   const queryClient = useQueryClient();
@@ -67,6 +70,11 @@ export default function TakeCertificationExamAttempt() {
   const [attemptLoaded, setAttemptLoaded] = useState(false);
   const [attemptCompleted, setAttemptCompleted] = useState(false);
   const [attemptError, setAttemptError] = useState<string | null>(null);
+
+  // Admin test mode
+  const isAdmin = ['admin', 'super_admin'].includes((user as any)?.profile?.role || '');
+  const returnPath = (location.state as any)?.adminReturnPath as string | undefined;
+  const [isDiscarding, setIsDiscarding] = useState(false);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -547,6 +555,22 @@ export default function TakeCertificationExamAttempt() {
     }
   };
 
+  const handleDiscardAttempt = async () => {
+    if (!attemptId || !isAdmin) return;
+    if (!window.confirm('Discard this test attempt and return to the ECO Blueprint Manager?\n\nThe attempt and all its data will be permanently deleted.')) return;
+
+    setIsDiscarding(true);
+    try {
+      const { error } = await supabase.rpc('discard_test_exam_attempt', { p_attempt_id: attemptId });
+      if (error) throw error;
+      localStorage.removeItem(storageKey);
+      navigate(returnPath || '/admin/exams/eco-blueprint');
+    } catch (err: any) {
+      toast({ title: 'Failed to discard attempt', description: err.message, variant: 'destructive' });
+      setIsDiscarding(false);
+    }
+  };
+
   const handleManualSave = () => {
     saveAnswers(answers, true);
   };
@@ -718,6 +742,31 @@ export default function TakeCertificationExamAttempt() {
           </div>
         </div>
       </div>
+
+      {/* Admin test mode banner */}
+      {isAdmin && !attemptCompleted && (
+        <div className="bg-amber-50 border-b border-amber-300">
+          <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-amber-800 text-sm">
+              <FlaskConical className="h-4 w-4 shrink-0" />
+              <span>
+                <strong>Admin Test Mode</strong> — This attempt is for testing only.
+                Discard it when done to keep the database clean.
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDiscardAttempt}
+              disabled={isDiscarding}
+              className="text-amber-800 border-amber-400 hover:bg-amber-100 shrink-0 ml-4"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              {isDiscarding ? 'Discarding…' : 'Discard & Exit'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Low time warning */}
       {timeRemaining !== null && timeRemaining < 300 && timeRemaining > 0 && (
