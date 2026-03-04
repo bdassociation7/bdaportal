@@ -111,6 +111,22 @@ export default function TakeCertificationExamAttempt() {
     enabled: !!attemptId,
   });
 
+  // Fetch attempt-specific question set (ECO weighted randomization)
+  const { data: attemptQuestionSet } = useQuery({
+    queryKey: ['exam-attempt-question-set', attemptId],
+    queryFn: async () => {
+      if (!attemptId) return null;
+      const { data, error } = await supabase
+        .from('exam_attempt_question_set')
+        .select('order_index, quiz_questions(*, answers:quiz_answers(*))')
+        .eq('attempt_id', attemptId)
+        .order('order_index');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!attemptId,
+  });
+
   // Load saved answers from database
   const loadSavedAnswers = useCallback(async () => {
     if (!attemptId) return;
@@ -302,7 +318,12 @@ export default function TakeCertificationExamAttempt() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [answers, attemptCompleted]);
 
-  const questions = exam?.questions || [];
+  // Use attempt-specific question set if available (ECO weighted), otherwise fall back to all quiz questions
+  const questions: any[] = (
+    attemptQuestionSet?.length
+      ? attemptQuestionSet.map((row: any) => row.quiz_questions)
+      : exam?.questions
+  ) || [];
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
@@ -310,8 +331,7 @@ export default function TakeCertificationExamAttempt() {
 
   // Determine if question allows multiple answers
   const isMultiSelect = (questionType: string | undefined) => {
-    // Types that allow multiple selections
-    return questionType === 'multiple_choice' || questionType === 'multi_select';
+    return questionType === 'multi_select';
   };
 
   const handleAnswerSelect = (answerId: string) => {
