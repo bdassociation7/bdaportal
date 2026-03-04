@@ -304,7 +304,7 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
   const [simLoading, setSimLoading] = useState(false);
 
   // Test attempt state
-  const [startingAttempt, setStartingAttempt] = useState(false);
+  const [startingAttempt, setStartingAttempt] = useState<'en' | 'ar' | null>(null);
 
   // Initialise counts from loaded data
   useEffect(() => {
@@ -426,19 +426,24 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
 
   // ── Option 2: Start Test Attempt ─────────────────────────────────────────
 
-  const handleStartTestAttempt = async () => {
-    if (!data?.enQuizId || !user?.id) return;
+  const handleStartTestAttempt = async (lang: 'en' | 'ar') => {
+    if (!user?.id) return;
+    const quizId = lang === 'en' ? data?.enQuizId : data?.arQuizId;
+    if (!quizId) {
+      toast({ title: `No ${lang.toUpperCase()} quiz found for BDA-${certType}`, variant: 'destructive' });
+      return;
+    }
 
     const confirmed = window.confirm(
-      `This will create a real exam attempt under your account (BDA-${certType} EN).\n\nThe attempt will appear in your quiz history. You can abandon it at any time.\n\nContinue?`
+      `This will create a real exam attempt under your account (BDA-${certType} ${lang.toUpperCase()}).\n\nThe attempt will appear in your quiz history. You can abandon it at any time.\n\nContinue?`
     );
     if (!confirmed) return;
 
-    setStartingAttempt(true);
+    setStartingAttempt(lang);
     try {
       const { data: attempt, error } = await supabase.rpc('start_certification_exam', {
         p_user_id: user.id,
-        p_quiz_id: data.enQuizId,
+        p_quiz_id: quizId,
         p_voucher_id: null,
         p_booking_id: null,
         p_ip_address: null,
@@ -450,11 +455,11 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
 
       toast({
         title: 'Test attempt created',
-        description: `Attempt ID: ${attempt.id} — opening exam…`,
+        description: `BDA-${certType} ${lang.toUpperCase()} — opening exam…`,
         duration: 3000,
       });
 
-      navigate(`/certification/exam/${data.enQuizId}/attempt/${attempt.id}`);
+      navigate(`/certification/exam/${quizId}/attempt/${attempt.id}`);
     } catch (err: any) {
       toast({
         title: 'Failed to start test attempt',
@@ -462,7 +467,7 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
         variant: 'destructive',
       });
     } finally {
-      setStartingAttempt(false);
+      setStartingAttempt(null);
     }
   };
 
@@ -572,18 +577,31 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
             {simLoading ? 'Simulating…' : 'Simulate Draw'}
           </Button>
 
-          {/* Option 2: Start Test Attempt */}
+          {/* Option 2: Start Test Attempt — EN and AR */}
           {data.enQuizId && (
             <Button
               variant="outline"
               size="sm"
-              onClick={handleStartTestAttempt}
-              disabled={startingAttempt || !hasSavedBlueprint}
+              onClick={() => handleStartTestAttempt('en')}
+              disabled={!!startingAttempt || !hasSavedBlueprint}
               title={!hasSavedBlueprint ? 'Save a blueprint first' : `Open a real BDA-${certType} EN exam attempt under your account`}
               className="text-blue-600 border-blue-300 hover:bg-blue-50"
             >
               <Play className="h-4 w-4 mr-1" />
-              {startingAttempt ? 'Starting…' : 'Start Test Attempt'}
+              {startingAttempt === 'en' ? 'Starting…' : 'Test EN'}
+            </Button>
+          )}
+          {data.arQuizId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleStartTestAttempt('ar')}
+              disabled={!!startingAttempt || !hasSavedBlueprint}
+              title={!hasSavedBlueprint ? 'Save a blueprint first' : `Open a real BDA-${certType} AR exam attempt under your account`}
+              className="text-blue-600 border-blue-300 hover:bg-blue-50"
+            >
+              <Play className="h-4 w-4 mr-1" />
+              {startingAttempt === 'ar' ? 'Starting…' : 'Test AR'}
             </Button>
           )}
 
