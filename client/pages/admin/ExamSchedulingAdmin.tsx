@@ -6,21 +6,24 @@
  */
 
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/shared/config/supabase.config';
 import {
   GraduationCap,
   Clock,
   Users,
   Search,
-  Filter,
   ChevronDown,
   CheckCircle,
   XCircle,
-  AlertCircle,
   FileText,
   Award,
+  FlaskConical,
+  Play,
+  Trash2,
 } from 'lucide-react';
 
 // ============================================================================
@@ -29,6 +32,9 @@ import {
 
 interface ExamAttempt {
   id: string;
+  user_id: string;
+  quiz_id: string;
+  voucher_id: string | null;
   started_at: string;
   completed_at: string | null;
   score: number | null;
@@ -40,6 +46,7 @@ interface ExamAttempt {
     email: string;
     first_name: string | null;
     last_name: string | null;
+    role: string | null;
   } | null;
   quizzes: {
     id: string;
@@ -55,11 +62,15 @@ interface ExamAttempt {
 export default function ExamSchedulingAdmin() {
   const { language } = useLanguage();
   const isRTL = language === 'ar';
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'in_progress'>('all');
   const [certFilter, setCertFilter] = useState<'all' | 'CP' | 'SCP'>('all');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Fetch exam attempts
   const { data: attempts = [], isLoading } = useQuery({
@@ -69,6 +80,9 @@ export default function ExamSchedulingAdmin() {
         .from('quiz_attempts')
         .select(`
           id,
+          user_id,
+          quiz_id,
+          voucher_id,
           started_at,
           completed_at,
           score,
@@ -79,7 +93,8 @@ export default function ExamSchedulingAdmin() {
             id,
             email,
             first_name,
-            last_name
+            last_name,
+            role
           ),
           quizzes!quiz_attempts_quiz_id_fkey(
             id,
@@ -126,6 +141,22 @@ export default function ExamSchedulingAdmin() {
       return matchesSearch;
     });
   }, [attempts, searchTerm]);
+
+  // Discard a test attempt
+  const handleDiscard = async (attempt: ExamAttempt) => {
+    if (!window.confirm(`Delete test attempt for ${attempt.users?.first_name} ${attempt.users?.last_name}?\n\nThis will permanently remove the attempt and all its data.`)) return;
+    setDeletingId(attempt.id);
+    try {
+      const { error } = await supabase.rpc('discard_test_exam_attempt', { p_attempt_id: attempt.id });
+      if (error) throw error;
+      toast({ title: 'Test attempt deleted' });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'exam-attempts'] });
+    } catch (err: any) {
+      toast({ title: 'Delete failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -297,6 +328,9 @@ export default function ExamSchedulingAdmin() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
                       {isRTL ? 'النتيجة' : 'Result'}
                     </th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -304,12 +338,25 @@ export default function ExamSchedulingAdmin() {
                     const startedDate = new Date(attempt.started_at);
                     const isCompleted = !!attempt.completed_at;
                     const hasResult = attempt.score !== null;
+                    const isTestAttempt = attempt.voucher_id === null &&
+                      ['admin', 'super_admin'].includes(attempt.users?.role || '');
 
                     return (
-                      <tr key={attempt.id} className="border-b hover:bg-gray-50">
+                      <tr
+                        key={attempt.id}
+                        className={`border-b hover:bg-gray-50 ${isTestAttempt ? 'bg-amber-50/40' : ''}`}
+                      >
                         <td className="py-3 px-4">
-                          <div className="font-medium">
-                            {attempt.users?.first_name} {attempt.users?.last_name}
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium">
+                              {attempt.users?.first_name} {attempt.users?.last_name}
+                            </div>
+                            {isTestAttempt && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs rounded bg-amber-100 text-amber-700 font-medium">
+                                <FlaskConical className="h-3 w-3" />
+                                Test
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-gray-500">
                             {attempt.users?.email}
@@ -362,6 +409,34 @@ export default function ExamSchedulingAdmin() {
                             </div>
                           ) : (
                             <span className="text-sm text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {isTestAttempt && (
+                            <div className="flex items-center gap-2">
+                              {!isCompleted && (
+                                <button
+                                  onClick={() => navigate(
+                                    `/certification/exam/${attempt.quiz_id}/attempt/${attempt.id}`,
+                                    { state: { adminReturnPath: '/admin/exam-scheduling' } }
+                                  )}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium transition-colors"
+                                >
+                                  <Play className="h-3 w-3" />
+                                  Continue
+                                </button>
+                              )}
+                              {!isCompleted && (
+                                <button
+                                  onClick={() => handleDiscard(attempt)}
+                                  disabled={deletingId === attempt.id}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-red-100 text-red-700 hover:bg-red-200 font-medium transition-colors disabled:opacity-50"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  {deletingId === attempt.id ? '…' : 'Delete'}
+                                </button>
+                              )}
+                            </div>
                           )}
                         </td>
                       </tr>
