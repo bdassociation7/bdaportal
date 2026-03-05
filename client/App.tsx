@@ -194,10 +194,11 @@ const IndividualOnlyWrapper = () => (
 );
 
 // Exam mode wrapper - no sidebar, full-screen focus mode for taking exams
+// Admins are allowed so they can run test attempts from the ECO Blueprint Manager
 const ExamModeWrapper = () => (
   <ProtectedRoute>
     <ProfileCompletionGuard>
-      <RoleGuard allowedRoles={['individual']}>
+      <RoleGuard allowedRoles={['individual', 'admin', 'super_admin']}>
         <Outlet />
       </RoleGuard>
     </ProfileCompletionGuard>
