@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -13,6 +13,7 @@ import {
   AlertCircle,
   BarChart3,
   ShieldCheck,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +21,8 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/shared/utils/cn';
 import { supabase } from '@/shared/config/supabase.config';
+import { useAuth } from '@/app/providers/AuthProvider';
+import { toast } from 'sonner';
 
 /**
  * ExamResults Page
@@ -66,6 +69,8 @@ interface AttemptAnswer {
 export default function ExamResults() {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Fetch attempt with quiz info
   const { data: attempt, isLoading: attemptLoading, error: attemptError } = useQuery({
@@ -137,6 +142,65 @@ export default function ExamResults() {
       .map(([competency]) => competency)
       .sort(); // Alphabetical order
   }, [answers]);
+
+  const handleSendResultsEmail = async () => {
+    if (!attempt || !user?.email) return;
+    setSendingEmail(true);
+    try {
+      const certType = attempt.quiz?.certification_type || 'CP';
+      const isPassed = attempt.passed ?? false;
+      const score = attempt.score ?? 0;
+      const passingScore = attempt.quiz?.passing_score_percentage ?? 70;
+      const pointsEarned = attempt.total_points_earned ?? 0;
+      const pointsPossible = attempt.total_points_possible ?? 0;
+
+      let timeSpentMin = attempt.time_spent_minutes;
+      if (!timeSpentMin && attempt.started_at && attempt.completed_at) {
+        const ms = new Date(attempt.completed_at).getTime() - new Date(attempt.started_at).getTime();
+        timeSpentMin = Math.round(ms / 60000);
+      }
+
+      const completedDate = new Date(attempt.completed_at!).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric',
+      });
+
+      const firstName = user?.profile?.first_name || user?.email || 'Candidate';
+
+      const { error } = await supabase.functions.invoke('send-email', {
+        body: {
+          type: 'exam_results',
+          to: user.email,
+          data: {
+            first_name: firstName,
+            certification_type: certType,
+            score: String(score),
+            passing_score: String(passingScore),
+            points_earned: String(pointsEarned),
+            points_possible: String(pointsPossible),
+            time_spent: String(timeSpentMin ?? '-'),
+            completed_date: completedDate,
+            header_bg: isPassed ? '#059669' : '#dc2626',
+            header_label: isPassed ? '🎉 Passed' : 'Not Passed',
+            score_color: isPassed ? '#059669' : '#dc2626',
+            result_message: isPassed
+              ? `Congratulations! You have successfully passed the BDA-${certType}™ certification exam with a score of ${score}%. Your certification has been issued and will be available for download within 14 days.`
+              : `Thank you for taking the BDA-${certType}™ certification exam. Your score of ${score}% did not meet the passing requirement of ${passingScore}%. We encourage you to review the competency areas and retake when ready.`,
+            next_steps: isPassed
+              ? 'Your digital certificate will be available in your portal within 14 days. You will also receive a separate certificate issuance confirmation email.'
+              : 'You can access study materials and mock exams through the BDA Learning System to prepare for your next attempt.',
+          },
+        },
+      });
+
+      if (error) throw error;
+      toast.success('Results sent to ' + user.email);
+    } catch (err: any) {
+      console.error('Email send error:', err);
+      toast.error('Failed to send email. Please try again.');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -450,12 +514,25 @@ export default function ExamResults() {
       )}
 
       {/* Actions */}
-      <div className="flex gap-4">
-        <Button variant="outline" onClick={() => navigate('/individual/dashboard')} className="flex-1">
+      <div className="flex flex-wrap gap-3">
+        <Button variant="outline" onClick={() => navigate('/individual/dashboard')} className="flex-1 min-w-[140px]">
           <Home className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
-        <Button onClick={() => navigate('/certification-exams')} className="flex-1">
+        <Button
+          variant="outline"
+          onClick={handleSendResultsEmail}
+          disabled={sendingEmail}
+          className="flex-1 min-w-[140px]"
+        >
+          {sendingEmail ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Mail className="h-4 w-4 mr-2" />
+          )}
+          {sendingEmail ? 'Sending...' : 'Email My Results'}
+        </Button>
+        <Button onClick={() => navigate('/certification-exams')} className="flex-1 min-w-[140px]">
           View Certification Exams
         </Button>
       </div>

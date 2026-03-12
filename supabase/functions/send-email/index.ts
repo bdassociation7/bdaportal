@@ -45,9 +45,10 @@ Deno.serve(async (req) => {
       : null;
 
     const body = await req.json();
-    // Accept both payload formats:
-    // Format 1 (direct): { type, to, user_id, data }
-    // Format 2 (from DB governance functions): { template_key, user_id, variables }
+    // Accept three payload formats:
+    // Format 1 (template key):  { type, to, user_id, data }
+    // Format 2 (DB governance): { template_key, user_id, variables }
+    // Format 3 (pre-rendered):  { to, subject, html }  ← used by DB triggers via pg_net
     const type = body.type || body.template_key;
     const data = body.data || body.variables || {};
     const user_id = body.user_id || null;
@@ -61,6 +62,30 @@ Deno.serve(async (req) => {
         .eq('id', user_id)
         .single();
       to = userData?.email;
+    }
+
+    // Format 3: pre-rendered HTML passed directly (no template lookup needed)
+    if (!type && body.html && body.subject && to) {
+      console.log('Processing pre-rendered email to=' + to);
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + resendApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject: body.subject, html: body.html }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return new Response(
+          JSON.stringify({ success: false, error: result.message || 'Send failed' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      return new Response(
+        JSON.stringify({ success: true, resend_id: result.id }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (!type || !to) {

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Award, Download, Clock, AlertCircle, CheckCircle, XCircle, Calendar, TrendingUp, ExternalLink, Loader2 } from 'lucide-react';
+import { Award, Download, Clock, AlertCircle, CheckCircle, XCircle, Calendar, TrendingUp, ExternalLink, Loader2, ShieldCheck } from 'lucide-react';
+import { impersonationService } from '@/services/impersonation.service';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { downloadCertificate } from '@/services/certificate-generator.service';
 import { Button } from '@/components/ui/button';
@@ -121,6 +123,11 @@ export default function MyCertifications() {
   const { language } = useLanguage();
   const texts = translations[language];
 
+  // Admin bypass: impersonation mode OR admin role → skip 14-day wait
+  const isAdminBypass =
+    impersonationService.isImpersonating() ||
+    ['admin', 'super_admin'].includes((user as any)?.profile?.role || '');
+
   // Filters
   const [statusFilter, setStatusFilter] = useState<'all' | CertificationStatus>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'CP' | 'SCP'>('all');
@@ -140,23 +147,50 @@ export default function MyCertifications() {
 
   const [generatingCerts, setGeneratingCerts] = useState<Set<string>>(new Set());
 
-  const handleDownloadCertificate = async (cert: {
-    credential_id: string;
-    certification_type: 'CP' | 'SCP';
-    issued_date: string;
-  }) => {
+  const handleDownloadCertificate = async (cert: UserCertification) => {
     try {
       setGeneratingCerts(prev => new Set(prev).add(cert.credential_id));
-      toast.info(language === 'ar' ? 'جارٍ إنشاء الشهادة...' : 'Generating certificate...');
 
-      // Generate PDF client-side
-      const firstName = user?.profile?.first_name || '';
-      const lastName = user?.profile?.last_name || '';
-      const fullName = [firstName, lastName].filter(Boolean).join(' ') || user?.email || 'Certificate Holder';
+      // Resolve the name to print on the certificate
+      let nameToUse = cert.certificate_holder_name || '';
+
+      if (!nameToUse) {
+        // First download — confirm the name with the user
+        const firstName = user?.profile?.first_name || '';
+        const lastName = user?.profile?.last_name || '';
+        const currentName = [firstName, lastName].filter(Boolean).join(' ') || user?.email || 'Certificate Holder';
+
+        const confirmed = window.confirm(
+          language === 'ar'
+            ? `سيتم إصدار شهادتك باسم:\n\n"${currentName}"\n\nلا يمكن تغيير هذا الاسم بعد التنزيل. هل تريد المتابعة؟`
+            : `Your certificate will be issued to:\n\n"${currentName}"\n\nThis name cannot be changed after download. Continue?`
+        );
+
+        if (!confirmed) {
+          setGeneratingCerts(prev => { const n = new Set(prev); n.delete(cert.credential_id); return n; });
+          return;
+        }
+
+        // Lock the name in DB (idempotent — safe if called again)
+        const { data: lockedName, error: lockErr } = await supabase.rpc('lock_certificate_holder_name', {
+          p_cert_id: cert.id,
+          p_name: currentName,
+        });
+
+        if (lockErr) {
+          console.error('Name lock error:', lockErr);
+          // Non-fatal — proceed with current name
+          nameToUse = currentName;
+        } else {
+          nameToUse = lockedName || currentName;
+        }
+      }
+
+      toast.info(language === 'ar' ? 'جارٍ إنشاء الشهادة...' : 'Generating certificate...');
 
       await downloadCertificate({
         credential_id: cert.credential_id,
-        user_full_name: fullName,
+        user_full_name: nameToUse,
         certification_type: cert.certification_type,
         issued_date: cert.issued_date,
       });
@@ -421,6 +455,14 @@ export default function MyCertifications() {
                     </div>
                   )}
 
+                  {/* Admin bypass notice */}
+                  {isAdminBypass && cert.certificate_available_date && new Date(cert.certificate_available_date) > new Date() && (
+                    <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1">
+                      <ShieldCheck className="h-3 w-3 flex-shrink-0" />
+                      Admin preview — bypass 14-day hold
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
                     {(() => {
@@ -428,7 +470,7 @@ export default function MyCertifications() {
                         ? new Date(cert.certificate_available_date)
                         : null;
                       const now = new Date();
-                      const isAvailable = !availableDate || availableDate <= now;
+                      const isAvailable = isAdminBypass || !availableDate || availableDate <= now;
 
                       if (!isAvailable && availableDate) {
                         const daysLeft = Math.ceil((availableDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));

@@ -951,6 +951,7 @@ export const translations = {
     'nav.admin.examBookings': 'Exam Bookings',
     'nav.admin.examWindows': 'Exam Windows',
     'nav.admin.ecoBlueprint': 'ECO Blueprint',
+    'nav.admin.voucherTracking': 'Voucher Reminders',
     'nav.admin.certifications': 'Certifications',
     'nav.admin.exams': 'Mock Exams',
     'nav.admin.mockExams': 'Mock Exams',
@@ -996,6 +997,7 @@ export const translations = {
     'nav.admin.communications': 'Communications',
     'nav.admin.reports': 'Reports & Analytics',
     'nav.admin.reportsAnalytics': 'Reports & Analytics',
+    'nav.admin.countryAnalytics': 'Country Analytics',
 
     // System Section (Super Admin Only)
     'nav.admin.section.system': 'System',
@@ -2045,6 +2047,7 @@ export const translations = {
     'nav.admin.examScheduling': 'جدولة الامتحانات',
     'nav.admin.examWindows': 'فترات الامتحانات',
     'nav.admin.ecoBlueprint': 'مخطط ECO',
+    'nav.admin.voucherTracking': 'تذكيرات القسائم',
     'nav.admin.certifications': 'الشهادات',
     'nav.admin.exams': 'الاختبارات التجريبية',
     'nav.admin.mockExams': 'الاختبارات التجريبية',
@@ -2089,6 +2092,7 @@ export const translations = {
     'nav.admin.communications': 'الاتصالات',
     'nav.admin.reports': 'التقارير والتحليلات',
     'nav.admin.reportsAnalytics': 'التقارير والتحليلات',
+    'nav.admin.countryAnalytics': 'تحليلات الدول',
 
     // System Section (Super Admin Only)
     'nav.admin.section.system': 'النظام',

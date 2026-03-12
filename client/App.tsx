@@ -146,6 +146,8 @@ import TrainerManagement from "./pages/admin/TrainerManagement";
 import LearningSystemProducts from "./pages/admin/LearningSystemProducts";
 import CertificateDesigner from "./pages/admin/CertificateDesigner";
 import ExamECOBlueprintManager from "./pages/admin/ExamECOBlueprintManager";
+import VoucherTrackingAdmin from "./pages/admin/VoucherTrackingAdmin";
+import CountryAnalytics from "./pages/admin/CountryAnalytics";
 
 // Profile Completion pages
 import IndividualCompleteProfile from "./pages/individual/CompleteProfile";
@@ -543,9 +545,11 @@ const App = () => (
                   <Route path="/admin/exam-bookings/:id" element={<ExamBookingDetail />} />
                   <Route path="/admin/exam-windows" element={<ExamWindows />} />
                   <Route path="/admin/exams/eco-blueprint" element={<ExamECOBlueprintManager />} />
+                  <Route path="/admin/voucher-tracking" element={<VoucherTrackingAdmin />} />
                   <Route path="/admin/admins" element={<AdminManagement />} />
                   <Route path="/admin/finance" element={<FinanceTransactions />} />
                   <Route path="/admin/reports" element={<ReportsAnalytics />} />
+                  <Route path="/admin/country-analytics" element={<CountryAnalytics />} />
                   <Route path="/admin/communications" element={<Communications />} />
                   <Route path="/admin/settings" element={<SystemSettings />} />
                   <Route path="/admin/security" element={<SecurityLogs />} />

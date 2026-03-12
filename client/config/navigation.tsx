@@ -44,7 +44,8 @@ import {
   Handshake,
   BookPlus,
   FileImage,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Globe
 } from 'lucide-react';
 import { NavigationConfig } from '@/types/navigation';
 
@@ -123,6 +124,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'exam-bookings', label: 'nav.admin.examBookings', path: '/admin/exam-bookings', icon: CalendarCheck },
     { id: 'exam-windows', label: 'nav.admin.examWindows', path: '/admin/exam-windows', icon: CalendarClock },
     { id: 'eco-blueprint', label: 'nav.admin.ecoBlueprint', path: '/admin/exams/eco-blueprint', icon: SlidersHorizontal },
+    { id: 'voucher-tracking', label: 'nav.admin.voucherTracking', path: '/admin/voucher-tracking', icon: Ticket },
     { id: 'certifications', label: 'nav.admin.certifications', path: '/admin/certifications', icon: Award },
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
 
@@ -155,6 +157,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'finance', label: 'nav.admin.financeTransactions', path: '/admin/finance', icon: CreditCard },
     { id: 'communications', label: 'nav.admin.communications', path: '/admin/communications', icon: Mail },
     { id: 'reports', label: 'nav.admin.reportsAnalytics', path: '/admin/reports', icon: BarChart3 },
+    { id: 'country-analytics', label: 'nav.admin.countryAnalytics', path: '/admin/country-analytics', icon: Globe },
 
     // Sign Out
     { id: 'sign-out', label: 'nav.admin.signOut', icon: LogOut, action: 'logout' }
@@ -187,6 +190,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'exam-bookings', label: 'nav.admin.examBookings', path: '/admin/exam-bookings', icon: CalendarCheck },
     { id: 'exam-windows', label: 'nav.admin.examWindows', path: '/admin/exam-windows', icon: CalendarClock },
     { id: 'eco-blueprint', label: 'nav.admin.ecoBlueprint', path: '/admin/exams/eco-blueprint', icon: SlidersHorizontal },
+    { id: 'voucher-tracking', label: 'nav.admin.voucherTracking', path: '/admin/voucher-tracking', icon: Ticket },
     { id: 'certifications', label: 'nav.admin.certifications', path: '/admin/certifications', icon: Award },
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
 
@@ -219,6 +223,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'finance', label: 'nav.admin.financeTransactions', path: '/admin/finance', icon: CreditCard },
     { id: 'communications', label: 'nav.admin.communications', path: '/admin/communications', icon: Mail },
     { id: 'reports', label: 'nav.admin.reportsAnalytics', path: '/admin/reports', icon: BarChart3 },
+    { id: 'country-analytics', label: 'nav.admin.countryAnalytics', path: '/admin/country-analytics', icon: Globe },
 
     // Sign Out
     { id: 'sign-out', label: 'nav.admin.signOut', icon: LogOut, action: 'logout' }

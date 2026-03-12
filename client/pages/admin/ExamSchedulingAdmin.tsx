@@ -34,7 +34,6 @@ interface ExamAttempt {
   id: string;
   user_id: string;
   quiz_id: string;
-  voucher_id: string | null;
   started_at: string;
   completed_at: string | null;
   score: number | null;
@@ -82,7 +81,6 @@ export default function ExamSchedulingAdmin() {
           id,
           user_id,
           quiz_id,
-          voucher_id,
           started_at,
           completed_at,
           score,
@@ -338,8 +336,7 @@ export default function ExamSchedulingAdmin() {
                     const startedDate = new Date(attempt.started_at);
                     const isCompleted = !!attempt.completed_at;
                     const hasResult = attempt.score !== null;
-                    const isTestAttempt = attempt.voucher_id === null &&
-                      ['admin', 'super_admin'].includes(attempt.users?.role || '');
+                    const isTestAttempt = ['admin', 'super_admin'].includes(attempt.users?.role || '');
 
                     return (
                       <tr
