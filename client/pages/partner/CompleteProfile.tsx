@@ -67,11 +67,11 @@ export default function PartnerCompleteProfile() {
         description: 'Your partner profile has been completed successfully!',
       });
 
-      // Rafraîchir les données utilisateur et attendre
+      // Refresh user profile to ensure updated name is reflected in state
       await checkAuth();
 
-      // Attendre un petit délai pour que le state soit mis à jour
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Give React time to propagate the updated state before navigating
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // Rediriger vers le dashboard approprié
       const dashboardPath = isECP ? '/ecp/dashboard' : isPDP ? '/pdp/dashboard' : '/dashboard';

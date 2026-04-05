@@ -66,11 +66,12 @@ export default function CompleteProfile() {
         description: 'Your profile has been completed successfully!',
       });
 
-      // Rafraîchir les données utilisateur et attendre
+      // Refresh user profile to ensure updated name is reflected in state
+      // We call checkAuth which re-fetches from DB, then navigate
       await checkAuth();
 
-      // Attendre un petit délai pour que le state soit mis à jour
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Give React time to propagate the updated state before navigating
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // Rediriger vers le dashboard
       navigate('/dashboard', { replace: true });

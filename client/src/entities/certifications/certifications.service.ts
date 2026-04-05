@@ -614,11 +614,15 @@ export class CertificationsService {
     adminId: string
   ): Promise<CertificationResult<boolean>> {
     try {
-      // Clear existing certificate to trigger regeneration
+      // Clear existing certificate URL AND unlock the holder name so it is
+      // re-resolved from the learner's current profile on next download.
+      // This ensures that if the admin re-issues after a name correction,
+      // the new certificate will carry the updated name.
       const { error } = await supabase
         .from('user_certifications')
         .update({
           certificate_url: null,
+          certificate_holder_name: null, // unlock so next download re-confirms from current profile
           updated_at: new Date().toISOString(),
         })
         .eq('id', certificationId);

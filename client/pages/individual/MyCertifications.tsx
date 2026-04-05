@@ -155,10 +155,16 @@ export default function MyCertifications() {
       let nameToUse = cert.certificate_holder_name || '';
 
       if (!nameToUse) {
-        // First download — confirm the name with the user
-        const firstName = user?.profile?.first_name || '';
-        const lastName = user?.profile?.last_name || '';
-        const currentName = [firstName, lastName].filter(Boolean).join(' ') || user?.email || 'Certificate Holder';
+        // First download — fetch the latest profile data from DB to avoid stale state
+        const { data: freshProfile } = await supabase
+          .from('users')
+          .select('first_name, last_name, email')
+          .eq('id', user!.id)
+          .single();
+
+        const firstName = freshProfile?.first_name || user?.profile?.first_name || '';
+        const lastName = freshProfile?.last_name || user?.profile?.last_name || '';
+        const currentName = [firstName, lastName].filter(Boolean).join(' ') || freshProfile?.email || user?.email || 'Certificate Holder';
 
         const confirmed = window.confirm(
           language === 'ar'
