@@ -20,38 +20,25 @@ export class AdminDashboardService {
    */
   static async getPartnerStats(): Promise<DashboardResult<PartnerStats>> {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      // Query the partners table directly — the single source of truth for all partners.
+      // This table has partner_type ('ecp' | 'pdp') and is_active flag.
+      const { data: allPartners, error: partnersError } = await supabase
+        .from('partners')
+        .select('partner_type, is_active');
 
-      // Count active ECP partners from ecp_licenses
-      // Must have status 'active' AND license not expired AND agreement signed
-      const { count: ecpCount, error: ecpError } = await supabase
-        .from('ecp_licenses')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .gte('expiry_date', today)
-        .not('agreement_signed_date', 'is', null);
-
-      if (ecpError) {
-        console.warn('Error fetching ECP partners:', ecpError);
+      if (partnersError) {
+        console.warn('Error fetching partners:', partnersError);
       }
 
-      // Count active PDP partners (users with role 'pdp' who have approved programs)
-      const { data: pdpWithPrograms, error: pdpError } = await supabase
-        .from('pdp_programs')
-        .select('provider_id')
-        .eq('is_active', true);
+      const partners = allPartners || [];
 
-      if (pdpError) {
-        console.warn('Error fetching PDP partners:', pdpError);
-      }
+      const activeECP = partners.filter(
+        (p) => p.partner_type === 'ecp' && p.is_active === true
+      ).length;
 
-      // Get unique partner IDs with approved programs
-      const uniquePdpPartners = pdpWithPrograms
-        ? new Set(pdpWithPrograms.map(p => p.provider_id)).size
-        : 0;
-
-      const activeECP = ecpCount || 0;
-      const activePDP = uniquePdpPartners;
+      const activePDP = partners.filter(
+        (p) => p.partner_type === 'pdp' && p.is_active === true
+      ).length;
 
       return {
         data: {
