@@ -72,6 +72,7 @@ import { CurriculumModuleManager, AccessManagement, LessonManager, LessonQuizMan
 
 // Learning System pages
 import { LearningSystemDashboard } from "@/features/learning-system";
+import { CompetencyAnalyticsPage } from "@/features/competency-analytics";
 import { QuestionBankDashboard, PracticeSession } from "@/features/question-bank";
 import { FlashcardsDashboard, FlashcardStudySession } from "@/features/flashcards";
 
@@ -415,6 +416,8 @@ const App = () => (
                   {/* Flashcard routes */}
                   <Route path="/learning-system/flashcards" element={<FlashcardsDashboard />} />
                   <Route path="/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
+                  {/* Competency Analytics route (NEW) */}
+                  <Route path="/learning-system/competency-analytics" element={<CompetencyAnalyticsPage />} />
 
                   {/* Support routes */}
                   <Route path="/support/new" element={<NewTicket />} />
@@ -445,6 +448,8 @@ const App = () => (
                   <Route path="/ecp/learning-system/question-bank/:setId" element={<PracticeSession />} />
                   <Route path="/ecp/learning-system/flashcards" element={<FlashcardsDashboard />} />
                   <Route path="/ecp/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
+                  {/* ECP Competency Analytics route (NEW) */}
+                  <Route path="/ecp/learning-system/competency-analytics" element={<CompetencyAnalyticsPage />} />
                   {/* ECP Mock Exams routes */}
                   <Route path="/ecp/mock-exams" element={<MockExamList />} />
                   <Route path="/ecp/mock-exams/:examId" element={<ExamDetail />} />

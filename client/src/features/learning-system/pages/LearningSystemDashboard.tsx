@@ -28,6 +28,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { ExamGoalWidget } from '@/features/learning-goals';
 
 interface SectionCardProps {
   title: string;
@@ -474,6 +475,16 @@ export function LearningSystemDashboard() {
           </div>
         </div>
 
+        {/* ── Goal-Oriented Widget (NEW) ── */}
+        {hasAccess && (
+          <div className="mb-6">
+            <ExamGoalWidget
+              certType={displayAccess?.certification_type ?? 'CP'}
+              totalModules={trainingProgress?.total ?? 14}
+              completedModules={trainingProgress?.completed ?? 0}
+            />
+          </div>
+        )}
         {/* Access Banner */}
         {displayAccess && expiryDate && (
           <div
@@ -658,6 +669,19 @@ export function LearningSystemDashboard() {
             </div>
           </div>
         </div>
+
+        {/* ── Competency Analytics Button (NEW) ── */}
+        {hasAccess && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => navigate(`${basePath}/competency-analytics?lang=${effectiveLanguage}`)}
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              <TrendingUp className="w-4 h-4" />
+              View My Competency Analytics
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
