@@ -124,8 +124,8 @@ CREATE OR REPLACE VIEW public.user_competency_analytics AS
 SELECT
   uqa.user_id,
   cqs.competency_id                                                        AS module_id,
-  cm.title                                                                 AS competency_name,
-  cm.title_ar                                                              AS competency_name_ar,
+  cm.competency_name                                                       AS competency_name,
+  cm.competency_name_ar                                                    AS competency_name_ar,
   cm.certification_type,
   COUNT(uqa.id)                                                            AS total_attempts,
   SUM(CASE WHEN uqa.is_correct THEN 1 ELSE 0 END)                         AS correct_answers,
@@ -145,8 +145,8 @@ WHERE cqs.competency_id IS NOT NULL
 GROUP BY
   uqa.user_id,
   cqs.competency_id,
-  cm.title,
-  cm.title_ar,
+  cm.competency_name,
+  cm.competency_name_ar,
   cm.certification_type;
 
 -- RLS on the view: users see only their own data
