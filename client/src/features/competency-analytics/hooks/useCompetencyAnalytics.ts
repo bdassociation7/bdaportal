@@ -4,7 +4,7 @@
  * Reads from the user_competency_analytics VIEW — zero writes.
  */
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/shared/lib/supabase';
+import { supabase } from '@/shared/config/supabase.config';
 import { useAuth } from '@/shared/hooks/useAuth';
 
 export interface CompetencyAnalyticsRow {

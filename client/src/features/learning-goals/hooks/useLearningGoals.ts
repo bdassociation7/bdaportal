@@ -7,7 +7,7 @@
  * - useHasVoucher: checks if user has a valid unused voucher
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/shared/lib/supabase';
+import { supabase } from '@/shared/config/supabase.config';
 import { useAuth } from '@/shared/hooks/useAuth';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
