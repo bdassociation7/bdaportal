@@ -1,9 +1,10 @@
 /**
  * useLearningGoals & useExamWindows
  * Hooks for Goal-Oriented UI feature.
- * - useExamWindows: fetches active BDA exam windows from exam_windows table
+ * - useExamWindows: fetches active BDA exam windows from certification_exam_windows table
+ *   (the authoritative table managed by admins in the portal)
  * - useLearningGoal: fetches/saves the user's target exam window
- * - useVoucherStatus: checks if user has a valid unused voucher
+ * - useHasVoucher: checks if user has a valid unused voucher
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/shared/lib/supabase';
@@ -11,15 +12,18 @@ import { useAuth } from '@/shared/hooks/useAuth';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/**
+ * Matches the shape of public.certification_exam_windows
+ * (the existing admin-managed table)
+ */
 export interface ExamWindow {
   id: string;
-  certification_type: string; // 'CP' | 'SCP' | 'both'
-  window_label: string;
-  window_key: string;
-  opens_at: string;
-  closes_at: string;
-  year: number;
-  display_order: number;
+  name: string;
+  description: string | null;
+  certification_type: string | null; // null means applies to all cert types
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
 }
 
 export interface LearningGoal {
@@ -41,6 +45,8 @@ export interface UpsertGoalPayload {
 }
 
 // ─── useExamWindows ───────────────────────────────────────────────────────────
+// Reads from certification_exam_windows — the authoritative table that admins
+// manage directly from the portal. No separate exam_windows table needed.
 
 export function useExamWindows(certType?: string) {
   return useQuery<ExamWindow[]>({
@@ -48,13 +54,15 @@ export function useExamWindows(certType?: string) {
     staleTime: 1000 * 60 * 60, // 1 hour — windows don't change often
     queryFn: async () => {
       let query = supabase
-        .from('exam_windows')
-        .select('*')
+        .from('certification_exam_windows')
+        .select('id, name, description, certification_type, start_date, end_date, is_active')
         .eq('is_active', true)
-        .order('display_order', { ascending: true });
+        .gte('end_date', new Date().toISOString().split('T')[0]) // only future/ongoing windows
+        .order('start_date', { ascending: true });
 
+      // Filter by cert type: include windows that match the cert type OR have no cert type (applies to all)
       if (certType) {
-        query = query.or(`certification_type.eq.${certType},certification_type.eq.both`);
+        query = query.or(`certification_type.eq.${certType},certification_type.is.null`);
       }
 
       const { data, error } = await query;
@@ -123,7 +131,6 @@ export function useHasVoucher(certType: string) {
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      // Fetch at most 1 row — lightweight check
       const { data, error } = await supabase
         .from('exam_vouchers')
         .select('id')

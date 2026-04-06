@@ -68,24 +68,25 @@ export function ExamGoalWidget({ certType, totalModules, completedModules }: Exa
   const isLoading = windowsLoading || goalLoading || voucherLoading;
 
   // Determine current active window (from saved goal or local selection)
+  // We use window.id as the key (matches certification_exam_windows.id)
   const activeWindowKey = selectedWindowKey ?? goal?.target_exam_window_id ?? null;
   const activeWindow: ExamWindow | undefined = windows?.find(
-    (w) => w.window_key === activeWindowKey
+    (w) => w.id === activeWindowKey
   );
 
   // ── Pace calculation ──
   const remainingModules = Math.max(0, totalModules - completedModules);
-  const weeksLeft = activeWindow ? weeksUntil(activeWindow.closes_at) : null;
+  const weeksLeft = activeWindow ? weeksUntil(activeWindow.end_date) : null;
   const modulesPerWeek =
     weeksLeft && weeksLeft > 0 ? (remainingModules / weeksLeft).toFixed(1) : null;
-  const daysLeft = activeWindow ? daysUntil(activeWindow.closes_at) : null;
+  const daysLeft = activeWindow ? daysUntil(activeWindow.end_date) : null;
 
   // "On track" = user has completed at least the expected proportion of modules
   const expectedProgress =
     weeksLeft && activeWindow
       ? 1 -
         weeksLeft /
-          Math.max(1, Math.ceil(daysUntil(activeWindow.opens_at) / 7) + weeksLeft)
+          Math.max(1, Math.ceil(daysUntil(activeWindow.start_date) / 7) + weeksLeft)
       : null;
   const actualProgress = totalModules > 0 ? completedModules / totalModules : 0;
   const isOnTrack = expectedProgress !== null ? actualProgress >= expectedProgress - 0.05 : null;
@@ -93,14 +94,14 @@ export function ExamGoalWidget({ certType, totalModules, completedModules }: Exa
   // ── Save handler ──
   const handleSave = async () => {
     if (!selectedWindowKey) return;
-    const win = windows?.find((w) => w.window_key === selectedWindowKey);
+    const win = windows?.find((w) => w.id === selectedWindowKey);
     if (!win) return;
     setIsSaving(true);
     try {
       await upsertGoal.mutateAsync({
         certification_type: certType,
         target_exam_window_id: selectedWindowKey,
-        target_exam_date: win.closes_at,
+        target_exam_date: win.end_date,
         study_hours_per_week: goal?.study_hours_per_week ?? 5,
       });
       setSaved(true);
@@ -137,7 +138,7 @@ export function ExamGoalWidget({ certType, totalModules, completedModules }: Exa
           <div className="text-left">
             <p className="text-sm font-semibold text-gray-800">
               {activeWindow
-                ? `Target Exam: ${activeWindow.window_label}`
+                ? `Target Exam: ${activeWindow.name}`
                 : 'Set Your Target Exam Window'}
             </p>
             {activeWindow && daysLeft !== null && (
@@ -218,13 +219,13 @@ export function ExamGoalWidget({ certType, totalModules, completedModules }: Exa
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {windows.map((win) => {
-                const isPast = daysUntil(win.closes_at) < 0;
-                const isSelected = win.window_key === (selectedWindowKey ?? goal?.target_exam_window_id);
+                const isPast = daysUntil(win.end_date) < 0;
+                const isSelected = win.id === (selectedWindowKey ?? goal?.target_exam_window_id);
                 return (
                   <button
-                    key={win.window_key}
+                    key={win.id}
                     disabled={isPast}
-                    onClick={() => setSelectedWindowKey(win.window_key)}
+                    onClick={() => setSelectedWindowKey(win.id)}
                     className={`text-left px-4 py-3 rounded-lg border-2 transition-all text-sm ${
                       isPast
                         ? 'opacity-40 cursor-not-allowed border-gray-200 bg-gray-50'
@@ -235,13 +236,13 @@ export function ExamGoalWidget({ certType, totalModules, completedModules }: Exa
                   >
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 flex-shrink-0" />
-                      <span className="font-medium">{win.window_label}</span>
+                      <span className="font-medium">{win.name}</span>
                     </div>
                     {!isPast && (
                       <p className="text-xs text-gray-500 mt-1 ml-6">
-                        {daysUntil(win.opens_at) > 0
-                          ? `Opens in ${daysUntil(win.opens_at)} days`
-                          : `Closes in ${daysUntil(win.closes_at)} days`}
+                        {daysUntil(win.start_date) > 0
+                          ? `Opens in ${daysUntil(win.start_date)} days`
+                          : `Closes in ${daysUntil(win.end_date)} days`}
                       </p>
                     )}
                     {isPast && (
