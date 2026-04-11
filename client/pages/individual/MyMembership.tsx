@@ -87,6 +87,13 @@ const translations = {
     generating: 'Generating...',
     certificateGenerationFailed: 'Failed to generate certificate',
     certificateGenerated: 'Certificate generated successfully!',
+    // Digital Badge
+    digitalBadge: 'Membership Digital Badge',
+    digitalBadgeDesc: 'Download your official BDA membership digital badge to share on LinkedIn, email signatures, and social media',
+    digitalBadgeFile: 'BDA Individual Membership Badge',
+    digitalBadgeInfo: 'PNG image • High resolution • Ready to share',
+    downloadBadge: 'Download Badge',
+    downloadingBadge: 'Downloading badge...',
     // Benefits
     yourBenefits: 'Your Membership Benefits',
     professionalBenefitsDesc: 'Enjoy all the exclusive benefits of your Professional membership',
@@ -152,6 +159,13 @@ const translations = {
     generating: 'جارٍ الإنشاء...',
     certificateGenerationFailed: 'فشل في إنشاء الشهادة',
     certificateGenerated: 'تم إنشاء الشهادة بنجاح!',
+    // Digital Badge
+    digitalBadge: 'الشارة الرقمية للعضوية',
+    digitalBadgeDesc: 'حمّل شارتك الرقمية الرسمية لعضوية BDA لمشاركتها على LinkedIn وتوقيع البريد الإلكتروني ووسائل التواصل الاجتماعي',
+    digitalBadgeFile: 'شارة عضوية BDA الفردية',
+    digitalBadgeInfo: 'صورة PNG • دقة عالية • جاهزة للمشاركة',
+    downloadBadge: 'تحميل الشارة',
+    downloadingBadge: 'جارٍ تحميل الشارة...',
     // Benefits
     yourBenefits: 'مزايا عضويتك',
     professionalBenefitsDesc: 'استمتع بجميع المزايا الحصرية لعضويتك المهنية',
@@ -518,6 +532,48 @@ export default function MyMembership() {
           )}
         </CardContent>
       </Card>
+
+      {/* Digital Badge Download - Available for ALL active members */}
+      {membershipStatus.hasActiveMembership && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-sky-600" />
+              {texts.digitalBadge}
+            </CardTitle>
+            <CardDescription>
+              {texts.digitalBadgeDesc}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row items-center gap-6 p-4 bg-sky-50 rounded-lg border border-sky-100">
+              {/* Badge Preview */}
+              <div className="flex-shrink-0">
+                <img
+                  src="https://dfsbzsxuursvqwnzruqt.supabase.co/storage/v1/object/public/certificate-templates/badges/membership-digital-badge.png"
+                  alt="BDA Membership Digital Badge"
+                  className="w-28 h-28 object-contain rounded-full shadow-sm"
+                />
+              </div>
+              {/* Badge Info */}
+              <div className="flex-1 text-center sm:text-left">
+                <p className="font-semibold text-gray-900">{texts.digitalBadgeFile}</p>
+                <p className="text-sm text-gray-500 mt-1">{texts.digitalBadgeInfo}</p>
+              </div>
+              {/* Download Button */}
+              <a
+                href="https://dfsbzsxuursvqwnzruqt.supabase.co/storage/v1/object/public/certificate-templates/badges/membership-digital-badge.png"
+                download="BDA-Membership-Digital-Badge.png"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-md transition-colors text-sm"
+                onClick={() => toast.success(texts.downloadingBadge)}
+              >
+                <Download className="h-4 w-4" />
+                {texts.downloadBadge}
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Certificate Download (Professional Only) - US3 */}
       {isProfessional && (
