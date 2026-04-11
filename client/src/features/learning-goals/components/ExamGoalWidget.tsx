@@ -186,21 +186,34 @@ export function ExamGoalWidget({ certType, totalModules, completedModules }: Exa
               <ShoppingCart className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-semibold text-amber-800">
-                  You don't have an exam voucher yet
+                  No active exam voucher found
                 </p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  You'll need a voucher to book your {certType} exam. Purchase one from the BDA
-                  store before your target window opens.
+                  To sit the {certType} exam, you'll need a valid exam voucher. We recommend
+                  reviewing your performance analysis first, then practicing with sample questions
+                  before purchasing your voucher.
                 </p>
-                <a
-                  href="https://bda-global.org/en/store/certifications/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-amber-800 underline hover:text-amber-900"
-                >
-                  Buy Exam Voucher
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+                <div className="flex flex-wrap gap-3 mt-3">
+                  <a
+                    href="https://bda-global.org/en/certifications/bda-practice-questions/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 underline hover:text-amber-900"
+                  >
+                    Practice Questions
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <span className="text-amber-400 text-xs">|</span>
+                  <a
+                    href="https://bda-global.org/en/store/certifications/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 underline hover:text-amber-900"
+                  >
+                    Buy Exam Voucher
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
               </div>
             </div>
           )}

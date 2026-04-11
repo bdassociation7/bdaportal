@@ -305,7 +305,7 @@ export function CompetencyAnalyticsPage() {
                   .map((row) => {
                     const pct = Number(row.mastery_percentage ?? 0);
                     return (
-                      <tr key={row.module_id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={row.competency_name} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 font-medium text-gray-800">
                           {row.competency_name}
                         </td>

@@ -121,7 +121,9 @@ export function useUpsertLearningGoal() {
 }
 
 // ─── useHasVoucher ────────────────────────────────────────────────────────────
-// Lightweight check: does the user have at least one valid unused voucher?
+// Checks if the user has at least one valid unused voucher for the given cert type.
+// Supports ALL vouchers (old and new) — checks status IN ('available', 'assigned')
+// AND either expires_at is NULL (no expiry set) OR expires_at is in the future.
 
 export function useHasVoucher(certType: string) {
   const { user } = useAuth();
@@ -133,14 +135,25 @@ export function useHasVoucher(certType: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('exam_vouchers')
-        .select('id')
+        .select('id, status, expires_at')
         .eq('user_id', user!.id)
         .eq('certification_type', certType)
-        .in('status', ['unused', 'available', 'assigned'])
-        .gt('expires_at', new Date().toISOString())
-        .limit(1);
+        .in('status', ['available', 'assigned'])
+        .limit(50); // fetch up to 50 to check locally (handles old vouchers with no expiry)
+
       if (error) throw error;
-      return Array.isArray(data) && data.length > 0;
+      if (!Array.isArray(data) || data.length === 0) return false;
+
+      const now = new Date();
+      // A voucher is valid if:
+      //   1. Status is 'available' or 'assigned' (already filtered above)
+      //   2. expires_at is NULL (no expiry = always valid) OR expires_at > now
+      const hasValid = data.some((v) => {
+        if (!v.expires_at) return true; // no expiry date = valid
+        return new Date(v.expires_at) > now;
+      });
+
+      return hasValid;
     },
   });
 }
