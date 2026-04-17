@@ -208,6 +208,11 @@ export class BooksService {
       // Start with purchased books
       let books = result.data || [];
 
+      // LIFETIME ACCESS: All purchased books (BoCK, Glossary, Study Plan, etc.) have lifetime access.
+      // We override any expires_at from WooCommerce download permissions to ensure
+      // books always appear as Lifetime regardless of WooCommerce settings.
+      books = books.map((book: UserBook) => ({ ...book, expires_at: null }));
+
       // CRITICAL: Filter out non-book products (memberships, learning systems, partnerships)
       // This ensures "BDA Professional Membership" doesn't appear in My Books
       books = await this.filterNonBookProducts(books);
