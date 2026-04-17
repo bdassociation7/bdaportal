@@ -35,7 +35,7 @@ export default function MyBooks() {
       subtitle: 'Access your purchased digital books and materials',
       // Info Card
       digitalLibrary: 'Digital Library',
-      digitalLibraryDesc: 'All books purchased from the BDA Store are available for download here. Most books have a 12-month access period from purchase date.',
+      digitalLibraryDesc: 'All books purchased from the BDA Store are available for download here. All books are available for lifetime access with no expiry date.',
       // Book Credits
       bookCredits: 'Book Credits',
       bookCreditsDesc: 'You have book credits available! Choose which language version you would like to access.',
@@ -75,7 +75,7 @@ export default function MyBooks() {
       subtitle: 'الوصول إلى كتبك الرقمية والمواد المشتراة',
       // Info Card
       digitalLibrary: 'المكتبة الرقمية',
-      digitalLibraryDesc: 'جميع الكتب المشتراة من متجر BDA متاحة للتحميل هنا. معظم الكتب لها فترة وصول 12 شهراً من تاريخ الشراء.',
+      digitalLibraryDesc: 'جميع الكتب المشتراة من متجر BDA متاحة للتحميل هنا. جميع الكتب متاحة مدى الحياة بدون تاريخ انتهاء.',
       // Book Credits
       bookCredits: 'أرصدة الكتب',
       bookCreditsDesc: 'لديك أرصدة كتب متاحة! اختر إصدار اللغة الذي ترغب في الوصول إليه.',
