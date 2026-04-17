@@ -151,26 +151,18 @@ export default function MyBooks() {
   const handleDownload = async (book: any) => {
     setDownloadingBookId(book.id);
     try {
-      // For membership benefit books with direct download URL, use it
-      if (book.access_type === 'membership_benefit' && book.download_url) {
-        window.open(book.download_url, '_blank');
-        toast({
-          title: texts.downloadStarted,
-          description: `${texts.downloadingBook} "${book.product_name}"...`,
-        });
-      } else {
-        // For purchased books and admin-granted books, fetch download URL from WooCommerce
-        const downloadUrl = await downloadMutation.mutateAsync({
-          productId: book.product_id,
-          orderId: book.order_id,
-          userEmail: user?.email
-        });
-        window.open(downloadUrl, '_blank');
-        toast({
-          title: texts.downloadStarted,
-          description: `${texts.downloadingBook} "${book.product_name}"...`,
-        });
-      }
+      // Always fetch download URL dynamically from WooCommerce
+      // This handles all cases: direct purchase, membership credit redemption, admin grant
+      const downloadUrl = await downloadMutation.mutateAsync({
+        productId: book.product_id,
+        orderId: book.order_id,
+        userEmail: user?.email
+      });
+      window.open(downloadUrl, '_blank');
+      toast({
+        title: texts.downloadStarted,
+        description: `${texts.downloadingBook} "${book.product_name}"...`,
+      });
     } catch (error: any) {
       toast({
         title: texts.downloadFailed,
