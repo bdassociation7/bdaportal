@@ -220,7 +220,6 @@ export class BooksService {
         console.warn('Failed to fetch redeemed books:', redeemedError);
         // Continue with purchased books only
       }
-
       // Check for admin-granted books (books granted by admins)
       try {
         const grantedBooks = await this.getAdminGrantedBooks(userEmail);
@@ -229,6 +228,16 @@ export class BooksService {
         console.warn('Failed to fetch granted books:', grantedError);
         // Continue with existing books
       }
+
+      // DEDUPLICATION: Remove duplicate books by product_id.
+      // WooCommerce direct purchase takes priority (appears first in the array).
+      const seenProductIds = new Set<number>();
+      books = books.filter((book: UserBook) => {
+        if (!book.product_id) return true;
+        if (seenProductIds.has(book.product_id)) return false;
+        seenProductIds.add(book.product_id);
+        return true;
+      });
 
       // Filter by format if specified
       if (filters?.format) {
@@ -288,21 +297,32 @@ export class BooksService {
 
     if (!user) return [];
 
-    // Fetch redeemed books
+    // Fetch redeemed books with their associated credit source_type
     const { data: redeemedBooks } = await supabase
       .from('user_redeemed_books')
-      .select('*')
+      .select('*, user_book_credits!credit_id(source_type)')
       .eq('user_id', user.id);
 
     if (!redeemedBooks || redeemedBooks.length === 0) return [];
 
+    // IMPORTANT: Only include books redeemed from MEMBERSHIP credits.
+    // Books from 'woocommerce_order' source are direct purchases — they are
+    // already fetched from WooCommerce and must NOT appear here again.
+    // Only 'membership' source_type should produce a redeemed book entry here.
+    const membershipBooks = redeemedBooks.filter((book) => {
+      const sourceType = (book.user_book_credits as any)?.source_type;
+      return sourceType === 'membership';
+    });
+
+    if (membershipBooks.length === 0) return [];
+
     // Transform to UserBook format
-    return redeemedBooks.map((book) => ({
+    return membershipBooks.map((book) => ({
       id: `redeemed-${book.id}`,
       product_id: book.product_id,
-      order_id: 0, // Not from an order
+      order_id: 0,
       product_name: book.product_name,
-      sku: '', // Redeemed books don't have SKU
+      sku: '',
       format: book.format as 'pdf' | 'epub' | 'mobi' | undefined,
       cover_image: book.cover_image_url,
       description: book.description,
