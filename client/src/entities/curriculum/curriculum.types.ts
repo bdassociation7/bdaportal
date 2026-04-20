@@ -20,7 +20,7 @@ export type UserCurriculumProgressUpdate = Database['public']['Tables']['user_cu
 // ENUMS
 // =============================================================================
 
-export type SectionType = 'knowledge_based' | 'behavioral';
+export type SectionType = 'knowledge_based' | 'behavioral' | 'intro' | 'outro';
 export type ModuleStatus = 'locked' | 'in_progress' | 'quiz_pending' | 'completed';
 export type CertificationType = 'CP' | 'SCP';
 export type ExamLanguage = 'en' | 'ar';

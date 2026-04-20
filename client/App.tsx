@@ -14,6 +14,7 @@ import { useSessionExpiry } from "@/shared/hooks/useSessionExpiry";
 import { HealthCheckService } from "@/services/health-check.service";
 import { useToast } from "@/hooks/use-toast";
 import { PortalLayout } from "@/components/PortalLayout";
+import { LearningSystemLayout } from "@/components/LearningSystemLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { ProfileCompletionGuard } from "@/components/guards/ProfileCompletionGuard";
 import { RoleGuard } from "@/components/guards/RoleGuard";
@@ -234,6 +235,19 @@ const PDPOnlyWrapper = () => (
   </ProtectedRoute>
 );
 
+// Learning System routes wrapper - no sidebar, minimal top bar
+const LearningSystemWrapper = () => (
+  <ProtectedRoute>
+    <ProfileCompletionGuard>
+      <RoleGuard allowedRoles={['individual', 'ecp']}>
+        <LearningSystemLayout>
+          <Outlet />
+        </LearningSystemLayout>
+      </RoleGuard>
+    </ProfileCompletionGuard>
+  </ProtectedRoute>
+);
+
 // Admin-only routes wrapper
 const AdminOnlyWrapper = () => (
   <ProtectedRoute>
@@ -402,7 +416,14 @@ const App = () => (
                   <Route path="/mock-exams/:examId/take" element={<TakeExam />} />
                   <Route path="/mock-exams/results/:attemptId" element={<ExamResults />} />
 
-                  {/* Learning System routes */}
+                  {/* Support routes */}
+                  <Route path="/support/new" element={<NewTicket />} />
+                  <Route path="/support/my-tickets" element={<MyTickets />} />
+                  <Route path="/support/tickets/:id" element={<TicketDetail />} />
+                </Route>
+
+                {/* LEARNING SYSTEM routes - no sidebar, minimal top bar */}
+                <Route element={<LearningSystemWrapper />}>
                   <Route path="/learning-system" element={<LearningSystemDashboard />} />
                   <Route path="/learning-system/training-kits" element={<MyCurriculum />} />
                   <Route path="/learning-system/training-kits/module/:moduleId" element={<ModuleViewer />} />
@@ -418,11 +439,16 @@ const App = () => (
                   <Route path="/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
                   {/* Competency Analytics route (NEW) */}
                   <Route path="/learning-system/competency-analytics" element={<CompetencyAnalyticsPage />} />
-
-                  {/* Support routes */}
-                  <Route path="/support/new" element={<NewTicket />} />
-                  <Route path="/support/my-tickets" element={<MyTickets />} />
-                  <Route path="/support/tickets/:id" element={<TicketDetail />} />
+                  {/* ECP Learning System routes (same layout, no sidebar) */}
+                  <Route path="/ecp/learning-system" element={<LearningSystemDashboard />} />
+                  <Route path="/ecp/learning-system/training-kits" element={<MyCurriculum />} />
+                  <Route path="/ecp/learning-system/training-kits/module/:moduleId" element={<ModuleViewer />} />
+                  <Route path="/ecp/learning-system/training-kits/modules/:moduleId/lessons/:lessonId" element={<LessonViewer />} />
+                  <Route path="/ecp/learning-system/question-bank" element={<QuestionBankDashboard />} />
+                  <Route path="/ecp/learning-system/question-bank/:setId" element={<PracticeSession />} />
+                  <Route path="/ecp/learning-system/flashcards" element={<FlashcardsDashboard />} />
+                  <Route path="/ecp/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
+                  <Route path="/ecp/learning-system/competency-analytics" element={<CompetencyAnalyticsPage />} />
                 </Route>
 
                 {/* ECP PARTNER-ONLY routes */}
@@ -439,17 +465,6 @@ const App = () => (
                   <Route path="/ecp/trainers/:id/edit" element={<ECPTrainerEdit />} />
                   <Route path="/ecp/vouchers" element={<ECPVouchers />} />
                   <Route path="/ecp/reports" element={<ECPReports />} />
-                  {/* ECP Learning System routes */}
-                  <Route path="/ecp/learning-system" element={<LearningSystemDashboard />} />
-                  <Route path="/ecp/learning-system/training-kits" element={<MyCurriculum />} />
-                  <Route path="/ecp/learning-system/training-kits/module/:moduleId" element={<ModuleViewer />} />
-                  <Route path="/ecp/learning-system/training-kits/modules/:moduleId/lessons/:lessonId" element={<LessonViewer />} />
-                  <Route path="/ecp/learning-system/question-bank" element={<QuestionBankDashboard />} />
-                  <Route path="/ecp/learning-system/question-bank/:setId" element={<PracticeSession />} />
-                  <Route path="/ecp/learning-system/flashcards" element={<FlashcardsDashboard />} />
-                  <Route path="/ecp/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
-                  {/* ECP Competency Analytics route (NEW) */}
-                  <Route path="/ecp/learning-system/competency-analytics" element={<CompetencyAnalyticsPage />} />
                   {/* ECP Mock Exams routes */}
                   <Route path="/ecp/mock-exams" element={<MockExamList />} />
                   <Route path="/ecp/mock-exams/:examId" element={<ExamDetail />} />

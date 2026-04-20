@@ -1,12 +1,11 @@
 /**
- * Learning System Dashboard
- * Main entry point showing 3 sections:
- * 1. Training Kits (Main Curriculum)
- * 2. Question Bank (Practice Questions)
- * 3. Flashcards (Quick Revision)
- *
- * When user has BOTH EN and AR access, shows language selection page first.
- * When user has only one language, goes directly to that language's dashboard.
+ * BDA Learning System Dashboard — SHRM-Inspired Design
+ * - EN/AR fully separated (no switching within the page)
+ * - No language switcher buttons
+ * - Hero section with progress ring + stats
+ * - Tool cards: Training Kits, Question Bank, Flashcards
+ * - Recommended Learning Path
+ * - BDA Brand Colors only (#0d1f4e, #1C4A8B, #0f91e0)
  */
 
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -21,667 +20,537 @@ import {
   Calendar,
   TrendingUp,
   Clock,
-  Award,
   ChevronRight,
-  Sparkles,
-  Globe,
-  ArrowLeft,
+  Play,
+  Target,
+  Zap,
+  BarChart2,
+  CheckCircle2,
+  Award,
+  Users,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ExamGoalWidget } from '@/features/learning-goals';
 
-interface SectionCardProps {
-  title: string;
-  titleAr?: string;
-  description: string;
-  icon: React.ReactNode;
-  stats?: {
-    label: string;
-    value: string | number;
-  }[];
-  primaryAction: {
-    label: string;
-    onClick: () => void;
-  };
-  color: 'blue' | 'green' | 'purple';
-  isNew?: boolean;
-  newLabel?: string;
+// ─── BDA Brand Palette ──────────────────────────────────────────────────────
+const BDA = {
+  navy: '#0d1f4e',
+  blue: '#1C4A8B',
+  accent: '#0f91e0',
+  light: '#f0f6ff',
+  lightBorder: '#dbeafe',
+  muted: '#64748b',
+};
+
+// ─── Circular Progress Ring ──────────────────────────────────────────────────
+function ProgressRing({ pct, size = 110 }: { pct: number; size?: number }) {
+  const r = (size - 14) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = (pct / 100) * circ;
+  return (
+    <svg width={size} height={size} className="rotate-[-90deg]">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={9} />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth={9}
+        strokeDasharray={`${dash} ${circ}`}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 0.8s ease' }}
+      />
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={size / 4.5}
+        fontWeight="bold"
+        fill="#ffffff"
+        style={{ transform: 'rotate(90deg)', transformOrigin: '50% 50%' }}
+      >
+        {pct}%
+      </text>
+    </svg>
+  );
 }
 
-function SectionCard({
-  title,
-  titleAr,
-  description,
-  icon,
-  stats,
-  primaryAction,
-  color,
-  isNew,
-  newLabel = 'NEW',
-}: SectionCardProps) {
-  const colorClasses = {
-    blue: {
-      bg: 'bg-gradient-to-br from-blue-50 to-blue-100',
-      border: 'border-blue-200',
-      icon: 'bg-blue-600 text-white',
-      button: 'bg-blue-600 hover:bg-blue-700',
-      text: 'text-blue-600',
-    },
-    green: {
-      bg: 'bg-gradient-to-br from-green-50 to-green-100',
-      border: 'border-green-200',
-      icon: 'bg-green-600 text-white',
-      button: 'bg-green-600 hover:bg-green-700',
-      text: 'text-green-600',
-    },
-    purple: {
-      bg: 'bg-gradient-to-br from-purple-50 to-purple-100',
-      border: 'border-purple-200',
-      icon: 'bg-purple-600 text-white',
-      button: 'bg-purple-600 hover:bg-purple-700',
-      text: 'text-purple-600',
-    },
-  };
+// ─── Hero Stat Card ──────────────────────────────────────────────────────────
+function HeroStat({ icon, value, label }: { icon: React.ReactNode; value: string | number; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-2xl px-5 py-4 border border-white/20 min-w-[100px]">
+      <div className="text-white/70">{icon}</div>
+      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-xs text-white/60 text-center leading-tight">{label}</p>
+    </div>
+  );
+}
 
-  const colors = colorClasses[color];
+// ─── Tool Card ───────────────────────────────────────────────────────────────
+interface ToolCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  stats: { label: string; value: string | number }[];
+  cta: string;
+  onClick: () => void;
+  badge?: string;
+  highlight?: boolean;
+}
 
+function ToolCard({ icon, title, description, stats, cta, onClick, badge, highlight }: ToolCardProps) {
   return (
     <div
-      className={`relative rounded-xl border-2 ${colors.border} ${colors.bg} p-6 transition-all hover:shadow-lg`}
+      className={`relative rounded-2xl border p-6 flex flex-col gap-5 transition-all duration-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer ${
+        highlight
+          ? 'bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] text-white border-transparent shadow-lg'
+          : 'bg-white border-[#dbeafe] hover:border-[#bfdbfe]'
+      }`}
+      onClick={onClick}
     >
-      {isNew && (
-        <div className="absolute -top-3 -right-2 flex items-center gap-1 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-          <Sparkles className="w-3 h-3" />
-          {newLabel}
-        </div>
+      {badge && (
+        <span className="absolute -top-3 right-5 bg-[#0f91e0] text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+          {badge}
+        </span>
       )}
 
       <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-xl ${colors.icon} shadow-lg`}>{icon}</div>
+        <div className={`p-3 rounded-xl ${highlight ? 'bg-white/15' : 'bg-[#f0f6ff]'}`}>
+          <div className={highlight ? 'text-white' : 'text-[#1C4A8B]'}>{icon}</div>
+        </div>
         <div className="flex-1">
-          <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-          {titleAr && (
-            <p className="text-sm text-gray-500" dir="rtl">
-              {titleAr}
-            </p>
-          )}
-          <p className="text-gray-600 mt-2 text-sm">{description}</p>
+          <h3 className={`text-lg font-bold leading-tight ${highlight ? 'text-white' : 'text-[#0d1f4e]'}`}>
+            {title}
+          </h3>
+          <p className={`text-sm mt-1.5 leading-relaxed ${highlight ? 'text-white/70' : 'text-slate-500'}`}>
+            {description}
+          </p>
         </div>
       </div>
 
-      {stats && stats.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mt-6">
-          {stats.map((stat, index) => (
-            <div key={index} className="text-center">
-              <p className={`text-2xl font-bold ${colors.text}`}>{stat.value}</p>
-              <p className="text-xs text-gray-500">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-3 gap-3">
+        {stats.map((s, i) => (
+          <div key={i} className={`text-center rounded-xl py-3 ${highlight ? 'bg-white/10' : 'bg-[#f8faff]'}`}>
+            <p className={`text-xl font-bold ${highlight ? 'text-white' : 'text-[#1C4A8B]'}`}>{s.value}</p>
+            <p className={`text-xs mt-0.5 ${highlight ? 'text-white/55' : 'text-slate-400'}`}>{s.label}</p>
+          </div>
+        ))}
+      </div>
 
       <button
-        onClick={primaryAction.onClick}
-        className={`mt-6 w-full flex items-center justify-center gap-2 ${colors.button} text-white font-semibold py-3 px-4 rounded-lg transition-colors`}
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className={`w-full flex items-center justify-center gap-2 font-semibold py-3 px-4 rounded-xl transition-colors ${
+          highlight
+            ? 'bg-white text-[#1C4A8B] hover:bg-[#f0f6ff]'
+            : 'bg-[#1C4A8B] text-white hover:bg-[#0d1f4e]'
+        }`}
       >
-        {primaryAction.label}
+        {cta}
         <ChevronRight className="w-4 h-4" />
       </button>
     </div>
   );
 }
 
-/**
- * Language Selection Card for dual-language access
- */
-interface LanguageCardProps {
-  language: 'EN' | 'AR';
-  title: string;
-  subtitle: string;
-  description: string;
-  expiryDate: Date | null;
-  daysRemaining: number;
-  onClick: () => void;
-}
-
-function LanguageCard({
-  language,
-  title,
-  subtitle,
-  description,
-  expiryDate,
-  daysRemaining,
-  onClick,
-}: LanguageCardProps) {
-  const isArabic = language === 'AR';
-  const flagEmoji = isArabic ? '🇸🇦' : '🇬🇧';
-  const bgGradient = isArabic
-    ? 'from-emerald-500 to-teal-600'
-    : 'from-blue-500 to-indigo-600';
-  const hoverGradient = isArabic
-    ? 'hover:from-emerald-600 hover:to-teal-700'
-    : 'hover:from-blue-600 hover:to-indigo-700';
-
-  return (
-    <button
-      onClick={onClick}
-      className={`group relative w-full bg-gradient-to-br ${bgGradient} ${hoverGradient} rounded-2xl p-8 text-white shadow-xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] text-left`}
-    >
-      <div className="flex items-start gap-4">
-        <div className="text-5xl">{flagEmoji}</div>
-        <div className="flex-1">
-          <h3 className="text-2xl font-bold mb-1">{title}</h3>
-          <p className="text-white/80 text-sm mb-3">{subtitle}</p>
-          <p className="text-white/70 text-sm">{description}</p>
-        </div>
-        <ChevronRight className="w-8 h-8 opacity-60 group-hover:opacity-100 transition-opacity" />
-      </div>
-
-      {expiryDate && (
-        <div className="mt-6 pt-4 border-t border-white/20">
-          <div className="flex items-center gap-2 text-sm text-white/80">
-            <Calendar className="w-4 h-4" />
-            <span>
-              Valid until {format(expiryDate, 'MMM d, yyyy')}
-              <span className="ml-2 text-white/60">
-                ({daysRemaining} days left)
-              </span>
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Decorative elements */}
-      <div className="absolute top-4 right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
-      <div className="absolute bottom-4 left-4 w-16 h-16 bg-white/10 rounded-full blur-xl" />
-    </button>
-  );
-}
-
+// ─── Main Component ───────────────────────────────────────────────────────────
 export function LearningSystemDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
-  // Determine base path (works for both /learning-system and /ecp/learning-system)
-  const basePath = location.pathname.includes('/ecp/')
+  const basePath = location.pathname.startsWith('/ecp/')
     ? '/ecp/learning-system'
     : '/learning-system';
 
-  // Get selected language from URL params
-  const selectedLang = searchParams.get('lang') as Language | null;
+  // Determine language from URL param — default to EN
+  const langParam = searchParams.get('lang') as Language | null;
+  const effectiveLanguage: Language = langParam === 'AR' ? 'AR' : 'EN';
+  const isAR = effectiveLanguage === 'AR';
 
-  // Check curriculum access using language-aware hook
-  // This properly handles users with access to both EN and AR
-  const {
-    data: accessSummary,
-    isLoading: isLoadingAccess,
-  } = useUserAccesses(user?.id);
+  const { data: accessSummary, isLoading: isLoadingAccess } = useUserAccesses(user?.id);
 
-  // Compute effective language early for stats hooks
-  // Use selectedLang from URL, or fallback to first available language
-  const statsLanguage: 'en' | 'ar' | undefined = selectedLang
-    ? (selectedLang.toLowerCase() as 'en' | 'ar')
-    : accessSummary?.has_en
-      ? 'en'
-      : accessSummary?.has_ar
-        ? 'ar'
-        : undefined;
+  const statsLanguage = effectiveLanguage.toLowerCase() as 'en' | 'ar';
 
-  // Get training/curriculum progress (with language filter)
   const { data: trainingProgress } = useOverallProgress(user?.id, 'CP', statsLanguage);
-
-  // Get question bank stats (with language filter)
   const { data: questionBankStats } = useQuestionBankStats(user?.id, 'CP', statsLanguage);
-
-  // Get flashcard stats (with language filter)
   const { data: flashcardStats } = useFlashcardStats(user?.id, 'CP', statsLanguage);
 
-  // UI Labels - Always in English per requirement
-  // Only content (curriculum text, questions, flashcards) should be in Arabic when viewing Arabic content
-  const texts = {
-    // Loading & Access
-    loading: 'Loading your learning system...',
-    accessRequired: 'Access Required',
-    accessRequiredDesc: 'You need to purchase a certification program to access the Learning System. This includes Training Kits, Question Bank, and Flashcards.',
-    purchaseNow: 'Purchase Now',
-    // Header
-    title: 'Learning System',
-    subtitle: 'BDA Body of Competency Knowledge (BoCK) - Complete Learning Suite',
-    // Access Banner
-    accessValidUntil: 'Access valid until',
-    daysRemaining: 'days remaining',
-    considerRenewing: '- Consider renewing soon',
-    // Quick Stats
-    trainingProgress: 'Training Progress',
-    questionsPracticed: 'Questions Practiced',
-    cardsMastered: 'Cards Mastered',
-    studyTime: 'Study Time',
-    // Section Cards
-    trainingKits: 'Training Kits',
-    trainingKitsAr: 'حقائب تدريبية',
-    trainingKitsDesc: 'Complete curriculum content organized by competencies. Read comprehensive material with text and images to build your knowledge foundation.',
-    questionBank: 'Question Bank',
-    questionBankAr: 'بنك الأسئلة',
-    questionBankDesc: 'Practice with hundreds of multiple-choice questions. Get instant feedback and track your performance across all competencies.',
-    flashcards: 'Flashcards',
-    flashcardsAr: 'بطاقات المراجعة',
-    flashcardsDesc: 'Quick revision cards with spaced repetition. Master key concepts through active recall and efficient memorization techniques.',
-    // Stats Labels
-    modules: 'Modules',
-    lessons: 'Lessons',
-    completed: 'Completed',
-    totalQuestions: 'Total Questions',
-    attempted: 'Attempted',
-    avgScore: 'Avg Score',
-    totalCards: 'Total Cards',
-    dueToday: 'Due Today',
-    mastered: 'Mastered',
-    // Button Labels
-    startLearning: 'Start Learning',
-    practiceNow: 'Practice Now',
-    studyFlashcards: 'Study Flashcards',
-    // Learning Path
-    recommendedPath: 'Recommended Learning Path',
-    readContentFirst: 'Read the content first',
-    memorizeKeyConcepts: 'Memorize key concepts',
-    testYourKnowledge: 'Test your knowledge',
-    new: 'NEW',
-    // Language Selection
-    selectLanguage: 'Select Your Language',
-    selectLanguageDesc: 'You have access to both English and Arabic Learning Systems. Choose which language you would like to study in.',
-    englishTitle: 'Learning System (English)',
-    englishSubtitle: 'BDA Body of Competency Knowledge',
-    englishDesc: 'Complete curriculum, question bank, and flashcards in English',
-    arabicTitle: 'Learning System (Arabic)',
-    arabicSubtitle: 'هيكل معارف كفاءات BDA',
-    arabicDesc: 'Complete curriculum, question bank, and flashcards in Arabic',
-    switchLanguage: 'Switch Language',
-    currentlyViewing: 'Currently viewing',
-  };
+  const hasAccess = isAR ? accessSummary?.has_ar : accessSummary?.has_en;
 
-  // User has access if they have EN, AR, or both
-  const hasAccess = accessSummary?.has_en || accessSummary?.has_ar;
-  const hasBothLanguages = accessSummary?.has_en && accessSummary?.has_ar;
+  const displayAccess = accessSummary?.accesses?.find((a) => a.language === effectiveLanguage)
+    || accessSummary?.accesses?.[0];
 
-  // Get access for specific language (for display purposes)
-  const getAccessForLanguage = (lang: Language) => {
-    return accessSummary?.accesses?.find(a => a.language === lang);
-  };
+  const expiryDate = displayAccess?.expires_at ? new Date(displayAccess.expires_at) : null;
+  const daysUntilExpiry = expiryDate
+    ? Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 0;
+  const isExpiringSoon = daysUntilExpiry > 0 && daysUntilExpiry <= 30;
 
-  // Get the access for currently selected language, or first available
-  const access = selectedLang
-    ? getAccessForLanguage(selectedLang)
-    : accessSummary?.accesses?.[0];
+  const pct = trainingProgress?.percentage || 0;
+  const completedModules = trainingProgress?.completed || 0;
+  const totalModules = trainingProgress?.total || 16;
+  const totalLessons = trainingProgress?.totalLessons || 52;
 
-  // Helper to calculate days until expiry
-  const getDaysUntilExpiry = (expiresAt: string | undefined) => {
-    if (!expiresAt) return 0;
-    const expiry = new Date(expiresAt);
-    return Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  };
-
-  // Loading state
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoadingAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">{texts.loading}</p>
+          <div className="w-14 h-14 rounded-full border-4 border-[#dbeafe] border-t-[#1C4A8B] animate-spin mx-auto mb-5" />
+          <p className="text-slate-500 font-medium">
+            {isAR ? 'جاري تحميل نظام التعلم...' : 'Loading your learning system...'}
+          </p>
         </div>
       </div>
     );
   }
 
-  // No access state
+  // ── No Access ─────────────────────────────────────────────────────────────
   if (!hasAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-md text-center bg-white p-8 rounded-xl shadow-lg">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-8 h-8 text-yellow-600" />
+      <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff] px-4">
+        <div className="max-w-md w-full text-center bg-white p-10 rounded-3xl shadow-xl border border-[#dbeafe]">
+          <div className="w-20 h-20 bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <BookOpen className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {texts.accessRequired}
+          <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">
+            {isAR ? 'الوصول مطلوب' : 'Access Required'}
           </h2>
-          <p className="text-gray-600 mb-6">
-            {texts.accessRequiredDesc}
+          <p className="text-slate-500 mb-8 text-sm leading-relaxed">
+            {isAR
+              ? 'تحتاج إلى شراء نظام التعلم BDA للوصول إلى مجموعات التدريب وبنك الأسئلة والبطاقات التعليمية.'
+              : 'You need to purchase the BDA Learning System to access Training Kits, Question Bank, and Flashcards.'}
           </p>
           <button
             onClick={() => window.open('https://bda-global.org/en/store/bda-learning-system/', '_blank')}
-            className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full bg-gradient-to-r from-[#1C4A8B] to-[#0d1f4e] text-white font-semibold py-3.5 px-6 rounded-xl hover:opacity-90 transition-opacity shadow-md"
           >
-            {texts.purchaseNow}
+            {isAR ? 'اشترِ الآن' : 'Purchase Now'}
           </button>
         </div>
       </div>
     );
   }
 
-  // DUAL LANGUAGE SELECTION PAGE
-  // Show when user has both EN and AR access but hasn't selected a language yet
-  if (hasBothLanguages && !selectedLang) {
-    const enAccess = getAccessForLanguage('EN');
-    const arAccess = getAccessForLanguage('AR');
-    const enExpiry = enAccess?.expires_at ? new Date(enAccess.expires_at) : null;
-    const arExpiry = arAccess?.expires_at ? new Date(arAccess.expires_at) : null;
+  // ── Main Dashboard ────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-[#f0f6ff]" dir={isAR ? 'rtl' : 'ltr'}>
 
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="container mx-auto px-4 py-12 max-w-4xl">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg mb-6">
-              <Globe className="w-10 h-10 text-white" />
+      {/* ══════════════════════════════════════════════════════════════════════
+          HERO SECTION
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div
+        className="relative overflow-hidden text-white"
+        style={{ background: 'linear-gradient(135deg, #0d1f4e 0%, #1C4A8B 55%, #0f91e0 100%)' }}
+      >
+        {/* Background decorative circles */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4" />
+
+        <div className="relative container mx-auto px-6 py-12 max-w-6xl">
+          {/* Program label */}
+          <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-4 py-1.5">
+              <Award className="w-4 h-4 text-white/80" />
+              <span className="text-xs font-semibold text-white/90 tracking-wide uppercase">
+                {isAR ? 'نظام التعلم BDA' : 'BDA Learning System'}
+              </span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              {texts.selectLanguage}
-            </h1>
-            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-              {texts.selectLanguageDesc}
-            </p>
+            {effectiveLanguage === 'EN' && (
+              <span className="bg-white/10 border border-white/20 rounded-full px-3 py-1 text-xs text-white/70">
+                English
+              </span>
+            )}
+            {effectiveLanguage === 'AR' && (
+              <span className="bg-white/10 border border-white/20 rounded-full px-3 py-1 text-xs text-white/70">
+                العربية
+              </span>
+            )}
           </div>
 
-          {/* Language Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <LanguageCard
-              language="EN"
-              title={texts.englishTitle}
-              subtitle={texts.englishSubtitle}
-              description={texts.englishDesc}
-              expiryDate={enExpiry}
-              daysRemaining={getDaysUntilExpiry(enAccess?.expires_at)}
-              onClick={() => setSearchParams({ lang: 'EN' })}
-            />
+          <div className="flex flex-col lg:flex-row items-start lg:items-center gap-10">
+            {/* Left: Title + CTA */}
+            <div className="flex-1">
+              <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-3">
+                {isAR ? 'مرحباً بك في نظام التعلم' : 'Welcome to Your Learning System'}
+              </h1>
+              <p className="text-white/70 text-base leading-relaxed max-w-xl mb-8">
+                {isAR
+                  ? 'منهج متكامل يغطي جميع كفاءات BDA — مجموعات التدريب وبنك الأسئلة والبطاقات التعليمية.'
+                  : 'A complete curriculum covering all BDA competencies — Training Kits, Question Bank, and Flashcards.'}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => navigate(`${basePath}/training-kits?lang=${effectiveLanguage}`)}
+                  className="flex items-center gap-2 bg-white text-[#1C4A8B] font-bold py-3 px-7 rounded-xl hover:bg-[#f0f6ff] transition-colors shadow-lg text-sm"
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  {pct > 0
+                    ? (isAR ? 'متابعة التعلم' : 'Continue Learning')
+                    : (isAR ? 'ابدأ التعلم' : 'Start Learning')}
+                </button>
+                <button
+                  onClick={() => navigate(`${basePath}/competency-analytics?lang=${effectiveLanguage}`)}
+                  className="flex items-center gap-2 bg-white/15 hover:bg-white/25 border border-white/30 font-medium py-3 px-6 rounded-xl transition-colors text-sm"
+                >
+                  <BarChart2 className="w-4 h-4" />
+                  {isAR ? 'تحليلاتي' : 'My Analytics'}
+                </button>
+              </div>
+            </div>
 
-            <LanguageCard
-              language="AR"
-              title={texts.arabicTitle}
-              subtitle={texts.arabicSubtitle}
-              description={texts.arabicDesc}
-              expiryDate={arExpiry}
-              daysRemaining={getDaysUntilExpiry(arAccess?.expires_at)}
-              onClick={() => setSearchParams({ lang: 'AR' })}
-            />
-          </div>
+            {/* Right: Progress Ring + Stats */}
+            <div className="flex flex-col items-center gap-6">
+              {/* Progress Ring */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 border border-white/20 shadow-inner">
+                  <ProgressRing pct={pct} size={130} />
+                </div>
+                <p className="text-white/60 text-sm font-medium">
+                  {isAR ? 'التقدم الكلي' : 'Overall Progress'}
+                </p>
+              </div>
 
-          {/* Info note */}
-          <div className="mt-8 text-center text-sm text-gray-500">
-            <p>You can switch between languages at any time from the dashboard.</p>
+              {/* Stats row */}
+              <div className="flex flex-wrap justify-center gap-3">
+                <HeroStat
+                  icon={<BookOpen className="w-5 h-5" />}
+                  value={`${completedModules}/${totalModules}`}
+                  label={isAR ? 'الوحدات المكتملة' : 'Modules Done'}
+                />
+                <HeroStat
+                  icon={<HelpCircle className="w-5 h-5" />}
+                  value={questionBankStats?.questionsAttempted || 0}
+                  label={isAR ? 'أسئلة مُمارَسة' : 'Questions Practiced'}
+                />
+                <HeroStat
+                  icon={<Layers className="w-5 h-5" />}
+                  value={flashcardStats?.cardsMastered || 0}
+                  label={isAR ? 'بطاقات محفوظة' : 'Cards Mastered'}
+                />
+                <HeroStat
+                  icon={<Clock className="w-5 h-5" />}
+                  value={`${Math.floor(((trainingProgress?.totalTimeSpent || 0) + (flashcardStats?.totalStudyTimeMinutes || 0)) / 60)}h`}
+                  label={isAR ? 'وقت الدراسة' : 'Study Time'}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    );
-  }
 
-  // For single language users without URL param, determine which language they have
-  const effectiveLanguage: Language = selectedLang
-    || (accessSummary?.has_en ? 'EN' : 'AR');
+      {/* ══════════════════════════════════════════════════════════════════════
+          BODY
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div className="container mx-auto px-6 py-8 max-w-6xl space-y-6">
 
-  // Get the access record for display (fallback to first available)
-  const displayAccess = access || accessSummary?.accesses?.[0];
-  const expiryDate = displayAccess?.expires_at ? new Date(displayAccess.expires_at) : null;
-  const daysUntilExpiry = expiryDate
-    ? Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    : 0;
-  const isExpiringSoon = daysUntilExpiry <= 30;
-
-  // Current language indicator
-  const currentLangLabel = effectiveLanguage === 'AR' ? 'Arabic' : 'English';
-  const otherLangLabel = effectiveLanguage === 'AR' ? 'English' : 'Arabic';
-  const otherLang: Language = effectiveLanguage === 'AR' ? 'EN' : 'AR';
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Header with language switcher */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {texts.title}
-                <span className="ml-3 text-lg font-medium text-gray-500">
-                  ({currentLangLabel})
-                </span>
-              </h1>
-              <p className="text-gray-600">
-                {texts.subtitle}
-              </p>
-            </div>
-
-            {/* Language Switcher - only show when both languages available */}
-            {hasBothLanguages && (
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setSearchParams({ lang: otherLang })}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
-                >
-                  <Globe className="w-4 h-4" />
-                  {texts.switchLanguage}: {otherLangLabel}
-                </button>
-                <button
-                  onClick={() => {
-                    searchParams.delete('lang');
-                    setSearchParams(searchParams);
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
-                  title="Back to language selection"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Goal-Oriented Widget (NEW) ── */}
+        {/* Exam Goal Widget */}
         {hasAccess && (
-          <div className="mb-6">
-            <ExamGoalWidget
-              certType={displayAccess?.certification_type ?? 'CP'}
-              totalModules={trainingProgress?.total ?? 14}
-              completedModules={trainingProgress?.completed ?? 0}
-            />
-          </div>
+          <ExamGoalWidget
+            certType={displayAccess?.certification_type ?? 'CP'}
+            totalModules={totalModules}
+            completedModules={completedModules}
+          />
         )}
-        {/* Access Banner */}
-        {displayAccess && expiryDate && (
+
+        {/* Access Expiry Banner */}
+        {expiryDate && (
           <div
-            className={`mb-6 p-4 rounded-lg border ${
+            className={`flex items-center justify-between p-4 rounded-2xl border ${
               isExpiringSoon
-                ? 'bg-yellow-50 border-yellow-200'
-                : 'bg-blue-50 border-blue-200'
+                ? 'bg-amber-50 border-amber-200'
+                : 'bg-white border-[#dbeafe]'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Calendar
-                  className={`w-5 h-5 ${
-                    isExpiringSoon ? 'text-yellow-600' : 'text-blue-600'
-                  }`}
-                />
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {texts.accessValidUntil} {format(expiryDate, 'MMMM d, yyyy')}
-                  </p>
-                  <p
-                    className={`text-sm ${
-                      isExpiringSoon ? 'text-yellow-600' : 'text-gray-600'
-                    }`}
-                  >
-                    {daysUntilExpiry} {texts.daysRemaining}
-                    {isExpiringSoon && ` ${texts.considerRenewing}`}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${isExpiringSoon ? 'bg-amber-100' : 'bg-[#f0f6ff]'}`}>
+                <Calendar className={`w-5 h-5 ${isExpiringSoon ? 'text-amber-500' : 'text-[#1C4A8B]'}`} />
+              </div>
+              <div>
+                <p className="font-semibold text-[#0d1f4e] text-sm">
+                  {isAR ? 'صالح حتى' : 'Access valid until'} {format(expiryDate, 'MMMM d, yyyy')}
+                </p>
+                <p className={`text-xs mt-0.5 ${isExpiringSoon ? 'text-amber-600' : 'text-slate-400'}`}>
+                  {daysUntilExpiry} {isAR ? 'يوم متبقي' : 'days remaining'}
+                  {isExpiringSoon && (isAR ? ' — يُنصح بالتجديد قريباً' : ' — Consider renewing soon')}
+                </p>
               </div>
             </div>
+            {isExpiringSoon && (
+              <button
+                onClick={() => window.open('https://bda-global.org/en/store/bda-learning-system/', '_blank')}
+                className="text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-4 py-2 rounded-xl transition-colors"
+              >
+                {isAR ? 'تجديد الوصول' : 'Renew Access'}
+              </button>
+            )}
           </div>
         )}
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-4 border">
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              <span className="text-sm font-medium text-gray-700">
-                {texts.trainingProgress}
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-blue-600">
-              {trainingProgress?.percentage || 0}%
+        {/* Today's Focus */}
+        <div className="bg-white rounded-2xl border border-[#dbeafe] p-6 flex flex-col md:flex-row items-start md:items-center gap-5 shadow-sm">
+          <div className="p-3 bg-[#f0f6ff] rounded-xl flex-shrink-0">
+            <Target className="w-6 h-6 text-[#1C4A8B]" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-[#0d1f4e] text-base mb-1">
+              {isAR ? 'تركيز اليوم' : "Today's Focus"}
+            </h3>
+            <p className="text-slate-500 text-sm leading-relaxed">
+              {pct === 0
+                ? (isAR
+                  ? 'ابدأ بالوحدة 0: مقدمة البرنامج — تعرف على رحلة التعلم في BDA و14 كفاءة.'
+                  : 'Start with Module 0: Program Introduction — get familiar with the BDA Learning Journey and the 14 Competencies.')
+                : (isAR
+                  ? `أنت أتممت ${pct}% من المنهج. استمر — الاتساق هو مفتاح الاستعداد للشهادة.`
+                  : `You're ${pct}% through the curriculum. Keep going — consistency is the key to certification readiness.`)}
             </p>
           </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-4 border">
-            <div className="flex items-center gap-3 mb-2">
-              <HelpCircle className="w-5 h-5 text-green-600" />
-              <span className="text-sm font-medium text-gray-700">
-                {texts.questionsPracticed}
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-green-600">
-              {questionBankStats?.questionsAttempted || 0}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-4 border">
-            <div className="flex items-center gap-3 mb-2">
-              <Layers className="w-5 h-5 text-purple-600" />
-              <span className="text-sm font-medium text-gray-700">
-                {texts.cardsMastered}
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-purple-600">
-              {flashcardStats?.cardsMastered || 0}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-4 border">
-            <div className="flex items-center gap-3 mb-2">
-              <Clock className="w-5 h-5 text-orange-600" />
-              <span className="text-sm font-medium text-gray-700">
-                {texts.studyTime}
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-orange-600">
-              {Math.floor(((trainingProgress?.totalTimeSpent || 0) + (flashcardStats?.totalStudyTimeMinutes || 0)) / 60)}h
-            </p>
-          </div>
+          <button
+            onClick={() => navigate(`${basePath}/training-kits?lang=${effectiveLanguage}`)}
+            className="flex items-center gap-2 bg-[#1C4A8B] text-white text-sm font-semibold px-5 py-3 rounded-xl hover:bg-[#0d1f4e] transition-colors whitespace-nowrap shadow-sm"
+          >
+            <Zap className="w-4 h-4" />
+            {isAR ? 'الذهاب للمنهج' : 'Go to Curriculum'}
+          </button>
         </div>
 
-        {/* Section Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Training Kits Section */}
-          <SectionCard
-            title={texts.trainingKits}
-            titleAr={effectiveLanguage === 'AR' ? texts.trainingKitsAr : undefined}
-            description={texts.trainingKitsDesc}
+        {/* Tool Cards — 3 columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <ToolCard
+            highlight
             icon={<BookOpen className="w-6 h-6" />}
-            color="blue"
+            title={isAR ? 'مجموعات التدريب' : 'Training Kits'}
+            description={
+              isAR
+                ? 'منهج متكامل منظم وفق 14 كفاءة BDA. ابنِ أساسك المعرفي.'
+                : 'Complete curriculum organized by the 14 BDA competencies. Build your knowledge foundation.'
+            }
             stats={[
-              { label: texts.modules, value: 14 },
-              { label: texts.lessons, value: 42 },
-              { label: texts.completed, value: '0%' },
+              { label: isAR ? 'وحدات' : 'Modules', value: totalModules },
+              { label: isAR ? 'دروس' : 'Lessons', value: totalLessons },
+              { label: isAR ? 'مكتمل' : 'Completed', value: `${pct}%` },
             ]}
-            primaryAction={{
-              label: texts.startLearning,
-              onClick: () => navigate(`${basePath}/training-kits?lang=${effectiveLanguage}`),
-            }}
+            cta={pct > 0 ? (isAR ? 'متابعة التعلم' : 'Continue Learning') : (isAR ? 'ابدأ التعلم' : 'Start Learning')}
+            onClick={() => navigate(`${basePath}/training-kits?lang=${effectiveLanguage}`)}
           />
 
-          {/* Question Bank Section */}
-          <SectionCard
-            title={texts.questionBank}
-            titleAr={effectiveLanguage === 'AR' ? texts.questionBankAr : undefined}
-            description={texts.questionBankDesc}
+          <ToolCard
+            badge={isAR ? 'جديد' : 'NEW'}
             icon={<HelpCircle className="w-6 h-6" />}
-            color="green"
-            isNew
-            newLabel={texts.new}
+            title={isAR ? 'بنك الأسئلة' : 'Question Bank'}
+            description={
+              isAR
+                ? 'تدرب على أسئلة الاختيار من متعدد. احصل على تغذية راجعة فورية عبر جميع الكفاءات.'
+                : 'Practice with multiple-choice questions. Get instant feedback across all competencies.'
+            }
             stats={[
-              { label: texts.totalQuestions, value: questionBankStats?.totalQuestions || 0 },
-              { label: texts.attempted, value: questionBankStats?.questionsAttempted || 0 },
-              { label: texts.avgScore, value: `${Math.round(questionBankStats?.averageScore || 0)}%` },
+              { label: isAR ? 'إجمالي الأسئلة' : 'Total Questions', value: questionBankStats?.totalQuestions || 0 },
+              { label: isAR ? 'مُحاوَل' : 'Attempted', value: questionBankStats?.questionsAttempted || 0 },
+              { label: isAR ? 'متوسط الدرجة' : 'Avg Score', value: `${Math.round(questionBankStats?.averageScore || 0)}%` },
             ]}
-            primaryAction={{
-              label: texts.practiceNow,
-              onClick: () => navigate(`${basePath}/question-bank?lang=${effectiveLanguage}`),
-            }}
+            cta={isAR ? 'تدرب الآن' : 'Practice Now'}
+            onClick={() => navigate(`${basePath}/question-bank?lang=${effectiveLanguage}`)}
           />
 
-          {/* Flashcards Section */}
-          <SectionCard
-            title={texts.flashcards}
-            titleAr={effectiveLanguage === 'AR' ? texts.flashcardsAr : undefined}
-            description={texts.flashcardsDesc}
+          <ToolCard
             icon={<Layers className="w-6 h-6" />}
-            color="purple"
-            isNew
-            newLabel={texts.new}
+            title={isAR ? 'البطاقات التعليمية' : 'Flashcards'}
+            description={
+              isAR
+                ? 'بطاقات التكرار المتباعد للحفظ السريع. أتقن المفاهيم الأساسية بكفاءة.'
+                : 'Spaced repetition cards for rapid recall. Master key concepts efficiently.'
+            }
             stats={[
-              { label: texts.totalCards, value: flashcardStats?.totalCards || 0 },
-              { label: texts.dueToday, value: flashcardStats?.cardsDueToday || 0 },
-              { label: texts.mastered, value: flashcardStats?.cardsMastered || 0 },
+              { label: isAR ? 'إجمالي البطاقات' : 'Total Cards', value: flashcardStats?.totalCards || 0 },
+              { label: isAR ? 'مستحقة اليوم' : 'Due Today', value: flashcardStats?.cardsDueToday || 0 },
+              { label: isAR ? 'محفوظة' : 'Mastered', value: flashcardStats?.cardsMastered || 0 },
             ]}
-            primaryAction={{
-              label: texts.studyFlashcards,
-              onClick: () => navigate(`${basePath}/flashcards?lang=${effectiveLanguage}`),
-            }}
+            cta={isAR ? 'ادرس البطاقات' : 'Study Flashcards'}
+            onClick={() => navigate(`${basePath}/flashcards?lang=${effectiveLanguage}`)}
           />
         </div>
 
-        {/* Learning Path Guide */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Award className="w-5 h-5 text-yellow-500" />
-            {texts.recommendedPath}
+        {/* Recommended Learning Path */}
+        <div className="bg-white rounded-2xl border border-[#dbeafe] p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-[#0d1f4e] mb-6 flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-[#0f91e0]" />
+            {isAR ? 'مسار التعلم الموصى به' : 'Recommended Learning Path'}
           </h2>
-          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                1
+          <div className="flex flex-col md:flex-row items-stretch gap-0">
+            {[
+              {
+                step: 1,
+                title: isAR ? 'مجموعات التدريب' : 'Training Kits',
+                sub: isAR ? 'اقرأ المحتوى أولاً' : 'Read the content first',
+                icon: <BookOpen className="w-5 h-5" />,
+                action: () => navigate(`${basePath}/training-kits?lang=${effectiveLanguage}`),
+              },
+              {
+                step: 2,
+                title: isAR ? 'البطاقات التعليمية' : 'Flashcards',
+                sub: isAR ? 'احفظ المفاهيم الأساسية' : 'Memorize key concepts',
+                icon: <Layers className="w-5 h-5" />,
+                action: () => navigate(`${basePath}/flashcards?lang=${effectiveLanguage}`),
+              },
+              {
+                step: 3,
+                title: isAR ? 'بنك الأسئلة' : 'Question Bank',
+                sub: isAR ? 'اختبر معرفتك' : 'Test your knowledge',
+                icon: <HelpCircle className="w-5 h-5" />,
+                action: () => navigate(`${basePath}/question-bank?lang=${effectiveLanguage}`),
+              },
+            ].map((item, idx, arr) => (
+              <div key={item.step} className="flex flex-col md:flex-row items-center flex-1">
+                <button
+                  onClick={item.action}
+                  className="flex-1 w-full flex items-center gap-4 p-4 rounded-xl hover:bg-[#f0f6ff] transition-colors group text-left"
+                >
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 group-hover:opacity-90 transition-opacity shadow-sm">
+                    {item.step}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-[#0d1f4e]">{item.title}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{item.sub}</p>
+                  </div>
+                </button>
+                {idx < arr.length - 1 && (
+                  <ChevronRight className="w-5 h-5 text-slate-300 hidden md:block flex-shrink-0 mx-1" />
+                )}
               </div>
-              <div>
-                <p className="font-semibold text-gray-900">{texts.trainingKits}</p>
-                <p className="text-sm text-gray-500">{texts.readContentFirst}</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 hidden md:block" />
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
-                2
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">{texts.flashcards}</p>
-                <p className="text-sm text-gray-500">{texts.memorizeKeyConcepts}</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 hidden md:block" />
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold">
-                3
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">{texts.questionBank}</p>
-                <p className="text-sm text-gray-500">{texts.testYourKnowledge}</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* ── Competency Analytics Button (NEW) ── */}
-        {hasAccess && (
-          <div className="mt-6 flex justify-center">
-            <button
-              onClick={() => navigate(`${basePath}/competency-analytics?lang=${effectiveLanguage}`)}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
-            >
-              <TrendingUp className="w-4 h-4" />
-              View My Competency Analytics
-            </button>
-          </div>
-        )}
+        {/* Program Overview Strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { icon: <BookOpen className="w-5 h-5" />, value: '16', label: isAR ? 'وحدة تعليمية' : 'Learning Modules' },
+            { icon: <Layers className="w-5 h-5" />, value: '52', label: isAR ? 'درس' : 'Lessons' },
+            { icon: <Users className="w-5 h-5" />, value: '14', label: isAR ? 'كفاءة BDA' : 'BDA Competencies' },
+            { icon: <Award className="w-5 h-5" />, value: 'BoCK', label: isAR ? 'هيكل المعارف' : 'Body of Knowledge' },
+          ].map((item, i) => (
+            <div key={i} className="bg-white rounded-2xl border border-[#dbeafe] p-5 flex flex-col items-center gap-2 shadow-sm hover:shadow-md transition-shadow">
+              <div className="p-2.5 bg-[#f0f6ff] rounded-xl text-[#1C4A8B]">{item.icon}</div>
+              <p className="text-2xl font-bold text-[#0d1f4e]">{item.value}</p>
+              <p className="text-xs text-slate-400 text-center">{item.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Analytics CTA */}
+        <div className="flex justify-center pb-6">
+          <button
+            onClick={() => navigate(`${basePath}/competency-analytics?lang=${effectiveLanguage}`)}
+            className="inline-flex items-center gap-2 bg-white border border-[#dbeafe] text-[#1C4A8B] px-7 py-3.5 rounded-xl text-sm font-semibold hover:bg-[#f0f6ff] transition-colors shadow-sm"
+          >
+            <TrendingUp className="w-4 h-4" />
+            {isAR ? 'عرض تحليلات الكفاءات' : 'View My Competency Analytics'}
+          </button>
+        </div>
       </div>
     </div>
   );

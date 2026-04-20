@@ -20,6 +20,12 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Hide the white top bar for pages that have their own hero section
+  const hideTopBar = [
+    '/learning-system',
+    '/ecp/learning-system',
+  ].some(path => location.pathname === path);
+
   // Get current role from authenticated user
   const currentRole = (user?.profile?.role || 'individual') as UserRole;
 
@@ -203,8 +209,8 @@ export function PortalLayout({ children }: PortalLayoutProps) {
         "lg:pl-64",
         isRTL && "lg:pl-0 lg:pr-64"
       )}>
-        {/* Top bar */}
-        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+        {/* Top bar — hidden on pages with their own hero section */}
+        {!hideTopBar && <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           <Button
             variant="ghost"
             size="sm"
@@ -228,13 +234,17 @@ export function PortalLayout({ children }: PortalLayoutProps) {
               <span className="text-sm text-gray-500">EN</span>
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Page content */}
-        <main className="py-6">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            {children}
-          </div>
+        <main className={hideTopBar ? '' : 'py-6'}>
+          {hideTopBar ? (
+            children
+          ) : (
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              {children}
+            </div>
+          )}
         </main>
       </div>
     </div>

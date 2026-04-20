@@ -251,6 +251,13 @@ export function useCurriculumDashboard(
   const behavioralModules = modulesQuery.data?.filter(
     (m) => m.section_type === 'behavioral'
   ) || [];
+  // Intro (Module 0) and Outro (Module 15) - SHRM-style
+  const introModules = modulesQuery.data?.filter(
+    (m) => m.section_type === 'intro'
+  ) || [];
+  const outroModules = modulesQuery.data?.filter(
+    (m) => m.section_type === 'outro'
+  ) || [];
 
   return {
     // Loading states
@@ -267,6 +274,8 @@ export function useCurriculumDashboard(
     modules: modulesQuery.data || [],
     knowledgeModules,
     behavioralModules,
+    introModules,
+    outroModules,
 
     // Stats
     overallProgress: statsQuery.data,

@@ -82,6 +82,8 @@ export function MyCurriculum() {
     access,
     knowledgeModules,
     behavioralModules,
+    introModules,
+    outroModules,
     overallProgress,
     nextModule,
     refetch,
@@ -179,6 +181,8 @@ export function MyCurriculum() {
         access={access!}
         knowledgeModules={knowledgeModules}
         behavioralModules={behavioralModules}
+        introModules={introModules}
+        outroModules={outroModules}
         overallProgress={overallProgress}
         nextModule={nextModule}
         basePath={basePath}

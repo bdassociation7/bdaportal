@@ -84,36 +84,12 @@ export function LessonViewer() {
     lessonId
   );
 
-  // Check if lesson is unlocked
-  const { data: isUnlocked, isLoading: isCheckingUnlock, error: unlockError } = useIsLessonUnlocked(
-    user?.id,
-    lessonId
-  );
-
   // Mutation to update progress
   const updateProgress = useUpdateLessonProgress();
 
-  // Determine if lesson is accessible - memoized to prevent re-renders
-  // Lesson is accessible if: RPC returns true OR progress exists with non-locked status
-  // Also treat first lesson (order_index === 1) as always accessible
-  const canAccessLesson = useMemo(() => {
-    // If RPC explicitly returns true, lesson is unlocked
-    if (isUnlocked === true) {
-      return true;
-    }
-
-    // If progress record exists with a non-locked status, lesson is accessible
-    if (progress && progress.status && progress.status !== 'locked') {
-      return true;
-    }
-
-    // First lesson of a module is always accessible (even without progress record)
-    if (lesson && lesson.order_index === 1) {
-      return true;
-    }
-
-    return false;
-  }, [isUnlocked, progress, lesson]);
+  // SHRM-style: All lessons are always accessible — no sequential lock
+  const canAccessLesson = true;
+  const isCheckingUnlock = false;
 
   // Keep progress percentage ref in sync (doesn't cause re-renders)
   useEffect(() => {
@@ -232,7 +208,7 @@ export function LessonViewer() {
     };
   }, [user, lessonId, canAccessLesson]);
 
-  const isLoading = isLoadingLesson || isLoadingProgress || isCheckingUnlock;
+  const isLoading = isLoadingLesson || isLoadingProgress;
 
   // Loading state
   if (isLoading) {
@@ -265,29 +241,7 @@ export function LessonViewer() {
     );
   }
 
-  // Lesson is locked - use canAccessLesson which checks both RPC result and progress status
-  if (!canAccessLesson) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md bg-white p-8 rounded-lg shadow-sm border">
-          <Lock className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Lesson Locked</h2>
-          <p className="text-muted-foreground mb-4">
-            This lesson will be unlocked when you complete the previous lesson.
-          </p>
-          {lesson.order_index > 1 && (
-            <p className="text-sm text-muted-foreground mb-6">
-              Complete lesson {lesson.order_index - 1} to unlock this lesson.
-            </p>
-          )}
-          <Button onClick={() => navigate(getModuleUrl(lesson.module_id, lesson.module?.exam_language))}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Module
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // No lock check needed — all lessons are open (SHRM-style)
 
   // Show optional quiz if user requested it
   if (showOptionalQuiz && lesson.lesson_quiz_id && progress) {
@@ -326,12 +280,11 @@ export function LessonViewer() {
                     Lesson {lesson.order_index} / 3
                   </span>
                 </div>
-                <h1 className="text-xl font-bold">{lesson.title}</h1>
-                {lesson.title_ar && (
-                  <p className="text-sm text-muted-foreground" dir="rtl">
-                    {lesson.title_ar}
-                  </p>
-                )}
+                <h1 className="text-xl font-bold">
+                  {(urlLang === 'AR' || lesson.module?.exam_language === 'ar')
+                    ? (lesson.title_ar || lesson.title)
+                    : lesson.title}
+                </h1>
               </div>
             </div>
 
@@ -350,12 +303,11 @@ export function LessonViewer() {
           {/* Lesson Info */}
           {lesson.description && (
             <div className="p-6 border-b bg-blue-50">
-              <p className="text-sm text-gray-700">{lesson.description}</p>
-              {lesson.description_ar && (
-                <p className="text-sm text-gray-700 mt-2" dir="rtl">
-                  {lesson.description_ar}
-                </p>
-              )}
+              <p className="text-sm text-gray-700">
+                {(urlLang === 'AR' || lesson.module?.exam_language === 'ar')
+                  ? (lesson.description_ar || lesson.description)
+                  : lesson.description}
+              </p>
             </div>
           )}
 
@@ -376,17 +328,13 @@ export function LessonViewer() {
             <div className="px-6 py-4 border-b">
               <h3 className="font-semibold mb-2">Learning Objectives:</h3>
               <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                {lesson.learning_objectives.map((objective, index) => (
+                {((urlLang === 'AR' || lesson.module?.exam_language === 'ar') && lesson.learning_objectives_ar?.length
+                  ? lesson.learning_objectives_ar
+                  : lesson.learning_objectives
+                ).map((objective, index) => (
                   <li key={index}>{objective}</li>
                 ))}
               </ul>
-              {lesson.learning_objectives_ar && lesson.learning_objectives_ar.length > 0 && (
-                <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 mt-3" dir="rtl">
-                  {lesson.learning_objectives_ar.map((objective, index) => (
-                    <li key={index}>{objective}</li>
-                  ))}
-                </ul>
-              )}
             </div>
           )}
 
@@ -396,7 +344,10 @@ export function LessonViewer() {
             className="p-6 overflow-y-auto"
             style={{ maxHeight: 'calc(100vh - 400px)' }}
           >
-            <LessonContent content={lesson.content} contentAr={lesson.content_ar} />
+            <LessonContent
+              content={lesson.content}
+              contentAr={(urlLang === 'AR' || lesson.module?.exam_language === 'ar') ? lesson.content_ar : undefined}
+            />
           </div>
 
           {/* Footer Actions */}
