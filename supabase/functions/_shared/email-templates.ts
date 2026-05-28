@@ -95,30 +95,80 @@ export interface WelcomeEmailData {
 
 export function welcomeEmailHtml(data: WelcomeEmailData): string {
   const { firstName, email, loginUrl, setPasswordUrl } = data
+  const actionUrl = setPasswordUrl || loginUrl
+  const actionLabel = setPasswordUrl ? 'Set My Password & Access Portal' : 'Login to BDA Portal'
   const content = `
-    <h1 style="margin: 0 0 24px 0; font-size: 24px; color: #1f2937;">Welcome to BDA Association, ${firstName}!</h1>
-    <p style="margin: 0 0 16px 0;">Your account has been successfully created. You can now access the BDA Portal to manage your certifications, training, and professional development.</p>
-    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f3f4f6; border-radius: 8px; margin: 24px 0;">
-      <tr><td style="padding: 20px;">
-        <h3 style="margin: 0 0 12px 0; font-size: 16px; color: #1e40af;">Your Account Details</h3>
-        <p style="margin: 0;"><strong>Email:</strong> ${email}</p>
+    <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 700; color: #1f2937;">Welcome to BDA Portal, ${firstName}!</h1>
+    <p style="margin: 0 0 24px 0; font-size: 15px; color: #6b7280;">Your purchase has been confirmed and your account is ready.</p>
+
+    <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 4px solid #1e40af; border-radius: 8px; padding: 20px 24px; margin: 0 0 28px 0;">
+      <p style="margin: 0 0 6px 0; font-size: 15px; font-weight: 700; color: #1e40af;">&#x1F511; Action Required: Set Your Password</p>
+      <p style="margin: 0; font-size: 14px; color: #374151;">Your BDA Portal account has been created with the email address below. To access your exam voucher and portal features, please set your password using the button below.</p>
+    </div>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin: 0 0 28px 0;">
+      <tr><td style="padding: 18px 20px;">
+        <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em;">Your Portal Login Email</p>
+        <p style="margin: 0; font-size: 16px; font-weight: 600; color: #1f2937;">${email}</p>
       </td></tr>
     </table>
-    ${setPasswordUrl ? `<p style="margin: 0 0 16px 0;"><strong>Important:</strong> Please set your password by clicking the button below:</p>${button('Set Your Password', setPasswordUrl)}` : button('Login to Portal', loginUrl)}
-    <p style="margin: 24px 0 16px 0;">Once logged in, you can:</p>
-    <ul style="margin: 0 0 24px 0; padding-left: 20px;">
-      <li style="margin-bottom: 8px;">View and register for BDA certification exams</li>
-      <li style="margin-bottom: 8px;">Access the Learning System (modules, flashcards, question bank)</li>
-      <li style="margin-bottom: 8px;">Track your professional development credits (PDCs)</li>
-      <li style="margin-bottom: 8px;">Download certificates and credentials</li>
-    </ul>
-    <p style="margin: 0; color: #6b7280; font-size: 14px;">If you have any questions, please contact us at <a href="mailto:support@bda-global.org" style="color: #1e40af;">support@bda-global.org</a>.</p>
+
+    <p style="margin: 0 0 8px 0; font-size: 14px; color: #374151;">Click the button below to set your password and access your account:</p>
+    ${button(actionLabel, actionUrl)}
+    <p style="margin: 0 0 28px 0; font-size: 12px; color: #9ca3af; text-align: center;">This link expires in 24 hours. If it has expired, use the <a href="${loginUrl}" style="color: #1e40af;">Forgot Password</a> option on the login page.</p>
+
+    <p style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #374151;">Once inside the portal, you can:</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 0 0 24px 0;">
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151;">&#x2705;&nbsp; Access and schedule your BDA certification exam</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151;">&#x2705;&nbsp; Use the Learning System (modules, flashcards, question bank)</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151;">&#x2705;&nbsp; Track your Professional Development Credits (PDCs)</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; font-size: 14px; color: #374151;">&#x2705;&nbsp; Download your certificates and credentials</td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 13px; color: #9ca3af;">Need help? Contact us at <a href="mailto:support@bda-global.org" style="color: #1e40af; text-decoration: none;">support@bda-global.org</a></p>
   `
-  return baseTemplate(`Welcome to BDA Association, ${firstName}! Your account is ready.`, content)
+  return baseTemplate(`Action Required: Set your BDA Portal password, ${firstName}`, content)
 }
 
 export function welcomeEmailText(data: WelcomeEmailData): string {
-  return `Welcome to BDA Association, ${data.firstName}!\n\nYour account has been created.\nEmail: ${data.email}\n\n${data.setPasswordUrl ? `Set your password: ${data.setPasswordUrl}` : `Login: ${data.loginUrl}`}\n\n---\nBDA Association | https://bda-global.org`
+  const actionUrl = data.setPasswordUrl || data.loginUrl
+  return [
+    `Welcome to BDA Portal, ${data.firstName}!`,
+    ``,
+    `Your purchase has been confirmed and your BDA Portal account is ready.`,
+    ``,
+    `ACTION REQUIRED: Set Your Password`,
+    `------------------------------------------`,
+    `Your portal login email: ${data.email}`,
+    ``,
+    data.setPasswordUrl
+      ? `Click the link below to set your password and access your account:`
+      : `Click the link below to login to your account:`,
+    actionUrl,
+    ``,
+    `This link expires in 24 hours. If it has expired, visit:`,
+    `${data.loginUrl} and use the "Forgot Password" option.`,
+    ``,
+    `Once inside the portal, you can:`,
+    `- Access and schedule your BDA certification exam`,
+    `- Use the Learning System (modules, flashcards, question bank)`,
+    `- Track your Professional Development Credits (PDCs)`,
+    `- Download your certificates and credentials`,
+    ``,
+    `Need help? Contact us at support@bda-global.org`,
+    ``,
+    `---`,
+    `The Business Development Association (BDA®)`,
+    `https://bda-global.org | https://portal.bda-global.org`,
+  ].join('\n')
 }
 
 // ============================================================================

@@ -195,48 +195,63 @@ serve(async (req: Request) => {
           // Send welcome email with set password link
           const portalUrl = Deno.env.get('PORTAL_URL') || 'https://portal.bda-global.org'
 
-          // Generate password reset link
-          const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-            type: 'recovery',
-            email: email,
-            options: {
-              redirectTo: `${portalUrl}/auth/set-password`,
+          // Step 1: Try to generate a direct set-password link via admin API
+          let setPasswordUrl: string | undefined
+          try {
+            const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+              type: 'recovery',
+              email: email,
+              options: {
+                redirectTo: `${portalUrl}/auth/set-password`,
+              }
+            })
+            if (!linkError && linkData?.properties?.action_link) {
+              setPasswordUrl = linkData.properties.action_link
+              console.log(`Generated set-password link for ${email}`)
+            } else if (linkError) {
+              console.warn('generateLink failed (will use resetPasswordForEmail):', linkError.message)
             }
+          } catch (genErr: any) {
+            console.warn('generateLink exception:', genErr.message)
+          }
+
+          // Step 2: If direct link failed, send reset password email via Supabase Auth
+          if (!setPasswordUrl) {
+            const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
+              redirectTo: `${portalUrl}/auth/set-password`,
+            })
+            if (resetErr) {
+              console.error('resetPasswordForEmail failed:', resetErr.message)
+            } else {
+              console.log(`Password reset email sent directly to ${email}`)
+            }
+          }
+
+          // Step 3: Always queue welcome email (with or without direct link)
+          const welcomeData = {
+            firstName: order.billing.first_name || 'User',
+            email: email,
+            loginUrl: `${portalUrl}/login`,
+            setPasswordUrl: setPasswordUrl || `${portalUrl}/auth/forgot-password`,
+          }
+
+          const result = await queueEmailWithTemplate({
+            supabase,
+            recipientEmail: email,
+            recipientName: order.billing.first_name,
+            templateName: 'welcome',
+            subject: `Welcome to BDA Portal — Set Your Password, ${welcomeData.firstName}!`,
+            htmlBody: welcomeEmailHtml(welcomeData),
+            textBody: welcomeEmailText(welcomeData),
+            priority: 1,
+            relatedEntityType: 'woocommerce_order',
+            relatedEntityId: order.id.toString(),
           })
 
-          if (linkError) {
-            console.error('Failed to generate password link:', linkError)
+          if (result.success) {
+            console.log(`Welcome email queued for ${email} (ID: ${result.emailId})`)
           } else {
-            // Queue welcome email with template
-            const welcomeData = {
-              firstName: order.billing.first_name || 'User',
-              email: email,
-              loginUrl: `${portalUrl}/login`,
-              setPasswordUrl: linkData.properties?.action_link || `${portalUrl}/auth/forgot-password`,
-            }
-
-            const result = await queueEmailWithTemplate({
-              supabase,
-              recipientEmail: email,
-              recipientName: order.billing.first_name,
-              templateName: 'welcome',
-              subject: `Welcome to BDA Association, ${welcomeData.firstName}!`,
-              htmlBody: welcomeEmailHtml(welcomeData),
-              textBody: welcomeEmailText(welcomeData),
-              priority: 2,
-              relatedEntityType: 'woocommerce_order',
-              relatedEntityId: order.id.toString(),
-            })
-
-            if (result.success) {
-              console.log(`Welcome email queued for ${email} (ID: ${result.emailId})`)
-            } else {
-              console.error('Failed to queue welcome email:', result.error)
-              // Fallback to password reset
-              await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${portalUrl}/auth/set-password`,
-              })
-            }
+            console.error('Failed to queue welcome email:', result.error)
           }
         }
       }
@@ -323,8 +338,11 @@ serve(async (req: Request) => {
 
             // Queue partner approval email
             const portalUrl = Deno.env.get('PORTAL_URL') || 'https://portal.bda-global.org'
+            // Check current user role to detect dual_partner
+            const { data: updatedUser } = await supabase.from('users').select('role').eq('id', userId).single()
+            const isDualPartner = updatedUser?.role === 'dual_partner'
             const partnerType = partnershipProduct.partnership_type.toUpperCase() as 'ECP' | 'PDP'
-            const dashboardPath = partnerType === 'ECP' ? '/ecp/dashboard' : '/pdp/dashboard'
+            const dashboardPath = isDualPartner ? '/workspace' : (partnerType === 'ECP' ? '/ecp/dashboard' : '/pdp/dashboard')
 
             const partnerData = {
               firstName: order.billing.first_name || 'Partner',
