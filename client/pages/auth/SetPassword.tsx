@@ -21,9 +21,34 @@ export default function SetPassword() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleInviteToken = async () => {
+    const handleAuthToken = async () => {
       try {
-        // Parse the hash fragment
+        // ── 1. Check if there's already an active session (PKCE flow) ──
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (existingSession?.user) {
+          setUserEmail(existingSession.user.email || null);
+          setLoading(false);
+          return;
+        }
+
+        // ── 2. Check for PKCE ?code= in query string ──
+        const searchParams = new URLSearchParams(window.location.search);
+        const code = searchParams.get('code');
+        if (code) {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) {
+            setError('Your password reset link has expired or is invalid. Please request a new one.');
+            setLoading(false);
+            return;
+          }
+          if (data.user) {
+            setUserEmail(data.user.email || null);
+          }
+          setLoading(false);
+          return;
+        }
+
+        // ── 3. Legacy: Check hash fragment for access_token ──
         const hash = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
 
@@ -31,17 +56,13 @@ export default function SetPassword() {
         const urlError = params.get('error');
         const urlErrorCode = params.get('error_code');
         const urlErrorDescription = params.get('error_description');
-
         if (urlError || urlErrorCode) {
-          // Handle specific error codes
           let errorMessage = urlErrorDescription?.replace(/\+/g, ' ') || 'An error occurred with your link.';
-
           if (urlErrorCode === 'otp_expired') {
             errorMessage = 'This password reset link has expired. Please request a new one.';
           } else if (urlErrorCode === 'access_denied') {
             errorMessage = 'Access denied. The link may be invalid or has already been used.';
           }
-
           setError(errorMessage);
           setErrorCode(urlErrorCode);
           setLoading(false);
@@ -50,7 +71,6 @@ export default function SetPassword() {
 
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
-
         if (!accessToken) {
           setError('Invalid or missing invitation link. Please request a new one.');
           setLoading(false);
@@ -73,7 +93,6 @@ export default function SetPassword() {
         if (data.user) {
           setUserEmail(data.user.email || null);
         }
-
         setLoading(false);
       } catch (err) {
         console.error('Error processing invite:', err);
@@ -82,185 +101,152 @@ export default function SetPassword() {
       }
     };
 
-    handleInviteToken();
+    handleAuthToken();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-
-    // Validation
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
-      return;
-    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
 
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+
     setSubmitting(true);
+    setError(null);
 
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password,
-      });
+      const { error: updateError } = await supabase.auth.updateUser({ password });
 
       if (updateError) {
-        throw updateError;
+        console.error('Password update error:', updateError);
+        setError('Failed to update password. Please try again or request a new link.');
+        return;
       }
 
       setSuccess(true);
 
-      // Redirect to dashboard after a short delay
+      // Redirect to dashboard after 2 seconds
       setTimeout(() => {
         navigate('/dashboard');
       }, 2000);
-    } catch (err: any) {
-      console.error('Error setting password:', err);
-      setError(err.message || 'Failed to set password. Please try again.');
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Loading state
+  // ── Loading state ──
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Card className="w-full max-w-md shadow-lg">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-gray-600">Verifying your link...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+            <p className="text-gray-600 text-sm">Verifying your link...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Success state
-  if (success) {
+  // ── Error state (invalid/expired link) ──
+  if (error && !password) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center space-y-3">
-            <div className="mx-auto mb-4 py-4">
-              <img
-                src="/bda-logo.png"
-                alt="BDA Logo"
-                className="h-32 w-auto mx-auto"
-                style={{ maxWidth: '100%', objectFit: 'contain' }}
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center py-8">
-            <CheckCircle className="h-16 w-16 text-green-600 mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Password Set Successfully!</h2>
-            <p className="text-gray-600 text-center">
-              Redirecting you to the dashboard...
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Error state (expired/invalid link)
-  if (error && !userEmail) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center space-y-3">
-            <div className="mx-auto mb-4 py-4">
-              <img
-                src="/bda-logo.png"
-                alt="BDA Logo"
-                className="h-32 w-auto mx-auto"
-                style={{ maxWidth: '100%', objectFit: 'contain' }}
-              />
-            </div>
-            <CardTitle className="text-2xl font-bold text-gray-900">
-              Link Expired
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="text-center pb-4">
+            <div className="flex justify-center mb-3">
+              <div className="bg-red-100 rounded-full p-3">
                 <AlertCircle className="h-8 w-8 text-red-600" />
               </div>
-              <p className="text-gray-600 mb-2">{error}</p>
-              {errorCode && (
-                <p className="text-xs text-gray-400">Error code: {errorCode}</p>
-              )}
             </div>
-
-            <div className="space-y-3">
-              <Link to="/forgot-password" className="block">
-                <Button className="w-full bg-primary hover:bg-primary/90">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Request New Link
-                </Button>
-              </Link>
-              <Link to="/login" className="block">
-                <Button variant="outline" className="w-full">
-                  Back to Login
-                </Button>
-              </Link>
-            </div>
-
-            <div className="pt-4 border-t border-gray-200 text-center">
-              <p className="text-xs text-gray-500">
-                Need help?{' '}
-                <a
-                  href="https://bda-global.org"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  Contact support
-                </a>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Normal form state
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-primary to-secondary flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-3">
-          <div className="mx-auto mb-4 py-4">
-            <img
-              src="/bda-logo.png"
-              alt="BDA Logo"
-              className="h-32 w-auto mx-auto"
-              style={{ maxWidth: '100%', objectFit: 'contain' }}
-            />
-          </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">
-            Set Your Password
-          </CardTitle>
-          <p className="text-sm text-gray-600">
-            {userEmail ? (
-              <>Welcome! Create a password for <strong>{userEmail}</strong></>
-            ) : (
-              'Create a secure password for your account'
-            )}
-          </p>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
+            <CardTitle className="text-xl text-gray-900">Link Expired or Invalid</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
-          )}
+            {errorCode && (
+              <p className="text-xs text-gray-400 text-center">Error code: {errorCode}</p>
+            )}
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate('/auth/forgot-password')}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Request New Link
+              </Button>
+              <Link to="/auth/login" className="text-center text-sm text-blue-600 hover:underline">
+                Back to Login
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
+  // ── Success state ──
+  if (success) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="text-center pb-4">
+            <div className="flex justify-center mb-3">
+              <div className="bg-green-100 rounded-full p-3">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+            <CardTitle className="text-xl text-gray-900">Password Set Successfully!</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-3">
+            <p className="text-gray-600 text-sm">
+              Your password has been set. Redirecting you to the dashboard...
+            </p>
+            <Loader2 className="h-5 w-5 animate-spin text-blue-600 mx-auto" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ── Set Password Form ──
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center pb-4">
+          <div className="flex justify-center mb-3">
+            <div className="bg-blue-100 rounded-full p-3">
+              <CheckCircle className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
+          <CardTitle className="text-xl text-gray-900">Set Your Password</CardTitle>
+          {userEmail && (
+            <p className="text-sm text-gray-500 mt-1">
+              Setting password for <span className="font-medium text-gray-700">{userEmail}</span>
+            </p>
+          )}
+        </CardHeader>
+        <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
               <div className="relative">
@@ -269,10 +255,10 @@ export default function SetPassword() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder="Enter your new password"
                   required
                   minLength={8}
-                  disabled={submitting}
+                  className="pr-10"
                 />
                 <button
                   type="button"
@@ -282,7 +268,7 @@ export default function SetPassword() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="text-xs text-gray-500">Must be at least 8 characters</p>
+              <p className="text-xs text-gray-400">Minimum 8 characters</p>
             </div>
 
             <div className="space-y-2">
@@ -292,41 +278,27 @@ export default function SetPassword() {
                 type={showPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm your password"
+                placeholder="Confirm your new password"
                 required
-                disabled={submitting}
+                minLength={8}
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-primary hover:bg-primary/90"
-              disabled={submitting}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={submitting || !password || !confirmPassword}
             >
               {submitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Setting Password...
                 </>
               ) : (
-                'Set Password & Continue'
+                'Set Password & Access Portal'
               )}
             </Button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-            <p className="text-xs text-gray-500">
-              Need help?{' '}
-              <a
-                href="https://bda-global.org"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                bda-global.org
-              </a>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
