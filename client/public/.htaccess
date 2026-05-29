@@ -1,0 +1,109 @@
+# BDA Portal - High Performance Static SPA Configuration
+
+# Enable compression for maximum performance
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE application/font-woff
+    AddOutputFilterByType DEFLATE application/font-woff2
+</IfModule>
+
+# Enable browser caching for static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Images
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    
+    # CSS and JavaScript
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
+    
+    # Fonts
+    ExpiresByType application/font-woff "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+    ExpiresByType application/vnd.ms-fontobject "access plus 1 year"
+    ExpiresByType font/truetype "access plus 1 year"
+    ExpiresByType font/opentype "access plus 1 year"
+    
+    # HTML files (short cache for SPA)
+    ExpiresByType text/html "access plus 5 minutes"
+</IfModule>
+
+# Add cache control headers
+<IfModule mod_headers.c>
+    # Cache static assets for 1 year
+    <FilesMatch "\.(css|js|png|jpg|jpeg|gif|svg|webp|woff|woff2|eot|ttf|otf)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    
+    # Cache HTML for 5 minutes
+    <FilesMatch "\.(html)$">
+        Header set Cache-Control "public, max-age=300"
+    </FilesMatch>
+    
+    # Security headers
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # CORS headers for API calls to WordPress
+    Header set Access-Control-Allow-Origin "https://bda-global.org"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+</IfModule>
+
+# SPA Fallback Routing - Redirect all routes to index.html
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Handle Angular and React Router
+    RewriteBase /
+    
+    # Handle client-side routing
+    # If the request is for a file or directory that exists, serve it
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Exclude API calls (if any local APIs are added later)
+    RewriteCond %{REQUEST_URI} !^/api/
+    
+    # Redirect everything else to index.html
+    RewriteRule . /index.html [L]
+</IfModule>
+
+# Security: Block access to sensitive files
+<FilesMatch "(^\.|\.(log|md|json|lock)$)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent access to source maps in production
+<FilesMatch "\.map$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Force HTTPS (uncomment when SSL is configured)
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTPS} off
+#     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>
