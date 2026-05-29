@@ -146,6 +146,17 @@ export async function handleWooCommerceOrderWebhook(
       throw mockExamError;
     }
 
+    // Get Book product mappings from database (for direct book purchases)
+    const { data: bookProducts, error: bookProductsError } = await supabase
+      .from('book_products')
+      .select('*')
+      .eq('is_active', true);
+
+    if (bookProductsError) {
+      console.error('Error fetching book products:', bookProductsError);
+      throw bookProductsError;
+    }
+
     // Create maps for quick lookup
     const productMap = new Map(
       productMappings.map((p) => [p.woocommerce_product_id.toString(), p])
@@ -167,6 +178,10 @@ export async function handleWooCommerceOrderWebhook(
       (mockExamProducts || []).map((p) => [p.woocommerce_product_id.toString(), p])
     );
 
+    const bookProductMap = new Map(
+      (bookProducts || []).map((p) => [p.woocommerce_product_id.toString(), p])
+    );
+
     // Process each line item
     for (const item of order.line_items) {
       const mapping = productMap.get(item.product_id.toString());
@@ -174,9 +189,10 @@ export async function handleWooCommerceOrderWebhook(
       const partnershipProduct = partnershipProductMap.get(item.product_id.toString());
       const certificationProduct = certificationProductMap.get(item.product_id.toString());
       const mockExamProduct = mockExamProductMap.get(item.product_id.toString());
+      const bookProduct = bookProductMap.get(item.product_id.toString());
 
       // Skip if none of the product types match
-      if (!mapping && !learningProduct && !partnershipProduct && !certificationProduct && !mockExamProduct) {
+      if (!mapping && !learningProduct && !partnershipProduct && !certificationProduct && !mockExamProduct && !bookProduct) {
         continue;
       }
 
@@ -611,6 +627,92 @@ export async function handleWooCommerceOrderWebhook(
               exam_language: mockExamProduct.exam_language,
             }
           );
+        }
+      }
+      // Process Direct Book Purchase
+      if (bookProduct) {
+        console.log(
+          `Processing direct book purchase: ${bookProduct.product_name} (${bookProduct.language}) for ${email}`
+        );
+
+        try {
+          // Map book_products.category to the correct book_product_group used in
+          // membership_benefit_books and user_redeemed_books
+          const categoryToGroupMap: Record<string, string> = {
+            'bock': 'bda-bock',
+            'glossary': 'glossary',
+            'study-guide': 'study-guide',
+          };
+          const bookProductGroup = categoryToGroupMap[bookProduct.category] || bookProduct.category;
+
+          // Check if already granted for this order (idempotent)
+          const { data: existingCredit } = await supabase
+            .from('user_book_credits')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('source_type', 'woocommerce_order')
+            .eq('source_id', order.id.toString())
+            .eq('book_product_group', bookProductGroup)
+            .maybeSingle();
+
+          if (existingCredit) {
+            console.log(
+              `Book credit already exists for order #${order.id} and product ${bookProduct.product_name} - skipping`
+            );
+          } else {
+            // Determine available languages based on category
+            // For BoCK and Glossary: both EN and AR may be available
+            // For study-guide: only the purchased language
+            const availableLanguages = [bookProduct.language];
+
+            const { error: creditError } = await supabase
+              .from('user_book_credits')
+              .insert({
+                user_id: userId,
+                source_type: 'woocommerce_order',
+                source_id: order.id.toString(),
+                book_product_group: bookProductGroup,
+                book_product_group_name: bookProduct.product_name,
+                available_languages: availableLanguages,
+                is_redeemed: false,
+                notes: `WooCommerce Order #${order.id} - Direct purchase`,
+              });
+
+            if (creditError) {
+              console.error('Error creating book credit:', creditError);
+              await supabase.from('membership_activation_logs').insert({
+                user_id: userId,
+                action: 'book_credit_failed',
+                triggered_by: 'webhook',
+                woocommerce_order_id: parseInt(order.id.toString()),
+                error_message: creditError.message,
+                notes: `Book: ${bookProduct.product_name} (ID: ${item.product_id}) - Order date: ${order.date_created}`,
+              });
+            } else {
+              console.log(
+                `Successfully created book credit for ${bookProduct.product_name} (${bookProduct.language}) for ${email}`
+              );
+
+              // Log successful book credit creation
+              await supabase.from('membership_activation_logs').insert({
+                user_id: userId,
+                action: 'book_credit_granted',
+                triggered_by: 'webhook',
+                woocommerce_order_id: parseInt(order.id.toString()),
+                notes: `Book: ${bookProduct.product_name} (ID: ${item.product_id}, Category: ${bookProduct.category}) - Order date: ${order.date_created}`,
+              });
+            }
+          }
+        } catch (error: any) {
+          console.error('Book credit creation error:', error);
+          await supabase.from('membership_activation_logs').insert({
+            user_id: userId,
+            action: 'book_credit_failed',
+            triggered_by: 'webhook',
+            woocommerce_order_id: parseInt(order.id.toString()),
+            error_message: error.message,
+            notes: `Book: ${bookProduct.product_name} (ID: ${item.product_id})`,
+          });
         }
       }
     }

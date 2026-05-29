@@ -79,11 +79,12 @@ serve(async (req: Request) => {
     }
 
     // Get product mappings
-    const [membershipMappings, learningProducts, partnershipProducts, certificationProducts] = await Promise.all([
+    const [membershipMappings, learningProducts, partnershipProducts, certificationProducts, bookProductsResult] = await Promise.all([
       supabase.from('membership_product_mapping').select('*').eq('is_active', true),
       supabase.from('learning_system_products').select('*').eq('is_active', true),
       supabase.from('partnership_product_mapping').select('*').eq('is_active', true),
       supabase.from('certification_products').select('*').eq('is_active', true),
+      supabase.from('book_products').select('*').eq('is_active', true),
     ])
 
     const membershipMap = new Map(
@@ -98,6 +99,15 @@ serve(async (req: Request) => {
     const certificationMap = new Map(
       (certificationProducts.data || []).map((p) => [p.woocommerce_product_id.toString(), p])
     )
+    const bookProductsMap = new Map(
+      (bookProductsResult.data || []).map((p) => [p.woocommerce_product_id.toString(), p])
+    )
+    // Map book_products.category to book_product_group used in membership_benefit_books
+    const categoryToGroupMap: Record<string, string> = {
+      'bock': 'bda-bock',
+      'glossary': 'glossary',
+      'study-guide': 'study-guide',
+    }
 
     // Process each line item
     for (const item of order.line_items) {
@@ -105,9 +115,10 @@ serve(async (req: Request) => {
       const learningProduct = learningMap.get(item.product_id.toString())
       const partnershipProduct = partnershipMap.get(item.product_id.toString())
       const certificationProduct = certificationMap.get(item.product_id.toString())
+      const bookProduct = bookProductsMap.get(item.product_id.toString())
 
       // Skip if no product type matches
-      if (!membershipProduct && !learningProduct && !partnershipProduct && !certificationProduct) {
+      if (!membershipProduct && !learningProduct && !partnershipProduct && !certificationProduct && !bookProduct) {
         continue
       }
 
@@ -429,6 +440,59 @@ serve(async (req: Request) => {
         } catch (error: any) {
           console.error('Certification voucher creation error:', error)
           await logVoucherError(supabase, userId, order.id, item.product_id, certificationProduct.id, error.message || 'Unknown error')
+        }
+      }
+      // Process Direct Book Purchase
+      if (bookProduct) {
+        console.log(`Processing direct book purchase: ${bookProduct.product_name} (${bookProduct.language}) for ${email}`)
+        try {
+          const bookProductGroup = categoryToGroupMap[bookProduct.category] || bookProduct.category
+
+          // Check if already granted for this order (idempotent)
+          const { data: existingCredit } = await supabase
+            .from('user_book_credits')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('source_type', 'woocommerce_order')
+            .eq('source_id', order.id.toString())
+            .eq('book_product_group', bookProductGroup)
+            .maybeSingle()
+
+          if (existingCredit) {
+            console.log(`Book credit already exists for order #${order.id} - skipping`)
+          } else {
+            const { error: creditError } = await supabase
+              .from('user_book_credits')
+              .insert({
+                user_id: userId,
+                source_type: 'woocommerce_order',
+                source_id: order.id.toString(),
+                book_product_group: bookProductGroup,
+                book_product_group_name: bookProduct.product_name,
+                available_languages: [bookProduct.language],
+                is_redeemed: false,
+                notes: `WooCommerce Order #${order.id} - Direct purchase`,
+              })
+
+            if (creditError) {
+              console.error('Error creating book credit:', creditError)
+              await logError(supabase, userId, order.id.toString(), item.product_id.toString(),
+                creditError.message, { book: bookProduct.product_name })
+            } else {
+              console.log(`Successfully created book credit for ${bookProduct.product_name} for ${email}`)
+              await supabase.from('membership_activation_logs').insert({
+                user_id: userId,
+                action: 'book_credit_granted',
+                triggered_by: 'webhook',
+                woocommerce_order_id: order.id,
+                notes: `Book: ${bookProduct.product_name} (ID: ${item.product_id}, Group: ${bookProductGroup})`,
+              })
+            }
+          }
+        } catch (error) {
+          console.error('Book credit creation error:', error)
+          await logError(supabase, userId, order.id.toString(), item.product_id.toString(),
+            error.message || 'Unknown error', { book: bookProduct.product_name })
         }
       }
     }
