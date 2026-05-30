@@ -209,7 +209,7 @@ export class PartnersService {
         const programIds = programs.map(p => p.id);
 
         const { data: enrollments, error: enrollmentError } = await supabase
-          .from('pdp_program_enrollments')
+          .from('pdp_program_enrolments')
           .select('id, status, pdc_credits_earned')
           .in('program_id', programIds);
 
@@ -264,6 +264,7 @@ export class PartnersService {
         active_partners: partners.filter((p) => p.is_active).length,
         ecp_partners: partners.filter((p) => p.partner_type === 'ecp').length,
         pdp_partners: partners.filter((p) => p.partner_type === 'pdp').length,
+        dual_partners: partners.filter((p) => p.partner_type === 'dual_partner').length,
         profile_completion_rate: 0, // Partners table doesn't have profile_completed field
         new_partners_this_month: partners.filter(
           (p) => new Date(p.created_at) >= firstDayOfMonth
