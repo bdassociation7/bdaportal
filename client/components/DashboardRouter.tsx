@@ -39,6 +39,11 @@ export function DashboardRouter() {
       case 'super_admin':
         dashboardPath = '/admin/dashboard';
         break;
+      // Pending partnership applications → locked holding page
+      case 'ecp_pending':
+      case 'pdp_pending':
+        dashboardPath = '/partnership-pending';
+        break;
       default:
         // Fallback pour rôles inconnus
         dashboardPath = '/individual/dashboard';

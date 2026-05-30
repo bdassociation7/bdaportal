@@ -17,6 +17,7 @@ import {
   CalendarClock,
   CalendarCheck,
   UserCheck,
+  UserPlus,
   BarChart3,
   FileText,
   Palette,
@@ -135,7 +136,7 @@ export const navigationConfig: NavigationConfig = {
     // User Management Section
     { id: 'users', label: 'nav.admin.users', path: '/admin/users', icon: Users, section: 'nav.admin.section.usersPartners' },
     { id: 'memberships', label: 'nav.admin.memberships', path: '/admin/memberships', icon: Crown },
-    { id: 'upgrade-requests', label: 'Upgrade Requests', path: '/admin/upgrade-requests', icon: ArrowUpCircle },
+    { id: 'upgrade-requests', label: 'Partnership Requests', path: '/admin/upgrade-requests', icon: UserPlus },
     { id: 'partners', label: 'nav.admin.partners', path: '/admin/partners', icon: Building2 },
     { id: 'ecp-management', label: 'nav.admin.ecpManagement', path: '/admin/ecp-management', icon: Award },
     { id: 'ecp-toolkit', label: 'nav.admin.ecpToolkit', path: '/admin/ecp-toolkit', icon: Palette },
@@ -202,7 +203,7 @@ export const navigationConfig: NavigationConfig = {
     // User Management Section
     { id: 'users', label: 'nav.admin.users', path: '/admin/users', icon: Users, section: 'nav.admin.section.usersPartners' },
     { id: 'memberships', label: 'nav.admin.memberships', path: '/admin/memberships', icon: Crown },
-    { id: 'upgrade-requests', label: 'Upgrade Requests', path: '/admin/upgrade-requests', icon: ArrowUpCircle },
+    { id: 'upgrade-requests', label: 'Partnership Requests', path: '/admin/upgrade-requests', icon: UserPlus },
     { id: 'partners', label: 'nav.admin.partners', path: '/admin/partners', icon: Building2 },
     { id: 'ecp-management', label: 'nav.admin.ecpManagement', path: '/admin/ecp-management', icon: Award },
     { id: 'ecp-toolkit', label: 'nav.admin.ecpToolkit', path: '/admin/ecp-toolkit', icon: Palette },

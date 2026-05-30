@@ -162,6 +162,9 @@ import PartnerCompleteProfile from "./pages/partner/CompleteProfile";
 import WorkspaceSwitcher from './pages/partner/WorkspaceSwitcher';
 import UpgradePartnership from './pages/partner/UpgradePartnership';
 
+// Partnership Pending page (for ecp_pending / pdp_pending roles)
+import PartnershipPending from './pages/PartnershipPending';
+
 // ECP Partner pages
 import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPLicense, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
 
@@ -380,6 +383,13 @@ const App = () => (
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/auth/set-password" element={<SetPassword />} />
+
+                {/* Partnership Pending - for ecp_pending / pdp_pending roles */}
+                <Route path="/partnership-pending" element={
+                  <ProtectedRoute>
+                    <PartnershipPending />
+                  </ProtectedRoute>
+                } />
 
                 {/* Profile Completion routes - protected but NO profile guard */}
                 <Route path="/individual/complete-profile" element={

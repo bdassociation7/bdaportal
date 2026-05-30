@@ -97,9 +97,11 @@ export default function Signup() {
   };
 
   // Map form userType to database role
+  // ECP/PDP registrations get a 'pending' role until approved by admin
   const mapUserTypeToRole = (userType: 'individual' | 'ecp' | 'pdp'): string => {
-    // Database uses 'ecp' and 'pdp' directly
-    return userType;
+    if (userType === 'ecp') return 'ecp_pending';
+    if (userType === 'pdp') return 'pdp_pending';
+    return userType; // 'individual' stays as-is
   };
 
   // Gérer la soumission du mot de passe dans le modal
