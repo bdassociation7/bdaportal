@@ -23,8 +23,8 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
-const STORE_ECP_URL = 'https://bda-global.org/product/ecp-partnership/';
-const STORE_PDP_URL = 'https://bda-global.org/product/pdp-partnership/';
+const STORE_ECP_URL = 'https://bda-global.org/en/product/ecp-standard/';
+const STORE_PDP_URL = 'https://bda-global.org/en/product/pdp/';
 const PARTNERSHIP_EMAIL = 'partnerships@bda-global.org';
 
 export default function PartnershipPending() {
@@ -125,21 +125,21 @@ export default function PartnershipPending() {
                   <Mail className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-gray-900 text-lg">Submit Application</h2>
-                  <p className="text-sm text-gray-500">Reviewed within 3–5 business days</p>
+                  <h2 className="font-bold text-gray-900 text-lg">Advanced Tiers</h2>
+                  <p className="text-sm text-gray-500">Advanced & Premium partnerships</p>
                 </div>
               </div>
 
               <p className="text-gray-600 text-sm leading-relaxed">
-                Send a partnership application to our team. We will review your request and
-                activate your account once approved.
+                Looking for <strong>Advanced</strong> or <strong>Premium</strong> {partnershipType} tiers?
+                Contact our partnerships team directly for a tailored offer and personalised onboarding.
               </p>
 
               <ul className="space-y-2">
                 {[
-                  'Direct review by BDA team',
+                  'Advanced & Premium tiers available',
                   'Flexible partnership terms',
-                  'Personalised onboarding support',
+                  'Dedicated onboarding support',
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-2 text-sm text-gray-600">
                     <CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0" />
@@ -153,13 +153,13 @@ export default function PartnershipPending() {
                 className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
                 onClick={() =>
                   window.open(
-                    `mailto:${PARTNERSHIP_EMAIL}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`,
+                    `mailto:${PARTNERSHIP_EMAIL}?subject=${encodeURIComponent(`${partnershipType} Advanced/Premium Partnership Enquiry`)}&body=${encodeURIComponent(emailBody)}`,
                     '_blank'
                   )
                 }
               >
                 <Mail className="h-4 w-4 mr-2" />
-                Email {PARTNERSHIP_EMAIL}
+                Contact {PARTNERSHIP_EMAIL}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </CardContent>
@@ -170,18 +170,17 @@ export default function PartnershipPending() {
         <Card className="border-0 bg-white/10 backdrop-blur">
           <CardContent className="p-4">
             <p className="text-white/80 text-sm text-center">
-              Already purchased or submitted your application?{' '}
+              Already purchased your partnership?{' '}
               <strong className="text-white">
-                Please allow up to 24 hours for activation.
+                Your account will be activated automatically.
               </strong>{' '}
-              Contact{' '}
+              If your account is not activated within 24 hours, contact{' '}
               <a
                 href={`mailto:${PARTNERSHIP_EMAIL}`}
                 className="underline text-white hover:text-white/80"
               >
                 {PARTNERSHIP_EMAIL}
-              </a>{' '}
-              if you need assistance.
+              </a>.
             </p>
           </CardContent>
         </Card>
