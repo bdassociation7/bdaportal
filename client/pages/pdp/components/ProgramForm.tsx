@@ -1,9 +1,12 @@
 /**
  * ProgramForm Component
  * Reusable form for creating and editing PDP programs
+ * - In limitedEdit mode: program name is locked, everything else is editable
+ * - Supports session_start_date / session_end_date for public display
+ * - Supports agenda PDF upload / replacement
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,8 +31,11 @@ import {
   X,
   Plus,
   Info,
+  Upload,
+  FileText,
+  Lock,
 } from 'lucide-react';
-import { useBockCompetencies } from '@/entities/pdp';
+import { useBockCompetencies, useUploadAgendaPDF } from '@/entities/pdp';
 import type { CreateProgramDTO, ActivityType, DeliveryMode, BockCompetency, PDPProgram } from '@/entities/pdp';
 
 const activityTypes: { value: ActivityType; label: string }[] = [
@@ -61,7 +67,10 @@ interface ProgramFormProps {
   onSubmit: (data: CreateProgramDTO) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
-  /** When true, only allows editing of name, description, and duration (for approved programs) */
+  /**
+   * When true, only the program name fields are locked.
+   * All other fields (description, dates, PDF, etc.) remain editable.
+   */
   limitedEdit?: boolean;
 }
 
@@ -81,6 +90,9 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
     prerequisites: initialData?.prerequisites || '',
     learning_outcomes: initialData?.learning_outcomes || [],
     competency_ids: [],
+    session_start_date: initialData?.session_start_date || '',
+    session_end_date: initialData?.session_end_date || '',
+    agenda_url: initialData?.agenda_url || null,
   });
 
   const [selectedCompetencies, setSelectedCompetencies] = useState<CompetencySelection[]>([]);
@@ -88,7 +100,14 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showCompetencies, setShowCompetencies] = useState(false);
 
+  // PDF upload state
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { data: competencies } = useBockCompetencies();
+  const uploadAgendaPDF = useUploadAgendaPDF();
 
   useEffect(() => {
     if (initialData?.competencies) {
@@ -143,6 +162,27 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
     return selectedCompetencies.find(c => c.id === competencyId)?.level || null;
   };
 
+  const handlePdfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setPdfError(null);
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      setPdfError('Only PDF files are allowed');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setPdfError('File size must be less than 10MB');
+      return;
+    }
+    setPdfFile(file);
+  };
+
+  const removePdf = () => {
+    setPdfFile(null);
+    setPdfError(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
@@ -174,6 +214,14 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
       }
     }
 
+    if (formData.session_start_date && formData.session_end_date) {
+      const start = new Date(formData.session_start_date);
+      const end = new Date(formData.session_end_date);
+      if (end < start) {
+        errors.session_end_date = 'Session end date must be on or after start date';
+      }
+    }
+
     if (formData.duration_hours && (formData.duration_hours < 0.5 || formData.duration_hours > 1000)) {
       errors.duration_hours = 'Duration must be between 0.5 and 1000 hours';
     }
@@ -185,8 +233,14 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
-      return;
+    if (!validateForm()) return;
+
+    // If there's a new PDF to upload and we have an existing program ID, upload it first
+    if (pdfFile && initialData?.id) {
+      setPdfUploading(true);
+      await uploadAgendaPDF.mutateAsync({ programId: initialData.id, file: pdfFile });
+      setPdfUploading(false);
+      setPdfFile(null);
     }
 
     const cleanedData: CreateProgramDTO = {
@@ -196,6 +250,8 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
       description_ar: formData.description_ar?.trim() || undefined,
       target_audience: formData.target_audience?.trim() || undefined,
       prerequisites: formData.prerequisites?.trim() || undefined,
+      session_start_date: formData.session_start_date?.trim() || null,
+      session_end_date: formData.session_end_date?.trim() || null,
       competency_ids: selectedCompetencies.length > 0 ? selectedCompetencies : undefined,
     };
 
@@ -219,21 +275,33 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
             <BookOpen className="h-5 w-5" />
             Program Details
           </CardTitle>
-          <CardDescription>Provide basic information about your program</CardDescription>
+          <CardDescription>
+            {limitedEdit
+              ? 'Program name is locked after approval. You may update all other details freely.'
+              : 'Provide basic information about your program'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Program Names */}
+          {/* Program Names — locked in limitedEdit */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="program_name">
+              <Label htmlFor="program_name" className="flex items-center gap-1">
                 Program Name (English) <span className="text-red-500">*</span>
+                {limitedEdit && <Lock className="h-3 w-3 text-gray-400 ml-1" />}
               </Label>
               <Input
                 id="program_name"
                 value={formData.program_name}
                 onChange={e => handleInputChange('program_name', e.target.value)}
                 placeholder="e.g., Advanced Business Analysis Workshop"
+                disabled={limitedEdit}
+                className={limitedEdit ? 'opacity-60 bg-gray-50' : ''}
               />
+              {limitedEdit && (
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Program name cannot be changed after approval
+                </p>
+              )}
               {validationErrors.program_name && (
                 <p className="text-sm text-red-500 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
@@ -242,13 +310,18 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="program_name_ar">Program Name (Arabic)</Label>
+              <Label htmlFor="program_name_ar" className="flex items-center gap-1">
+                Program Name (Arabic)
+                {limitedEdit && <Lock className="h-3 w-3 text-gray-400 ml-1" />}
+              </Label>
               <Input
                 id="program_name_ar"
                 value={formData.program_name_ar}
                 onChange={e => handleInputChange('program_name_ar', e.target.value)}
                 placeholder="اسم البرنامج"
                 dir="rtl"
+                disabled={limitedEdit}
+                className={limitedEdit ? 'opacity-60 bg-gray-50' : ''}
               />
             </div>
           </div>
@@ -287,9 +360,8 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
               <Select
                 value={formData.activity_type}
                 onValueChange={value => handleInputChange('activity_type', value as ActivityType)}
-                disabled={limitedEdit}
               >
-                <SelectTrigger className={limitedEdit ? 'opacity-60' : ''}>
+                <SelectTrigger>
                   <SelectValue placeholder="Select activity type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -312,9 +384,8 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
               <Select
                 value={formData.delivery_mode}
                 onValueChange={value => handleInputChange('delivery_mode', value as DeliveryMode)}
-                disabled={limitedEdit}
               >
-                <SelectTrigger className={limitedEdit ? 'opacity-60' : ''}>
+                <SelectTrigger>
                   <SelectValue placeholder="Select delivery mode" />
                 </SelectTrigger>
                 <SelectContent>
@@ -359,8 +430,6 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
                 max={40}
                 value={formData.max_pdc_credits}
                 onChange={e => handleInputChange('max_pdc_credits', parseInt(e.target.value))}
-                disabled={limitedEdit}
-                className={limitedEdit ? 'opacity-60' : ''}
               />
               <p className="text-xs text-gray-500">Maximum PDC credits that can be earned (1-40)</p>
               {validationErrors.max_pdc_credits && (
@@ -372,45 +441,80 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
             </div>
           </div>
 
-          {/* Validity Period */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="valid_from">
-                Valid From <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="valid_from"
-                type="date"
-                value={formData.valid_from}
-                onChange={e => handleInputChange('valid_from', e.target.value)}
-                disabled={limitedEdit}
-                className={limitedEdit ? 'opacity-60' : ''}
-              />
-              {validationErrors.valid_from && (
-                <p className="text-sm text-red-500 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {validationErrors.valid_from}
-                </p>
-              )}
+          {/* Accreditation Validity Period */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+              <Award className="h-4 w-4" /> Accreditation Validity
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="valid_from">
+                  Valid From <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="valid_from"
+                  type="date"
+                  value={formData.valid_from}
+                  onChange={e => handleInputChange('valid_from', e.target.value)}
+                />
+                {validationErrors.valid_from && (
+                  <p className="text-sm text-red-500 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.valid_from}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="valid_until">
+                  Valid Until <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="valid_until"
+                  type="date"
+                  value={formData.valid_until}
+                  onChange={e => handleInputChange('valid_until', e.target.value)}
+                />
+                {validationErrors.valid_until && (
+                  <p className="text-sm text-red-500 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.valid_until}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="valid_until">
-                Valid Until <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="valid_until"
-                type="date"
-                value={formData.valid_until}
-                onChange={e => handleInputChange('valid_until', e.target.value)}
-                disabled={limitedEdit}
-                className={limitedEdit ? 'opacity-60' : ''}
-              />
-              {validationErrors.valid_until && (
-                <p className="text-sm text-red-500 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {validationErrors.valid_until}
-                </p>
-              )}
+          </div>
+
+          {/* Session / Event Dates */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+              <Calendar className="h-4 w-4" /> Session / Event Dates
+              <span className="text-xs font-normal text-gray-400 ml-1">(shown publicly on the programmes directory)</span>
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="session_start_date">Session Start Date</Label>
+                <Input
+                  id="session_start_date"
+                  type="date"
+                  value={formData.session_start_date || ''}
+                  onChange={e => handleInputChange('session_start_date', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="session_end_date">Session End Date</Label>
+                <Input
+                  id="session_end_date"
+                  type="date"
+                  value={formData.session_end_date || ''}
+                  onChange={e => handleInputChange('session_end_date', e.target.value)}
+                />
+                {validationErrors.session_end_date && (
+                  <p className="text-sm text-red-500 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {validationErrors.session_end_date}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -423,8 +527,6 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
                 value={formData.target_audience}
                 onChange={e => handleInputChange('target_audience', e.target.value)}
                 placeholder="e.g., Business Analysts, Project Managers"
-                disabled={limitedEdit}
-                className={limitedEdit ? 'opacity-60' : ''}
               />
             </div>
             <div className="space-y-2">
@@ -434,193 +536,266 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
                 value={formData.prerequisites}
                 onChange={e => handleInputChange('prerequisites', e.target.value)}
                 placeholder="e.g., 2+ years BA experience"
-                disabled={limitedEdit}
-                className={limitedEdit ? 'opacity-60' : ''}
               />
             </div>
           </div>
 
-          {/* Learning Outcomes - Hidden in limited edit mode */}
-          {!limitedEdit && (
-            <div className="space-y-2">
-              <Label>Learning Outcomes</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={learningOutcome}
-                  onChange={e => setLearningOutcome(e.target.value)}
-                  placeholder="Add a learning outcome..."
-                  onKeyPress={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addLearningOutcome();
-                    }
-                  }}
-                />
-                <Button type="button" variant="outline" onClick={addLearningOutcome}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              {formData.learning_outcomes && formData.learning_outcomes.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {formData.learning_outcomes.map((outcome, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border"
-                    >
-                      <span className="text-sm">{outcome}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeLearningOutcome(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {/* Learning Outcomes */}
+          <div className="space-y-2">
+            <Label>Learning Outcomes</Label>
+            <div className="flex gap-2">
+              <Input
+                value={learningOutcome}
+                onChange={e => setLearningOutcome(e.target.value)}
+                placeholder="Add a learning outcome..."
+                onKeyPress={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addLearningOutcome();
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" onClick={addLearningOutcome}>
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
+            {formData.learning_outcomes && formData.learning_outcomes.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {formData.learning_outcomes.map((outcome, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border"
+                  >
+                    <span className="text-sm">{outcome}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeLearningOutcome(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Agenda / Syllabus PDF */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Program Agenda / Syllabus
+          </CardTitle>
+          <CardDescription>
+            Upload a PDF outlining the programme content, schedule, or syllabus (max 10 MB).
+            {initialData?.agenda_url && ' A file is already attached — uploading a new one will replace it.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Existing file indicator */}
+          {initialData?.agenda_url && !pdfFile && (
+            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+              <FileText className="h-5 w-5 text-blue-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-blue-800">Current agenda file</p>
+                <a
+                  href={initialData.agenda_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 underline truncate block"
+                >
+                  {initialData.agenda_url.split('/').pop()}
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* New file selected */}
+          {pdfFile ? (
+            <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <FileText className="h-5 w-5 text-green-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-green-800">{pdfFile.name}</p>
+                <p className="text-xs text-green-600">{(pdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+              <Button type="button" variant="ghost" size="sm" onClick={removePdf}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <label
+              htmlFor="agenda-pdf-upload"
+              className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+            >
+              <Upload className="h-6 w-6 text-gray-400 mb-2" />
+              <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
+              <p className="text-xs text-gray-400 mt-1">PDF only, max 10 MB</p>
+              <input
+                id="agenda-pdf-upload"
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={handlePdfChange}
+              />
+            </label>
+          )}
+
+          {pdfError && (
+            <p className="text-sm text-red-500 flex items-center gap-1 mt-2">
+              <AlertCircle className="h-3 w-3" />
+              {pdfError}
+            </p>
+          )}
+
+          {/* Note: for new programs, PDF is uploaded after the program is created */}
+          {!initialData?.id && pdfFile && (
+            <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+              <Info className="h-3 w-3" />
+              The PDF will be attached after the program is created.
+            </p>
           )}
         </CardContent>
       </Card>
 
-      {/* BoCK Competency Mapping - Hidden in limited edit mode */}
-      {!limitedEdit && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  BoCK Competency Mapping
-                </CardTitle>
-                <CardDescription>
-                  Map this program to relevant BDA BoCK® competencies (optional)
-                </CardDescription>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCompetencies(!showCompetencies)}
-              >
-                {showCompetencies ? 'Hide' : 'Show'} Competencies
-              </Button>
+      {/* BoCK Competency Mapping */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                BoCK Competency Mapping
+              </CardTitle>
+              <CardDescription>
+                Map this program to relevant BDA BoCK® competencies (optional)
+              </CardDescription>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedCompetencies.length > 0 && (
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                <h4 className="font-medium text-green-800 mb-2">
-                  Selected Competencies ({selectedCompetencies.length})
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedCompetencies.map(sel => {
-                    const comp = competencies?.find(c => c.id === sel.id);
-                    return comp ? (
-                      <Badge
-                        key={sel.id}
-                        className={
-                          sel.level === 'primary'
-                            ? 'bg-blue-600'
-                            : sel.level === 'secondary'
-                            ? 'bg-purple-600'
-                            : 'bg-gray-600'
-                        }
-                      >
-                        {comp.code} - {sel.level}
-                      </Badge>
-                    ) : null;
-                  })}
-                </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCompetencies(!showCompetencies)}
+            >
+              {showCompetencies ? 'Hide' : 'Show'} Competencies
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {selectedCompetencies.length > 0 && (
+            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+              <h4 className="font-medium text-green-800 mb-2">
+                Selected Competencies ({selectedCompetencies.length})
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedCompetencies.map(sel => {
+                  const comp = competencies?.find(c => c.id === sel.id);
+                  return comp ? (
+                    <Badge
+                      key={sel.id}
+                      className={
+                        sel.level === 'primary'
+                          ? 'bg-blue-600'
+                          : sel.level === 'secondary'
+                          ? 'bg-purple-600'
+                          : 'bg-gray-600'
+                      }
+                    >
+                      {comp.code} - {sel.level}
+                    </Badge>
+                  ) : null;
+                })}
               </div>
-            )}
+            </div>
+          )}
 
-            {showCompetencies && (
-              <>
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Primary:</strong> Core focus • <strong>Secondary:</strong> Significantly
-                    addressed • <strong>Supporting:</strong> Touched upon or reinforced
-                  </AlertDescription>
-                </Alert>
+          {showCompetencies && (
+            <>
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Primary:</strong> Core focus • <strong>Secondary:</strong> Significantly
+                  addressed • <strong>Supporting:</strong> Touched upon or reinforced
+                </AlertDescription>
+              </Alert>
 
-                {competenciesByDomain && (
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {Object.entries(competenciesByDomain).map(([domain, comps]) => (
-                      <div key={domain} className="border rounded-lg p-4">
-                        <h3 className="font-semibold text-gray-900 mb-3">{domain}</h3>
-                        <div className="space-y-2">
-                          {comps.map(comp => {
-                            const level = getCompetencyLevel(comp.id);
-                            return (
-                              <div
-                                key={comp.id}
-                                className={`p-3 rounded-lg border ${
-                                  level ? 'border-blue-200 bg-blue-50' : 'border-gray-200'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs">
-                                        {comp.code}
-                                      </Badge>
-                                      <span className="font-medium text-sm">{comp.name}</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant={level === 'primary' ? 'default' : 'outline'}
-                                      onClick={() => toggleCompetency(comp, 'primary')}
-                                      className="text-xs px-2"
-                                    >
-                                      Primary
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant={level === 'secondary' ? 'default' : 'outline'}
-                                      onClick={() => toggleCompetency(comp, 'secondary')}
-                                      className="text-xs px-2"
-                                    >
-                                      Secondary
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant={level === 'supporting' ? 'default' : 'outline'}
-                                      onClick={() => toggleCompetency(comp, 'supporting')}
-                                      className="text-xs px-2"
-                                    >
-                                      Supporting
-                                    </Button>
+              {competenciesByDomain && (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {Object.entries(competenciesByDomain).map(([domain, comps]) => (
+                    <div key={domain} className="border rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-3">{domain}</h3>
+                      <div className="space-y-2">
+                        {comps.map(comp => {
+                          const level = getCompetencyLevel(comp.id);
+                          return (
+                            <div
+                              key={comp.id}
+                              className={`p-3 rounded-lg border ${
+                                level ? 'border-blue-200 bg-blue-50' : 'border-gray-200'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs">
+                                      {comp.code}
+                                    </Badge>
+                                    <span className="font-medium text-sm">{comp.name}</span>
                                   </div>
                                 </div>
+                                <div className="flex gap-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={level === 'primary' ? 'default' : 'outline'}
+                                    onClick={() => toggleCompetency(comp, 'primary')}
+                                    className="text-xs px-2"
+                                  >
+                                    Primary
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={level === 'secondary' ? 'default' : 'outline'}
+                                    onClick={() => toggleCompetency(comp, 'secondary')}
+                                    className="text-xs px-2"
+                                  >
+                                    Secondary
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={level === 'supporting' ? 'default' : 'outline'}
+                                    onClick={() => toggleCompetency(comp, 'supporting')}
+                                    className="text-xs px-2"
+                                  >
+                                    Supporting
+                                  </Button>
+                                </div>
                               </div>
-                            );
-                          })}
-                        </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Form Actions */}
       <div className="flex items-center gap-4">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : initialData ? 'Update Program' : 'Create Program'}
+        <Button type="submit" disabled={isSubmitting || pdfUploading}>
+          {isSubmitting || pdfUploading ? 'Saving...' : initialData ? 'Update Program' : 'Create Program'}
         </Button>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting || pdfUploading}>
           Cancel
         </Button>
       </div>

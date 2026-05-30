@@ -910,6 +910,43 @@ export class PDPService {
       return { data: null, error: error as Error };
     }
   }
+
+  /**
+   * Upload or replace the agenda/syllabus PDF for a program.
+   * Stores under pdp-programs/{programId}/agenda_{timestamp}.pdf
+   * and updates the agenda_url column on the program row.
+   */
+  static async uploadAgendaPDF(
+    programId: string,
+    file: File,
+  ): Promise<ServiceResult<string>> {
+    try {
+      const fileName = `${programId}/agenda_${Date.now()}.pdf`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('pdp-programs')
+        .upload(fileName, file, { upsert: true, contentType: 'application/pdf' });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('pdp-programs')
+        .getPublicUrl(fileName);
+
+      // Persist the URL on the program row
+      const { error: updateError } = await supabase
+        .from('pdp_programs')
+        .update({ agenda_url: publicUrl })
+        .eq('id', programId);
+
+      if (updateError) throw updateError;
+
+      return { data: publicUrl, error: null };
+    } catch (error) {
+      console.error('Error uploading agenda PDF:', error);
+      return { data: null, error: error as Error };
+    }
+  }
 }
 
 // =============================================================================

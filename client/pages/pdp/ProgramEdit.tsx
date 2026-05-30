@@ -63,7 +63,7 @@ export default function PDPProgramEdit() {
     );
   }
 
-  // Determine if limited edit mode should be used (approved programs can only edit name, description, duration)
+  // In limitedEdit mode the program name is locked; all other fields remain editable.
   const isLimitedEdit = program.status === 'approved';
 
   // Block editing for submitted, under_review, and expired programs
@@ -105,7 +105,7 @@ export default function PDPProgramEdit() {
         <h1 className="text-3xl font-bold">Edit Program</h1>
         <p className="text-gray-600 mt-2">
           {isLimitedEdit
-            ? 'Update program name, description, and duration (other fields are locked for approved programs)'
+            ? 'You can update all programme details. The programme name is locked after approval.'
             : 'Update your program details'}
         </p>
       </div>

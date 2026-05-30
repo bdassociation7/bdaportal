@@ -42,6 +42,9 @@ interface AccreditedProgram {
   max_pdc_credits: number;
   valid_from: string;
   valid_until: string;
+  session_start_date?: string;
+  session_end_date?: string;
+  agenda_url?: string;
   provider_id: string;
   provider_name: string;
   provider_website?: string;
@@ -436,8 +439,8 @@ export default function AccreditedPrograms() {
                     <div className="h-1 bg-gradient-to-r from-[#1c4a8b] to-[#2563eb]" />
 
                     <div className="p-5 flex gap-5">
-                      {/* Date badge */}
-                      <DateBadge dateString={program.valid_from} />
+                      {/* Date badge — shows session start if set, otherwise falls back to valid_from */}
+                      <DateBadge dateString={program.session_start_date || program.valid_from} />
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
@@ -455,7 +458,11 @@ export default function AccreditedPrograms() {
                         {/* Date range */}
                         <p className="text-xs text-gray-500 flex items-center gap-1 mb-3">
                           <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                          Added {formatLong(program.valid_from)}
+                          {program.session_start_date
+                            ? program.session_end_date && program.session_end_date !== program.session_start_date
+                              ? `${formatLong(program.session_start_date)} — ${formatLong(program.session_end_date)}`
+                              : formatLong(program.session_start_date)
+                            : `Added ${formatLong(program.valid_from)}`}
                         </p>
 
                         {/* Info grid */}
@@ -675,7 +682,7 @@ export default function AccreditedPrograms() {
             {/* Modal header */}
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-start gap-4">
-                <DateBadge dateString={selectedProgram.valid_from} />
+                <DateBadge dateString={selectedProgram.session_start_date || selectedProgram.valid_from} />
                 <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-bold text-gray-900 uppercase tracking-wide leading-snug mb-1">
                     {getName(selectedProgram)}
@@ -704,7 +711,11 @@ export default function AccreditedPrograms() {
                 </MetaBadge>
                 <span className="text-xs text-gray-500 flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
-                  Added {formatLong(selectedProgram.valid_from)}
+                  {selectedProgram.session_start_date
+                    ? selectedProgram.session_end_date && selectedProgram.session_end_date !== selectedProgram.session_start_date
+                      ? `${formatLong(selectedProgram.session_start_date)} — ${formatLong(selectedProgram.session_end_date)}`
+                      : formatLong(selectedProgram.session_start_date)
+                    : `Added ${formatLong(selectedProgram.valid_from)}`}
                 </span>
               </div>
 

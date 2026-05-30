@@ -866,6 +866,39 @@ export function useUploadGuidelineFile() {
   });
 }
 
+export function useUploadAgendaPDF() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({ programId, file }: { programId: string; file: File }) =>
+      PDPService.uploadAgendaPDF(programId, file),
+    onSuccess: (result, { programId }) => {
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: pdpKeys.programs() });
+      queryClient.invalidateQueries({ queryKey: pdpKeys.program(programId) });
+      toast({
+        title: 'Success',
+        description: 'Agenda PDF uploaded successfully',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
 // =============================================================================
 // Legacy hooks for backward compatibility
 // =============================================================================

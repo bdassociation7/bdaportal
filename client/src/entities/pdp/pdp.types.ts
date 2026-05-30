@@ -55,6 +55,11 @@ export interface PDPProgram {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  // Session / event dates (shown publicly)
+  session_start_date?: string;
+  session_end_date?: string;
+  // Agenda / syllabus PDF
+  agenda_url?: string;
   // Computed/Joined
   competencies?: ProgramCompetency[];
   enrollment_count?: number; // Count of distinct users who submitted PDCs
@@ -88,6 +93,11 @@ export interface CreateProgramDTO {
   target_audience?: string;
   prerequisites?: string;
   competency_ids?: { id: string; level: 'primary' | 'secondary' | 'supporting' }[];
+  // Session / event dates
+  session_start_date?: string | null;
+  session_end_date?: string | null;
+  // Agenda / syllabus PDF URL (set after upload)
+  agenda_url?: string | null;
 }
 
 export interface UpdateProgramDTO extends Partial<CreateProgramDTO> {
