@@ -243,7 +243,7 @@ export class UnifiedAuthService {
     first_name?: string;
     last_name?: string;
     bda_role?: string;
-    organization?: string;
+    organisation?: string;
     signup_type?: 'portal-only' | 'store-only' | 'both';
   }): Promise<AuthResult> {
     const signupType = userData.signup_type || 'both';
@@ -274,7 +274,7 @@ export class UnifiedAuthService {
               first_name: userData.first_name,
               last_name: userData.last_name,
               bda_role: userData.bda_role || 'individual',
-              organization: userData.organization,
+              organisation: userData.organisation,
               signup_type: signupType
             }
           }
@@ -629,7 +629,7 @@ export class UnifiedAuthService {
           first_name: profileData.first_name,
           last_name: profileData.last_name,
           role: profileData.bda_role || profileData.role,
-          organization: profileData.organization,
+          organisation: profileData.organisation,
           updated_at: new Date().toISOString()
         });
 

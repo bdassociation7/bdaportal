@@ -244,7 +244,7 @@ export class CertificationsService {
   /**
    * Unified search for certifications by credential ID OR name
    * Returns all certifications matching either the credential ID or holder name
-   * Smart search that automatically detects and prioritizes credential ID matches
+   * Smart search that automatically detects and prioritises credential ID matches
    */
   static async searchCertificationsUnified(
     query: string

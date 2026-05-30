@@ -128,7 +128,7 @@ const App = () => (
                 <Route path="/my-membership" element={<MyMembership />} />
                 <Route path="/my-recognitions" element={<MyRecognitions />} />
                 <Route path="/pdcs" element={<PDCs />} />
-                <Route path="/authorized-providers" element={<AuthorizedProviders />} />
+                <Route path="/authorised-providers" element={<AuthorizedProviders />} />
                 <Route path="/resources" element={<Resources />} />
                 <Route path="/verify-certification" element={<VerifyCertification />} />
                 <Route path="/help-center" element={<HelpCenter />} />

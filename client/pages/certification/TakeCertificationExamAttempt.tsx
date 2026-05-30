@@ -350,13 +350,13 @@ export default function TakeCertificationExamAttempt() {
       const currentAnswers = prev[questionId] || [];
 
       if (isMultiSelect(currentQuestion.question_type)) {
-        // Multiple choice: toggle answer (checkbox behavior)
+        // Multiple choice: toggle answer (checkbox behaviour)
         const newAnswers = currentAnswers.includes(answerId)
           ? currentAnswers.filter((id) => id !== answerId)
           : [...currentAnswers, answerId];
         return { ...prev, [questionId]: newAnswers };
       } else {
-        // Single choice / true_false: replace answer (radio behavior)
+        // Single choice / true_false: replace answer (radio behaviour)
         return { ...prev, [questionId]: [answerId] };
       }
     });
@@ -384,7 +384,7 @@ export default function TakeCertificationExamAttempt() {
 
       if (unansweredCount > 0) {
         const confirmed = await confirm({
-          title: 'Finalize Exam Attempt',
+          title: 'Finalise Exam Attempt',
           description: `You have ${unansweredCount} unanswered question(s). Submitting now will finalize your attempt and you cannot continue after submitting. Do you want to submit?`,
           confirmText: 'Submit Exam',
           cancelText: 'Review Questions',
@@ -394,8 +394,8 @@ export default function TakeCertificationExamAttempt() {
       } else {
         // All questions answered, still confirm
         const confirmed = await confirm({
-          title: 'Finalize Exam Attempt',
-          description: 'You are about to submit your certification exam. This will finalize your attempt and you cannot continue after submitting. Do you want to proceed?',
+          title: 'Finalise Exam Attempt',
+          description: 'You are about to submit your certification exam. This will finalise your attempt and you cannot continue after submitting. Do you want to proceed?',
           confirmText: 'Submit Exam',
           cancelText: 'Review Questions',
           variant: 'default',

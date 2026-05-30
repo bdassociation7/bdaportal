@@ -1,19 +1,17 @@
 /**
  * Public Page Layout
  *
- * Simple layout for public pages that don't require authentication
- * Provides consistent header/footer without portal navigation
+ * Layout for public pages with two-tier header:
+ * - Top: BDA logo + "BDA CERTIFICATION / BDA-CP | BDA-SCP"
+ * - Nav bar: Activities | Certificant Directory | Recertification Provider Directory
  */
 
-import { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { ReactNode, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   LogIn,
-  GraduationCap,
-  Building2,
-  ShieldCheck,
   Menu,
   X
 } from 'lucide-react';
@@ -23,98 +21,139 @@ interface PublicPageLayoutProps {
   children: ReactNode;
 }
 
-export function PublicPageLayout({ children }: PublicPageLayoutProps) {
-  const { language, t } = useLanguage();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+// Page titles for dynamic SEO
+const PAGE_TITLES: Record<string, string> = {
+  '/public/programs':  'BDA Approved Programmes | Accredited Professional Development Programmes',
+  '/public/providers': 'BDA Partners Directory | PDP and ECP Partners Worldwide',
+  '/public/verify':    'Verify BDA Certification | Credential Verification',
+  '/verify':           'Verify BDA Certification | Credential Verification',
+};
 
-  const navLinks = [
-    { path: '/public/programs', label: language === 'ar' ? 'البرامج المعتمدة' : 'Accredited Programs', icon: GraduationCap },
-    { path: '/public/providers', label: language === 'ar' ? 'المزودون المعتمدون' : 'Authorized Providers', icon: Building2 },
-    { path: '/verify', label: language === 'ar' ? 'التحقق من الشهادات' : 'Verify Credentials', icon: ShieldCheck },
-  ];
+const navLinks = [
+  { path: '/public/programs',  labelEn: 'Activities',                         labelAr: 'الأنشطة' },
+  { path: '/public/providers', labelEn: 'BDA Partners Directory',  labelAr: 'دليل شركاء BDA' },
+  { path: '/public/verify',    labelEn: 'Certificant Directory',               labelAr: 'دليل حاملي الشهادات' },
+];
+
+export function PublicPageLayout({ children }: PublicPageLayoutProps) {
+  const { language } = useLanguage();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  // Update document title on route change
+  useEffect(() => {
+    const path = location.pathname.replace(/\/$/, '');
+    const title = PAGE_TITLES[path];
+    if (title) {
+      document.title = title;
+    }
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+
+      {/* ── Top identity bar ── */}
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
+          <div className="flex items-center justify-between py-4">
+            {/* Logo + title block */}
+            <Link to="/" className="flex items-center gap-4">
               <img
                 src="/bda-logo.png"
                 alt="BDA"
-                className="h-10 w-auto"
+                className="h-16 w-auto"
               />
-              <span className="hidden sm:inline text-lg font-bold text-gray-800">
-                {language === 'ar' ? 'جمعية تطوير الأعمال' : 'BDA'}
-              </span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-xl font-extrabold text-gray-900 tracking-wide uppercase">
+                  {language === 'ar' ? 'اعتماد BDA' : 'BDA CERTIFICATION'}
+                </span>
+                <span className="text-base font-semibold text-gray-600 tracking-widest">
+                  {language === 'ar' ? 'BDA-CP | BDA-SCP' : 'BDA-CP | BDA-SCP'}
+                </span>
+              </div>
             </Link>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-6">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className="flex items-center gap-1.5 text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors"
-                >
-                  <link.icon className="h-4 w-4" />
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              {/* Login Button */}
-              <Link to="/login">
-                <Button size="sm" className="hidden sm:flex items-center gap-1">
-                  <LogIn className="h-4 w-4" />
-                  {language === 'ar' ? 'تسجيل الدخول' : 'Login'}
-                </Button>
-              </Link>
-
-              {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="md:hidden"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {/* Login button (top-right) */}
+            <Link to="/login">
+              <Button size="sm" className="hidden sm:flex items-center gap-1.5">
+                <LogIn className="h-4 w-4" />
+                {language === 'ar' ? 'تسجيل الدخول' : 'Login'}
               </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Navigation bar ── */}
+      <nav className="bg-[#3a3a3a] sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-11">
+
+            {/* Desktop nav links */}
+            <div className="hidden md:flex items-center h-full">
+              {navLinks.map((link) => {
+                const isActive = location.pathname.startsWith(link.path);
+                const label = language === 'ar' ? link.labelAr : link.labelEn;
+                return (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`
+                      h-full flex items-center px-5 text-sm font-medium transition-colors
+                      ${isActive
+                        ? 'bg-[#5a8a3c] text-white'
+                        : 'text-gray-300 hover:bg-[#4a4a4a] hover:text-white'}
+                    `}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
             </div>
+
+            {/* Mobile menu button */}
+            <button
+              className="md:hidden text-gray-300 hover:text-white p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+
+            {/* Mobile login */}
+            <Link to="/login" className="md:hidden">
+              <Button size="sm" variant="ghost" className="text-gray-300 hover:text-white">
+                <LogIn className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
 
-          {/* Mobile Navigation */}
+          {/* Mobile dropdown */}
           {mobileMenuOpen && (
-            <div className="md:hidden border-t border-gray-200 py-4">
-              <nav className="flex flex-col gap-2">
-                {navLinks.map((link) => (
+            <div className="md:hidden border-t border-gray-600 py-2">
+              {navLinks.map((link) => {
+                const label = language === 'ar' ? link.labelAr : link.labelEn;
+                return (
                   <Link
                     key={link.path}
                     to={link.path}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                    className="block px-4 py-2 text-sm text-gray-300 hover:bg-[#4a4a4a] hover:text-white"
                   >
-                    <link.icon className="h-4 w-4" />
-                    {link.label}
+                    {label}
                   </Link>
-                ))}
-                <Link
-                  to="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg mt-2"
-                >
-                  <LogIn className="h-4 w-4" />
-                  {language === 'ar' ? 'تسجيل الدخول' : 'Login'}
-                </Link>
-              </nav>
+                );
+              })}
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-4 py-2 text-sm text-blue-400 hover:bg-[#4a4a4a] mt-1"
+              >
+                {language === 'ar' ? 'تسجيل الدخول' : 'Login'}
+              </Link>
             </div>
           )}
         </div>
-      </header>
+      </nav>
 
       {/* Main Content */}
       <main className="flex-1">

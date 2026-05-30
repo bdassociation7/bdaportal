@@ -142,7 +142,7 @@ const translations = {
     faq1Q: "How do I submit a new program for accreditation?",
     faq1A: "Navigate to Programs > Submit New Program. Fill in all required fields including program details, BoCK competency mapping, and PDC credit information. Click 'Submit for Review' when complete.",
     faq2Q: "What are the BoCK competencies and how do I map them?",
-    faq2A: "BoCK (Body of Competency & Knowledge) consists of 14 competencies: 7 Behavioral (BC01-BC07) and 7 Knowledge-based (KC01-KC07). When submitting a program, select primary competencies that your program directly addresses and secondary ones that are covered partially.",
+    faq2A: "BoCK (Body of Competency & Knowledge) consists of 14 competencies: 7 Behavioural (BC01-BC07) and 7 Knowledge-based (KC01-KC07). When submitting a program, select primary competencies that your program directly addresses and secondary ones that are covered partially.",
     faq3Q: "How long does program approval take?",
     faq3A: "Programs are typically auto-approved upon submission if they meet all requirements. However, programs flagged for manual review may take 3-5 business days. You'll receive email notifications about your program status.",
     faq4Q: "Can I edit a program after submission?",
@@ -160,7 +160,7 @@ const translations = {
     faq8Q: "How are PDC credits calculated?",
     faq8A: "PDC credits are based on contact hours: 1 PDC per hour of instruction for classroom and virtual training. Self-paced learning is calculated based on estimated completion time. Maximum 8 PDCs per day for in-person training.",
     faq9Q: "When do participants receive their PDC credits?",
-    faq9A: "Participants receive PDC credits after you record their completion in the Enrollments section. Credits are automatically added to their BDA profile if they're registered members.",
+    faq9A: "Participants receive PDC credits after you record their completion in the Enrolments section. Credits are automatically added to their BDA profile if they're registered members.",
     faq10Q: "Can PDC credits be awarded retroactively?",
     faq10A: "PDC credits can only be awarded for program completions that occur after the program is approved. Completions before approval are not eligible for PDC credits.",
 

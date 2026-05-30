@@ -117,7 +117,7 @@ const FAQ_ITEMS: FAQItem[] = [
     category: 'certification',
     question: 'What is the difference between CP and SCP certifications?',
     questionAr: 'ما الفرق بين شهادتي CP و SCP؟',
-    answer: 'The Certified Professional (CP) is the foundational certification covering 8 BoCK™ domains. The Senior Certified Professional (SCP) is an advanced certification that includes all CP domains plus 4 additional advanced domains (Strategic Planning, Organizational Development, Change Management, and Advanced Leadership).',
+    answer: 'The Certified Professional (CP) is the foundational certification covering 8 BoCK™ domains. The Senior Certified Professional (SCP) is an advanced certification that includes all CP domains plus 4 additional advanced domains (Strategic Planning, Organisational Development, Change Management, and Advanced Leadership).',
     answerAr: 'الاحترافي المعتمد (CP) هو الشهادة الأساسية التي تغطي 8 مجالات BoCK™. بينما الاحترافي المعتمد الأول (SCP) هو شهادة متقدمة تشمل جميع مجالات CP بالإضافة إلى 4 مجالات متقدمة إضافية (التخطيط الاستراتيجي، التطوير التنظيمي، إدارة التغيير، والقيادة المتقدمة).',
   },
   {
@@ -141,7 +141,7 @@ const FAQ_ITEMS: FAQItem[] = [
     category: 'exams',
     question: 'What is the exam format and duration?',
     questionAr: 'ما هو شكل الامتحان ومدته؟',
-    answer: 'CP exam: 150 multiple-choice questions, 3 hours. SCP exam: 170 multiple-choice questions, 3.5 hours. Both exams are computer-based and can be taken at authorized testing centers or online with proctoring.',
+    answer: 'CP exam: 150 multiple-choice questions, 3 hours. SCP exam: 170 multiple-choice questions, 3.5 hours. Both exams are computer-based and can be taken at authorised testing centers or online with proctoring.',
     answerAr: 'امتحان CP: 150 سؤال اختيار من متعدد، 3 ساعات. امتحان SCP: 170 سؤال اختيار من متعدد، 3.5 ساعة. كلا الامتحانين قائم على الكمبيوتر ويمكن إجراؤه في مراكز الاختبار المعتمدة أو عبر الإنترنت مع المراقبة.',
   },
   {

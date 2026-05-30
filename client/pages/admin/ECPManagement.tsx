@@ -71,6 +71,7 @@ import {
   RefreshCw,
   Plus,
   Upload,
+  Layers,
 } from "lucide-react";
 
 // Types
@@ -82,6 +83,7 @@ interface ECPPartnerWithStats {
   last_name?: string;
   country_code?: string;
   created_at: string;
+  partner_type?: string;
   license_status?: string;
   vouchers_total: number;
   vouchers_used: number;
@@ -131,7 +133,7 @@ async function fetchECPPartners(): Promise<ECPPartnerWithStats[]> {
   const { data: partners, error: partnersError } = await supabase
     .from('partners')
     .select('*')
-    .eq('partner_type', 'ecp')
+    .in('partner_type', ['ecp', 'dual_partner'])
     .order('created_at', { ascending: false });
 
   if (partnersError) throw partnersError;
@@ -186,6 +188,7 @@ async function fetchECPPartners(): Promise<ECPPartnerWithStats[]> {
         last_name: '',
         country_code: partner.country,
         created_at: partner.created_at,
+        partner_type: partner.partner_type,
         license_status: license?.status || 'pending',
         vouchers_total: vouchersTotal,
         vouchers_used: vouchersUsed,
@@ -273,7 +276,14 @@ export default function ECPManagement() {
     country: '',
     city: '',
     address: '',
+    partnership_type: 'ecp' as 'ecp' | 'pdp' | 'dual_partner',
+    pdp_tier: 'standard' as 'standard' | 'advanced' | 'premium',
   });
+
+  // Upgrade to Dual Partner dialog state
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [selectedPartnerForUpgrade, setSelectedPartnerForUpgrade] = useState<ECPPartnerWithStats | null>(null);
+  const [upgradePdpTier, setUpgradePdpTier] = useState<'standard' | 'advanced' | 'premium'>('standard');
 
   const [reviewVoucherDialogOpen, setReviewVoucherDialogOpen] = useState(false);
   const [selectedVoucherRequest, setSelectedVoucherRequest] = useState<VoucherRequest | null>(null);
@@ -308,16 +318,24 @@ export default function ECPManagement() {
   });
 
   // Mutations
+  // PDP tier → max_programs mapping
+  const PDP_TIER_PROGRAMS: Record<string, number> = {
+    standard: 5,
+    advanced: 8,
+    premium: 12,
+  };
+
   const createPartnerMutation = useMutation({
     mutationFn: async (formData: typeof newPartnerForm) => {
-      // Get current session for authorization
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      // Create user via Edge Function (secure - uses service role key on server)
       const nameParts = formData.contact_person.split(' ');
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Determine base role: if dual, create as ecp first then upgrade
+      const baseRole = formData.partnership_type === 'pdp' ? 'pdp' : 'ecp';
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
@@ -325,7 +343,7 @@ export default function ECPManagement() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
+            'Authorisation': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             email: formData.email,
@@ -333,21 +351,19 @@ export default function ECPManagement() {
             last_name: lastName,
             phone: formData.contact_phone,
             country_code: formData.country,
-            role: 'ecp',
+            role: baseRole,
             source: 'admin_created',
           }),
         }
       );
 
       const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create user');
-      }
+      if (!response.ok) throw new Error(result.error || 'Failed to create user');
 
       const userId = result.user_id;
       if (!userId) throw new Error('Failed to create user');
 
-      // Partner record should be auto-created by trigger, but let's verify
+      // Update partner record with company info
       const { error: partnerError } = await supabase
         .from('partners')
         .update({
@@ -363,13 +379,49 @@ export default function ECPManagement() {
 
       if (partnerError) throw partnerError;
 
-      return { id: userId };
+      // If dual_partner: activate PDP partnership on top of ECP
+      if (formData.partnership_type === 'dual_partner') {
+        const maxPrograms = PDP_TIER_PROGRAMS[formData.pdp_tier] || 5;
+        // Create PDP profile
+        await supabase.from('pdp_partner_profiles').upsert({
+          partner_id: userId,
+          organization_name: formData.company_name,
+          legal_name: formData.company_name,
+          primary_contact_name: formData.contact_person,
+          primary_contact_email: formData.email,
+          primary_contact_phone: formData.contact_phone,
+        }, { onConflict: 'partner_id' });
+
+        // Create PDP license
+        const expiryDate = new Date();
+        expiryDate.setMonth(expiryDate.getMonth() + 12);
+        const countryCode = formData.country?.toUpperCase() || 'XX';
+        await supabase.from('pdp_licenses').insert({
+          partner_id: userId,
+          license_number: `PDP-LIC-${Date.now()}`,
+          partner_code: `PDP-${countryCode}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+          status: 'active',
+          issue_date: new Date().toISOString(),
+          expiry_date: expiryDate.toISOString(),
+          max_programs: maxPrograms,
+          programs_used: 0,
+          program_submission_enabled: true,
+        });
+
+        // Update user role and partner_type to dual_partner
+        await supabase.from('users').update({ role: 'dual_partner' }).eq('id', userId);
+        await supabase.from('partners').update({ partner_type: 'dual_partner' }).eq('id', userId);
+      }
+
+      return { id: userId, type: formData.partnership_type };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-partners'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pdp-partners'] });
+      const typeLabel = data.type === 'dual_partner' ? 'ECP + PDP (Dual Partner)' : data.type === 'pdp' ? 'PDP' : 'ECP';
       toast({
         title: 'Partner Created',
-        description: 'ECP partner has been successfully created. They will receive login credentials via email.'
+        description: `${typeLabel} partner has been successfully created. They will receive login credentials via email.`
       });
       setAddPartnerDialogOpen(false);
       setNewPartnerForm({
@@ -380,6 +432,8 @@ export default function ECPManagement() {
         country: '',
         city: '',
         address: '',
+        partnership_type: 'ecp',
+        pdp_tier: 'standard',
       });
     },
     onError: (error: Error) => {
@@ -532,6 +586,67 @@ export default function ECPManagement() {
         description: error.message,
         variant: 'destructive'
       });
+    },
+  });
+
+  // ── Upgrade ECP → Dual Partner mutation ──────────────────────────────────
+  const upgradePartnerMutation = useMutation({
+    mutationFn: async ({ partnerId, tier }: { partnerId: string; tier: 'standard' | 'advanced' | 'premium' }) => {
+      const maxPrograms = PDP_TIER_PROGRAMS[tier] || 5;
+
+      // 1. Get partner info
+      const { data: partnerData } = await supabase
+        .from('partners')
+        .select('company_name, contact_person, contact_email, contact_phone, country')
+        .eq('id', partnerId)
+        .single();
+
+      if (!partnerData) throw new Error('Partner not found');
+
+      // 2. Create PDP partner profile
+      await supabase.from('pdp_partner_profiles').upsert({
+        partner_id: partnerId,
+        organization_name: partnerData.company_name,
+        legal_name: partnerData.company_name,
+        primary_contact_name: partnerData.contact_person,
+        primary_contact_email: partnerData.contact_email,
+        primary_contact_phone: partnerData.contact_phone,
+      }, { onConflict: 'partner_id' });
+
+      // 3. Create PDP license
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + 12);
+      const countryCode = partnerData.country?.toUpperCase() || 'XX';
+      const { error: licErr } = await supabase.from('pdp_licenses').insert({
+        partner_id: partnerId,
+        license_number: `PDP-LIC-${Date.now()}`,
+        partner_code: `PDP-${countryCode}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        status: 'active',
+        issue_date: new Date().toISOString(),
+        expiry_date: expiryDate.toISOString(),
+        max_programs: maxPrograms,
+        programs_used: 0,
+        program_submission_enabled: true,
+      });
+      if (licErr) throw licErr;
+
+      // 4. Update user role and partner_type
+      await supabase.from('users').update({ role: 'dual_partner' }).eq('id', partnerId);
+      const { error: ptErr } = await supabase.from('partners').update({ partner_type: 'dual_partner' }).eq('id', partnerId);
+      if (ptErr) throw ptErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-partners'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pdp-partners'] });
+      toast({
+        title: 'Partnership Upgraded',
+        description: 'Partner now has both ECP and PDP partnerships. They will see a Workspace Switcher on next login.',
+      });
+      setUpgradeDialogOpen(false);
+      setSelectedPartnerForUpgrade(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Upgrade Failed', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -811,6 +926,23 @@ export default function ECPManagement() {
                                     >
                                       <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
                                       Create License
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                {/* Upgrade to Dual Partner — only for pure ECP partners */}
+                                {partner.partner_type === 'ecp' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setSelectedPartnerForUpgrade(partner);
+                                        setUpgradePdpTier('standard');
+                                        setUpgradeDialogOpen(true);
+                                      }}
+                                      className="text-[#0d2b5e] font-medium"
+                                    >
+                                      <Layers className="h-4 w-4 mr-2 text-[#0d2b5e]" />
+                                      Add PDP Partnership
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -1188,18 +1320,69 @@ export default function ECPManagement() {
             country: '',
             city: '',
             address: '',
+            partnership_type: 'ecp',
+            pdp_tier: 'standard',
           });
         }
         setAddPartnerDialogOpen(open);
       }}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t('ecp.addNewECPPartner')}</DialogTitle>
+            <DialogTitle>Add New Partner</DialogTitle>
             <DialogDescription>
-              {t('ecp.createNewPartnerDescription')}
+              Create a new partner account. You can assign ECP, PDP, or both partnerships at once.
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4">
+            {/* Partnership Type Selector */}
+            <div className="col-span-2">
+              <Label>Partnership Type *</Label>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                {(['ecp', 'pdp', 'dual_partner'] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setNewPartnerForm({ ...newPartnerForm, partnership_type: type })}
+                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                      newPartnerForm.partnership_type === type
+                        ? 'border-[#0d2b5e] bg-[#0d2b5e] text-white'
+                        : 'border-gray-200 text-gray-600 hover:border-[#0d2b5e]'
+                    }`}
+                  >
+                    {type === 'ecp' ? 'ECP Only' : type === 'pdp' ? 'PDP Only' : 'ECP + PDP (Dual)'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* PDP Tier — shown only when PDP or Dual */}
+            {(newPartnerForm.partnership_type === 'pdp' || newPartnerForm.partnership_type === 'dual_partner') && (
+              <div className="col-span-2">
+                <Label>PDP Package *</Label>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  {([
+                    { key: 'standard', label: 'Standard', programs: 5 },
+                    { key: 'advanced', label: 'Advanced', programs: 8 },
+                    { key: 'premium', label: 'Premium', programs: 12 },
+                  ] as const).map((tier) => (
+                    <button
+                      key={tier.key}
+                      type="button"
+                      onClick={() => setNewPartnerForm({ ...newPartnerForm, pdp_tier: tier.key })}
+                      className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                        newPartnerForm.pdp_tier === tier.key
+                          ? 'border-[#0d2b5e] bg-blue-50 text-[#0d2b5e]'
+                          : 'border-gray-200 text-gray-600 hover:border-[#0d2b5e]'
+                      }`}
+                    >
+                      <div className="font-semibold">{tier.label}</div>
+                      <div className="text-xs text-gray-500">{tier.programs} Programs</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="col-span-2">
               <Label htmlFor="email">{t('common.email')} *</Label>
               <Input
@@ -1284,6 +1467,7 @@ export default function ECPManagement() {
               {t('common.cancel')}
             </Button>
             <Button
+              className="bg-[#0d2b5e] hover:bg-[#1a3d7c]"
               onClick={() => createPartnerMutation.mutate(newPartnerForm)}
               disabled={
                 !newPartnerForm.email ||
@@ -1296,7 +1480,68 @@ export default function ECPManagement() {
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
               <Plus className="h-4 w-4 mr-2" />
-              {t('ecp.createPartner')}
+              Create Partner
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade to Dual Partner Dialog */}
+      <Dialog open={upgradeDialogOpen} onOpenChange={(open) => {
+        if (!open) setSelectedPartnerForUpgrade(null);
+        setUpgradeDialogOpen(open);
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add PDP Partnership</DialogTitle>
+            <DialogDescription>
+              Upgrade <strong>{selectedPartnerForUpgrade?.company_name || selectedPartnerForUpgrade?.email}</strong> to a Dual Partner by adding a PDP partnership.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="mb-2 block">Select PDP Package</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { key: 'standard', label: 'Standard', programs: 5 },
+                  { key: 'advanced', label: 'Advanced', programs: 8 },
+                  { key: 'premium', label: 'Premium', programs: 12 },
+                ] as const).map((tier) => (
+                  <button
+                    key={tier.key}
+                    type="button"
+                    onClick={() => setUpgradePdpTier(tier.key)}
+                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                      upgradePdpTier === tier.key
+                        ? 'border-[#0d2b5e] bg-blue-50 text-[#0d2b5e]'
+                        : 'border-gray-200 text-gray-600 hover:border-[#0d2b5e]'
+                    }`}
+                  >
+                    <div className="font-semibold">{tier.label}</div>
+                    <div className="text-xs text-gray-500">{tier.programs} Programs</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                The partner will receive a PDP license with {upgradePdpTier === 'standard' ? 5 : upgradePdpTier === 'advanced' ? 8 : 12} program slots. Their role will be upgraded to Dual Partner and they will see a Workspace Switcher on next login.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)} disabled={upgradePartnerMutation.isPending}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#0d2b5e] hover:bg-[#1a3d7c]"
+              onClick={() => upgradePartnerMutation.mutate({ partnerId: selectedPartnerForUpgrade!.id, tier: upgradePdpTier })}
+              disabled={upgradePartnerMutation.isPending}
+            >
+              {upgradePartnerMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <Layers className="h-4 w-4 mr-2" />
+              Upgrade to Dual Partner
             </Button>
           </DialogFooter>
         </DialogContent>

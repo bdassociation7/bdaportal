@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuthContext } from '@/app/providers/AuthProvider';
@@ -6,8 +6,9 @@ import { AuthService } from '@/entities/auth/auth.service';
 import { navigationConfig } from '@/config/navigation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Menu, X, Settings, LogOut } from 'lucide-react';
+import { Menu, X, Settings, LogOut, Users } from 'lucide-react';
 import { ROLE_DEFINITIONS, type UserRole } from '@/shared/types/roles.types';
+import { useMergedVouchers } from '@/entities/quiz';
 
 interface PortalLayoutProps {
   children: React.ReactNode;
@@ -29,9 +30,38 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   // Get current role from authenticated user
   const currentRole = (user?.profile?.role || 'individual') as UserRole;
 
-  // Get navigation items based on current role
-  const navItems = navigationConfig[currentRole];
+  // Get base navigation items based on current role
+  const baseNavItems = navigationConfig[currentRole];
   const roleInfo = ROLE_DEFINITIONS[currentRole];
+
+  // Conditionally add Distribute Vouchers for individual users with 2+ available vouchers
+  const { vouchers } = useMergedVouchers();
+  const availableVoucherCount = useMemo(() => {
+    if (currentRole !== 'individual') return 0;
+    return vouchers.filter((v) => {
+      const raw = v._raw as Record<string, unknown>;
+      const transferCount = (raw.transfer_count as number) ?? 0;
+      return v.displayInfo.status === 'active' && transferCount === 0;
+    }).length;
+  }, [vouchers, currentRole]);
+
+  const navItems = useMemo(() => {
+    if (currentRole !== 'individual' || availableVoucherCount < 2) return baseNavItems;
+    // Insert Distribute Vouchers after certification-exams
+    const idx = baseNavItems.findIndex((item) => item.id === 'certification-exams');
+    const insertAt = idx >= 0 ? idx + 1 : baseNavItems.length - 2;
+    const distributeItem = {
+      id: 'distribute-vouchers',
+      label: 'Distribute Vouchers',
+      path: '/distribute-vouchers',
+      icon: Users,
+    };
+    return [
+      ...baseNavItems.slice(0, insertAt),
+      distributeItem,
+      ...baseNavItems.slice(insertAt),
+    ];
+  }, [baseNavItems, currentRole, availableVoucherCount]);
 
   const closeSidebar = () => {
     setSidebarOpen(false);
@@ -138,6 +168,15 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                     {item.external && (
                       <span className={cn("ml-auto text-xs", isActive ? "text-white" : "text-gray-400")}>
                         ↗
+                      </span>
+                    )}
+                    {/* Badge for Distribute Vouchers showing count */}
+                    {item.id === 'distribute-vouchers' && availableVoucherCount >= 2 && (
+                      <span className={cn(
+                        "ml-auto text-xs px-1.5 py-0.5 rounded-full font-semibold",
+                        isActive ? "bg-white/20 text-white" : "bg-indigo-100 text-indigo-700"
+                      )}>
+                        {availableVoucherCount}
                       </span>
                     )}
                   </button>

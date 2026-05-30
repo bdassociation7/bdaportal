@@ -409,7 +409,7 @@ export default function PDPAnnualReports() {
                 <TableHead>{t('pdpAnnualReports.partner')}</TableHead>
                 <TableHead>{t('pdpAnnualReports.year')}</TableHead>
                 <TableHead>{t('pdpAnnualReports.programs')}</TableHead>
-                <TableHead>{t('pdpAnnualReports.enrollments')}</TableHead>
+                <TableHead>{t('pdpAnnualReports.enrolments')}</TableHead>
                 <TableHead>{t('pdpAnnualReports.pdcsIssued')}</TableHead>
                 <TableHead>{t('pdpAnnualReports.submitted')}</TableHead>
                 <TableHead>{t('table.status')}</TableHead>
@@ -525,7 +525,7 @@ export default function PDPAnnualReports() {
                   <p className="text-2xl font-bold text-gray-900">
                     {selectedReport.total_enrollments.toLocaleString()}
                   </p>
-                  <p className="text-sm text-gray-600">{t('pdpAnnualReports.enrollments')}</p>
+                  <p className="text-sm text-gray-600">{t('pdpAnnualReports.enrolments')}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-gray-900">

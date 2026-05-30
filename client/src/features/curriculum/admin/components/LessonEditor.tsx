@@ -326,7 +326,7 @@ export function LessonEditor({ lessonId, isOpen, onClose, defaultLanguage = 'en'
                                 {module.competency_name_ar && ` | ${module.competency_name_ar}`}
                                 {module.section_type === 'knowledge_based'
                                   ? ' (Knowledge)'
-                                  : ' (Behavioral)'}
+                                  : ' (Behavioural)'}
                               </SelectItem>
                             ))}
                           </SelectContent>

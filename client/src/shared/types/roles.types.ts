@@ -5,7 +5,7 @@
  */
 
 // Type pour les rôles utilisateur (correspond à l'ENUM Supabase)
-export type UserRole = 'individual' | 'ecp' | 'pdp' | 'admin' | 'super_admin';
+export type UserRole = 'individual' | 'ecp' | 'pdp' | 'dual_partner' | 'admin' | 'super_admin';
 
 // Informations d'affichage pour chaque rôle
 export interface RoleInfo {
@@ -23,6 +23,30 @@ export interface RoleInfo {
  * Définitions complètes des rôles avec permissions
  */
 export const ROLE_DEFINITIONS: Record<UserRole, RoleInfo> = {
+  dual_partner: {
+    id: 'dual_partner',
+    label: 'Dual Partner (ECP + PDP)',
+    labelAr: 'شريك مزدوج (ECP + PDP)',
+    description: 'Endorsed Certification Partner & Professional Development Partner',
+    descriptionAr: 'شريك معتمد للشهادات وشريك التطوير المهني',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+    permissions: [
+      'view_profile',
+      'edit_profile',
+      'manage_candidates',
+      'view_reports',
+      'manage_vouchers',
+      'manage_trainings',
+      'manage_trainers',
+      'view_license',
+      'access_toolkit',
+      'manage_programs',
+      'submit_program',
+      'view_guidelines',
+      'manage_annual_report',
+    ] as const,
+  },
   individual: {
     id: 'individual',
     label: 'Professional Individual',
@@ -182,6 +206,7 @@ export const ROLE_HOME_ROUTES: Record<UserRole, string> = {
   individual: '/individual/dashboard',
   ecp: '/ecp/dashboard',
   pdp: '/pdp/dashboard',
+  dual_partner: '/workspace',
   admin: '/admin/dashboard',
   super_admin: '/admin/dashboard',
 } as const;
@@ -233,19 +258,26 @@ export function isSuperAdminRole(role: UserRole): boolean {
  * Vérifier si un utilisateur est un partenaire
  */
 export function isPartnerRole(role: UserRole): boolean {
-  return role === 'ecp' || role === 'pdp';
+  return role === 'ecp' || role === 'pdp' || role === 'dual_partner';
 }
 
 /**
  * Check if role is an ECP partner
  */
 export function isECPRole(role: UserRole): boolean {
-  return role === 'ecp';
+  return role === 'ecp' || role === 'dual_partner';
 }
 
 /**
  * Check if role is a PDP partner
  */
 export function isPDPRole(role: UserRole): boolean {
-  return role === 'pdp';
+  return role === 'pdp' || role === 'dual_partner';
+}
+
+/**
+ * Check if role is a dual partner (both ECP and PDP)
+ */
+export function isDualPartnerRole(role: UserRole): boolean {
+  return role === 'dual_partner';
 }

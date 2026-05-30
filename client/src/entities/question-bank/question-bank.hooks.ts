@@ -60,9 +60,9 @@ export const questionBankKeys = {
   adminStats: (certType?: CertificationType) =>
     [...questionBankKeys.all, 'admin-stats', certType] as const,
 
-  // Favorites
-  favorites: (userId: string) =>
-    [...questionBankKeys.all, 'favorites', userId] as const,
+  // Favourites
+  favourites: (userId: string) =>
+    [...questionBankKeys.all, 'favourites', userId] as const,
 };
 
 // =============================================================================
@@ -245,17 +245,17 @@ export function useQuestionBankStats(
 }
 
 /**
- * Get user's favorited questions
+ * Get user's favourited questions
  */
-export function useFavoritedQuestions(
+export function useFavouritedQuestions(
   userId: string | undefined,
   certificationType?: string
 ) {
   return useQuery({
-    queryKey: questionBankKeys.favorites(userId || ''),
+    queryKey: questionBankKeys.favourites(userId || ''),
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
-      const result = await QuestionBankService.getFavoritedQuestions(
+      const result = await QuestionBankService.getFavouritedQuestions(
         userId,
         certificationType
       );
@@ -505,31 +505,31 @@ export function useRecordAttempt() {
 }
 
 /**
- * Toggle favorite
+ * Toggle favourite
  */
-export function useToggleFavorite() {
+export function useToggleFavourite() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
       userId,
       questionId,
-      isFavorited,
+      isFavourited,
     }: {
       userId: string;
       questionId: string;
-      isFavorited: boolean;
+      isFavourited: boolean;
     }) => {
-      const result = await QuestionBankService.toggleFavorite(
+      const result = await QuestionBankService.toggleFavourite(
         userId,
         questionId,
-        isFavorited
+        isFavourited
       );
       if (result.error) throw result.error;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: questionBankKeys.favorites(variables.userId),
+        queryKey: questionBankKeys.favourites(variables.userId),
       });
     },
   });

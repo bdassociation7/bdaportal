@@ -83,7 +83,7 @@ const translations = {
   en: {
     // Header
     title: 'Trainee Management',
-    subtitle: 'Manage your enrolled trainees and track their certification journey',
+    subtitle: 'Manage your enroled trainees and track their certification journey',
     exportExcel: 'Export Excel',
     exportCSV: 'Export CSV',
     bulkUpload: 'Bulk Upload',
@@ -94,7 +94,7 @@ const translations = {
     allTypes: 'All Types',
     allStatus: 'All Status',
     // Status options
-    enrolled: 'Enrolled',
+    enrolled: 'Enroled',
     attending: 'Attending',
     completed: 'Completed',
     dropped: 'Dropped',
@@ -109,7 +109,7 @@ const translations = {
     actions: 'Actions',
     // Table content
     trainees: 'Trainees',
-    viewAndManage: 'View and manage all enrolled trainees',
+    viewAndManage: 'View and manage all enroled trainees',
     pageOf: (current: number, total: number) => `Page ${current} of ${total}`,
     showingTrainees: (from: number, to: number, total: number) => `Showing ${from} to ${to} of ${total} trainees`,
     noTraineesFound: 'No trainees found',
@@ -196,7 +196,7 @@ const translations = {
     allTypes: 'جميع الأنواع',
     allStatus: 'جميع الحالات',
     // Status options
-    enrolled: 'مسجل',
+    enroled: 'مسجل',
     attending: 'يحضر',
     completed: 'مكتمل',
     dropped: 'منسحب',
@@ -287,7 +287,7 @@ const translations = {
 };
 
 const ENROLLMENT_STATUS_COLORS: Record<string, string> = {
-  enrolled: 'bg-blue-100 text-blue-700',
+  enroled: 'bg-blue-100 text-blue-700',
   attending: 'bg-yellow-100 text-yellow-700',
   completed: 'bg-green-100 text-green-700',
   dropped: 'bg-red-100 text-red-700',
@@ -297,7 +297,7 @@ const ENROLLMENT_STATUS_COLORS: Record<string, string> = {
 const ITEMS_PER_PAGE = 50;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-type SortField = 'name' | 'email' | 'batch' | 'certification_type' | 'enrollment_status' | 'created_at';
+type SortField = 'name' | 'email' | 'batch' | 'certification_type' | 'enrolment_status' | 'created_at';
 type SortOrder = 'asc' | 'desc';
 
 export default function ECPTrainees() {
@@ -400,9 +400,9 @@ export default function ECPTrainees() {
           aVal = a.certification_type;
           bVal = b.certification_type;
           break;
-        case 'enrollment_status':
-          aVal = a.enrollment_status;
-          bVal = b.enrollment_status;
+        case 'enrolment_status':
+          aVal = a.enrolment_status;
+          bVal = b.enrolment_status;
           break;
         case 'created_at':
         default:
@@ -648,7 +648,7 @@ export default function ECPTrainees() {
       job_title: t.job_title || '',
       certification_type: t.certification_type,
       batch_code: t.batch?.batch_code || '',
-      enrollment_status: t.enrollment_status,
+      enrolment_status: t.enrolment_status,
       training_completed: t.training_completed ? 'Yes' : 'No',
       exam_passed: t.exam_passed === true ? 'Yes' : t.exam_passed === false ? 'No' : 'Not Taken',
       certified: t.certified ? 'Yes' : 'No',
@@ -689,7 +689,7 @@ export default function ECPTrainees() {
       'Job Title': t.job_title || '',
       'Certification Type': t.certification_type,
       'Batch': t.batch?.batch_code || '',
-      'Enrollment Status': t.enrollment_status,
+      'Enrolment Status': t.enrolment_status,
       'Training Completed': t.training_completed ? 'Yes' : 'No',
       'Exam Passed': t.exam_passed === true ? 'Yes' : t.exam_passed === false ? 'No' : 'Not Taken',
       'Exam Score': t.exam_score || '',
@@ -819,11 +819,11 @@ export default function ECPTrainees() {
             </Select>
 
             <Select
-              value={filters.enrollment_status || 'all'}
+              value={filters.enrolment_status || 'all'}
               onValueChange={(value) =>
                 setFilters({
                   ...filters,
-                  enrollment_status: value === 'all' ? undefined : (value as any),
+                  enrolment_status: value === 'all' ? undefined : (value as any),
                 })
               }
             >
@@ -832,7 +832,7 @@ export default function ECPTrainees() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{texts.allStatus}</SelectItem>
-                <SelectItem value="enrolled">{texts.enrolled}</SelectItem>
+                <SelectItem value="enroled">{texts.enroled}</SelectItem>
                 <SelectItem value="attending">{texts.attending}</SelectItem>
                 <SelectItem value="completed">{texts.completed}</SelectItem>
                 <SelectItem value="dropped">{texts.dropped}</SelectItem>
@@ -886,7 +886,7 @@ export default function ECPTrainees() {
                   </Button>
                 </TableHead>
                 <TableHead>
-                  <Button variant="ghost" size="sm" onClick={() => toggleSort('enrollment_status')} className={`hover:bg-gray-100 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                  <Button variant="ghost" size="sm" onClick={() => toggleSort('enrolment_status')} className={`hover:bg-gray-100 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                     {texts.status}
                     <ArrowUpDown className={`h-4 w-4 ${language === 'ar' ? 'mr-2' : 'ml-2'}`} />
                   </Button>
@@ -943,8 +943,8 @@ export default function ECPTrainees() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className={ENROLLMENT_STATUS_COLORS[trainee.enrollment_status]}>
-                        {trainee.enrollment_status}
+                      <Badge className={ENROLLMENT_STATUS_COLORS[trainee.enrolment_status]}>
+                        {trainee.enrolment_status}
                       </Badge>
                     </TableCell>
                     <TableCell>

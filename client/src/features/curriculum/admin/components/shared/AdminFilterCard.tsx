@@ -13,7 +13,7 @@ interface AdminFilterCardProps {
 }
 
 /**
- * Standardized filter card component for admin pages
+ * Standardised filter card component for admin pages
  * Provides consistent styling and reset functionality
  */
 export function AdminFilterCard({

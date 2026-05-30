@@ -99,7 +99,7 @@ export function ModulePreview({ moduleId, onClose }: ModulePreviewProps) {
               <p className="text-sm text-gray-600">
                 {module.section_type === 'knowledge_based'
                   ? '🧠 Knowledge-Based Competency'
-                  : '💼 Behavioral Competency'}
+                  : '💼 Behavioural Competency'}
                 {' • '}
                 {module.certification_type.toUpperCase()}
               </p>

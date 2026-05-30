@@ -149,7 +149,7 @@ describe('Auth Error Codes', () => {
       );
     });
 
-    it('should return UNKNOWN_ERROR for unrecognized messages', () => {
+    it('should return UNKNOWN_ERROR for unrecognised messages', () => {
       expect(mapErrorToCode('Something went wrong')).toBe(
         AUTH_ERROR_CODES.UNKNOWN_ERROR
       );

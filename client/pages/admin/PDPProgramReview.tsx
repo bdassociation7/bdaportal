@@ -104,7 +104,7 @@ const mockSubmissions: ProgramSubmission[] = [
     submitted_at: "2024-02-15",
     competencies: [
       { code: "BA1", name: "BA Planning & Monitoring", level: "primary" },
-      { code: "BA2", name: "Elicitation & Collaboration", level: "primary" },
+      { code: "BA2", name: "Elicitation & Collabouration", level: "primary" },
       { code: "BA3", name: "Requirements Life Cycle", level: "secondary" },
     ],
     description:
@@ -156,7 +156,7 @@ const mockSubmissions: ProgramSubmission[] = [
     submitted_at: "2024-02-08",
     competencies: [
       { code: "BA10", name: "Agile Analysis", level: "primary" },
-      { code: "BA2", name: "Elicitation & Collaboration", level: "supporting" },
+      { code: "BA2", name: "Elicitation & Collabouration", level: "supporting" },
     ],
     description: "Introduction to agile business analysis practices.",
     learning_outcomes: ["Understand agile BA role", "Apply user story techniques"],

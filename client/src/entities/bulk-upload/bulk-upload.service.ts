@@ -587,7 +587,7 @@ export class BulkUploadService {
       return { job_id: '', error: 'No valid rows to process' };
     }
 
-    // Get session for authorization
+    // Get session for authorisation
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       return { job_id: '', error: 'You must be logged in to create users' };
@@ -782,7 +782,7 @@ export class BulkUploadService {
   static async resendInvite(itemId: string): Promise<{ success: boolean; error?: string }> {
     console.log('[BulkUpload] Resending invite for item:', itemId);
 
-    // Get session for authorization
+    // Get session for authorisation
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       return { success: false, error: 'You must be logged in' };

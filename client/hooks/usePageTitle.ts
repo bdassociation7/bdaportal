@@ -9,7 +9,7 @@ const pageTitle = {
   '/dashboard': 'Dashboard - BDA Portal',
   '/dashboard/mock-exams': 'Mock Exams - BDA Portal',
   '/dashboard/certifications': 'My Certifications - BDA Portal',
-  '/dashboard/providers': 'Authorized Providers - BDA Portal',
+  '/dashboard/providers': 'Authorised Providers - BDA Portal',
   '/dashboard/exam-applications': 'Exam Applications - BDA Portal',
   '/dashboard/recognitions': 'My Recognitions - BDA Portal',
   '/dashboard/idus': 'IDUs - BDA Portal',

@@ -95,7 +95,7 @@ export function FlashcardManager() {
       allSections: 'All Sections',
       introduction: 'Introduction',
       knowledge: 'Knowledge',
-      behavioral: 'Behavioral',
+      behavioral: 'Behavioural',
       status: 'Status',
       allStatus: 'All Status',
       cards: 'cards',
@@ -446,7 +446,7 @@ export function FlashcardManager() {
             <SelectItem value="all">{texts.allSections}</SelectItem>
             <SelectItem value="introduction">{texts.introduction}</SelectItem>
             <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
-            <SelectItem value="behavioral">{texts.behavioral}</SelectItem>
+            <SelectItem value="behavioural">{texts.behavioral}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={publishedFilter} onValueChange={setPublishedFilter}>
@@ -618,7 +618,7 @@ function DeckCard({
             }`}
           >
             {deck.section_type === 'introduction' ? texts.introduction :
-             deck.section_type === 'knowledge' ? texts.knowledge : texts.behavioral}
+             deck.section_type === 'knowledge' ? texts.knowledge : texts.behavioural}
           </span>
           {deck.estimated_study_time_minutes && (
             <span className="flex items-center gap-1">
@@ -765,7 +765,7 @@ function DeckDialog({
                 <SelectContent>
                   <SelectItem value="introduction">{texts.introduction}</SelectItem>
                   <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
-                  <SelectItem value="behavioral">{texts.behavioral}</SelectItem>
+                  <SelectItem value="behavioural">{texts.behavioural}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -270,7 +270,7 @@ export default function CompleteProfile() {
 
                 <div className="space-y-2">
                   <Label htmlFor="company_name">
-                    Company/Organization <span className="text-red-500">*</span>
+                    Company/Organisation <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="company_name"

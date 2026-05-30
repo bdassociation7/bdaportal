@@ -92,7 +92,7 @@ const translations = {
     certification: 'Certification',
     dates: 'Dates',
     trainer: 'Trainer',
-    enrollment: 'Enrollment',
+    enrollment: 'Enrolment',
     status: 'Status',
     actions: 'Actions',
     to: 'to',

@@ -315,7 +315,7 @@ export default function ExamResults() {
               {passed
                 ? isSCP
                   ? 'This designation reflects your advanced expertise, strategic leadership ability, and mastery of the BDA BoCK® competencies at a senior professional level.'
-                  : 'You are now recognized as a BDA Certified Professional in Business Development. Your achievement demonstrates your capability across the BDA BoCK® competencies and your commitment to professional excellence in business development.'
+                  : 'You are now recognised as a BDA Certified Professional in Business Development. Your achievement demonstrates your capability across the BDA BoCK® competencies and your commitment to professional excellence in business development.'
                 : isSCP
                   ? 'The SCP credential represents advanced business development expertise. We encourage you to revisit the BDA Learning System modules and strengthen your strategic competency areas.'
                   : 'We encourage you to continue developing your competencies. You may review your areas of improvement through the BDA Learning System and retake the exam when ready.'}

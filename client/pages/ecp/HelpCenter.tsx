@@ -114,7 +114,7 @@ const translations = {
     cancel: 'Cancel',
     // Support categories
     catTechnical: 'Technical',
-    catLicensing: 'Licensing',
+    catLicensing: 'Licencing',
     catExam: 'Exam',
     catBilling: 'Billing',
     // Priorities
@@ -254,7 +254,7 @@ const getFaqs = (texts: typeof translations.en) => [
         question: texts === translations.ar ? "ما الفرق بين تدريب CP و SCP؟" : "What's the difference between CP and SCP training?",
         answer: texts === translations.ar
           ? "CP (المحترف المعتمد) هي الشهادة التأسيسية التي تتطلب 40 ساعة تدريب. SCP (المحترف المعتمد الأول) هو المستوى المتقدم الذي يتطلب شهادة CP بالإضافة إلى 40 ساعة إضافية من التدريب المتخصص."
-          : "CP (Certified Professional) is the foundational certification requiring 40 hours of training. SCP (Senior Certified Professional) is the advanced level requiring CP certification plus additional 40 hours of specialized training.",
+          : "CP (Certified Professional) is the foundational certification requiring 40 hours of training. SCP (Senior Certified Professional) is the advanced level requiring CP certification plus additional 40 hours of specialised training.",
       },
       {
         question: texts === translations.ar ? "هل يمكنني رفع مواد التدريب والصور؟" : "Can I upload training materials and photos?",
@@ -289,7 +289,7 @@ const getFaqs = (texts: typeof translations.en) => [
         question: texts === translations.ar ? "هل يمكن لمدربين من شركاء آخرين تقديم التدريب لنا؟" : "Can trainers from other partners deliver training for us?",
         answer: texts === translations.ar
           ? "لا، المدربون المعتمدون مرتبطون حصرياً بمنظمة شريكهم. يمكنك فقط تعيين المدربين المعتمدين لشراكة ECP الخاصة بك."
-          : "No, certified trainers are exclusively associated with their partner organization. You can only assign trainers that are approved for your specific ECP partnership.",
+          : "No, certified trainers are exclusively associated with their partner organisation. You can only assign trainers that are approved for your specific ECP partnership.",
       },
       {
         question: texts === translations.ar ? "كيف أضيف مدرباً جديداً لفريقي؟" : "How do I add a new trainer to my team?",
@@ -385,7 +385,7 @@ const getFaqs = (texts: typeof translations.en) => [
 // Dynamic support categories based on language
 const getSupportCategories = (texts: typeof translations.en) => [
   { value: "technical", label: texts.catTechnical },
-  { value: "licensing", label: texts.catLicensing },
+  { value: "licencing", label: texts.catLicensing },
   { value: "exam", label: texts.catExam },
   { value: "billing", label: texts.catBilling },
 ];

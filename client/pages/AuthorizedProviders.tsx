@@ -10,9 +10,9 @@ export default function AuthorizedProviders() {
     {
       id: "atap",
       title: "ATAP",
-      fullName: "Authorized Training Application Provider",
+      fullName: "Authorised Training Application Provider",
       description:
-        "Become an authorized provider for training applications and expand your service offerings.",
+        "Become an authorised provider for training applications and expand your service offerings.",
       image: "/placeholder.svg",
       status: "Available",
       requirements: ["Minimum 2 years experience", "Valid certification"],
@@ -20,9 +20,9 @@ export default function AuthorizedProviders() {
     {
       id: "atp",
       title: "ATP",
-      fullName: "Authorized Training Provider",
+      fullName: "Authorised Training Provider",
       description:
-        "Join our network of authorized training providers and deliver high-quality educational content.",
+        "Join our network of authorised training providers and deliver high-quality educational content.",
       image: "/placeholder.svg",
       status: "Available",
       requirements: ["Training facility", "Qualified instructors"],
@@ -30,7 +30,7 @@ export default function AuthorizedProviders() {
     {
       id: "aup",
       title: "AUP",
-      fullName: "Authorized Upgrade Provider",
+      fullName: "Authorised Upgrade Provider",
       description:
         "Provide upgrade services and help professionals advance their certifications.",
       image: "/placeholder.svg",
@@ -54,10 +54,10 @@ export default function AuthorizedProviders() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
-          {t("nav.authorizedProviders")}
+          {t("nav.authorisedProviders")}
         </h1>
         <p className="mt-1 text-sm text-gray-600">
-          Apply to become an authorized provider and join our professional
+          Apply to become an authorised provider and join our professional
           network.
         </p>
       </div>
@@ -153,7 +153,7 @@ export default function AuthorizedProviders() {
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Approval</h3>
               <p className="text-sm text-gray-600">
-                Receive approval and start offering authorized services.
+                Receive approval and start offering authorised services.
               </p>
             </div>
           </div>

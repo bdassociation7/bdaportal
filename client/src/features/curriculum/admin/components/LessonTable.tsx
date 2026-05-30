@@ -71,7 +71,7 @@ export function LessonTable({
     }
     return (
       <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-        {t('curriculum.behavioralShort')}
+        {t('curriculum.behaviouralShort')}
       </Badge>
     );
   };

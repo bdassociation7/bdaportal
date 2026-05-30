@@ -176,7 +176,7 @@ export class RoleMappingService {
       {
         role: 'admin',
         display_name: 'BDA Administrator',
-        description: 'BDA organization administrator'
+        description: 'BDA organisation administrator'
       },
       {
         role: 'super_admin',

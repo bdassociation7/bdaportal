@@ -23,7 +23,7 @@ export function CurriculumModuleManager() {
   const [isCreating, setIsCreating] = useState(false);
   const [createLanguage, setCreateLanguage] = useState<ExamLanguage>('en');
   const [previewModule, setPreviewModule] = useState<string | null>(null);
-  const [filterSection, setFilterSection] = useState<'all' | 'knowledge_based' | 'behavioral'>('all');
+  const [filterSection, setFilterSection] = useState<'all' | 'knowledge_based' | 'behavioural'>('all');
   const [filterPublished, setFilterPublished] = useState<'all' | 'published' | 'draft'>('all');
   const [filterLanguage, setFilterLanguage] = useState<ExamLanguage>('en');
 
@@ -191,7 +191,7 @@ export function CurriculumModuleManager() {
             >
               <option value="all">{t('curriculum.allSections')}</option>
               <option value="knowledge_based">{t('curriculum.knowledgeBased')}</option>
-              <option value="behavioral">{t('curriculum.behavioral')}</option>
+              <option value="behavioural">{t('curriculum.behavioural')}</option>
             </select>
           </div>
 
@@ -300,7 +300,7 @@ export function CurriculumModuleManager() {
                       <span className="text-sm text-gray-700">
                         {module.section_type === 'knowledge_based'
                           ? t('curriculum.knowledgeShort')
-                          : t('curriculum.behavioralShort')}
+                          : t('curriculum.behaviouralShort')}
                       </span>
                     </td>
                     <td className="px-6 py-4">

@@ -116,7 +116,7 @@ function t(key: string, isAR: boolean): string {
     accuracy: 'accuracy',
     introduction: 'Introduction',
     introSub: 'Foundation questions to get started',
-    behavioral: 'Behavioral Competencies',
+    behavioral: 'Behavioural Competencies',
     knowledge: 'Knowledge-Based Competencies',
     subLessons: 'Sub-lessons',
     sets: 'Sets',
@@ -395,11 +395,11 @@ export function QuestionBankDashboard() {
 
   // Group hierarchically
   const groupedSets = useMemo(() => {
-    if (!questionSets) return { introduction: [], knowledge: {}, behavioral: {}, standalone: [] };
+    if (!questionSets) return { introduction: [], knowledge: {}, behavioural: {}, standalone: [] };
 
     const introSets: QuestionSetWithProgress[] = [];
     const knowledge: Record<string, Record<string, QuestionSetWithProgress[]>> = {};
-    const behavioral: Record<string, Record<string, QuestionSetWithProgress[]>> = {};
+    const behavioural: Record<string, Record<string, QuestionSetWithProgress[]>> = {};
     const standalone: QuestionSetWithProgress[] = [];
 
     questionSets.forEach((set) => {
@@ -412,16 +412,16 @@ export function QuestionBankDashboard() {
           if (!knowledge[cId][sId]) knowledge[cId][sId] = [];
           knowledge[cId][sId].push(set);
         } else {
-          if (!behavioral[cId]) behavioral[cId] = {};
-          if (!behavioral[cId][sId]) behavioral[cId][sId] = [];
-          behavioral[cId][sId].push(set);
+          if (!behavioural[cId]) behavioural[cId] = {};
+          if (!behavioural[cId][sId]) behavioural[cId][sId] = [];
+          behavioural[cId][sId].push(set);
         }
       } else {
         standalone.push(set);
       }
     });
 
-    return { introduction: introSets, knowledge, behavioral, standalone };
+    return { introduction: introSets, knowledge, behavioural, standalone };
   }, [questionSets]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
@@ -593,18 +593,18 @@ export function QuestionBankDashboard() {
           </AccordionSection>
         )}
 
-        {/* ── Behavioral Competencies ───────────────────────────────────── */}
-        {Object.keys(groupedSets.behavioral).length > 0 && (
+        {/* ── Behavioural Competencies ───────────────────────────────────── */}
+        {Object.keys(groupedSets.behavioural).length > 0 && (
           <AccordionSection
-            title={t('behavioral', isAR)}
+            title={t('behavioural', isAR)}
             subtitle={`${Object.keys(groupedSets.behavioral).length} ${t('competencies', isAR)}`}
             icon={<Layers className="w-5 h-5 text-purple-600" />}
             color="bg-purple-50"
-            count={Object.values(groupedSets.behavioral).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
+            count={Object.values(groupedSets.behavioural).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
             defaultOpen
           >
             <div className="mt-2 space-y-2">
-              {Object.entries(groupedSets.behavioral).map(([cId, subUnits]) => {
+              {Object.entries(groupedSets.behavioural).map(([cId, subUnits]) => {
                 const firstSet = Object.values(subUnits)[0]?.[0];
                 const competency = firstSet?.competency;
                 if (!competency) return null;

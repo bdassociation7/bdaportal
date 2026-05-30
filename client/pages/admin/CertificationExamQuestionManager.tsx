@@ -95,7 +95,7 @@ export default function CertificationExamQuestionManager() {
     question_text_ar: string;
     question_type: 'multiple_choice' | 'true_false' | 'multi_select';
     bock_domain: string;
-    competency_section: 'behavioral' | 'knowledge_based' | '';
+    competency_section: 'behavioural' | 'knowledge_based' | '';
     competency_name: string;
     difficulty: 'easy' | 'medium' | 'hard';
     points: number;
@@ -155,7 +155,7 @@ export default function CertificationExamQuestionManager() {
       question_text_ar: question.question_text_ar || '',
       question_type: question.question_type || 'multiple_choice',
       bock_domain: question.bock_domain || '',
-      competency_section: ((question as any).competency_section || '') as 'behavioral' | 'knowledge_based' | '',
+      competency_section: ((question as any).competency_section || '') as 'behavioural' | 'knowledge_based' | '',
       competency_name: (question as any).competency_name || '',
       difficulty: question.difficulty || 'medium',
       points: question.points || 1,
@@ -555,7 +555,7 @@ export default function CertificationExamQuestionManager() {
                   <Label className="text-sm">Competency Section</Label>
                   <Select
                     value={questionForm.competency_section || undefined}
-                    onValueChange={(value: 'behavioral' | 'knowledge_based') => {
+                    onValueChange={(value: 'behavioural' | 'knowledge_based') => {
                       setQuestionForm((prev) => ({
                         ...prev,
                         competency_section: value,
@@ -567,10 +567,10 @@ export default function CertificationExamQuestionManager() {
                       <SelectValue placeholder="Select section" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="behavioral">
+                      <SelectItem value="behavioural">
                         <span className="flex items-center gap-2">
                           <span className="text-amber-600">●</span>
-                          Behavioral (45%)
+                          Behavioural (45%)
                         </span>
                       </SelectItem>
                       <SelectItem value="knowledge_based">
@@ -612,13 +612,13 @@ export default function CertificationExamQuestionManager() {
               {questionForm.competency_section && questionForm.competency_name && (
                 <div className={cn(
                   "mt-2 p-2 rounded-md text-sm flex items-center gap-2",
-                  questionForm.competency_section === 'behavioral'
+                  questionForm.competency_section === 'behavioural'
                     ? "bg-amber-100 text-amber-800 border border-amber-200"
                     : "bg-blue-100 text-blue-800 border border-blue-200"
                 )}>
-                  <span>{questionForm.competency_section === 'behavioral' ? '🧠' : '📚'}</span>
+                  <span>{questionForm.competency_section === 'behavioural' ? '🧠' : '📚'}</span>
                   <span className="font-medium">
-                    {questionForm.competency_section === 'behavioral' ? 'Behavioral:' : 'Knowledge-Based:'}
+                    {questionForm.competency_section === 'behavioural' ? 'Behavioural:' : 'Knowledge-Based:'}
                   </span>
                   <span>{questionForm.competency_name}</span>
                 </div>
@@ -1121,12 +1121,12 @@ export default function CertificationExamQuestionManager() {
                           <Badge
                             variant="outline"
                             className={cn(
-                              (question as any).competency_section === 'behavioral'
+                              (question as any).competency_section === 'behavioural'
                                 ? "bg-amber-50 border-amber-300 text-amber-700"
                                 : "bg-indigo-50 border-indigo-300 text-indigo-700"
                             )}
                           >
-                            {(question as any).competency_section === 'behavioral' ? '🧠' : '📚'} {(question as any).competency_name}
+                            {(question as any).competency_section === 'behavioural' ? '🧠' : '📚'} {(question as any).competency_name}
                           </Badge>
                         )}
                       </div>

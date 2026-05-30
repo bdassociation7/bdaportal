@@ -137,7 +137,7 @@ export interface ProgramEnrollment {
   enrollment_date: string;
   completion_date?: string;
   pdc_credits_earned?: number;
-  status: 'enrolled' | 'in_progress' | 'completed' | 'dropped' | 'cancelled';
+  status: 'enroled' | 'in_progress' | 'completed' | 'dropped' | 'cancelled';
   certificate_issued: boolean;
   certificate_number?: string;
   created_at: string;

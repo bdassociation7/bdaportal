@@ -201,7 +201,7 @@ describe('UnifiedSignupService - Conflict Resolution', () => {
 
       expect(result.message).toContain('first name');
       expect(result.message).toContain('last name');
-      expect(result.message).toContain('organization');
+      expect(result.message).toContain('organisation');
     });
 
     it('should handle missing optional fields', async () => {

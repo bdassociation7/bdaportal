@@ -104,11 +104,11 @@ const translations = {
     // Terms card
     licenseTermsTitle: 'License Terms & Conditions',
     trainingDeliveryRights: 'Training Delivery Rights',
-    trainingDeliveryDesc: 'Authorized to deliver official BDA certification training programs within licensed territories.',
+    trainingDeliveryDesc: 'Authorised to deliver official BDA certification training programs within licensed territories.',
     bdaBrandingRights: 'Use of BDA Branding',
     bdaBrandingDesc: 'Licensed to use BDA and ECP logos in marketing materials according to brand guidelines.',
     examAdministration: 'Exam Administration',
-    examAdministrationDesc: 'Authorized to purchase and distribute exam vouchers to registered candidates.',
+    examAdministrationDesc: 'Authorised to purchase and distribute exam vouchers to registered candidates.',
     certifiedTrainerAssignment: 'Certified Trainer Assignment',
     certifiedTrainerDesc: 'Must use only BDA-approved Certified Trainers for all training deliveries.',
     // Compliance

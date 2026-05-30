@@ -52,7 +52,7 @@ const FIELD_LABELS: Record<string, string> = {
   phone: 'Phone Number',
   country_code: 'Country',
   job_title: 'Job Title',
-  company_name: 'Company/Organization',
+  company_name: 'Company/Organisation',
   industry: 'Industry',
   preferred_language: 'Preferred Language',
   experience_years: 'Years of Experience',
@@ -63,7 +63,7 @@ const FIELD_LABELS: Record<string, string> = {
  * Détermine les champs requis selon le rôle
  */
 function getRequiredFieldsForRole(role: string): readonly string[] {
-  if (role === 'ecp' || role === 'pdp') {
+  if (role === 'ecp' || role === 'pdp' || role === 'dual_partner') {
     return PARTNER_REQUIRED_FIELDS;
   }
 
@@ -153,7 +153,7 @@ export function getFieldLabel(fieldName: string): string {
  * Détermine la route de completion selon le rôle
  */
 export function getProfileCompletionRoute(role: string): string {
-  if (role === 'ecp' || role === 'pdp') {
+  if (role === 'ecp' || role === 'pdp' || role === 'dual_partner') {
     return '/partner/complete-profile';
   }
 

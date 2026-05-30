@@ -65,7 +65,7 @@ export class UnifiedSignupService {
       email: request.email,
       role: request.role,
       accessType: request.accessType,
-      hasOrganization: !!request.organization
+      hasOrganisation: !!request.organisation
     });
 
     try {
@@ -113,8 +113,8 @@ export class UnifiedSignupService {
       this.checkStoreAccount(email)
     ]);
 
-    const portalExists = portalCheck.status === 'fulfilled' && portalCheck.value !== null;
-    const storeExists = storeCheck.status === 'fulfilled' && storeCheck.value !== null;
+    const portalExists = portalCheck.status === 'fulfiled' && portalCheck.value !== null;
+    const storeExists = storeCheck.status === 'fulfiled' && storeCheck.value !== null;
 
     const portalData = portalExists ? portalCheck.value : undefined;
     const storeData = storeExists ? storeCheck.value : undefined;
@@ -361,7 +361,7 @@ export class UnifiedSignupService {
         first_name: request.firstName,
         last_name: request.lastName,
         bda_role: request.role || 'individual',
-        organization: request.organization,
+        organisation: request.organisation,
         signup_type: 'both' as const
       };
       console.log('📝 [createNewAccounts] Unified request data:', unifiedRequestData);
@@ -470,7 +470,7 @@ export class UnifiedSignupService {
               role: request.role || 'individual',
               wp_user_id: storeData.wp_user_id,
               wp_sync_status: 'synced',
-              organization: request.organization,
+              organisation: request.organisation,
               signup_type: 'both',
               created_from: 'portal',
               updated_at: new Date().toISOString()
@@ -504,7 +504,7 @@ export class UnifiedSignupService {
             first_name: request.firstName,
             last_name: request.lastName,
             bda_role: request.role || 'individual',
-            organization: request.organization,
+            organisation: request.organisation,
             wp_user_id: storeData.wp_user_id,
             signup_type: 'portal-only'
           }
@@ -533,7 +533,7 @@ export class UnifiedSignupService {
                 first_name: request.firstName,
                 last_name: request.lastName,
                 bda_role: request.role || 'individual',
-                organization: request.organization,
+                organisation: request.organisation,
                 wp_user_id: storeData.wp_user_id
               }
             });
@@ -549,7 +549,7 @@ export class UnifiedSignupService {
                 role: request.role || 'individual',
                 wp_user_id: storeData.wp_user_id,
                 wp_sync_status: 'synced',
-                organization: request.organization,
+                organisation: request.organisation,
                 signup_type: 'both',
                 created_from: 'portal',
                 updated_at: new Date().toISOString()
@@ -660,7 +660,7 @@ export class UnifiedSignupService {
             role: request.role || 'individual',
             wp_user_id: storeData.wp_user_id,
             wp_sync_status: 'synced',
-            organization: request.organization,
+            organisation: request.organisation,
             signup_type: 'both',
             created_from: 'portal',
             updated_at: new Date().toISOString()
@@ -933,7 +933,7 @@ export class UnifiedSignupService {
         updatedFields.push('name');
       }
       if (request.organization) {
-        updatedFields.push('organization');
+        updatedFields.push('organisation');
       }
 
       let message = 'Conflicts resolved successfully! ';
@@ -988,7 +988,7 @@ export class UnifiedSignupService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Authorisation': `Bearer ${supabaseAnonKey}`,
           'apikey': supabaseAnonKey
         },
         body: JSON.stringify({

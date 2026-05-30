@@ -359,7 +359,7 @@ export class ECPService {
         query = query.eq('certification_type', filters.certification_type);
       }
       if (filters.enrollment_status) {
-        query = query.eq('enrollment_status', filters.enrollment_status);
+        query = query.eq('enrolment_status', filters.enrollment_status);
       }
       if (filters.certified !== undefined) {
         query = query.eq('certified', filters.certified);

@@ -114,7 +114,7 @@ const translations = {
     tablePDCs: "PDCs",
     tableStatus: "Status",
     tableValidUntil: "Valid Until",
-    tableEnrollments: "Enrollments",
+    tableEnrolments: "Enrolments",
     tableActions: "Actions",
 
     // Actions
@@ -184,7 +184,7 @@ const translations = {
     tablePDCs: "PDCs",
     tableStatus: "الحالة",
     tableValidUntil: "صالح حتى",
-    tableEnrollments: "التسجيلات",
+    tableEnrolments: "التسجيلات",
     tableActions: "الإجراءات",
 
     // Actions
@@ -489,7 +489,7 @@ export default function PDPPrograms() {
                     <TableHead className={language === 'ar' ? 'text-right' : ''}>{texts.tablePDCs}</TableHead>
                     <TableHead className={language === 'ar' ? 'text-right' : ''}>{texts.tableStatus}</TableHead>
                     <TableHead className={language === 'ar' ? 'text-right' : ''}>{texts.tableValidUntil}</TableHead>
-                    <TableHead className={language === 'ar' ? 'text-right' : ''}>{texts.tableEnrollments}</TableHead>
+                    <TableHead className={language === 'ar' ? 'text-right' : ''}>{texts.tableEnrolments}</TableHead>
                     <TableHead className={language === 'ar' ? 'text-left' : 'text-right'}>{texts.tableActions}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -530,7 +530,7 @@ export default function PDPPrograms() {
                       <TableCell>
                         <div className={`flex items-center gap-1 ${language === 'ar' ? 'flex-row-reverse justify-end' : ''}`}>
                           <Users className="h-4 w-4 text-blue-600" />
-                          <span>{program.enrollment_count ?? 0}</span>
+                          <span>{program.enrolment_count ?? 0}</span>
                         </div>
                       </TableCell>
                       <TableCell className={language === 'ar' ? 'text-left' : 'text-right'}>

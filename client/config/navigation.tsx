@@ -30,6 +30,7 @@ import {
   Mail,
   Settings,
   ArrowLeftRight,
+  ArrowUpCircle,
   Shield,
   Package,
   ShoppingCart,
@@ -61,13 +62,36 @@ export const navigationConfig: NavigationConfig = {
     { id: 'my-certifications', label: 'nav.individual.myCertifications', path: '/my-certifications', icon: Award },
     { id: 'verify-certification', label: 'nav.individual.verifyCertification', path: '/verify-certification', icon: ShieldCheck },
     { id: 'pdcs', label: 'nav.individual.pdcs', path: '/pdcs', icon: Clock },
-    { id: 'authorized-providers', label: 'nav.individual.authorizedProviders', path: '/authorized-providers', icon: Building2 },
+    { id: 'authorised-providers', label: 'nav.individual.authorisedProviders', path: '/authorised-providers', icon: Building2 },
     { id: 'accredited-programs', label: 'nav.individual.accreditedPrograms', path: '/accredited-programs', icon: GraduationCap },
     { id: 'resources', label: 'nav.individual.resources', path: '/resources', icon: FolderOpen },
     { id: 'my-tickets', label: 'nav.individual.myTickets', path: '/support/my-tickets', icon: MessageCircle },
     { id: 'help-center', label: 'nav.individual.helpCenter', path: '/help-center', icon: HelpCircle },
     { id: 'return-website', label: 'nav.individual.returnWebsite', path: 'https://bda-global.org', icon: ExternalLink, external: true },
     { id: 'sign-out', label: 'nav.individual.signOut', icon: LogOut, action: 'logout' }
+  ],
+
+  // Dual Partner Navigation (ECP + PDP)
+  dual_partner: [
+    { id: 'workspace', label: 'Workspace', path: '/workspace', icon: ArrowLeftRight },
+    // ECP Section
+    { id: 'ecp-dashboard', label: 'ECP Dashboard', path: '/ecp/dashboard', icon: LayoutDashboard, section: 'ECP — Endorsed Certification Partner' },
+    { id: 'candidates', label: 'nav.ecp.candidates', path: '/ecp/candidates', icon: Users },
+    { id: 'vouchers', label: 'nav.ecp.vouchers', path: '/ecp/vouchers', icon: Ticket },
+    { id: 'trainings', label: 'nav.ecp.trainings', path: '/ecp/trainings', icon: Calendar },
+    { id: 'trainers', label: 'nav.ecp.trainers', path: '/ecp/trainers', icon: UserCheck },
+    { id: 'ecp-reports', label: 'nav.ecp.reports', path: '/ecp/reports', icon: BarChart3 },
+    { id: 'ecp-license', label: 'nav.ecp.license', path: '/ecp/license', icon: FileText },
+    { id: 'ecp-toolkit', label: 'nav.ecp.toolkit', path: '/ecp/toolkit', icon: Palette },
+    // PDP Section
+    { id: 'pdp-dashboard', label: 'PDP Dashboard', path: '/pdp/dashboard', icon: LayoutDashboard, section: 'PDP — Professional Development Partner' },
+    { id: 'programs', label: 'nav.pdp.programs', path: '/pdp/programs', icon: BookOpen },
+    { id: 'submit-program', label: 'Submit Program', path: '/pdp/submit-program', icon: PlusCircle },
+    { id: 'pdp-guidelines', label: 'nav.pdp.guidelines', path: '/pdp/guidelines', icon: FileText },
+    { id: 'pdp-toolkit', label: 'nav.pdp.toolkit', path: '/pdp/toolkit', icon: Package },
+    { id: 'annual-report', label: 'nav.pdp.annualReport', path: '/pdp/annual-report', icon: Upload },
+    { id: 'pdp-support', label: 'nav.pdp.support', path: '/pdp/support', icon: MessageCircle },
+    { id: 'sign-out', label: 'nav.ecp.signOut', icon: LogOut, action: 'logout' }
   ],
 
   // ECP Partner Navigation
@@ -83,6 +107,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'license', label: 'nav.ecp.license', path: '/ecp/license', icon: FileText },
     { id: 'toolkit', label: 'nav.ecp.toolkit', path: '/ecp/toolkit', icon: Palette },
     { id: 'help', label: 'nav.ecp.help', path: '/ecp/help', icon: HelpCircle },
+    { id: 'upgrade', label: 'Upgrade Partnership', path: '/ecp/upgrade', icon: ArrowUpCircle },
     { id: 'sign-out', label: 'nav.ecp.signOut', icon: LogOut, action: 'logout' }
   ],
 
@@ -95,6 +120,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'toolkit', label: 'nav.pdp.toolkit', path: '/pdp/toolkit', icon: Package },
     { id: 'annual-report', label: 'nav.pdp.annualReport', path: '/pdp/annual-report', icon: Upload },
     { id: 'support', label: 'nav.pdp.support', path: '/pdp/support', icon: MessageCircle },
+    { id: 'upgrade', label: 'Upgrade Partnership', path: '/pdp/upgrade', icon: ArrowUpCircle },
     { id: 'sign-out', label: 'nav.pdp.signOut', icon: LogOut, action: 'logout' }
   ],
 
@@ -109,6 +135,7 @@ export const navigationConfig: NavigationConfig = {
     // User Management Section
     { id: 'users', label: 'nav.admin.users', path: '/admin/users', icon: Users, section: 'nav.admin.section.usersPartners' },
     { id: 'memberships', label: 'nav.admin.memberships', path: '/admin/memberships', icon: Crown },
+    { id: 'upgrade-requests', label: 'Upgrade Requests', path: '/admin/upgrade-requests', icon: ArrowUpCircle },
     { id: 'partners', label: 'nav.admin.partners', path: '/admin/partners', icon: Building2 },
     { id: 'ecp-management', label: 'nav.admin.ecpManagement', path: '/admin/ecp-management', icon: Award },
     { id: 'ecp-toolkit', label: 'nav.admin.ecpToolkit', path: '/admin/ecp-toolkit', icon: Palette },
@@ -175,6 +202,7 @@ export const navigationConfig: NavigationConfig = {
     // User Management Section
     { id: 'users', label: 'nav.admin.users', path: '/admin/users', icon: Users, section: 'nav.admin.section.usersPartners' },
     { id: 'memberships', label: 'nav.admin.memberships', path: '/admin/memberships', icon: Crown },
+    { id: 'upgrade-requests', label: 'Upgrade Requests', path: '/admin/upgrade-requests', icon: ArrowUpCircle },
     { id: 'partners', label: 'nav.admin.partners', path: '/admin/partners', icon: Building2 },
     { id: 'ecp-management', label: 'nav.admin.ecpManagement', path: '/admin/ecp-management', icon: Award },
     { id: 'ecp-toolkit', label: 'nav.admin.ecpToolkit', path: '/admin/ecp-toolkit', icon: Palette },

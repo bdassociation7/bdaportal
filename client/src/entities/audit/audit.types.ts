@@ -58,7 +58,7 @@ export type AuditEventType =
   | 'exam_violation_logged'
   | 'session_timeout'
   | 'multiple_login_attempt'
-  | 'unauthorized_access_attempt'
+  | 'unauthorised_access_attempt'
 
   // Admin Actions
   | 'admin_user_modified'
@@ -257,7 +257,7 @@ export const AUDIT_EVENT_LABELS: Record<AuditEventType, string> = {
   exam_violation_logged: 'Exam Violation Logged',
   session_timeout: 'Session Timeout',
   multiple_login_attempt: 'Multiple Login Attempt',
-  unauthorized_access_attempt: 'Unauthorized Access Attempt',
+  unauthorized_access_attempt: 'Unauthorised Access Attempt',
 
   // Admin Actions
   admin_user_modified: 'Admin: User Modified',

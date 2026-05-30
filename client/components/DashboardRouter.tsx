@@ -32,6 +32,9 @@ export function DashboardRouter() {
       case 'pdp':
         dashboardPath = '/pdp/dashboard';
         break;
+      case 'dual_partner':
+        dashboardPath = '/workspace';
+        break;
       case 'admin':
       case 'super_admin':
         dashboardPath = '/admin/dashboard';

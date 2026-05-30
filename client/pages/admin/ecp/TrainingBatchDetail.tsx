@@ -365,12 +365,12 @@ export default function AdminECPTrainingBatchDetail() {
           </CardContent>
         </Card>
 
-        {/* Enrollment Info */}
+        {/* Enrolment Info */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Enrollment
+              Enrolment
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

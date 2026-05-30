@@ -692,13 +692,13 @@ export class FlashcardService {
   }
 
   /**
-   * Toggle favorite status for a card
+   * Toggle favourite status for a card
    */
-  static async toggleFavorite(
+  static async toggleFavourite(
     userId: string,
     cardId: string,
     deckId: string,
-    isFavorited: boolean
+    isFavourited: boolean
   ): Promise<ServiceResponse<UserFlashcardProgress>> {
     try {
       const { data, error } = await supabase
@@ -708,7 +708,7 @@ export class FlashcardService {
             user_id: userId,
             flashcard_id: cardId,
             deck_id: deckId,
-            is_favorited: isFavorited,
+            is_favourited: isFavourited,
           },
           {
             onConflict: 'user_id,flashcard_id',
@@ -932,7 +932,7 @@ export class FlashcardService {
       // Get card progress counts
       const { data: cardProgress, error: cardProgressError } = await supabase
         .from('user_flashcard_progress')
-        .select('status, is_favorited')
+        .select('status, is_favourited')
         .eq('user_id', userId)
         .in('deck_id', deckIds);
 
@@ -1016,7 +1016,7 @@ export class FlashcardService {
         .from('user_flashcard_progress')
         .select('flashcard_id')
         .eq('user_id', userId)
-        .eq('is_favorited', true);
+        .eq('is_favourited', true);
 
       if (progressError) throw progressError;
 
@@ -1039,7 +1039,7 @@ export class FlashcardService {
       return {
         error: {
           code: error.code || 'FETCH_ERROR',
-          message: 'Failed to fetch favorited cards',
+          message: 'Failed to fetch favourited cards',
           details: error,
         },
       };

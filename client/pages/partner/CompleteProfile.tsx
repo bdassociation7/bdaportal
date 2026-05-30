@@ -234,11 +234,11 @@ export default function PartnerCompleteProfile() {
 
               {/* Organization Information */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Organization Details</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Organisation Details</h3>
 
                 <div className="space-y-2">
                   <Label htmlFor="company_name">
-                    Organization/Company Name <span className="text-red-500">*</span>
+                    Organisation/Company Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="company_name"

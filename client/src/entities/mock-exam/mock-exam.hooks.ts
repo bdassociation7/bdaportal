@@ -20,7 +20,7 @@ export const mockExamKeys = {
   all: ['mock-exams'] as const,
   lists: () => [...mockExamKeys.all, 'list'] as const,
   list: (filters?: ExamFilters) => [...mockExamKeys.lists(), filters] as const,
-  catalog: (filters?: ExamFilters) => [...mockExamKeys.all, 'catalog', filters] as const,
+  catalogue: (filters?: ExamFilters) => [...mockExamKeys.all, 'catalogue', filters] as const,
   details: () => [...mockExamKeys.all, 'detail'] as const,
   detail: (id: string) => [...mockExamKeys.details(), id] as const,
   stats: (id: string) => [...mockExamKeys.all, 'stats', id] as const,
@@ -123,7 +123,7 @@ export function useGrantPremiumAccess() {
       queryClient.invalidateQueries({ queryKey: mockExamKeys.premiumAccess() });
       queryClient.invalidateQueries({ queryKey: mockExamKeys.examPremiumAccess(variables.examId) });
       queryClient.invalidateQueries({ queryKey: mockExamKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: mockExamKeys.catalog() });
+      queryClient.invalidateQueries({ queryKey: mockExamKeys.catalogue() });
     },
   });
 }
@@ -141,7 +141,7 @@ export function useRevokePremiumAccess() {
       queryClient.invalidateQueries({ queryKey: mockExamKeys.premiumAccess() });
       queryClient.invalidateQueries({ queryKey: mockExamKeys.examPremiumAccess(variables.examId) });
       queryClient.invalidateQueries({ queryKey: mockExamKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: mockExamKeys.catalog() });
+      queryClient.invalidateQueries({ queryKey: mockExamKeys.catalogue() });
     },
   });
 }
@@ -650,7 +650,7 @@ export function useUseMockExamCredit() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: mockExamProductKeys.credits(variables.userId) });
       queryClient.invalidateQueries({ queryKey: mockExamKeys.premiumAccess() });
-      queryClient.invalidateQueries({ queryKey: mockExamKeys.catalog() });
+      queryClient.invalidateQueries({ queryKey: mockExamKeys.catalogue() });
     },
   });
 }

@@ -12,7 +12,7 @@ import {
   useRecordReview,
   useStartStudySession,
   useEndStudySession,
-  useToggleCardFavorite,
+  useToggleCardFavourite,
 } from '@/entities/flashcards';
 import type {
   FlashcardWithProgress,
@@ -39,8 +39,8 @@ interface FlashcardDisplayProps {
   card: FlashcardWithProgress;
   isFlipped: boolean;
   onFlip: () => void;
-  isFavorite: boolean;
-  onToggleFavorite: () => void;
+  isFavourite: boolean;
+  onToggleFavourite: () => void;
 }
 
 function FlashcardDisplay({
@@ -81,7 +81,7 @@ function FlashcardDisplay({
                 onToggleFavorite();
               }}
               className={`p-2 rounded-full transition-colors ${
-                isFavorite
+                isFavourite
                   ? 'bg-yellow-100 text-yellow-500'
                   : 'bg-gray-100 text-gray-400 hover:text-yellow-500'
               }`}
@@ -241,7 +241,7 @@ export function FlashcardStudySession() {
   const recordReview = useRecordReview();
   const startSession = useStartStudySession();
   const endSession = useEndStudySession();
-  const toggleFavorite = useToggleCardFavorite();
+  const toggleFavorite = useToggleCardFavourite();
 
   const currentCard = cards?.[currentIndex];
   const totalCards = cards?.length || 0;
@@ -493,8 +493,8 @@ export function FlashcardStudySession() {
               card={currentCard}
               isFlipped={isFlipped}
               onFlip={() => setIsFlipped(!isFlipped)}
-              isFavorite={currentCard.progress?.is_favorited || false}
-              onToggleFavorite={handleToggleFavorite}
+              isFavourite={currentCard.progress?.is_favourited || false}
+              onToggleFavourite={handleToggleFavourite}
             />
 
             {/* Rating Buttons - show only when flipped */}

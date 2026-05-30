@@ -61,7 +61,7 @@ export function partnerApprovedHtml(data: PartnerApprovedData): string {
     </p>
 
     <p style="margin: 0 0 24px 0;">
-      We are pleased to inform you that <strong>${organizationName}</strong> has been approved as a <strong>BDA ${partnerTypeFull} (${partnerType})</strong>. Welcome to the BDA Partner Network!
+      We are pleased to inform you that <strong>${organisationName}</strong> has been approved as a <strong>BDA ${partnerTypeFull} (${partnerType})</strong>. Welcome to the BDA Partner Network!
     </p>
 
     <div style="background-color: #f0f9ff; border-radius: 8px; padding: 20px; margin: 24px 0;">
@@ -98,7 +98,7 @@ export function partnerApprovedHtml(data: PartnerApprovedData): string {
   `;
 
   return baseTemplate({
-    previewText: `Congratulations! ${organizationName} is now a BDA ${partnerType} Partner`,
+    previewText: `Congratulations! ${organisationName} is now a BDA ${partnerType} Partner`,
     children: content,
   });
 }
@@ -140,7 +140,7 @@ WELCOME TO THE BDA PARTNER NETWORK!
 
 Dear ${firstName},
 
-We are pleased to inform you that ${organizationName} has been approved as a BDA ${partnerTypeFull} (${partnerType}). Welcome to the BDA Partner Network!
+We are pleased to inform you that ${organisationName} has been approved as a BDA ${partnerTypeFull} (${partnerType}). Welcome to the BDA Partner Network!
 
 YOUR PARTNER ID: ${partnerNumber}
 
@@ -161,5 +161,5 @@ If you have any questions, please contact our partner support team at partners@b
 }
 
 export function getPartnerApprovedSubject(organizationName: string, partnerType: 'ECP' | 'PDP'): string {
-  return `✓ ${organizationName} Approved as BDA ${partnerType} Partner`;
+  return `✓ ${organisationName} Approved as BDA ${partnerType} Partner`;
 }

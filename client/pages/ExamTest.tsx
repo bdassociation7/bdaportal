@@ -99,7 +99,7 @@ export default function ExamTest() {
       question: "What is the ADDIE model in training design?",
       options: [
         "A certification program",
-        "A systematic approach: Analyze, Design, Develop, Implement, Evaluate",
+        "A systematic approach: Analyse, Design, Develop, Implement, Evaluate",
         "A type of learning management system",
         "A government training standard",
       ],

@@ -52,7 +52,7 @@ export function voucherCreatedHtml(data: VoucherCreatedData): string {
     </p>
 
     <p style="margin: 0 0 24px 0;">
-      A new exam voucher has been created for your organization. ${candidateName ? `This voucher has been assigned to <strong>${candidateName}</strong>.` : 'You can assign this voucher to a candidate or share the booking link directly.'}
+      A new exam voucher has been created for your organisation. ${candidateName ? `This voucher has been assigned to <strong>${candidateName}</strong>.` : 'You can assign this voucher to a candidate or share the booking link directly.'}
     </p>
 
     ${infoBox('Voucher Details', infoItems)}
@@ -104,7 +104,7 @@ EXAM VOUCHER CREATED
 
 Dear ${partnerName},
 
-A new exam voucher has been created for your organization.${candidateName ? ` This voucher has been assigned to ${candidateName}.` : ''}
+A new exam voucher has been created for your organisation.${candidateName ? ` This voucher has been assigned to ${candidateName}.` : ''}
 
 VOUCHER DETAILS
 ---------------

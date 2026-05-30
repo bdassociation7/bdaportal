@@ -87,9 +87,9 @@ const translations = {
 
     // Overview tab
     aboutPdpTitle: "About PDP Accreditation",
-    aboutPdpDesc: "The Professional Development Provider (PDP) program enables training organizations to offer BDA-accredited professional development programs. Accredited programs allow participants to earn Professional Development Credits (PDCs) toward maintaining their BDA certifications.",
+    aboutPdpDesc: "The Professional Development Provider (PDP) program enables training organisations to offer BDA-accredited professional development programs. Accredited programs allow participants to earn Professional Development Credits (PDCs) toward maintaining their BDA certifications.",
     recognition: "Recognition",
-    recognitionDesc: "Your programs are recognized by BDA as meeting quality standards",
+    recognitionDesc: "Your programs are recognised by BDA as meeting quality standards",
     pdcCredits: "PDC Credits",
     pdcCreditsDesc: "Participants can earn PDCs for certification maintenance",
     bockAlignment: "BoCK Alignment",

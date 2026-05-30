@@ -16,7 +16,7 @@ export interface Lesson extends LessonRow {
     id: string;
     competency_name: string;
     competency_name_ar?: string | null;
-    section_type: 'knowledge_based' | 'behavioral';
+    section_type: 'knowledge_based' | 'behavioural';
     certification_type: 'CP' | 'SCP';
     order_index?: number;
     exam_language?: 'en' | 'ar';
@@ -73,7 +73,7 @@ export type ExamLanguage = 'en' | 'ar';
 export interface LessonFilters {
   module_id?: string;
   certification_type?: 'CP' | 'SCP';
-  section_type?: 'knowledge_based' | 'behavioral';
+  section_type?: 'knowledge_based' | 'behavioural';
   is_published?: boolean;
   order_index?: 1 | 2 | 3;
   has_quiz?: boolean;

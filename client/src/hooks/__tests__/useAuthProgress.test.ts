@@ -8,7 +8,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useAuthProgress, AUTH_PROGRESS_STEPS } from '../useAuthProgress';
 
 describe('useAuthProgress', () => {
-  describe('Initialization', () => {
+  describe('Initialisation', () => {
     it('should initialize with default steps', () => {
       const { result } = renderHook(() => useAuthProgress());
 

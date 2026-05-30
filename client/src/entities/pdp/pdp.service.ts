@@ -126,7 +126,7 @@ export class PDPService {
 
   static async getProgram(id: string): Promise<ServiceResult<PDPProgram>> {
     try {
-      // Get program with enrollment stats using RPC
+      // Get program with enrolment stats using RPC
       const { data: programsWithStats, error: rpcError } = await supabase
         .rpc('get_pdp_program_with_stats', { p_program_id: id });
 
@@ -317,19 +317,19 @@ export class PDPService {
         .eq('provider_id', user.id);
 
       const programIds = programs?.map((p) => p.id) || [];
-      let enrollmentCount = 0;
+      let enrolmentCount = 0;
       let completionCount = 0;
       let pdcCredits = 0;
 
       if (programIds.length > 0) {
-        const { data: enrollments } = await supabase
+        const { data: enrolments } = await supabase
           .from('pdp_program_enrollments')
           .select('status, pdc_credits_earned')
           .in('program_id', programIds);
 
-        enrollmentCount = enrollments?.length || 0;
-        completionCount = enrollments?.filter((e) => e.status === 'completed').length || 0;
-        pdcCredits = enrollments?.reduce((sum, e) => sum + (e.pdc_credits_earned || 0), 0) || 0;
+        enrolmentCount = enrolments?.length || 0;
+        completionCount = enrolments?.filter((e) => e.status === 'completed').length || 0;
+        pdcCredits = enrolments?.reduce((sum, e) => sum + (e.pdc_credits_earned || 0), 0) || 0;
       }
 
       const { data, error } = await supabase
@@ -338,10 +338,10 @@ export class PDPService {
           ...dto,
           partner_id: user.id,
           total_programs: programs?.length || 0,
-          total_enrollments: enrollmentCount,
+          total_enrolments: enrolmentCount,
           total_completions: completionCount,
           total_pdc_credits_issued: pdcCredits,
-          completion_rate: enrollmentCount > 0 ? (completionCount / enrollmentCount) * 100 : null,
+          completion_rate: enrolmentCount > 0 ? (completionCount / enrolmentCount) * 100 : null,
           status: 'draft',
         })
         .select()

@@ -158,7 +158,7 @@ export const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, {
     action: "Continue using Portal features"
   },
   [AUTH_ERROR_CODES.WP_SYNC_FAILED]: {
-    user: "Account sync incomplete. Data will be synchronized later.",
+    user: "Account sync incomplete. Data will be synchronised later.",
     debug: "WordPress profile sync failed",
     recoverable: true,
     action: "Automatic retry will occur"

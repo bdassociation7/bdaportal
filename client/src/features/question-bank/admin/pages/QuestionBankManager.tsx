@@ -101,7 +101,7 @@ export function QuestionBankManager() {
       allSections: 'All Sections',
       introduction: 'Introduction',
       knowledge: 'Knowledge',
-      behavioral: 'Behavioral',
+      behavioral: 'Behavioural',
       status: 'Status',
       allStatus: 'All Status',
       titleColumn: 'Title',
@@ -504,7 +504,7 @@ export function QuestionBankManager() {
             <SelectItem value="all">{texts.allSections}</SelectItem>
             <SelectItem value="introduction">{texts.introduction}</SelectItem>
             <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
-            <SelectItem value="behavioral">{texts.behavioral}</SelectItem>
+            <SelectItem value="behavioural">{texts.behavioral}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={publishedFilter} onValueChange={setPublishedFilter}>
@@ -719,7 +719,7 @@ export function QuestionBankManager() {
                     }`}
                   >
                     {set.section_type === 'introduction' ? texts.introduction :
-                     set.section_type === 'knowledge' ? texts.knowledge : texts.behavioral}
+                     set.section_type === 'knowledge' ? texts.knowledge : texts.behavioural}
                   </span>
                 </td>
                 <td className="py-3 px-4 text-center">
@@ -955,7 +955,7 @@ function QuestionSetDialog({
                 <SelectContent>
                   <SelectItem value="introduction">{texts.introduction}</SelectItem>
                   <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
-                  <SelectItem value="behavioral">{texts.behavioral}</SelectItem>
+                  <SelectItem value="behavioural">{texts.behavioural}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

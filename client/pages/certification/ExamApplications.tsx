@@ -192,15 +192,23 @@ export default function ExamApplications() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredVouchers.map((voucher) => (
+          {filteredVouchers.map((voucher) => {
+            // Count active vouchers of the same cert type to determine Transfer button visibility
+            const totalActiveVouchersSameCert = activeVouchers.filter(
+              (v) => v.certification_type === voucher.certification_type
+            ).length;
+            return (
             <VoucherCard
               key={voucher.id}
               voucher={voucher}
               isSelected={selectedVoucherId === voucher.id}
               onSelect={() => handleSelectVoucher(voucher.id)}
               disabled={!voucher.displayInfo.canUse}
+              totalActiveVouchersSameCert={totalActiveVouchersSameCert}
             />
-          ))}
+            );
+          })}
+        
         </div>
       )}
 

@@ -48,8 +48,8 @@ export function ProfileTab() {
       jobTitlePlaceholder: 'e.g., Business Development Manager',
       companyName: 'Company Name',
       companyPlaceholder: 'Enter your company name',
-      organization: 'Organization',
-      organizationPlaceholder: 'Organization or institution',
+      organization: 'Organisation',
+      organizationPlaceholder: 'Organisation or institution',
       industry: 'Industry',
       industryPlaceholder: 'e.g., Technology, Finance, Healthcare',
       yearsExperience: 'Years of Experience',
@@ -421,9 +421,9 @@ export function ProfileTab() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="organization">{texts.organization}</Label>
+              <Label htmlFor="organisation">{texts.organization}</Label>
               <Input
-                id="organization"
+                id="organisation"
                 value={profileData.organization}
                 onChange={(e) =>
                   setProfileData((prev) => ({ ...prev, organization: e.target.value }))

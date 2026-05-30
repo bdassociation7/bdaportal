@@ -332,7 +332,7 @@ export default function VerifyIdentity() {
           <AlertTitle>Why do we need this?</AlertTitle>
           <AlertDescription>
             As per certification requirements, we must verify that your legal name matches your government-issued ID.
-            All documents are securely stored and only accessible to authorized administrators.
+            All documents are securely stored and only accessible to authorised administrators.
           </AlertDescription>
         </Alert>
 

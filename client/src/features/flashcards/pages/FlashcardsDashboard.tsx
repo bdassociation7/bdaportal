@@ -101,8 +101,8 @@ function t(key: string, isAR: boolean): string {
     dueAlertSub: 'You have {n} cards that need review today. Click on any deck to start studying!',
     introduction: 'Introduction',
     introSub: 'Foundation cards to get started',
-    behavioral: 'Behavioral Competencies',
-    behavioralSub: 'Soft skills and professional behaviors',
+    behavioral: 'Behavioural Competencies',
+    behavioralSub: 'Soft skills and professional behaviours',
     knowledge: 'Knowledge-Based Competencies',
     knowledgeSub: 'Technical knowledge and expertise',
     additional: 'Additional Flashcards',
@@ -337,10 +337,10 @@ export function FlashcardsDashboard() {
   const { data: stats } = useFlashcardStats(user?.id, certificationType, dbLanguage);
 
   const groupedDecks = useMemo(() => {
-    if (!decks) return { introduction: [], knowledge: {}, behavioral: {}, standalone: [] };
+    if (!decks) return { introduction: [], knowledge: {}, behavioural: {}, standalone: [] };
     const introDecks: FlashcardDeckWithProgress[] = [];
     const knowledge: Record<string, Record<string, FlashcardDeckWithProgress[]>> = {};
-    const behavioral: Record<string, Record<string, FlashcardDeckWithProgress[]>> = {};
+    const behavioural: Record<string, Record<string, FlashcardDeckWithProgress[]>> = {};
     const standalone: FlashcardDeckWithProgress[] = [];
 
     decks.forEach((deck) => {
@@ -353,15 +353,15 @@ export function FlashcardsDashboard() {
           if (!knowledge[cId][sId]) knowledge[cId][sId] = [];
           knowledge[cId][sId].push(deck);
         } else {
-          if (!behavioral[cId]) behavioral[cId] = {};
-          if (!behavioral[cId][sId]) behavioral[cId][sId] = [];
-          behavioral[cId][sId].push(deck);
+          if (!behavioural[cId]) behavioural[cId] = {};
+          if (!behavioural[cId][sId]) behavioural[cId][sId] = [];
+          behavioural[cId][sId].push(deck);
         }
       } else {
         standalone.push(deck);
       }
     });
-    return { introduction: introDecks, knowledge, behavioral, standalone };
+    return { introduction: introDecks, knowledge, behavioural, standalone };
   }, [decks]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
@@ -498,18 +498,18 @@ export function FlashcardsDashboard() {
           </AccordionSection>
         )}
 
-        {/* Behavioral */}
-        {Object.keys(groupedDecks.behavioral).length > 0 && (
+        {/* Behavioural */}
+        {Object.keys(groupedDecks.behavioural).length > 0 && (
           <AccordionSection
-            title={t('behavioral', isAR)}
+            title={t('behavioural', isAR)}
             subtitle={`${Object.keys(groupedDecks.behavioral).length} ${isAR ? 'كفاءة' : 'Competencies'}`}
             icon={<Layers className="w-5 h-5 text-purple-600" />}
             color="bg-purple-50"
-            count={Object.values(groupedDecks.behavioral).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
+            count={Object.values(groupedDecks.behavioural).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
             defaultOpen
           >
             <div className="mt-2 space-y-2">
-              {Object.entries(groupedDecks.behavioral).map(([cId, subUnits]) => {
+              {Object.entries(groupedDecks.behavioural).map(([cId, subUnits]) => {
                 const firstDeck = Object.values(subUnits)[0]?.[0];
                 const competency = firstDeck?.competency;
                 if (!competency) return null;

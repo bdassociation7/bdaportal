@@ -195,7 +195,7 @@ export const BATCH_STATUS_INFO: Record<BatchStatus, { label: string; labelAr: st
 };
 
 export const ENROLLMENT_STATUS_INFO: Record<EnrollmentStatus, { label: string; labelAr: string; color: string }> = {
-  enrolled: { label: 'Enrolled', labelAr: 'مسجل', color: 'blue' },
+  enrolled: { label: 'Enroled', labelAr: 'مسجل', color: 'blue' },
   attending: { label: 'Attending', labelAr: 'حاضر', color: 'yellow' },
   completed: { label: 'Completed', labelAr: 'مكتمل', color: 'green' },
   dropped: { label: 'Dropped', labelAr: 'انسحب', color: 'red' },

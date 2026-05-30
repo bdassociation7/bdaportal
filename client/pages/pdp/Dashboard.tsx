@@ -50,7 +50,7 @@ const translations = {
     totalLabel: "total",
     pendingReview: "Pending Review",
     awaitingApproval: "Awaiting approval",
-    totalEnrollments: "Total Enrollments",
+    totalEnrollments: "Total Enrolments",
     allTime: "All time",
     pdcsIssued: "PDCs Issued",
     professionalCredits: "Professional credits",
@@ -67,7 +67,7 @@ const translations = {
     myPrograms: "My Programs",
     viewAll: "View All",
     pdcs: "PDCs",
-    enrolled: "enrolled",
+    enrolled: "enroled",
     noProgramsYet: "No programs yet",
     submitFirstProgram: "Submit Your First Program",
 
@@ -92,7 +92,7 @@ const translations = {
     manage: "Manage",
     annualReport: "Annual Report",
     programs: "programs",
-    enrollments: "enrollments",
+    enrolments: "enrolments",
     noAnnualReportsYet: "No annual reports yet",
     createReport: "Create Report",
 
@@ -127,7 +127,7 @@ const translations = {
     totalLabel: "الإجمالي",
     pendingReview: "قيد المراجعة",
     awaitingApproval: "في انتظار الموافقة",
-    totalEnrollments: "إجمالي التسجيلات",
+    totalEnrolments: "إجمالي التسجيلات",
     allTime: "كل الأوقات",
     pdcsIssued: "PDCs صادرة",
     professionalCredits: "ساعات التطوير المهني",
@@ -144,7 +144,7 @@ const translations = {
     myPrograms: "برامجي",
     viewAll: "عرض الكل",
     pdcs: "PDCs",
-    enrolled: "مسجل",
+    enroled: "مسجل",
     noProgramsYet: "لا توجد برامج بعد",
     submitFirstProgram: "قدّم برنامجك الأول",
 
@@ -169,7 +169,7 @@ const translations = {
     manage: "إدارة",
     annualReport: "التقرير السنوي",
     programs: "برامج",
-    enrollments: "تسجيلات",
+    enrolments: "تسجيلات",
     noAnnualReportsYet: "لا توجد تقارير سنوية بعد",
     createReport: "إنشاء تقرير",
 
@@ -359,9 +359,9 @@ export default function PDPDashboard() {
                   </div>
                   <div className={language === 'ar' ? 'mr-4 text-right' : 'ml-4'}>
                     <p className="text-2xl font-bold text-gray-900">
-                      {stats?.total_enrollments?.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US') ?? 0}
+                      {stats?.total_enrolments?.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US') ?? 0}
                     </p>
-                    <p className="text-sm font-medium text-gray-600">{texts.totalEnrollments}</p>
+                    <p className="text-sm font-medium text-gray-600">{texts.totalEnrolments}</p>
                     <p className="text-xs text-gray-500">{texts.allTime}</p>
                   </div>
                 </div>
@@ -432,7 +432,7 @@ export default function PDPDashboard() {
                       </div>
                       <div className={`flex items-center gap-1 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                         <Users className="h-4 w-4" />
-                        <span>{program.enrollment_count ?? 0} {texts.enrolled}</span>
+                        <span>{program.enrolment_count ?? 0} {texts.enroled}</span>
                       </div>
                     </div>
                   </div>
@@ -628,7 +628,7 @@ export default function PDPDashboard() {
                     <div className={language === 'ar' ? 'text-right' : ''}>
                       <p className="font-medium">{report.report_year} {texts.annualReport}</p>
                       <p className="text-sm text-gray-600">
-                        {report.total_programs} {texts.programs} | {report.total_enrollments} {texts.enrollments}
+                        {report.total_programs} {texts.programs} | {report.total_enrolments} {texts.enrolments}
                       </p>
                     </div>
                     <Badge className={

@@ -28,7 +28,7 @@ const translations = {
   en: {
     pageTitle: "BDA Body of Competency & Knowledge (BoCK)",
     pageDescription: "Reference guide for mapping your programs to BDA competencies",
-    behavioralCompetencies: "Behavioral Competencies",
+    behavioralCompetencies: "Behavioural Competencies",
     knowledgeCompetencies: "Knowledge-Based Competencies",
     behavioralFocus: "Focus on professional skills, mindset, and interpersonal capabilities",
     knowledgeFocus: "Focus on technical knowledge, methodologies, and domain expertise",
@@ -45,7 +45,7 @@ const translations = {
     relatedAreasDesc: "Competencies that are touched upon but not the main focus. Optional to specify.",
     bestPractices: "Best Practices for Mapping",
     practice1: "Review your program's learning objectives and match them to specific competencies",
-    practice2: "Consider both behavioral and knowledge competencies - most programs span both domains",
+    practice2: "Consider both behavioural and knowledge competencies - most programs span both domains",
     practice3: "Be realistic - don't claim competencies that aren't directly addressed in your content",
     practice4: "Document how each claimed competency is developed through specific program activities",
   },
@@ -98,7 +98,7 @@ export default function CompetencyMapping() {
   const texts = translations[language];
   const isRTL = language === "ar";
 
-  const behavioralCompetencies = competencies?.filter(c => c.domain === 'Behavioral') || [];
+  const behavioralCompetencies = competencies?.filter(c => c.domain === 'Behavioural') || [];
   const knowledgeCompetencies = competencies?.filter(c => c.domain === 'Knowledge') || [];
 
   if (isLoading) {
@@ -165,9 +165,9 @@ export default function CompetencyMapping() {
       </div>
 
       {/* Competencies Tabs */}
-      <Tabs defaultValue="behavioral" className="mt-6">
+      <Tabs defaultValue="behavioural" className="mt-6">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="behavioral" className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+          <TabsTrigger value="behavioural" className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
             <Brain className="h-4 w-4" />
             {texts.behavioralCompetencies}
           </TabsTrigger>
@@ -177,7 +177,7 @@ export default function CompetencyMapping() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="behavioral" className="mt-6">
+        <TabsContent value="behavioural" className="mt-6">
           <div className="grid gap-4">
             {behavioralCompetencies.map(comp => {
               const Icon = competencyIcons[comp.code] || Target;

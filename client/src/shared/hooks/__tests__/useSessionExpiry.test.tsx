@@ -57,7 +57,7 @@ describe('useSessionExpiry', () => {
     vi.clearAllMocks();
   });
 
-  describe('Initialization', () => {
+  describe('Initialisation', () => {
     it('should subscribe to session manager on mount', () => {
       renderHook(() => useSessionExpiry());
 

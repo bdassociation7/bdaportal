@@ -248,8 +248,8 @@ export function useCurriculumDashboard(
   const knowledgeModules = modulesQuery.data?.filter(
     (m) => m.section_type === 'knowledge_based'
   ) || [];
-  const behavioralModules = modulesQuery.data?.filter(
-    (m) => m.section_type === 'behavioral'
+  const behaviouralModules = modulesQuery.data?.filter(
+    (m) => m.section_type === 'behavioural'
   ) || [];
   // Intro (Module 0) and Outro (Module 15) - SHRM-style
   const introModules = modulesQuery.data?.filter(

@@ -250,7 +250,7 @@ export default function AdminECPTrainingBatches() {
                 <TableHead>Certification</TableHead>
                 <TableHead>Dates</TableHead>
                 <TableHead>Trainer</TableHead>
-                <TableHead>Enrollment</TableHead>
+                <TableHead>Enrolment</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>

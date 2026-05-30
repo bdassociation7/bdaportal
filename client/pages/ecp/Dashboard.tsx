@@ -59,7 +59,7 @@ const translations = {
     upcomingTrainings: 'Upcoming Trainings',
     noUpcomingTrainings: 'No upcoming trainings',
     scheduleOneNow: 'Schedule one now',
-    enrolled: 'enrolled',
+    enroled: 'enroled',
     // Recent Trainees
     recentTrainees: 'Recent Trainees',
     viewAll: 'View All',
@@ -106,7 +106,7 @@ const translations = {
     upcomingTrainings: 'التدريبات القادمة',
     noUpcomingTrainings: 'لا توجد تدريبات قادمة',
     scheduleOneNow: 'جدولة واحدة الآن',
-    enrolled: 'مسجل',
+    enroled: 'مسجل',
     // Recent Trainees
     recentTrainees: 'المتدربون الجدد',
     viewAll: 'عرض الكل',
@@ -365,7 +365,7 @@ export default function ECPDashboard() {
                           BDA-{batch.certification_type}™
                         </Badge>
                         <span className="text-xs text-blue-600">
-                          {batch.trainee_count || 0} {texts.enrolled}
+                          {batch.trainee_count || 0} {texts.enroled}
                         </span>
                       </div>
                     </div>
@@ -431,7 +431,7 @@ export default function ECPDashboard() {
                           ? texts.certified
                           : trainee.exam_passed
                             ? texts.examPassed
-                            : trainee.enrollment_status}
+                            : trainee.enrolment_status}
                       </Badge>
                     </div>
                   </div>

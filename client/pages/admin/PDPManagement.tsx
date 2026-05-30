@@ -90,6 +90,7 @@ interface PDPPartner {
   contact_name: string;
   country: string;
   created_at: string;
+  partner_type?: string;
   license?: PDPLicense;
 }
 
@@ -156,7 +157,7 @@ async function fetchPDPPartners() {
   const { data, error } = await supabase
     .from('partners')
     .select('*')
-    .eq('partner_type', 'pdp')
+    .in('partner_type', ['pdp', 'dual_partner'])
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -177,6 +178,7 @@ async function fetchPDPPartners() {
     contact_name: p.contact_person || '',
     country: p.country || 'N/A',
     created_at: p.created_at,
+    partner_type: p.partner_type,
     license: licenseMap.get(p.id),
   })) || [];
 }
@@ -231,7 +233,12 @@ export default function PDPManagement() {
     country: '',
     city: '',
     address: '',
+    pdp_tier: 'standard' as 'standard' | 'advanced' | 'premium',
   });
+
+  // Upgrade PDP → Dual Partner dialog state
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [selectedPartnerForUpgrade, setSelectedPartnerForUpgrade] = useState<PDPPartner | null>(null);
   const [licenseDialogOpen, setLicenseDialogOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<PDPPartner | null>(null);
   const [editLicenseOpen, setEditLicenseOpen] = useState(false);
@@ -286,7 +293,7 @@ export default function PDPManagement() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
+            'Authorisation': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             email: formData.email,
@@ -354,7 +361,7 @@ export default function PDPManagement() {
           status: 'active',
           issue_date: new Date().toISOString(),
           expiry_date: expiryDate.toISOString(),
-          max_programs: 5,
+          max_programs: formData.pdp_tier === 'premium' ? 12 : formData.pdp_tier === 'advanced' ? 8 : 5,
           programs_used: 0,
           program_submission_enabled: true,
         });
@@ -381,6 +388,7 @@ export default function PDPManagement() {
         country: '',
         city: '',
         address: '',
+        pdp_tier: 'standard',
       });
     },
     onError: (error: Error) => {
@@ -523,6 +531,62 @@ export default function PDPManagement() {
     },
     onError: (error: Error) => {
       toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // ── Upgrade PDP → Dual Partner mutation ──────────────────────────────────
+  const upgradePartnerMutation = useMutation({
+    mutationFn: async ({ partnerId }: { partnerId: string }) => {
+      // 1. Get partner info
+      const { data: partnerData } = await supabase
+        .from('partners')
+        .select('company_name, contact_person, contact_email, contact_phone, country')
+        .eq('id', partnerId)
+        .single();
+
+      if (!partnerData) throw new Error('Partner not found');
+
+      // 2. Get current session for create-user call
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      // 3. Create ECP license for this partner
+      const countryCode = partnerData.country?.toUpperCase() || 'XX';
+      const year = new Date().getFullYear();
+      const timestamp = Date.now().toString().slice(-4);
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + 12);
+
+      const { error: licErr } = await supabase.from('ecp_licenses').insert({
+        partner_id: partnerId,
+        license_number: `BDA-ECP-${countryCode}-${year}-${timestamp}`,
+        partner_code: `ECP-${countryCode}-${timestamp}`,
+        status: 'active',
+        issue_date: new Date().toISOString().split('T')[0],
+        expiry_date: expiryDate.toISOString().split('T')[0],
+        territories: [countryCode],
+        programs: ['CP'],
+        renewal_requested: false,
+      });
+      if (licErr) throw licErr;
+
+      // 4. Update user role and partner_type
+      await supabase.from('users').update({ role: 'dual_partner' }).eq('id', partnerId);
+      const { error: ptErr } = await supabase.from('partners').update({ partner_type: 'dual_partner' }).eq('id', partnerId);
+      if (ptErr) throw ptErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pdp-partners'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-partners'] });
+      toast({
+        title: 'Partnership Upgraded',
+        description: 'Partner now has both ECP and PDP partnerships. They will see a Workspace Switcher on next login.',
+      });
+      setUpgradeDialogOpen(false);
+      setSelectedPartnerForUpgrade(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Upgrade Failed', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -882,6 +946,22 @@ export default function PDPManagement() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 {t('partners.editPartner')}
                               </DropdownMenuItem>
+                              {/* Upgrade to Dual Partner — only for pure PDP partners */}
+                              {partner.partner_type === 'pdp' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedPartnerForUpgrade(partner);
+                                      setUpgradeDialogOpen(true);
+                                    }}
+                                    className="text-[#0d2b5e] font-medium"
+                                  >
+                                    <Layers className="h-4 w-4 mr-2 text-[#0d2b5e]" />
+                                    Add ECP Partnership
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

@@ -254,7 +254,7 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
                 required
               >
                 <option value="knowledge_based">Knowledge-Based</option>
-                <option value="behavioral">Behavioral</option>
+                <option value="behavioural">Behavioural</option>
               </select>
             </div>
 

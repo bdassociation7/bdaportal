@@ -27,7 +27,7 @@ const SECTION_STYLES: Record<string, { badge: React.CSSProperties; accent: strin
 
 const SECTION_LABELS: Record<string, string> = {
   intro: 'Introduction',
-  behavioral: 'Behavioral',
+  behavioral: 'Behavioural',
   knowledge_based: 'Knowledge',
   outro: 'Wrap-Up',
 };

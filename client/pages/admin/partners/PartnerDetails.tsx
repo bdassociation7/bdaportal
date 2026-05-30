@@ -301,8 +301,8 @@ export default function PartnerDetails() {
                   </div>
                   <div className="text-center p-4 border rounded-lg">
                     <Users className="h-6 w-6 mx-auto text-blue-600 mb-2" />
-                    <p className="text-2xl font-bold">{pdpStats.total_enrollments}</p>
-                    <p className="text-sm text-gray-500">Enrollments</p>
+                    <p className="text-2xl font-bold">{pdpStats.total_enrolments}</p>
+                    <p className="text-sm text-gray-500">Enrolments</p>
                   </div>
                   <div className="text-center p-4 border rounded-lg">
                     <Award className="h-6 w-6 mx-auto text-purple-600 mb-2" />

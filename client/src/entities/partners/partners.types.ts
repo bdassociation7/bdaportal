@@ -3,7 +3,7 @@
  * ECP and PDP partner management (subset of users with partner roles)
  */
 
-export type PartnerType = 'ecp' | 'pdp';
+export type PartnerType = 'ecp' | 'pdp' | 'dual_partner';
 
 export interface Partner {
   id: string;
@@ -56,6 +56,7 @@ export interface PartnerStats {
   active_partners: number;
   ecp_partners: number;
   pdp_partners: number;
+  dual_partners: number;
   profile_completion_rate: number;
   new_partners_this_month: number;
 }

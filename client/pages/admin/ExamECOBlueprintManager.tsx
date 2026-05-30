@@ -40,7 +40,7 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 
 type CertType = 'CP' | 'SCP';
-type Domain = 'behavioral' | 'knowledge_based';
+type Domain = 'behavioural' | 'knowledge_based';
 
 interface PoolRow {
   competency_section: Domain;
@@ -158,7 +158,7 @@ function useECOData(certType: CertType) {
       // Sort: behavioral first, then knowledge_based; alphabetical within
       pool.sort((a, b) => {
         if (a.competency_section !== b.competency_section) {
-          return a.competency_section === 'behavioral' ? -1 : 1;
+          return a.competency_section === 'behavioural' ? -1 : 1;
         }
         return a.competency_name.localeCompare(b.competency_name);
       });
@@ -564,11 +564,11 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
     </Alert>
   );
 
-  const behavioralRows = data.pool.filter(r => r.competency_section === 'behavioral');
+  const behaviouralRows = data.pool.filter(r => r.competency_section === 'behavioural');
   const knowledgeRows = data.pool.filter(r => r.competency_section === 'knowledge_based');
 
   const total = Object.values(counts).reduce((s, v) => s + (v || 0), 0);
-  const behavioralTotal = behavioralRows.reduce((s, r) => s + (counts[r.competency_name] || 0), 0);
+  const behaviouralTotal = behaviouralRows.reduce((s, r) => s + (counts[r.competency_name] || 0), 0);
   const knowledgeTotal = knowledgeRows.reduce((s, r) => s + (counts[r.competency_name] || 0), 0);
   const totalOk = total === EXAM_TOTAL;
 
@@ -723,11 +723,11 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
         </Alert>
       )}
 
-      {/* Behavioral domain */}
+      {/* Behavioural domain */}
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="font-semibold">Behavioral Domain</h3>
-          <Badge variant="secondary">{behavioralTotal} questions ({Math.round(behavioralTotal / EXAM_TOTAL * 100)}%)</Badge>
+          <h3 className="font-semibold">Behavioural Domain</h3>
+          <Badge variant="secondary">{behaviouralTotal} questions ({Math.round(behaviouralTotal / EXAM_TOTAL * 100)}%)</Badge>
           <span className="text-xs text-muted-foreground">Target: 45% = 54 questions</span>
         </div>
         <Table>
@@ -741,10 +741,10 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {renderRows(behavioralRows)}
+            {renderRows(behaviouralRows)}
             <TableRow className="bg-muted/30">
-              <TableCell colSpan={3} className="font-medium text-right text-sm text-muted-foreground">Behavioral subtotal</TableCell>
-              <TableCell className="text-center font-semibold">{behavioralTotal}</TableCell>
+              <TableCell colSpan={3} className="font-medium text-right text-sm text-muted-foreground">Behavioural subtotal</TableCell>
+              <TableCell className="text-center font-semibold">{behaviouralTotal}</TableCell>
               <TableCell />
             </TableRow>
           </TableBody>

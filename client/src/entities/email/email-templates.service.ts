@@ -304,7 +304,7 @@ export async function queuePartnerApprovedEmail(
 ): Promise<QueueEmailResult> {
   const htmlBody = partnerApprovedHtml(data);
   const textBody = partnerApprovedText(data);
-  const subject = getPartnerApprovedSubject(data.organizationName, data.partnerType);
+  const subject = getPartnerApprovedSubject(data.organisationName, data.partnerType);
 
   return queueEmailWithTemplate(
     recipientEmail,

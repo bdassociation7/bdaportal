@@ -65,9 +65,9 @@ export const flashcardKeys = {
   adminStats: (certType?: CertificationType) =>
     [...flashcardKeys.all, 'admin-stats', certType] as const,
 
-  // Favorites
-  favorites: (userId: string) =>
-    [...flashcardKeys.all, 'favorites', userId] as const,
+  // Favourites
+  favourites: (userId: string) =>
+    [...flashcardKeys.all, 'favourites', userId] as const,
 
   // Sessions
   sessions: (userId: string) =>
@@ -262,17 +262,17 @@ export function useFlashcardStats(
 }
 
 /**
- * Get favorited flashcards
+ * Get favourited flashcards
  */
-export function useFavoritedCards(
+export function useFavouritedCards(
   userId: string | undefined,
   certificationType?: string
 ) {
   return useQuery({
-    queryKey: flashcardKeys.favorites(userId || ''),
+    queryKey: flashcardKeys.favourites(userId || ''),
     queryFn: async () => {
       if (!userId) throw new Error('User ID required');
-      const result = await FlashcardService.getFavoritedCards(
+      const result = await FlashcardService.getFavouritedCards(
         userId,
         certificationType
       );
@@ -518,9 +518,9 @@ export function useRecordReview() {
 }
 
 /**
- * Toggle favorite
+ * Toggle favourite
  */
-export function useToggleCardFavorite() {
+export function useToggleCardFavourite() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -528,25 +528,25 @@ export function useToggleCardFavorite() {
       userId,
       cardId,
       deckId,
-      isFavorited,
+      isFavourited,
     }: {
       userId: string;
       cardId: string;
       deckId: string;
-      isFavorited: boolean;
+      isFavourited: boolean;
     }) => {
-      const result = await FlashcardService.toggleFavorite(
+      const result = await FlashcardService.toggleFavourite(
         userId,
         cardId,
         deckId,
-        isFavorited
+        isFavourited
       );
       if (result.error) throw result.error;
       return result.data!;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: flashcardKeys.favorites(variables.userId),
+        queryKey: flashcardKeys.favourites(variables.userId),
       });
       queryClient.invalidateQueries({
         queryKey: flashcardKeys.cardsWithProgress(

@@ -181,7 +181,7 @@ class AuthTokenManager {
       try {
         const userResponse = await fetch(`${this.WP_BASE_URL}/wp-json/wp/v2/users/me`, {
           headers: {
-            'Authorization': `Bearer ${authData.token}`,
+            'Authorisation': `Bearer ${authData.token}`,
             'Content-Type': 'application/json',
           },
         });
@@ -224,7 +224,7 @@ class AuthTokenManager {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorisation': `Bearer ${token}`,
         },
         credentials: 'include',
       });
@@ -288,7 +288,7 @@ class AuthTokenManager {
     const token = this.getAccessToken();
     return token
       ? {
-          'Authorization': `Bearer ${token}`,
+          'Authorisation': `Bearer ${token}`,
           'Content-Type': 'application/json',
         }
       : {

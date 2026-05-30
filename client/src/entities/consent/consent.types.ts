@@ -130,7 +130,7 @@ export const DEFAULT_CONSENT_TEXTS = {
 
   privacy_policy: `We collect and process your personal data in accordance with GDPR and applicable privacy laws. Your data will be used for certification purposes, identity verification, and exam administration. You have the right to access, correct, and delete your data.`,
 
-  exam_code_of_conduct: `You agree to uphold academic integrity during all examinations. This includes: no unauthorized materials, no communication with others during exams, no sharing of exam content, and honest representation of your work. Violations may result in exam invalidation and certification denial.`,
+  exam_code_of_conduct: `You agree to uphold academic integrity during all examinations. This includes: no unauthorised materials, no communication with others during exams, no sharing of exam content, and honest representation of your work. Violations may result in exam invalidation and certification denial.`,
 };
 
 // ============================================================================
@@ -142,9 +142,9 @@ I hereby pledge to uphold the highest standards of academic integrity and profes
 
 1. **Identity Verification**: I confirm that I am the person registered for this exam, and I will not impersonate or allow impersonation.
 
-2. **No Unauthorized Assistance**: I will not give or receive unauthorized assistance during the exam. I will complete all work independently.
+2. **No Unauthorised Assistance**: I will not give or receive unauthorised assistance during the exam. I will complete all work independently.
 
-3. **No Unauthorized Materials**: I will not use any unauthorized materials, resources, or technology during the exam unless explicitly permitted.
+3. **No Unauthorised Materials**: I will not use any unauthorised materials, resources, or technology during the exam unless explicitly permitted.
 
 4. **Confidentiality**: I will not share, distribute, reproduce, or discuss exam content with anyone, during or after the examination.
 

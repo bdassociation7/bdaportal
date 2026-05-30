@@ -269,18 +269,18 @@ export default function PDPProgramDetail() {
           </CardContent>
         </Card>
 
-        {/* Enrollment Info */}
+        {/* Enrolment Info */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Enrollments
+              Enrolments
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <div className="text-sm text-gray-500 mb-1">Total Enrollments</div>
-              <div className="text-2xl font-bold text-blue-600">{program.enrollment_count || 0}</div>
+              <div className="text-sm text-gray-500 mb-1">Total Enrolments</div>
+              <div className="text-2xl font-bold text-blue-600">{program.enrolment_count || 0}</div>
             </div>
           </CardContent>
         </Card>

@@ -359,7 +359,7 @@ export class MockExamService {
       const { data, error } = await query;
 
       if (error) {
-        console.error('Error fetching exams catalog:', error);
+        console.error('Error fetching exams catalogue:', error);
         return { data: null, error };
       }
 
@@ -392,7 +392,7 @@ export class MockExamService {
 
       return { data: examsWithStats, error: null };
     } catch (error) {
-      console.error('Error in getAllExamsForCatalog:', error);
+      console.error('Error in getAllExamsForCatalogue:', error);
       return { data: null, error };
     }
   }

@@ -177,7 +177,7 @@ export default function PartnerEdit() {
                   id="company_name"
                   value={editForm.company_name || ''}
                   onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
-                  placeholder="Partner organization name"
+                  placeholder="Partner organisation name"
                   required
                 />
               </div>
@@ -210,7 +210,7 @@ export default function PartnerEdit() {
                   id="description"
                   value={editForm.description || ''}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                  placeholder="Brief description of the partner organization"
+                  placeholder="Brief description of the partner organisation"
                   rows={3}
                 />
               </div>

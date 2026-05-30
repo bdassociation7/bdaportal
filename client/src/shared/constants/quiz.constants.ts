@@ -168,7 +168,7 @@ export const BOCK_DOMAINS_CP = [
   'Problem Solving',
   'Leadership',
   'Communication',
-  'Team Collaboration',
+  'Team Collabouration',
   'Innovation & Creativity',
   'Ethics & Professionalism',
 ] as const;
@@ -179,7 +179,7 @@ export const BOCK_DOMAINS_CP = [
 export const BOCK_DOMAINS_SCP = [
   ...BOCK_DOMAINS_CP,
   'Strategic Planning',
-  'Organizational Development',
+  'Organisational Development',
   'Change Management',
   'Advanced Leadership',
   'Stakeholder Management',

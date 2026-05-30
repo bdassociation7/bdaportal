@@ -631,18 +631,18 @@ export class QuestionBankService {
   }
 
   /**
-   * Toggle favorite status for a question
+   * Toggle favourite status for a question
    */
-  static async toggleFavorite(
+  static async toggleFavourite(
     userId: string,
     questionId: string,
-    isFavorited: boolean
+    isFavourited: boolean
   ): Promise<ServiceResponse<void>> {
     try {
       // Update the most recent attempt for this question
       const { error } = await supabase
         .from('user_question_attempts')
-        .update({ is_favorited: isFavorited })
+        .update({ is_favourited: isFavourited })
         .eq('user_id', userId)
         .eq('question_id', questionId)
         .order('attempted_at', { ascending: false })
@@ -675,7 +675,7 @@ export class QuestionBankService {
         .from('user_question_attempts')
         .select('question_id')
         .eq('user_id', userId)
-        .eq('is_favorited', true);
+        .eq('is_favourited', true);
 
       if (attemptsError) throw attemptsError;
 
@@ -700,7 +700,7 @@ export class QuestionBankService {
       return {
         error: {
           code: error.code || 'FETCH_ERROR',
-          message: 'Failed to fetch favorited questions',
+          message: 'Failed to fetch favourited questions',
           details: error,
         },
       };
@@ -821,8 +821,8 @@ export class QuestionBankService {
 
       if (progressError) throw progressError;
 
-      // Get favorited count
-      const { count: favoritedCount, error: favError } = await supabase
+      // Get favourited count
+      const { count: favouritedCount, error: favError } = await supabase
         .from('user_question_attempts')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
@@ -853,7 +853,7 @@ export class QuestionBankService {
           questionsAttempted,
           questionsCorrect,
           averageScore,
-          favoritedQuestions: favoritedCount || 0,
+          favouritedQuestions: favouritedCount || 0,
           setsCompleted,
         },
       };

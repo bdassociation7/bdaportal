@@ -96,7 +96,7 @@ export {
 
   // Mutation hooks - User Study
   useRecordReview,
-  useToggleCardFavorite,
+  useToggleCardFavourite,
   useStartStudySession,
   useEndStudySession,
 } from './flashcard.hooks';

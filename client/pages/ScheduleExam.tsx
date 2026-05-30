@@ -31,6 +31,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
+import { getUserFriendlyError } from '@/lib/error-handler';
 import { format, addDays, isWithinInterval, startOfDay, isBefore, isAfter } from 'date-fns';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 
@@ -277,6 +278,7 @@ export default function ScheduleExam() {
 
       // Load voucher info
       if (voucherId) {
+        let isEcpVoucher = false;
         let { data: voucher, error: voucherError } = await supabase
           .from('exam_vouchers')
           .select('id, code, certification_type, exam_language, expires_at, status, no_show_count')
@@ -284,20 +286,23 @@ export default function ScheduleExam() {
           .single();
 
         if (voucherError || !voucher) {
+          // Try ecp_vouchers table (voucher issued by ECP partner)
           const { data: ecpVoucher } = await supabase
             .from('ecp_vouchers')
-            .select('id, code, certification_type, exam_language, valid_until, status')
+            .select('id, voucher_code, certification_type, valid_until, status, trainee_id')
             .eq('id', voucherId)
             .single();
 
           if (ecpVoucher) {
+            isEcpVoucher = true;
             voucher = {
               id: ecpVoucher.id,
-              code: ecpVoucher.code,
+              code: ecpVoucher.voucher_code,
               certification_type: ecpVoucher.certification_type,
-              exam_language: ecpVoucher.exam_language || 'en',
+              exam_language: 'en', // ECP vouchers default to English
               expires_at: ecpVoucher.valid_until,
               status: ecpVoucher.status === 'assigned' ? 'available' : ecpVoucher.status,
+              no_show_count: 0,
             };
             voucherError = null;
           }
@@ -356,7 +361,7 @@ export default function ScheduleExam() {
                 });
               }
             } else {
-              setVoucherInfo(voucher);
+              setVoucherInfo({ ...voucher, _isEcp: isEcpVoucher });
             }
           }
         }
@@ -418,12 +423,17 @@ export default function ScheduleExam() {
       const scheduledEnd = new Date(scheduledStart.getTime() + (examInfo?.time_limit_minutes || 120) * 60 * 1000);
       const confirmationCode = `BDA-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
+      // Determine if this is an ECP voucher
+      const isEcp = voucherInfo?._isEcp === true;
+
       const { data: booking, error: bookingError } = await supabase
         .from('exam_bookings')
         .insert({
           user_id: authUser.id,
           quiz_id: quizId,
-          voucher_id: voucherId || null,
+          // ECP vouchers use ecp_voucher_id; direct vouchers use voucher_id
+          voucher_id: (voucherId && !isEcp) ? voucherId : null,
+          ecp_voucher_id: (voucherId && isEcp) ? voucherId : null,
           scheduled_start_time: scheduledStart.toISOString(),
           scheduled_end_time: scheduledEnd.toISOString(),
           timezone: selectedTimezone,
@@ -439,15 +449,16 @@ export default function ScheduleExam() {
 
       if (bookingError) throw bookingError;
 
+      // Mark voucher as assigned/reserved
       if (voucherId && voucherInfo) {
-        const { error: voucherUpdateError } = await supabase
-          .from('exam_vouchers')
-          .update({ status: 'assigned' })
-          .eq('id', voucherId);
-
-        if (voucherUpdateError) {
+        if (isEcp) {
           await supabase
             .from('ecp_vouchers')
+            .update({ status: 'assigned', updated_at: new Date().toISOString() })
+            .eq('id', voucherId);
+        } else {
+          await supabase
+            .from('exam_vouchers')
             .update({ status: 'assigned' })
             .eq('id', voucherId);
         }
@@ -469,7 +480,7 @@ export default function ScheduleExam() {
       console.error('Error scheduling exam:', error);
       toast({
         title: 'Scheduling Failed',
-        description: error instanceof Error ? error.message : 'Failed to schedule exam',
+        description: getUserFriendlyError(error, 'Unable to schedule your exam. Please try again or contact support.'),
         variant: 'destructive',
       });
     } finally {

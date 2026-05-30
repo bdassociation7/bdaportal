@@ -63,7 +63,7 @@ function useAllTrainers(filters?: { status?: TrainerStatus; certification?: Cert
         .from('ecp_trainers')
         .select(`
           *,
-          partner:partner_id(id, organization_name:raw_user_meta_data->organization_name, email)
+          partner:partner_id(id, organisation_name:raw_user_meta_data->organisation_name, email)
         `)
         .order('created_at', { ascending: false });
 

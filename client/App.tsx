@@ -37,6 +37,7 @@ import UserManagement from "./pages/admin/UserManagement";
 import MembershipManagement from "./pages/admin/MembershipManagement";
 import CertificationManagement from "./pages/admin/CertificationManagement";
 import PartnerManagement from "./pages/admin/PartnerManagement";
+import UpgradeRequests from "./pages/admin/UpgradeRequests";
 import PartnerDetails from "./pages/admin/partners/PartnerDetails";
 import PartnerEdit from "./pages/admin/partners/PartnerEdit";
 import PDCValidation from "./pages/admin/PDCValidation";
@@ -51,6 +52,7 @@ import MyCertifications from "./pages/individual/MyCertifications";
 import MyMembership from "./pages/individual/MyMembership";
 import AuthorizedProviders from "./pages/individual/AuthorizedProviders";
 import AccreditedPrograms from "./pages/individual/AccreditedPrograms";
+import ProgramDetail from "./pages/public/ProgramDetail";
 import VerifyCertification from "./pages/individual/VerifyCertification";
 import VerifyCertificate from "./pages/VerifyCertificate";
 import { PublicPageLayout } from "./components/PublicPageLayout";
@@ -90,6 +92,7 @@ import { QuestionEditor } from "@/features/quiz/admin/QuestionEditor";
 
 // Certification Exam pages
 import ExamApplications from "./pages/certification/ExamApplications";
+import DistributeVouchers from "./pages/certification/DistributeVouchers";
 import CertExamDetail from "./pages/certification/ExamDetail";
 import TakeCertExam from "./pages/certification/TakeExam";
 import CertExamResults from "./pages/certification/ExamResults";
@@ -155,6 +158,10 @@ import CountryAnalytics from "./pages/admin/CountryAnalytics";
 import IndividualCompleteProfile from "./pages/individual/CompleteProfile";
 import PartnerCompleteProfile from "./pages/partner/CompleteProfile";
 
+// Dual Partner Workspace
+import WorkspaceSwitcher from './pages/partner/WorkspaceSwitcher';
+import UpgradePartnership from './pages/partner/UpgradePartnership';
+
 // ECP Partner pages
 import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPLicense, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
 
@@ -209,11 +216,11 @@ const ExamModeWrapper = () => (
   </ProtectedRoute>
 );
 
-// ECP Partner-only routes wrapper
+// ECP Partner-only routes wrapper (dual_partner also has access)
 const ECPOnlyWrapper = () => (
   <ProtectedRoute>
     <ProfileCompletionGuard>
-      <RoleGuard allowedRoles={['ecp']}>
+      <RoleGuard allowedRoles={['ecp', 'dual_partner']}>
         <PortalLayout>
           <Outlet />
         </PortalLayout>
@@ -222,11 +229,24 @@ const ECPOnlyWrapper = () => (
   </ProtectedRoute>
 );
 
-// PDP Partner-only routes wrapper
+// PDP Partner-only routes wrapper (dual_partner also has access)
 const PDPOnlyWrapper = () => (
   <ProtectedRoute>
     <ProfileCompletionGuard>
-      <RoleGuard allowedRoles={['pdp']}>
+      <RoleGuard allowedRoles={['pdp', 'dual_partner']}>
+        <PortalLayout>
+          <Outlet />
+        </PortalLayout>
+      </RoleGuard>
+    </ProfileCompletionGuard>
+  </ProtectedRoute>
+);
+
+// Dual Partner workspace wrapper
+const DualPartnerWrapper = () => (
+  <ProtectedRoute>
+    <ProfileCompletionGuard>
+      <RoleGuard allowedRoles={['dual_partner']}>
         <PortalLayout>
           <Outlet />
         </PortalLayout>
@@ -334,6 +354,11 @@ const App = () => (
                     <AccreditedPrograms />
                   </PublicPageLayout>
                 } />
+                <Route path="/public/programs/:slug" element={
+                  <PublicPageLayout>
+                    <ProgramDetail />
+                  </PublicPageLayout>
+                } />
                 <Route path="/public/providers" element={
                   <PublicPageLayout>
                     <AuthorizedProviders />
@@ -394,7 +419,7 @@ const App = () => (
                   <Route path="/my-membership" element={<MyMembership />} />
                   <Route path="/my-recognitions" element={<PlaceholderPage title="My Recognitions" />} />
                   <Route path="/pdcs" element={<PDCs />} />
-                  <Route path="/authorized-providers" element={<AuthorizedProviders />} />
+                  <Route path="/authorised-providers" element={<AuthorizedProviders />} />
                   <Route path="/accredited-programs" element={<AccreditedPrograms />} />
                   <Route path="/resources" element={<Resources />} />
                   <Route path="/verify-certification" element={<VerifyCertification />} />
@@ -406,6 +431,7 @@ const App = () => (
                   <Route path="/exam-launch" element={<ExamLaunch />} />
                   {/* Note: Exam attempt route moved to ExamModeWrapper for full-screen focus mode */}
                   <Route path="/exam-applications" element={<ExamApplications />} />
+                  <Route path="/distribute-vouchers" element={<DistributeVouchers />} />
                   <Route path="/exam-applications/:examId" element={<CertExamDetail />} />
                   <Route path="/exam-applications/:examId/take" element={<TakeCertExam />} />
                   <Route path="/exam-applications/results/:attemptId" element={<CertExamResults />} />
@@ -473,6 +499,7 @@ const App = () => (
                   <Route path="/ecp/license" element={<ECPLicense />} />
                   <Route path="/ecp/toolkit" element={<ECPToolkit />} />
                   <Route path="/ecp/help" element={<ECPHelpCenter />} />
+                  <Route path="/ecp/upgrade" element={<UpgradePartnership />} />
                 </Route>
 
                 {/* PDP PARTNER-ONLY routes */}
@@ -489,6 +516,12 @@ const App = () => (
                   <Route path="/pdp/license" element={<PDPLicense />} />
                   <Route path="/pdp/toolkit" element={<PDPToolkit />} />
                   <Route path="/pdp/support" element={<PDPSupportCenter />} />
+                  <Route path="/pdp/upgrade" element={<UpgradePartnership />} />
+                </Route>
+
+                {/* DUAL PARTNER workspace route */}
+                <Route element={<DualPartnerWrapper />}>
+                  <Route path="/workspace" element={<WorkspaceSwitcher />} />
                 </Route>
 
                 {/* ADMIN-ONLY routes */}
@@ -501,6 +534,7 @@ const App = () => (
                   <Route path="/admin/partners" element={<PartnerManagement />} />
                   <Route path="/admin/partners/:id" element={<PartnerDetails />} />
                   <Route path="/admin/partners/:id/edit" element={<PartnerEdit />} />
+                  <Route path="/admin/upgrade-requests" element={<UpgradeRequests />} />
                   <Route path="/admin/exams" element={<ExamManagement />} />
                   <Route path="/admin/exams/new" element={<ExamForm />} />
                   <Route path="/admin/exams/:examId/edit" element={<ExamForm />} />

@@ -68,7 +68,7 @@ export default function PDPProgramNew() {
                 Please contact BDA administration to request additional program slots.
               </>
             ) : (
-              'You are not authorized to create programs at this time. Please contact BDA administration to set up your PDP license.'
+              'You are not authorised to create programs at this time. Please contact BDA administration to set up your PDP license.'
             )}
           </AlertDescription>
         </Alert>

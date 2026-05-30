@@ -54,7 +54,7 @@ const translations = {
   en: {
     // Page header
     pageTitle: "Edit Partner Profile",
-    pageSubtitle: "Update your organization information and preferences",
+    pageSubtitle: "Update your organisation information and preferences",
     cancel: "Cancel",
     saveChanges: "Save Changes",
     saving: "Saving...",
@@ -73,26 +73,26 @@ const translations = {
     licenseValidUntil: "License valid until",
 
     // Tabs
-    tabOrganization: "Organization",
+    tabOrganisation: "Organisation",
     tabContact: "Contact Info",
-    tabSpecializations: "Specializations",
+    tabSpecialisations: "Specialisations",
     tabBranding: "Branding",
 
-    // Organization tab
-    organizationDetails: "Organization Details",
-    organizationDetailsDesc: "Basic information about your organization",
-    organizationName: "Organization Name",
+    // Organisation tab
+    organisationDetails: "Organisation Details",
+    organisationDetailsDesc: "Basic information about your organisation",
+    organisationName: "Organisation Name",
     legalName: "Legal Name",
     registrationNumber: "Registration Number",
     taxId: "Tax ID",
     yearEstablished: "Year Established",
     website: "Website",
-    organizationDescription: "Organization Description",
-    descriptionPlaceholder: "Brief description of your organization and training services...",
+    organisationDescription: "Organisation Description",
+    descriptionPlaceholder: "Brief description of your organisation and training services...",
 
     // Address section
     address: "Address",
-    addressDesc: "Physical location of your organization",
+    addressDesc: "Physical location of your organisation",
     streetAddress: "Street Address",
     city: "City",
     stateProvince: "State/Province",
@@ -117,23 +117,23 @@ const translations = {
     twitterX: "Twitter/X",
     facebook: "Facebook",
 
-    // Specializations tab
-    trainingSpecializations: "Training Specializations",
-    trainingSpecializationsDesc: "Select the areas your programs specialize in",
+    // Specialisations tab
+    trainingSpecialisations: "Training Specialisations",
+    trainingSpecialisationsDesc: "Select the areas your programs specialise in",
     deliveryMethods: "Delivery Methods",
     deliveryMethodsDesc: "How do you deliver your training programs?",
     targetAudiences: "Target Audiences",
     targetAudiencesDesc: "Who are your typical training participants?",
 
     // Branding tab
-    organizationLogo: "Organization Logo",
-    organizationLogoDesc: "Your company logo. Upload your organization's own logo to display on your partner profile.",
+    organisationLogo: "Organisation Logo",
+    organisationLogoDesc: "Your company logo. Upload your organisation's own logo to display on your partner profile.",
     uploadLogo: "Upload Logo",
     removeLogo: "Remove Logo",
     logoRecommendation: "Recommended: Square image, at least 200x200 pixels",
     noLogo: "No logo uploaded",
     bdaPartnerBadge: "BDA Partner Badge",
-    bdaPartnerBadgeDesc: "Official BDA accreditation badge issued to authorized PDP partners. Download and use on your website and marketing materials.",
+    bdaPartnerBadgeDesc: "Official BDA accreditation badge issued to authorised PDP partners. Download and use on your website and marketing materials.",
     downloadBadge: "Download Badge",
     downloadBadgePng: "Download PNG",
     downloadBadgeSvg: "Download SVG",
@@ -148,7 +148,7 @@ const translations = {
     badgeNotAvailable: "Badge not yet available",
     badgeNotAvailableDesc: "Your BDA Partner Badge will be available once your partnership is fully activated. Contact support if you believe this is an error.",
 
-    // Specialization options
+    // Specialisation options
     specBusinessDevelopment: "Business Development",
     specLeadership: "Leadership & Management",
     specProjectManagement: "Project Management",
@@ -161,7 +161,7 @@ const translations = {
     specCompliance: "Compliance & Risk",
     specStrategy: "Strategy & Planning",
     specCommunication: "Communication Skills",
-    specOther: "Other Specializations",
+    specOther: "Other Specialisations",
 
     // Delivery methods
     deliveryInPerson: "In-Person/Classroom",
@@ -174,7 +174,7 @@ const translations = {
     audienceIndividual: "Individual Professionals",
     audienceGovernment: "Government/Public Sector",
     audienceAcademic: "Academic/Students",
-    audienceNonprofit: "Non-Profit Organizations",
+    audienceNonprofit: "Non-Profit Organisations",
   },
   ar: {
     // Page header
@@ -198,21 +198,21 @@ const translations = {
     licenseValidUntil: "الترخيص صالح حتى",
 
     // Tabs
-    tabOrganization: "المؤسسة",
+    tabOrganisation: "المؤسسة",
     tabContact: "معلومات الاتصال",
-    tabSpecializations: "التخصصات",
+    tabSpecialisations: "التخصصات",
     tabBranding: "العلامة التجارية",
 
-    // Organization tab
-    organizationDetails: "تفاصيل المؤسسة",
-    organizationDetailsDesc: "معلومات أساسية عن مؤسستك",
-    organizationName: "اسم المؤسسة",
+    // Organisation tab
+    organisationDetails: "تفاصيل المؤسسة",
+    organisationDetailsDesc: "معلومات أساسية عن مؤسستك",
+    organisationName: "اسم المؤسسة",
     legalName: "الاسم القانوني",
     registrationNumber: "رقم التسجيل",
     taxId: "الرقم الضريبي",
     yearEstablished: "سنة التأسيس",
     website: "الموقع الإلكتروني",
-    organizationDescription: "وصف المؤسسة",
+    organisationDescription: "وصف المؤسسة",
     descriptionPlaceholder: "وصف موجز لمؤسستك وخدمات التدريب...",
 
     // Address section
@@ -242,17 +242,17 @@ const translations = {
     twitterX: "تويتر/X",
     facebook: "فيسبوك",
 
-    // Specializations tab
-    trainingSpecializations: "تخصصات التدريب",
-    trainingSpecializationsDesc: "حدد المجالات التي تتخصص فيها برامجك",
+    // Specialisations tab
+    trainingSpecialisations: "تخصصات التدريب",
+    trainingSpecialisationsDesc: "حدد المجالات التي تتخصص فيها برامجك",
     deliveryMethods: "طرق التقديم",
     deliveryMethodsDesc: "كيف تقدم برامجك التدريبية؟",
     targetAudiences: "الجمهور المستهدف",
     targetAudiencesDesc: "من هم المشاركون النموذجيون في تدريباتك؟",
 
     // Branding tab
-    organizationLogo: "شعار المؤسسة",
-    organizationLogoDesc: "شعار شركتك. قم بتحميل شعار مؤسستك لعرضه في ملفك الشخصي كشريك.",
+    organisationLogo: "شعار المؤسسة",
+    organisationLogoDesc: "شعار شركتك. قم بتحميل شعار مؤسستك لعرضه في ملفك الشخصي كشريك.",
     uploadLogo: "تحميل الشعار",
     removeLogo: "حذف الشعار",
     logoRecommendation: "يُنصح بصورة مربعة بحجم 200×200 بكسل على الأقل",
@@ -273,7 +273,7 @@ const translations = {
     badgeNotAvailable: "الشارة غير متاحة بعد",
     badgeNotAvailableDesc: "ستتوفر شارة شريك BDA الخاصة بك بمجرد تفعيل شراكتك بالكامل. تواصل مع الدعم إذا كنت تعتقد أن هذا خطأ.",
 
-    // Specialization options
+    // Specialisation options
     specBusinessDevelopment: "تطوير الأعمال",
     specLeadership: "القيادة والإدارة",
     specProjectManagement: "إدارة المشاريع",
@@ -303,20 +303,20 @@ const translations = {
   },
 };
 
-const getSpecializationOptions = (texts: typeof translations.en) => [
-  { id: "business_development" as Specialization, name: texts.specBusinessDevelopment },
-  { id: "leadership" as Specialization, name: texts.specLeadership },
-  { id: "project_management" as Specialization, name: texts.specProjectManagement },
-  { id: "data_analytics" as Specialization, name: texts.specDataAnalytics },
-  { id: "hr_management" as Specialization, name: texts.specHrManagement },
-  { id: "finance" as Specialization, name: texts.specFinance },
-  { id: "marketing" as Specialization, name: texts.specMarketing },
-  { id: "operations" as Specialization, name: texts.specOperations },
-  { id: "technology" as Specialization, name: texts.specTechnology },
-  { id: "compliance" as Specialization, name: texts.specCompliance },
-  { id: "strategy" as Specialization, name: texts.specStrategy },
-  { id: "communication" as Specialization, name: texts.specCommunication },
-  { id: "other" as Specialization, name: texts.specOther },
+const getSpecialisationOptions = (texts: typeof translations.en) => [
+  { id: "business_development" as Specialisation, name: texts.specBusinessDevelopment },
+  { id: "leadership" as Specialisation, name: texts.specLeadership },
+  { id: "project_management" as Specialisation, name: texts.specProjectManagement },
+  { id: "data_analytics" as Specialisation, name: texts.specDataAnalytics },
+  { id: "hr_management" as Specialisation, name: texts.specHrManagement },
+  { id: "finance" as Specialisation, name: texts.specFinance },
+  { id: "marketing" as Specialisation, name: texts.specMarketing },
+  { id: "operations" as Specialisation, name: texts.specOperations },
+  { id: "technology" as Specialisation, name: texts.specTechnology },
+  { id: "compliance" as Specialisation, name: texts.specCompliance },
+  { id: "strategy" as Specialisation, name: texts.specStrategy },
+  { id: "communication" as Specialisation, name: texts.specCommunication },
+  { id: "other" as Specialisation, name: texts.specOther },
 ];
 
 const getDeliveryMethodOptions = (texts: typeof translations.en) => [
@@ -351,7 +351,7 @@ const timeZones = [
 ];
 
 interface FormData {
-  organization_name: string;
+  organisation_name: string;
   legal_name: string;
   registration_number: string;
   tax_id: string;
@@ -371,7 +371,7 @@ interface FormData {
   billing_contact_name: string;
   billing_contact_email: string;
   billing_contact_phone: string;
-  specializations: Specialization[];
+  specialisations: Specialisation[];
   delivery_methods: DeliveryMethod[];
   target_audiences: TargetAudience[];
   linkedin_url: string;
@@ -385,10 +385,10 @@ export default function EditProfile() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const texts = translations[language];
-  const [activeTab, setActiveTab] = useState("organization");
+  const [activeTab, setActiveTab] = useState("organisation");
 
   // Dynamic options based on language
-  const specializationOptions = getSpecializationOptions(texts);
+  const specialisationOptions = getSpecialisationOptions(texts);
   const deliveryMethodOptions = getDeliveryMethodOptions(texts);
   const targetAudienceOptions = getTargetAudienceOptions(texts);
 
@@ -420,7 +420,7 @@ export default function EditProfile() {
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
-    organization_name: "",
+    organisation_name: "",
     legal_name: "",
     registration_number: "",
     tax_id: "",
@@ -440,7 +440,7 @@ export default function EditProfile() {
     billing_contact_name: "",
     billing_contact_email: "",
     billing_contact_phone: "",
-    specializations: [],
+    specialisations: [],
     delivery_methods: [],
     target_audiences: [],
     linkedin_url: "",
@@ -455,7 +455,7 @@ export default function EditProfile() {
   useEffect(() => {
     if (profile) {
       setFormData({
-        organization_name: profile.organization_name || "",
+        organisation_name: profile.organisation_name || "",
         legal_name: profile.legal_name || "",
         registration_number: profile.registration_number || "",
         tax_id: profile.tax_id || "",
@@ -475,7 +475,7 @@ export default function EditProfile() {
         billing_contact_name: profile.billing_contact_name || "",
         billing_contact_email: profile.billing_contact_email || "",
         billing_contact_phone: profile.billing_contact_phone || "",
-        specializations: profile.specializations || [],
+        specialisations: profile.specialisations || [],
         delivery_methods: profile.delivery_methods || [],
         target_audiences: profile.target_audiences || [],
         linkedin_url: profile.linkedin_url || "",
@@ -492,12 +492,12 @@ export default function EditProfile() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSpecializationToggle = (specId: Specialization) => {
+  const handleSpecialisationToggle = (specId: Specialisation) => {
     setFormData(prev => ({
       ...prev,
-      specializations: prev.specializations.includes(specId)
-        ? prev.specializations.filter(s => s !== specId)
-        : [...prev.specializations, specId]
+      specialisations: prev.specialisations.includes(specId)
+        ? prev.specialisations.filter(s => s !== specId)
+        : [...prev.specialisations, specId]
     }));
   };
 
@@ -559,7 +559,7 @@ export default function EditProfile() {
   const handleSubmit = async () => {
     // Build the update DTO
     const dto: UpdatePDPPartnerProfileDTO = {
-      organization_name: formData.organization_name || undefined,
+      organisation_name: formData.organisation_name || undefined,
       legal_name: formData.legal_name || undefined,
       registration_number: formData.registration_number || undefined,
       tax_id: formData.tax_id || undefined,
@@ -579,7 +579,7 @@ export default function EditProfile() {
       billing_contact_name: formData.billing_contact_name || undefined,
       billing_contact_email: formData.billing_contact_email || undefined,
       billing_contact_phone: formData.billing_contact_phone || undefined,
-      specializations: formData.specializations,
+      specialisations: formData.specialisations,
       delivery_methods: formData.delivery_methods,
       target_audiences: formData.target_audiences,
       linkedin_url: formData.linkedin_url || undefined,
@@ -686,32 +686,32 @@ export default function EditProfile() {
       {/* Profile Form Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="organization">{texts.tabOrganization}</TabsTrigger>
+          <TabsTrigger value="organisation">{texts.tabOrganisation}</TabsTrigger>
           <TabsTrigger value="contact">{texts.tabContact}</TabsTrigger>
-          <TabsTrigger value="specializations">{texts.tabSpecializations}</TabsTrigger>
+          <TabsTrigger value="specialisations">{texts.tabSpecialisations}</TabsTrigger>
           <TabsTrigger value="branding">{texts.tabBranding}</TabsTrigger>
         </TabsList>
 
-        {/* Organization Tab */}
-        <TabsContent value="organization" className="space-y-6 mt-6">
+        {/* Organisation Tab */}
+        <TabsContent value="organisation" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
               <CardTitle className={`flex items-center gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                 <Building2 className="h-5 w-5" />
-                {texts.organizationDetails}
+                {texts.organisationDetails}
               </CardTitle>
               <CardDescription className={language === 'ar' ? 'text-right' : ''}>
-                {texts.organizationDetailsDesc}
+                {texts.organisationDetailsDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="organization_name">{texts.organizationName} *</Label>
+                  <Label htmlFor="organisation_name">{texts.organisationName} *</Label>
                   <Input
-                    id="organization_name"
-                    value={formData.organization_name}
-                    onChange={(e) => handleInputChange("organization_name", e.target.value)}
+                    id="organisation_name"
+                    value={formData.organisation_name}
+                    onChange={(e) => handleInputChange("organisation_name", e.target.value)}
                     className={language === 'ar' ? 'text-right' : ''}
                   />
                 </div>
@@ -774,7 +774,7 @@ export default function EditProfile() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">{texts.organizationDescription}</Label>
+                <Label htmlFor="description">{texts.organisationDescription}</Label>
                 <Textarea
                   id="description"
                   rows={4}
@@ -1029,21 +1029,21 @@ export default function EditProfile() {
           </Card>
         </TabsContent>
 
-        {/* Specializations Tab */}
-        <TabsContent value="specializations" className="space-y-6 mt-6">
+        {/* Specialisations Tab */}
+        <TabsContent value="specialisations" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className={language === 'ar' ? 'text-right' : ''}>{texts.trainingSpecializations}</CardTitle>
+              <CardTitle className={language === 'ar' ? 'text-right' : ''}>{texts.trainingSpecialisations}</CardTitle>
               <CardDescription className={language === 'ar' ? 'text-right' : ''}>
-                {texts.trainingSpecializationsDesc}
+                {texts.trainingSpecialisationsDesc}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3">
-                {specializationOptions.map(spec => (
+                {specialisationOptions.map(spec => (
                   <div
                     key={spec.id}
-                    onClick={() => handleSpecializationToggle(spec.id)}
+                    onClick={() => handleSpecialisationToggle(spec.id)}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                       formData.specializations.includes(spec.id)
                         ? "border-primary bg-primary/5"
@@ -1056,7 +1056,7 @@ export default function EditProfile() {
                           ? "bg-primary border-primary"
                           : "border-gray-300"
                       }`}>
-                        {formData.specializations.includes(spec.id) && (
+                        {formData.specialisations.includes(spec.id) && (
                           <CheckCircle2 className="h-3 w-3 text-white" />
                         )}
                       </div>
@@ -1119,9 +1119,9 @@ export default function EditProfile() {
         <TabsContent value="branding" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle className={language === 'ar' ? 'text-right' : ''}>{texts.organizationLogo}</CardTitle>
+              <CardTitle className={language === 'ar' ? 'text-right' : ''}>{texts.organisationLogo}</CardTitle>
               <CardDescription className={language === 'ar' ? 'text-right' : ''}>
-                {texts.organizationLogoDesc}
+                {texts.organisationLogoDesc}
               </CardDescription>
             </CardHeader>
             <CardContent>

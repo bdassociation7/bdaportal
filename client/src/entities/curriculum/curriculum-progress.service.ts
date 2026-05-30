@@ -255,7 +255,7 @@ export class CurriculumProgressService {
 
         if (nextInSection) {
           nextModuleId = nextInSection.id;
-        } else if (module.section_type === 'behavioral') {
+        } else if (module.section_type === 'behavioural') {
           // At end of behavioral section, get first knowledge_based module
           const { data: firstKnowledge } = await supabase
             .from('curriculum_modules')

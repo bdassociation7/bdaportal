@@ -128,7 +128,7 @@ export default function Signup() {
             lastName: formData.lastName,
             accessType: getAccessType(formData.userType),
             role: mapUserTypeToRole(formData.userType),
-            organization: formData.organization || undefined
+            organisation: formData.organisation || undefined
           };
 
           const result = await UnifiedSignupService.handleSignup(request);
@@ -200,7 +200,7 @@ export default function Signup() {
         lastName: formData.lastName,
         accessType: getAccessType(formData.userType),
         role: mapUserTypeToRole(formData.userType),
-        organization: formData.organization || undefined
+        organisation: formData.organisation || undefined
       };
 
       const result = await UnifiedSignupService.handleSignup(request);
@@ -292,7 +292,7 @@ export default function Signup() {
         lastName: formData.lastName,
         accessType: getAccessType(formData.userType),
         role: mapUserTypeToRole(formData.userType),
-        organization: formData.organization || undefined
+        organisation: formData.organisation || undefined
       };
 
       const result = await UnifiedSignupService.handleSignup(request);
@@ -453,15 +453,15 @@ export default function Signup() {
                   </RadioGroup>
                 </div>
 
-                {/* Organization for ECP/PDP */}
+                {/* Organisation for ECP/PDP */}
                 {(formData.userType === 'ecp' || formData.userType === 'pdp') && (
                   <div>
-                    <Label htmlFor="organization">Organization</Label>
+                    <Label htmlFor="organisation">Organisation</Label>
                     <Input
-                      id="organization"
-                      value={formData.organization}
+                      id="organisation"
+                      value={formData.organisation}
                       onChange={(e) => updateFormData('organization', e.target.value)}
-                      placeholder="Your organization name"
+                      placeholder="Your organisation name"
                     />
                   </div>
                 )}

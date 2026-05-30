@@ -305,7 +305,7 @@ export class AuthService {
     role: string;
     wpUserId?: number;
     signupType: string;
-    organization?: string;
+    organisation?: string;
   }): Promise<any> {
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -318,7 +318,7 @@ export class AuthService {
             role: userData.role,
             wp_user_id: userData.wpUserId,
             signup_type: userData.signupType,
-            organization: userData.organization
+            organisation: userData.organisation
           }
         }
       });

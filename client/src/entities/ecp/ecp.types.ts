@@ -6,7 +6,7 @@
 export type TrainingMode = 'in_person' | 'online' | 'hybrid';
 export type BatchStatus = 'draft' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 export type TrainerStatus = 'pending' | 'approved' | 'suspended' | 'inactive';
-export type EnrollmentStatus = 'enrolled' | 'attending' | 'completed' | 'dropped' | 'transferred';
+export type EnrollmentStatus = 'enroled' | 'attending' | 'completed' | 'dropped' | 'transferred';
 export type VoucherAllocationStatus = 'active' | 'depleted' | 'expired' | 'cancelled';
 export type CertificationType = 'CP' | 'SCP';
 
@@ -385,7 +385,7 @@ export interface LicenseInfo {
 // =============================================================================
 
 export type VoucherStatus = 'available' | 'assigned' | 'used' | 'expired' | 'cancelled';
-export type VoucherRequestStatus = 'pending' | 'approved' | 'paid' | 'fulfilled' | 'cancelled' | 'refunded';
+export type VoucherRequestStatus = 'pending' | 'approved' | 'paid' | 'fulfiled' | 'cancelled' | 'refunded';
 
 export interface Voucher {
   id: string;

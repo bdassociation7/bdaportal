@@ -57,7 +57,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       icon: Gift,
     },
     {
-      name: t("nav.authorizedProviders"),
+      name: t("nav.authorisedProviders"),
       href: "/dashboard/providers",
       icon: Shield,
     },

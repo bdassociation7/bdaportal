@@ -44,7 +44,7 @@ export const TICKET_CATEGORY_DESCRIPTIONS: Record<TicketCategory, string> = {
   exam: 'Issues with exam registration, scheduling, or results',
   pdc: 'Professional Development Credits submission or approval',
   account: 'Login problems, password reset, or account settings',
-  partnership: 'Questions about becoming an Authorized Provider or partner',
+  partnership: 'Questions about becoming an Authorised Provider or partner',
   technical: 'Website errors, payment issues, or system problems',
   other: 'Any other questions or concerns',
 } as const;
