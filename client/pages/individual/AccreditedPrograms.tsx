@@ -455,10 +455,7 @@ export default function AccreditedPrograms() {
                         {/* Date range */}
                         <p className="text-xs text-gray-500 flex items-center gap-1 mb-3">
                           <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                          {formatLong(program.valid_from)}
-                          {program.valid_until && (
-                            <> &mdash; {formatLong(program.valid_until)}</>
-                          )}
+                          Added {formatLong(program.valid_from)}
                         </p>
 
                         {/* Info grid */}
@@ -707,7 +704,7 @@ export default function AccreditedPrograms() {
                 </MetaBadge>
                 <span className="text-xs text-gray-500 flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
-                  {formatLong(selectedProgram.valid_from)} — {formatLong(selectedProgram.valid_until)}
+                  Added {formatLong(selectedProgram.valid_from)}
                 </span>
               </div>
 
