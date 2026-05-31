@@ -442,9 +442,28 @@ serve(async (req) => {
               if (!subject) subject = `New Exam Voucher Created: ${data.voucherCode || 'N/A'}`
               break
 
-            default:
-              console.warn(`[send-emails] Unknown template: ${emailItem.template_name}`)
-              throw new Error(`Template not found: ${emailItem.template_name}`)
+            default: {
+              // Try to load template from email_templates table in DB
+              const { data: dbTemplate } = await adminClient
+                .from('email_templates')
+                .select('subject, html_body, text_body')
+                .eq('template_key', emailItem.template_name)
+                .eq('is_active', true)
+                .single()
+              if (dbTemplate) {
+                console.log(`[send-emails] Found DB template for: ${emailItem.template_name}`)
+                // Render template variables {{varName}}
+                const renderTpl = (tpl: string, vars: Record<string, any>) =>
+                  tpl.replace(/\{\{(\w+)\}\}/g, (_: string, k: string) => String(vars[k] ?? ''))
+                const templateVars = emailItem.template_data || {}
+                if (!subject) subject = renderTpl(dbTemplate.subject, templateVars)
+                htmlBody = renderTpl(dbTemplate.html_body, templateVars)
+                textBody = dbTemplate.text_body ? renderTpl(dbTemplate.text_body, templateVars) : ''
+              } else {
+                console.warn(`[send-emails] Unknown template: ${emailItem.template_name}`)
+                throw new Error(`Template not found: ${emailItem.template_name}`)
+              }
+            }
           }
         }
 
