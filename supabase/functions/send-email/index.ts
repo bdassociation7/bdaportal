@@ -30,6 +30,24 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Security: verify internal secret to prevent unauthorized email sending
+  // Accepts calls from: Edge Functions with x-internal-secret header, or service role key
+  const internalSecret = Deno.env.get('INTERNAL_EMAIL_SECRET');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (internalSecret) {
+    const providedSecret = req.headers.get('x-internal-secret');
+    const providedAuth = req.headers.get('authorization')?.replace('Bearer ', '');
+    const isInternalCall = providedSecret === internalSecret;
+    const isServiceRole = providedAuth === serviceRoleKey;
+    if (!isInternalCall && !isServiceRole) {
+      console.warn('[send-email] Unauthorized call blocked from:', req.headers.get('x-forwarded-for') || 'unknown');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
   try {
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');

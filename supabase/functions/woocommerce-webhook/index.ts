@@ -204,7 +204,7 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
           role: 'individual',
           is_active: true,
           profile_completed: false,
-          created_from: 'woocommerce',
+          created_from: 'store',
         }, { onConflict: 'id', ignoreDuplicates: true })
       } else {
         // Create new auth user
@@ -242,7 +242,7 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
           role: 'individual',
           is_active: true,
           profile_completed: false,
-          created_from: 'woocommerce',
+          created_from: 'store',
         })
 
         if (createError) {
