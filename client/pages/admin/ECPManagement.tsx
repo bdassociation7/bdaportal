@@ -445,47 +445,107 @@ export default function ECPManagement() {
     },
   });
 
-  const reviewVoucherMutation = useMutation({
-    mutationFn: async ({ requestId, status, adminNotes }: { requestId: string; status: string; adminNotes?: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+  // ─── Voucher Request Workflow Mutations ─────────────────────────────────────
+  // Correct flow: pending → approved → paid → fulfilled
+  // Each step is a separate action; vouchers are only created at 'fulfilled' stage
+  // via fulfill_voucher_request() RPC which uses generate_voucher_code() for proper codes.
 
+  const approveVoucherMutation = useMutation({
+    mutationFn: async ({ requestId, adminNotes }: { requestId: string; adminNotes?: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('ecp_voucher_requests')
         .update({
-          status,
-          admin_notes: adminNotes,
+          status: 'approved',
+          admin_notes: adminNotes || null,
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', requestId)
+        .eq('status', 'pending'); // safety: only approve pending requests
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-voucher-requests'] });
+      toast({ title: 'Request Approved', description: 'Partner will be notified to proceed with payment.' });
+      setReviewVoucherDialogOpen(false);
+      setSelectedVoucherRequest(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const markPaidVoucherMutation = useMutation({
+    mutationFn: async ({ requestId, paymentReference }: { requestId: string; paymentReference?: string }) => {
+      const { error } = await supabase
+        .from('ecp_voucher_requests')
+        .update({
+          status: 'paid',
+          payment_reference: paymentReference || null,
+          paid_at: new Date().toISOString(),
+        })
+        .eq('id', requestId)
+        .eq('status', 'approved'); // safety: only mark approved requests as paid
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-voucher-requests'] });
+      toast({ title: 'Marked as Paid', description: 'You can now fulfil the request to generate vouchers.' });
+      setReviewVoucherDialogOpen(false);
+      setSelectedVoucherRequest(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const fulfillVoucherMutation = useMutation({
+    mutationFn: async ({ requestId }: { requestId: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      // Uses fulfill_voucher_request() RPC which:
+      // 1. Generates proper voucher codes via generate_voucher_code()
+      // 2. Inserts rows into ecp_vouchers with correct partner_id, valid_until, etc.
+      // 3. Updates the request status to 'fulfilled'
+      const { data, error } = await supabase.rpc('fulfill_voucher_request', {
+        p_request_id: requestId,
+        p_admin_id: user?.id,
+      });
+      if (error) throw error;
+      return data as number; // returns count of vouchers created
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-voucher-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-partners'] });
+      toast({
+        title: 'Vouchers Generated',
+        description: `${count} voucher${count !== 1 ? 's' : ''} created and are now available in the partner's account.`,
+      });
+      setReviewVoucherDialogOpen(false);
+      setSelectedVoucherRequest(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const rejectVoucherMutation = useMutation({
+    mutationFn: async ({ requestId, adminNotes }: { requestId: string; adminNotes?: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('ecp_voucher_requests')
+        .update({
+          status: 'cancelled',
+          admin_notes: adminNotes || null,
           reviewed_by: user?.id,
           reviewed_at: new Date().toISOString(),
         })
         .eq('id', requestId);
-
       if (error) throw error;
-
-      // If approved, create the vouchers
-      if (status === 'approved') {
-        const request = voucherRequests?.find((r) => r.id === requestId);
-        if (request) {
-          // Create vouchers for the partner
-          const vouchers = Array(request.quantity).fill(null).map(() => ({
-            partner_id: request.partner_id,
-            certification_type: request.certification_type,
-            voucher_code: `ECP-${request.certification_type}-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-            status: 'available',
-            valid_until: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year validity
-          }));
-
-          const { error: voucherError } = await supabase
-            .from('ecp_vouchers')
-            .insert(vouchers);
-
-          if (voucherError) throw voucherError;
-        }
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-voucher-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-partners'] });
-      toast({ title: 'Request Updated', description: 'Voucher request has been processed.' });
+      toast({ title: 'Request Rejected', description: 'The voucher request has been cancelled.' });
       setReviewVoucherDialogOpen(false);
       setSelectedVoucherRequest(null);
     },
@@ -1139,70 +1199,144 @@ export default function ECPManagement() {
         </TabsContent>
       </Tabs>
 
-      {/* Review Voucher Request Dialog */}
+      {/* Review Voucher Request Dialog — full workflow: pending → approved → paid → fulfilled */}
       <Dialog open={reviewVoucherDialogOpen} onOpenChange={(open) => {
         if (!open) {
-          // Force cleanup cursor issue
           document.body.style.pointerEvents = '';
           document.body.style.overflow = '';
           setSelectedVoucherRequest(null);
         }
         setReviewVoucherDialogOpen(open);
       }}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{t('ecp.reviewVoucherRequest')}</DialogTitle>
+            <DialogTitle>Voucher Request</DialogTitle>
             <DialogDescription>
-              {t('ecp.requestFrom')} {getPartnerName(selectedVoucherRequest?.partner)}
+              From {getPartnerName(selectedVoucherRequest?.partner)}
             </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-4">
+            {/* Status indicator */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Status:</span>
+              <Badge
+                className={
+                  selectedVoucherRequest?.status === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                  selectedVoucherRequest?.status === 'approved' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                  selectedVoucherRequest?.status === 'paid' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                  selectedVoucherRequest?.status === 'fulfilled' ? 'bg-green-100 text-green-800 border-green-200' :
+                  'bg-gray-100 text-gray-800'
+                }
+                variant="outline"
+              >
+                {selectedVoucherRequest?.status?.toUpperCase()}
+              </Badge>
+            </div>
+
+            {/* Request details */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">{t('ecp.quantityRequested')}</p>
+                <p className="text-sm text-gray-600">Quantity</p>
                 <p className="text-2xl font-bold">{selectedVoucherRequest?.quantity}</p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">{t('ecp.certificationType')}</p>
+                <p className="text-sm text-gray-600">Certification</p>
                 <p className="text-2xl font-bold">BDA-{selectedVoucherRequest?.certification_type}™</p>
               </div>
             </div>
-            <div className="p-4 border rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">{t('ecp.totalAmount')}</p>
+
+            <div className="p-4 border rounded-lg space-y-1">
+              <p className="text-sm text-gray-600">Total Amount</p>
               <p className="text-xl font-bold text-gray-900">
                 ${selectedVoucherRequest?.total_amount?.toFixed(2) || '0.00'}
               </p>
               <p className="text-sm text-gray-500">
-                {t('ecp.paymentMethod')}: {selectedVoucherRequest?.payment_method || t('ecp.invoice')}
+                Payment method: {selectedVoucherRequest?.payment_method || 'invoice'}
               </p>
             </div>
+
+            {/* Workflow guidance */}
+            {selectedVoucherRequest?.status === 'pending' && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                ⚠️ Review the request and approve it. The partner will then be invoiced.
+              </div>
+            )}
+            {selectedVoucherRequest?.status === 'approved' && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                💳 Once payment is confirmed, mark as paid to proceed to voucher generation.
+              </div>
+            )}
+            {selectedVoucherRequest?.status === 'paid' && (
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
+                ✅ Payment confirmed. Click “Fulfil” to generate {selectedVoucherRequest.quantity} voucher codes.
+              </div>
+            )}
+            {selectedVoucherRequest?.status === 'fulfilled' && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                ✅ {selectedVoucherRequest.quantity} vouchers have been generated and are visible in the partner’s account.
+              </div>
+            )}
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => reviewVoucherMutation.mutate({
-                requestId: selectedVoucherRequest!.id,
-                status: 'rejected',
-              })}
-              disabled={reviewVoucherMutation.isPending}
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              {t('ecp.reject')}
-            </Button>
-            <Button
-              onClick={() => reviewVoucherMutation.mutate({
-                requestId: selectedVoucherRequest!.id,
-                status: 'approved',
-              })}
-              disabled={reviewVoucherMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {reviewVoucherMutation.isPending && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              )}
-              <CheckCircle className="h-4 w-4 mr-2" />
-              {t('ecp.approve')}
-            </Button>
+
+          <DialogFooter className="flex-wrap gap-2">
+            {/* Reject — available for pending and approved */}
+            {(selectedVoucherRequest?.status === 'pending' || selectedVoucherRequest?.status === 'approved') && (
+              <Button
+                variant="outline"
+                onClick={() => rejectVoucherMutation.mutate({ requestId: selectedVoucherRequest!.id })}
+                disabled={rejectVoucherMutation.isPending}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
+              </Button>
+            )}
+
+            {/* Approve — only for pending */}
+            {selectedVoucherRequest?.status === 'pending' && (
+              <Button
+                onClick={() => approveVoucherMutation.mutate({ requestId: selectedVoucherRequest!.id })}
+                disabled={approveVoucherMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {approveVoucherMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve
+              </Button>
+            )}
+
+            {/* Mark as Paid — only for approved */}
+            {selectedVoucherRequest?.status === 'approved' && (
+              <Button
+                onClick={() => markPaidVoucherMutation.mutate({ requestId: selectedVoucherRequest!.id })}
+                disabled={markPaidVoucherMutation.isPending}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {markPaidVoucherMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Mark as Paid
+              </Button>
+            )}
+
+            {/* Fulfil — only for paid */}
+            {selectedVoucherRequest?.status === 'paid' && (
+              <Button
+                onClick={() => fulfillVoucherMutation.mutate({ requestId: selectedVoucherRequest!.id })}
+                disabled={fulfillVoucherMutation.isPending}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {fulfillVoucherMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Fulfil &amp; Generate Vouchers
+              </Button>
+            )}
+
+            {/* Close for terminal states */}
+            {(selectedVoucherRequest?.status === 'fulfilled' || selectedVoucherRequest?.status === 'cancelled') && (
+              <Button variant="outline" onClick={() => setReviewVoucherDialogOpen(false)}>
+                Close
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

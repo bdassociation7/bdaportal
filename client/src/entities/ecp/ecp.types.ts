@@ -385,7 +385,7 @@ export interface LicenseInfo {
 // =============================================================================
 
 export type VoucherStatus = 'available' | 'assigned' | 'used' | 'expired' | 'cancelled';
-export type VoucherRequestStatus = 'pending' | 'approved' | 'paid' | 'fulfiled' | 'cancelled' | 'refunded';
+export type VoucherRequestStatus = 'pending' | 'approved' | 'paid' | 'fulfilled' | 'cancelled' | 'refunded';
 
 export interface Voucher {
   id: string;
