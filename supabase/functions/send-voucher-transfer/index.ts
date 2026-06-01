@@ -5,6 +5,11 @@
  * Handles two cases:
  *   1. Recipient has an existing BDA account → voucher_transferred_to_you
  *   2. Recipient has no account → voucher_transferred_invite
+ *
+ * Security:
+ *   - Requires valid JWT (verify_jwt = true in config.toml)
+ *   - sender_user_id is extracted from the verified JWT, NOT from request body
+ *   - Verifies that the sender actually owns the voucher before sending
  */
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -22,58 +27,94 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const resendApiKey = Deno.env.get('RESEND_API_KEY')!
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    const supabase = createClient(supabaseUrl, serviceKey)
+    // ─── 1. Authenticate the caller via JWT ───────────────────────────────────
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Missing or invalid Authorization header' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
-    const { voucher_id, recipient_email, recipient_has_account, sender_user_id } = await req.json()
+    // Use the caller's JWT to identify them — never trust sender_user_id from body
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } }
+    })
+
+    const { data: { user: callerUser }, error: authErr } = await callerClient.auth.getUser()
+    if (authErr || !callerUser) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: invalid token' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // sender_user_id comes from the verified JWT, not from request body
+    const senderUserId = callerUser.id
+
+    // ─── 2. Parse request body (sender_user_id is ignored even if provided) ──
+    const { voucher_id, recipient_email, recipient_has_account } = await req.json()
 
     if (!voucher_id || !recipient_email) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+      return new Response(JSON.stringify({ error: 'Missing required fields: voucher_id, recipient_email' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Fetch voucher details
+    // ─── 3. Admin client for DB operations ────────────────────────────────────
+    const supabase = createClient(supabaseUrl, serviceKey)
+
+    // ─── 4. Verify sender owns the voucher ────────────────────────────────────
     const { data: voucher, error: vErr } = await supabase
       .from('exam_vouchers')
-      .select('code, certification_type, expires_at')
+      .select('id, code, certification_type, expires_at, user_id')
       .eq('id', voucher_id)
       .single()
 
-    if (vErr || !voucher) throw new Error('Voucher not found')
+    if (vErr || !voucher) {
+      return new Response(JSON.stringify({ error: 'Voucher not found' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
-    // Fetch sender name
+    // Ownership check: the caller must be the voucher owner
+    if (voucher.user_id !== senderUserId) {
+      console.warn(`Unauthorized voucher transfer attempt: user ${senderUserId} tried to transfer voucher ${voucher_id} owned by ${voucher.user_id}`)
+      return new Response(JSON.stringify({ error: 'Forbidden: you do not own this voucher' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // ─── 5. Fetch sender details from verified user id ────────────────────────
     const { data: sender } = await supabase
       .from('users')
       .select('full_name, email')
-      .eq('id', sender_user_id)
+      .eq('id', senderUserId)
       .single()
 
     const senderName = sender?.full_name || sender?.email || 'A BDA Member'
 
-    // Format expiry date
+    // ─── 6. Format voucher data ───────────────────────────────────────────────
     const expiresAt = voucher.expires_at
       ? new Date(voucher.expires_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       : 'No expiry'
 
-    // Format certification type for brand consistency: CP → CP (template uses BDA-{{certification_type}}™)
-    // The template already has BDA- prefix hardcoded, so we just pass CP or SCP
     const certType = voucher.certification_type // 'CP' or 'SCP'
 
-    // Determine template and recipient name
+    // ─── 7. Determine template and recipient name ─────────────────────────────
     let templateKey: string
     let recipientName: string
     let templateData: Record<string, string>
 
     if (recipient_has_account) {
-      // Fetch recipient name
-      const { data: recipient } = await supabase
+      // Fetch recipient name by email
+      const { data: recipientUser } = await supabase
         .from('users')
         .select('full_name')
-        .eq('id', (await supabase.from('users').select('id').eq('email', recipient_email).single()).data?.id)
+        .eq('email', recipient_email.toLowerCase().trim())
         .single()
 
-      recipientName = recipient?.full_name || recipient_email.split('@')[0]
+      recipientName = recipientUser?.full_name || recipient_email.split('@')[0]
       templateKey = 'voucher_transferred_to_you'
       templateData = {
         recipient_name: recipientName,
@@ -92,7 +133,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fetch email template
+    // ─── 8. Fetch email template ──────────────────────────────────────────────
     const { data: template, error: tErr } = await supabase
       .from('email_templates')
       .select('subject, html_body, text_body')
@@ -102,7 +143,7 @@ Deno.serve(async (req) => {
 
     if (tErr || !template) throw new Error(`Template ${templateKey} not found`)
 
-    // Render template
+    // ─── 9. Render template ───────────────────────────────────────────────────
     function render(str: string, data: Record<string, string>): string {
       return str.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] ?? `{{${key}}}`)
     }
@@ -111,7 +152,7 @@ Deno.serve(async (req) => {
     const htmlBody = render(template.html_body, templateData)
     const textBody = template.text_body ? render(template.text_body, templateData) : undefined
 
-    // Send email via Resend
+    // ─── 10. Send email via Resend ────────────────────────────────────────────
     const emailPayload: Record<string, unknown> = {
       from: FROM_EMAIL,
       to: [recipient_email],
@@ -136,7 +177,7 @@ Deno.serve(async (req) => {
       throw new Error(`Email send failed: ${JSON.stringify(sendResult)}`)
     }
 
-    // Log email in email_logs if table exists
+    // ─── 11. Log email ────────────────────────────────────────────────────────
     try {
       await supabase.from('email_logs').insert({
         template_key: templateKey,
