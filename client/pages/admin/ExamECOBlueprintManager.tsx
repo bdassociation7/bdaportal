@@ -369,13 +369,8 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
 
   // Local editable state: map competency_name → question_count
   const [counts, setCounts] = useState<Record<string, number>>({});
-  // Saved weight percentages from DB
-  const weightMap: Record<string, number> = {};
-  if (data?.config) {
-    for (const c of data.config) {
-      if (c.exam_weight_percent) weightMap[c.competency_name] = c.exam_weight_percent;
-    }
-  }
+  // Editable target weight percentages: map competency_name → exam_weight_percent
+  const [weights, setWeights] = useState<Record<string, number>>({});
   const [dirty, setDirty] = useState(false);
 
   // Simulation state
@@ -386,15 +381,18 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
   // Test attempt state
   const [startingAttempt, setStartingAttempt] = useState<'en' | 'ar' | null>(null);
 
-  // Initialise counts from loaded data
+  // Initialise counts and weights from loaded data
   useEffect(() => {
     if (!data) return;
     const initial: Record<string, number> = {};
+    const initialWeights: Record<string, number> = {};
     for (const row of data.pool) {
       const saved = data.config.find(c => c.competency_name === row.competency_name);
       initial[row.competency_name] = saved?.question_count ?? 0;
+      if (saved?.exam_weight_percent) initialWeights[row.competency_name] = saved.exam_weight_percent;
     }
     setCounts(initial);
+    setWeights(initialWeights);
     setDirty(false);
   }, [data]);
 
@@ -409,6 +407,7 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
           competency_name: r.competency_name,
           question_count: counts[r.competency_name] ?? 0,
           order_index: i,
+          ...(weights[r.competency_name] !== undefined ? { exam_weight_percent: weights[r.competency_name] } : {}),
         }));
 
       const { error } = await supabase
@@ -443,12 +442,21 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
   const handleReset = () => {
     if (!data) return;
     const initial: Record<string, number> = {};
+    const initialWeights: Record<string, number> = {};
     for (const row of data.pool) {
       const saved = data.config.find(c => c.competency_name === row.competency_name);
       initial[row.competency_name] = saved?.question_count ?? 0;
+      if (saved?.exam_weight_percent) initialWeights[row.competency_name] = saved.exam_weight_percent;
     }
     setCounts(initial);
+    setWeights(initialWeights);
     setDirty(false);
+  };
+
+  const handleWeightChange = (name: string, value: string) => {
+    const n = Math.max(0, Math.min(100, parseInt(value) || 0));
+    setWeights(prev => ({ ...prev, [name]: n }));
+    setDirty(true);
   };
 
   const handleChange = (name: string, value: string) => {
@@ -595,7 +603,6 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
 
       // Calculate live weight % from current count vs total
       const liveWeight = total > 0 ? Math.round((count / EXAM_TOTAL) * 100) : 0;
-      const savedWeight = weightMap[row.competency_name] ?? 0;
 
       return (
         <TableRow key={row.competency_name}>
@@ -622,24 +629,23 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
             />
           </TableCell>
           <TableCell className="text-center">
-            {count > 0 ? (
-              <div className="flex flex-col items-center gap-0.5">
-                <span className={`text-sm font-semibold ${
-                  savedWeight > 0 && liveWeight !== savedWeight ? 'text-amber-600' : 'text-foreground'
-                }`}>
-                  {liveWeight}%
-                </span>
-                {savedWeight > 0 && (
-                  <span className="text-xs text-muted-foreground">Target: {savedWeight}%</span>
-                )}
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={weights[row.competency_name] ?? ''}
+                  placeholder="0"
+                  onChange={e => handleWeightChange(row.competency_name, e.target.value)}
+                  className="w-16 text-center text-xs h-7 px-1"
+                />
+                <span className="text-xs text-muted-foreground">%</span>
               </div>
-            ) : (
-              savedWeight > 0 ? (
-                <span className="text-xs text-muted-foreground">Target: {savedWeight}%</span>
-              ) : (
-                <span className="text-muted-foreground text-sm">—</span>
-              )
-            )}
+              {count > 0 && liveWeight !== (weights[row.competency_name] ?? 0) && (weights[row.competency_name] ?? 0) > 0 && (
+                <span className="text-xs text-amber-600">Live: {liveWeight}%</span>
+              )}
+            </div>
           </TableCell>
           <TableCell className="text-center">
             {count === 0 ? (
