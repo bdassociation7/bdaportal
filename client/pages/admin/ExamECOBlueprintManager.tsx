@@ -62,6 +62,13 @@ interface BlueprintRow {
   order_index: number;
 }
 
+interface ConfigRow {
+  competency_name: string;
+  question_count: number;
+  order_index: number;
+  exam_weight_percent?: number;
+}
+
 interface SimResultRow {
   competency_name: string;
   domain: Domain;
@@ -163,7 +170,7 @@ function useECOData(certType: CertType) {
       // 3. Load existing blueprint config
       const { data: config, error: configError } = await supabase
         .from('eco_blueprint_config')
-        .select('competency_name, question_count, order_index')
+        .select('competency_name, question_count, order_index, exam_weight_percent')
         .eq('certification_type', certType)
         .order('order_index');
 
@@ -171,7 +178,7 @@ function useECOData(certType: CertType) {
 
       return {
         pool,
-        config: config || [],
+        config: (config || []) as ConfigRow[],
         enQuizId: enQuiz?.id || null,
         arQuizId: arQuiz?.id || null,
         untaggedEn,
@@ -362,6 +369,13 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
 
   // Local editable state: map competency_name → question_count
   const [counts, setCounts] = useState<Record<string, number>>({});
+  // Saved weight percentages from DB
+  const weightMap: Record<string, number> = {};
+  if (data?.config) {
+    for (const c of data.config) {
+      if (c.exam_weight_percent) weightMap[c.competency_name] = c.exam_weight_percent;
+    }
+  }
   const [dirty, setDirty] = useState(false);
 
   // Simulation state
@@ -579,6 +593,10 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
       const overEn = count > 0 && count > row.pool_en;
       const overAr = row.pool_ar > 0 && count > row.pool_ar;
 
+      // Calculate live weight % from current count vs total
+      const liveWeight = total > 0 ? Math.round((count / EXAM_TOTAL) * 100) : 0;
+      const savedWeight = weightMap[row.competency_name] ?? 0;
+
       return (
         <TableRow key={row.competency_name}>
           <TableCell className="font-medium">{row.competency_name}</TableCell>
@@ -602,6 +620,26 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
               onChange={e => handleChange(row.competency_name, e.target.value)}
               className={`text-center ${overPool ? 'border-destructive focus-visible:ring-destructive' : ''}`}
             />
+          </TableCell>
+          <TableCell className="text-center">
+            {count > 0 ? (
+              <div className="flex flex-col items-center gap-0.5">
+                <span className={`text-sm font-semibold ${
+                  savedWeight > 0 && liveWeight !== savedWeight ? 'text-amber-600' : 'text-foreground'
+                }`}>
+                  {liveWeight}%
+                </span>
+                {savedWeight > 0 && (
+                  <span className="text-xs text-muted-foreground">Target: {savedWeight}%</span>
+                )}
+              </div>
+            ) : (
+              savedWeight > 0 ? (
+                <span className="text-xs text-muted-foreground">Target: {savedWeight}%</span>
+              ) : (
+                <span className="text-muted-foreground text-sm">—</span>
+              )
+            )}
           </TableCell>
           <TableCell className="text-center">
             {count === 0 ? (
@@ -734,6 +772,7 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
               <TableHead className="text-center w-20">Pool EN</TableHead>
               <TableHead className="text-center w-20">Pool AR</TableHead>
               <TableHead className="text-center w-28">Draw Count</TableHead>
+              <TableHead className="text-center w-32">Weight %</TableHead>
               <TableHead className="text-center w-36">Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -742,6 +781,7 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
             <TableRow className="bg-muted/30">
               <TableCell colSpan={3} className="font-medium text-right text-sm text-muted-foreground">Behavioural subtotal</TableCell>
               <TableCell className="text-center font-semibold">{behaviouralTotal}</TableCell>
+              <TableCell className="text-center font-semibold text-sm">{Math.round(behaviouralTotal / EXAM_TOTAL * 100)}%</TableCell>
               <TableCell />
             </TableRow>
           </TableBody>
@@ -762,6 +802,7 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
               <TableHead className="text-center w-20">Pool EN</TableHead>
               <TableHead className="text-center w-20">Pool AR</TableHead>
               <TableHead className="text-center w-28">Draw Count</TableHead>
+              <TableHead className="text-center w-32">Weight %</TableHead>
               <TableHead className="text-center w-36">Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -770,6 +811,7 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
             <TableRow className="bg-muted/30">
               <TableCell colSpan={3} className="font-medium text-right text-sm text-muted-foreground">Knowledge subtotal</TableCell>
               <TableCell className="text-center font-semibold">{knowledgeTotal}</TableCell>
+              <TableCell className="text-center font-semibold text-sm">{Math.round(knowledgeTotal / EXAM_TOTAL * 100)}%</TableCell>
               <TableCell />
             </TableRow>
           </TableBody>
