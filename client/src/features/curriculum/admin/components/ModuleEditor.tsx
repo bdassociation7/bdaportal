@@ -310,28 +310,22 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
           </div>
         </div>
 
-        {/* Language-Specific Content with EN/AR Tabs */}
+        {/* Language-Specific Content — shows only the relevant language section */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Module Content</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Module Content
+            <span className={`ml-3 text-sm font-normal px-2 py-0.5 rounded-full ${
+              examLanguage === 'en'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-emerald-100 text-emerald-700'
+            }`}>
+              {examLanguage === 'en' ? '🇬🇧 English Module' : '🇸🇦 وحدة عربية'}
+            </span>
+          </h2>
 
-          <Tabs value={activeLanguageTab} onValueChange={(v) => setActiveLanguageTab(v as 'en' | 'ar')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger
-                value="en"
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-              >
-                English Version
-              </TabsTrigger>
-              <TabsTrigger
-                value="ar"
-                className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-              >
-                Arabic Version
-              </TabsTrigger>
-            </TabsList>
-
-            {/* English Content Tab */}
-            <TabsContent value="en" className="space-y-6">
+          {/* ── ENGLISH MODULE ── */}
+          {examLanguage === 'en' && (
+            <div className="space-y-6">
               {/* Competency Name (English) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -342,7 +336,7 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
                   value={competencyName}
                   onChange={(e) => setCompetencyName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Business Analysis Planning and Monitoring"
+                  placeholder="e.g., Strategic Leadership"
                   required
                 />
               </div>
@@ -411,29 +405,35 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
                   placeholder="Write the module content here. Use the toolbar to format text, add headings, lists, images, etc."
                 />
               </div>
-            </TabsContent>
+            </div>
+          )}
 
-            {/* Arabic Content Tab */}
-            <TabsContent value="ar" className="space-y-6">
+          {/* ── ARABIC MODULE ── */}
+          {examLanguage === 'ar' && (
+            <div className="space-y-6" dir="rtl">
               {/* Competency Name (Arabic) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Competency Name (Arabic)
+                  اسم الكفاءة *
                 </label>
                 <input
                   type="text"
                   value={competencyNameAr}
-                  onChange={(e) => setCompetencyNameAr(e.target.value)}
+                  onChange={(e) => {
+                    setCompetencyNameAr(e.target.value);
+                    // Mirror to competency_name so DB NOT NULL constraint is satisfied
+                    setCompetencyName(e.target.value);
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  placeholder="اسم الكفاءة بالعربية"
-                  dir="rtl"
+                  placeholder="مثال: القيادة الاستراتيجية"
+                  required
                 />
               </div>
 
               {/* Description (Arabic) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description (Arabic)
+                  الوصف
                 </label>
                 <textarea
                   value={descriptionAr}
@@ -441,7 +441,6 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   placeholder="وصف مختصر لهذه الوحدة..."
                   rows={3}
-                  dir="rtl"
                 />
               </div>
 
@@ -449,14 +448,14 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <label className="block text-sm font-medium text-gray-700">
-                    Learning Objectives (Arabic)
+                    أهداف التعلم
                   </label>
                   <button
                     type="button"
                     onClick={handleAddObjectiveAr}
                     className="px-3 py-1 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
                   >
-                    Add Objective
+                    إضافة هدف
                   </button>
                 </div>
                 <div className="space-y-3">
@@ -468,14 +467,13 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
                         onChange={(e) => handleUpdateObjectiveAr(index, e.target.value)}
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         placeholder={`هدف التعلم ${index + 1}`}
-                        dir="rtl"
                       />
                       {learningObjectivesAr.length > 1 && (
                         <button
                           type="button"
                           onClick={() => handleRemoveObjectiveAr(index)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                          title="Remove"
+                          title="حذف"
                         >
                           <X className="w-5 h-5" />
                         </button>
@@ -488,7 +486,7 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
               {/* Content Editor (Arabic) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Module Content (Arabic)
+                  محتوى الوحدة
                 </label>
                 <RichTextEditor
                   content={contentAr}
@@ -497,8 +495,8 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
                   dir="rtl"
                 />
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
         </div>
 
         {/* Quiz & Prerequisites */}
