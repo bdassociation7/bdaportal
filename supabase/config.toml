@@ -62,3 +62,10 @@ content_path = "./supabase/templates/magic_link.html"
 [auth.email.template.email_change]
 subject = "Confirm Email Change - BDA Portal"
 content_path = "./supabase/templates/email_change.html"
+
+# =============================================================================
+# Edge Functions Configuration
+# =============================================================================
+
+[functions.woocommerce-webhook]
+verify_jwt = false

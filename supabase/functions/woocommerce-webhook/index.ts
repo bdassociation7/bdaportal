@@ -188,7 +188,13 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
         .limit(1)
 
       // Also check auth.users directly via RPC (more reliable than listUsers)
-      const { data: authUserData } = await supabase.rpc('get_auth_user_by_email', { p_email: email }).maybeSingle().catch(() => ({ data: null }))
+      let authUserData = null
+      try {
+        const { data: rpcResult } = await supabase.rpc('get_auth_user_by_email', { p_email: email }).maybeSingle()
+        authUserData = rpcResult
+      } catch (_rpcErr) {
+        authUserData = null
+      }
 
       if (authUserData?.id) {
         userId = authUserData.id
@@ -224,12 +230,43 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
         })
 
         if (authError) {
-          console.error('Error creating auth user:', authError)
-          return { success: false, error: `Failed to create auth user: ${authError.message}` }
+          // RACE CONDITION FIX: If auth user already exists (e.g. user registered
+          // independently, or WooCommerce sent a duplicate webhook), fall back to
+          // fetching the existing user instead of failing the whole order.
+          const alreadyExists =
+            authError.message?.toLowerCase().includes('already been registered') ||
+            authError.message?.toLowerCase().includes('already registered') ||
+            authError.status === 422
+          if (alreadyExists) {
+            console.warn(`Auth user already exists for ${email} — recovering via RPC`)
+            try {
+              const { data: existingAuthUser } = await supabase.rpc('get_auth_user_by_email', { p_email: email })
+              if (existingAuthUser?.id) {
+                userId = existingAuthUser.id
+                isNewUser = false
+                console.log(`Recovered existing auth user: ${userId}`)
+                await supabase.from('users').upsert({
+                  id: userId, email, first_name: order.billing.first_name || '',
+                  last_name: order.billing.last_name || '', phone: order.billing.phone || null,
+                  country_code: order.billing.country || null, role: 'individual',
+                  is_active: true, profile_completed: false, created_from: 'store',
+                }, { onConflict: 'id', ignoreDuplicates: true })
+              } else {
+                console.error('Could not recover existing auth user for:', email)
+                return { success: false, error: `Failed to create auth user: ${authError.message}` }
+              }
+            } catch (recoverErr: any) {
+              console.error('Error recovering existing auth user:', recoverErr)
+              return { success: false, error: `Failed to create auth user: ${authError.message}` }
+            }
+          } else {
+            console.error('Error creating auth user:', authError)
+            return { success: false, error: `Failed to create auth user: ${authError.message}` }
+          }
+        } else {
+          userId = authData.user.id
+          console.log(`Created auth user with ID: ${userId}`)
         }
-
-        userId = authData.user.id
-        console.log(`Created auth user with ID: ${userId}`)
 
         // Create users table record
         const { error: createError } = await supabase.from('users').insert({

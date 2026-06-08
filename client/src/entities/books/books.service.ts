@@ -91,10 +91,26 @@ export class BooksService {
   }
 
   /**
+   * Hardcoded non-book product IDs as a reliable fallback.
+   * These are products that should NEVER appear in My Books regardless of DB state.
+   * Update this list when new membership/learning/partnership products are added.
+   */
+  private static readonly HARDCODED_NON_BOOK_PRODUCT_IDS: number[] = [
+    14510, // BDA Basic Membership
+    14512, // BDA Professional Membership
+    14874, // BDA Learning System - English
+    14873, // BDA Learning System - Arabic
+  ];
+
+  /**
    * Get non-book product IDs (memberships, learning systems, partnerships)
-   * These should be excluded from My Books display
+   * These should be excluded from My Books display.
+   * Uses hardcoded fallback + dynamic DB query for reliability.
    */
   private static async getNonBookProductIds(): Promise<number[]> {
+    // Start with hardcoded IDs as a guaranteed baseline
+    const excludedIds: number[] = [...this.HARDCODED_NON_BOOK_PRODUCT_IDS];
+
     try {
       const [membershipData, learningData, partnershipData] = await Promise.all([
         supabase
@@ -111,8 +127,6 @@ export class BooksService {
           .eq('is_active', true),
       ]);
 
-      const excludedIds: number[] = [];
-
       if (membershipData.data) {
         excludedIds.push(...membershipData.data.map(p => p.woocommerce_product_id));
       }
@@ -122,12 +136,12 @@ export class BooksService {
       if (partnershipData.data) {
         excludedIds.push(...partnershipData.data.map(p => p.woocommerce_product_id));
       }
-
-      return [...new Set(excludedIds)]; // Remove duplicates
     } catch (error) {
-      console.error('Failed to fetch non-book product IDs:', error);
-      return [];
+      // DB query failed, but hardcoded IDs are still used as fallback
+      console.warn('Failed to fetch non-book product IDs from DB, using hardcoded fallback:', error);
     }
+
+    return [...new Set(excludedIds)]; // Remove duplicates
   }
 
   /**

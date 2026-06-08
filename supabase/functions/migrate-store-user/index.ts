@@ -123,10 +123,12 @@ serve(async (req) => {
     })
 
     // Check if user already exists in auth.users
-    const { data: existingAuthUser } = await adminClient.auth.admin.listUsers()
-    const existingUser = existingAuthUser?.users?.find(
-      u => u.email?.toLowerCase() === body.email.toLowerCase()
+    // FIX: Use getUserByEmail instead of listUsers() to avoid N+1 Query
+    // listUsers() fetches ALL users into memory — very slow with large user bases
+    const { data: existingAuthData } = await adminClient.auth.admin.getUserByEmail(
+      body.email.toLowerCase()
     )
+    const existingUser = existingAuthData?.user ?? null
 
     if (existingUser) {
       console.log(`User already exists in auth.users: ${existingUser.id}`)

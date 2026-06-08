@@ -1,26 +1,11 @@
 /**
  * Voucher Tracking Admin Page
- *
- * Shows candidates with unused vouchers during open exam windows,
- * reminder history, and scheduling status.
+ * Rewritten to use direct Supabase queries instead of complex RPC
  */
-
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import {
-  Ticket,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Calendar,
-  RefreshCw,
-  Filter,
-  Search,
-  Mail,
-  Bell,
-  BellOff,
-  Globe,
-  XCircle,
+  Ticket, AlertTriangle, CheckCircle, Clock, Calendar,
+  RefreshCw, Search, Mail, Globe, XCircle, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -28,253 +13,360 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/shared/config/supabase.config';
 import { cn } from '@/shared/utils/cn';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface VoucherRow {
-  voucher_id: string;
-  voucher_code: string;
+  id: string;
+  code: string;
+  status: string;
   certification_type: string;
-  exam_language: string | null;
+  exam_language: string;
+  expires_at: string;
+  created_at: string;
   user_id: string;
   user_email: string;
-  user_first_name: string | null;
-  user_last_name: string | null;
-  user_country_code: string | null;
-  voucher_status: string;
-  expires_at: string;
-  booking_id: string | null;
-  booking_status: string | null;
-  scheduled_date: string | null;
-  window_id: string | null;
-  window_name: string | null;
-  window_start: string | null;
-  window_end: string | null;
+  user_first_name: string;
+  user_last_name: string;
+  user_country_code: string;
+  booking_id?: string;
+  booking_status?: string;
+  scheduled_date?: string;
   reminders_sent: number;
-  last_reminder_type: string | null;
-  last_reminder_at: string | null;
+  last_reminder_type?: string;
+  last_reminder_at?: string;
+  next_window_name?: string;
+  next_window_start?: string;
+  next_window_end?: string;
 }
 
-type TrackingFilter = 'all' | 'unused_no_booking' | 'scheduled' | 'used' | 'expired';
+interface ExamWindow {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+}
 
-const REMINDER_ORDER = ['window_open', 'day_5', 'day_minus_3', 'day_minus_1'];
-const REMINDER_LABELS: Record<string, string> = {
-  window_open: 'Window Open',
-  day_5: 'Day 5',
-  day_minus_3: '3 Days Left',
-  day_minus_1: 'Last Day',
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function daysUntil(dateStr?: string | null): number | null {
+  if (!dateStr) return null;
+  const diff = new Date(dateStr).getTime() - Date.now();
+  return Math.ceil(diff / 86_400_000);
+}
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
-function useVoucherTracking(
-  certType: string,
-  countryCode: string,
-  status: string,
-) {
-  return useQuery({
-    queryKey: ['voucher-tracking', certType, countryCode, status],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_voucher_tracking_data', {
-        p_cert_type:    certType   === 'all' ? null : certType,
-        p_country_code: countryCode === 'all' ? null : countryCode,
-        p_status:       status     === 'all' ? null : status,
-      });
-      if (error) throw error;
-      return (data as VoucherRow[]) ?? [];
-    },
-    staleTime: 60_000,
+function formatDate(dateStr?: string | null): string {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
   });
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatDate(d: string | null) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+function statusColor(status: string) {
+  switch (status) {
+    case 'available': return 'bg-green-100 text-green-800';
+    case 'assigned':  return 'bg-blue-100 text-blue-800';
+    case 'used':      return 'bg-gray-100 text-gray-600';
+    case 'expired':   return 'bg-red-100 text-red-700';
+    default:          return 'bg-gray-100 text-gray-600';
+  }
 }
 
-function daysUntil(d: string | null) {
-  if (!d) return null;
-  const diff = Math.ceil((new Date(d).getTime() - Date.now()) / 86_400_000);
-  return diff;
-}
-
-function ReminderDots({ sent, last }: { sent: number; last: string | null }) {
-  const lastIdx = last ? REMINDER_ORDER.indexOf(last) : -1;
-  return (
-    <div className="flex gap-1 items-center">
-      {REMINDER_ORDER.map((type, i) => (
-        <span
-          key={type}
-          title={REMINDER_LABELS[type]}
-          className={cn(
-            'w-2.5 h-2.5 rounded-full border',
-            i <= lastIdx
-              ? 'bg-blue-500 border-blue-600'
-              : 'bg-gray-200 border-gray-300',
-          )}
-        />
-      ))}
-      <span className="text-xs text-gray-500 ml-1">{sent}/4</span>
-    </div>
-  );
-}
-
-function StatusBadge({ row }: { row: VoucherRow }) {
-  if (row.voucher_status === 'used') {
-    return <Badge className="bg-green-100 text-green-700 border-green-300">Used</Badge>;
-  }
-  if (row.voucher_status === 'expired' || (row.expires_at && new Date(row.expires_at) < new Date())) {
-    return <Badge className="bg-gray-100 text-gray-500 border-gray-300">Expired</Badge>;
-  }
-  if (row.booking_id) {
-    return <Badge className="bg-blue-100 text-blue-700 border-blue-300">Scheduled</Badge>;
-  }
-  if (row.window_id) {
-    const days = daysUntil(row.window_end);
-    if (days !== null && days <= 3) {
-      return <Badge className="bg-red-100 text-red-700 border-red-300">Urgent — {days}d left</Badge>;
-    }
-    return <Badge className="bg-amber-100 text-amber-700 border-amber-300">Window Open</Badge>;
-  }
-  return <Badge className="bg-gray-100 text-gray-600 border-gray-300">No Window</Badge>;
-}
-
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
-
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function VoucherTrackingAdmin() {
   const { t } = useLanguage();
   const { toast } = useToast();
 
-  const [certType,    setCertType]    = useState('all');
-  const [countryCode, setCountryCode] = useState('all');
-  const [status,      setStatus]      = useState<TrackingFilter>('all');
-  const [search,      setSearch]      = useState('');
+  const [vouchers, setVouchers]           = useState<VoucherRow[]>([]);
+  const [windows, setWindows]             = useState<ExamWindow[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState<string | null>(null);
+  const [search, setSearch]               = useState('');
+  const [certFilter, setCertFilter]       = useState('all');
+  const [statusFilter, setStatusFilter]   = useState('all');
+  const [countryFilter, setCountryFilter] = useState('all');
+  const [sortField, setSortField]         = useState<string>('expires_at');
+  const [sortAsc, setSortAsc]             = useState(true);
 
-  const { data = [], isLoading, refetch, isFetching } = useVoucherTracking(certType, countryCode, status);
+  // ── Fetch all data directly ──────────────────────────────────────────────
+  async function fetchData() {
+    setLoading(true);
+    setError(null);
+    try {
+      // 1. Fetch vouchers with user info via join
+      const { data: voucherData, error: vErr } = await supabase
+        .from('exam_vouchers')
+        .select(`
+          id, code, status, certification_type, exam_language,
+          expires_at, created_at, user_id,
+          users!exam_vouchers_user_id_fkey(email, first_name, last_name, country_code)
+        `)
+        .order('created_at', { ascending: false });
 
-  // Filter by search client-side
-  const filtered = search.trim()
-    ? data.filter(r =>
-        r.user_email.toLowerCase().includes(search.toLowerCase()) ||
-        (r.user_first_name + ' ' + r.user_last_name).toLowerCase().includes(search.toLowerCase()) ||
-        r.voucher_code.toLowerCase().includes(search.toLowerCase()),
-      )
-    : data;
+      if (vErr) throw new Error(`Vouchers error: ${vErr.message}`);
+      if (!voucherData || voucherData.length === 0) {
+        setVouchers([]);
+        setLoading(false);
+        return;
+      }
 
-  // Summary stats
+      // 2. Fetch exam windows
+      const { data: windowData } = await supabase
+        .from('certification_exam_windows')
+        .select('id, name, start_date, end_date, is_active')
+        .eq('is_active', true)
+        .order('start_date', { ascending: true });
+
+      // 3. Fetch bookings for these vouchers
+      const voucherIds = voucherData.map((v: any) => v.id);
+      const bookingMap: Record<string, any> = {};
+
+      const { data: bookingData } = await supabase
+        .from('exam_bookings')
+        .select('id, voucher_id, status, scheduled_start_time')
+        .in('voucher_id', voucherIds)
+        .not('status', 'in', '("cancelled","no_show")')
+        .order('scheduled_start_time', { ascending: false });
+
+      (bookingData || []).forEach((b: any) => {
+        if (!bookingMap[b.voucher_id]) bookingMap[b.voucher_id] = b;
+      });
+
+      // 4. Fetch reminder logs
+      const reminderMap: Record<string, { count: number; last_type?: string; last_sent?: string }> = {};
+
+      const { data: reminderData } = await supabase
+        .from('voucher_reminder_logs')
+        .select('voucher_id, reminder_type, sent_at')
+        .in('voucher_id', voucherIds)
+        .order('sent_at', { ascending: false });
+
+      (reminderData || []).forEach((r: any) => {
+        if (!reminderMap[r.voucher_id]) {
+          reminderMap[r.voucher_id] = { count: 0 };
+        }
+        reminderMap[r.voucher_id].count++;
+        if (!reminderMap[r.voucher_id].last_type) {
+          reminderMap[r.voucher_id].last_type = r.reminder_type;
+          reminderMap[r.voucher_id].last_sent = r.sent_at;
+        }
+      });
+
+      // 5. Find next upcoming window
+      const today = new Date().toISOString().split('T')[0];
+      const nextWindow = (windowData || []).find((w: any) => w.start_date > today);
+
+      // 6. Combine all data
+      const rows: VoucherRow[] = voucherData.map((v: any) => {
+        const user = v.users;
+        const booking = bookingMap[v.id];
+        const reminder = reminderMap[v.id] || { count: 0 };
+        return {
+          id: v.id,
+          code: v.code,
+          status: v.status,
+          certification_type: v.certification_type,
+          exam_language: v.exam_language || '',
+          expires_at: v.expires_at,
+          created_at: v.created_at,
+          user_id: v.user_id,
+          user_email: user?.email || '',
+          user_first_name: user?.first_name || '',
+          user_last_name: user?.last_name || '',
+          user_country_code: user?.country_code || '',
+          booking_id: booking?.id,
+          booking_status: booking?.status,
+          scheduled_date: booking?.scheduled_start_time,
+          reminders_sent: reminder.count,
+          last_reminder_type: reminder.last_type,
+          last_reminder_at: reminder.last_sent,
+          next_window_name: nextWindow?.name,
+          next_window_start: nextWindow?.start_date,
+          next_window_end: nextWindow?.end_date,
+        };
+      });
+
+      setVouchers(rows);
+      setWindows(windowData || []);
+    } catch (err: any) {
+      console.error('Voucher tracking error:', err);
+      setError(err.message || 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { fetchData(); }, []);
+
+  // ── Filter & Sort ────────────────────────────────────────────────────────
+  const filtered = vouchers.filter(v => {
+    const matchSearch = !search.trim() || [
+      v.user_email, v.user_first_name, v.user_last_name, v.code,
+    ].some(s => s.toLowerCase().includes(search.toLowerCase()));
+
+    const matchCert    = certFilter   === 'all' || v.certification_type === certFilter;
+    const matchStatus  = statusFilter === 'all' || v.status === statusFilter;
+    const matchCountry = countryFilter === 'all' || v.user_country_code === countryFilter;
+
+    return matchSearch && matchCert && matchStatus && matchCountry;
+  }).sort((a, b) => {
+    const av: any = (a as any)[sortField] ?? '';
+    const bv: any = (b as any)[sortField] ?? '';
+    if (av < bv) return sortAsc ? -1 : 1;
+    if (av > bv) return sortAsc ? 1 : -1;
+    return 0;
+  });
+
+  // ── Stats ────────────────────────────────────────────────────────────────
   const stats = {
-    total:          data.length,
-    unusedNoWindow: data.filter(r => r.voucher_status === 'unused' && !r.booking_id && !r.window_id).length,
-    unusedInWindow: data.filter(r => r.voucher_status === 'unused' && !r.booking_id && !!r.window_id).length,
-    scheduled:      data.filter(r => !!r.booking_id).length,
-    urgent:         data.filter(r => {
-      const days = daysUntil(r.window_end);
-      return r.voucher_status === 'unused' && !r.booking_id && !!r.window_id && days !== null && days <= 3;
+    total:     vouchers.length,
+    available: vouchers.filter(v => v.status === 'available').length,
+    assigned:  vouchers.filter(v => v.status === 'assigned').length,
+    used:      vouchers.filter(v => v.status === 'used').length,
+    expired:   vouchers.filter(v => v.status === 'expired').length,
+    urgent:    vouchers.filter(v => {
+      const days = daysUntil(v.expires_at);
+      return (v.status === 'available' || v.status === 'assigned') && days !== null && days <= 30;
     }).length,
   };
 
-  // Collect unique countries for filter
-  const countries = Array.from(new Set(data.map(r => r.user_country_code).filter(Boolean))).sort() as string[];
+  // ── Unique countries for filter ──────────────────────────────────────────
+  const countries = Array.from(
+    new Set(vouchers.map(v => v.user_country_code).filter(Boolean))
+  ).sort() as string[];
 
+  // ── Sort toggle ──────────────────────────────────────────────────────────
+  function toggleSort(field: string) {
+    if (sortField === field) setSortAsc(p => !p);
+    else { setSortField(field); setSortAsc(true); }
+  }
+
+  function SortIcon({ field }: { field: string }) {
+    if (sortField !== field) return null;
+    return sortAsc
+      ? <ChevronUp className="w-3 h-3 inline ml-1" />
+      : <ChevronDown className="w-3 h-3 inline ml-1" />;
+  }
+
+  // ── Next window info ─────────────────────────────────────────────────────
+  const today = new Date().toISOString().split('T')[0];
+  const nextWindow = windows.find(w => w.start_date > today);
+  const daysToNext = nextWindow ? daysUntil(nextWindow.start_date) : null;
+
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Ticket className="w-6 h-6 text-blue-600" />
-            Voucher Reminder Tracking
+            <Ticket className="w-7 h-7 text-blue-600" />
+            Voucher Reminders
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Monitor unused exam vouchers and automated reminder status
-          </p>
+          <p className="text-sm text-gray-500 mt-1">Monitor all exam vouchers and candidate status</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={cn('w-4 h-4 mr-2', isFetching && 'animate-spin')} />
+        <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+          <RefreshCw className={cn('w-4 h-4 mr-2', loading && 'animate-spin')} />
           Refresh
         </Button>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-              <Ticket className="w-3 h-3" /> Total vouchers
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-amber-200">
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-amber-600">{stats.unusedInWindow}</div>
-            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-              <Bell className="w-3 h-3" /> Unused in open window
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-red-200">
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-red-600">{stats.urgent}</div>
-            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" /> Urgent (&le;3 days left)
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-green-200">
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold text-green-600">{stats.scheduled}</div>
-            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-              <Calendar className="w-3 h-3" /> Scheduled
-            </div>
-          </CardContent>
-        </Card>
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm flex items-center gap-2">
+          <XCircle className="w-5 h-5 flex-shrink-0" />
+          <div>
+            <strong>Error loading data:</strong> {error}
+            <Button variant="link" size="sm" className="ml-2 text-red-600 p-0 h-auto" onClick={fetchData}>
+              Try again
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Next Window Banner */}
+      {nextWindow && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+          <Calendar className="w-5 h-5 text-blue-600 flex-shrink-0" />
+          <div>
+            <span className="font-medium text-blue-800">Next Exam Window: </span>
+            <span className="text-blue-700">{nextWindow.name}</span>
+            <span className="text-blue-600 text-sm ml-2">
+              ({formatDate(nextWindow.start_date)} – {formatDate(nextWindow.end_date)})
+            </span>
+            {daysToNext !== null && (
+              <Badge className="ml-2 bg-blue-100 text-blue-800 border-0">
+                {daysToNext > 0 ? `in ${daysToNext} days` : 'Open now'}
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {[
+          { label: 'Total',        value: stats.total,     color: 'text-gray-900',   icon: Ticket },
+          { label: 'Available',    value: stats.available, color: 'text-green-700',  icon: CheckCircle },
+          { label: 'Assigned',     value: stats.assigned,  color: 'text-blue-700',   icon: Clock },
+          { label: 'Used',         value: stats.used,      color: 'text-gray-500',   icon: CheckCircle },
+          { label: 'Expired',      value: stats.expired,   color: 'text-red-600',    icon: XCircle },
+          { label: 'Expiring ≤30d', value: stats.urgent,   color: 'text-orange-600', icon: AlertTriangle },
+        ].map(({ label, value, color, icon: Icon }) => (
+          <Card key={label} className={cn(stats.urgent > 0 && label === 'Expiring ≤30d' ? 'border-orange-300' : '')}>
+            <CardContent className="pt-4 pb-3 px-4">
+              <div className={cn('text-2xl font-bold', color)}>{loading ? '—' : value}</div>
+              <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                <Icon className="w-3 h-3" />
+                {label}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-4">
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex-1 min-w-48">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search by name, email or code…"
+                placeholder="Search by name, email or code..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="h-9"
+                className="pl-9"
               />
             </div>
-            <Select value={certType} onValueChange={setCertType}>
-              <SelectTrigger className="w-36 h-9">
-                <SelectValue placeholder="Cert Type" />
+            <Select value={certFilter} onValueChange={setCertFilter}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="CP">BDA-CP™</SelectItem>
-                <SelectItem value="SCP">BDA-SCP™</SelectItem>
+                <SelectItem value="CP">CP</SelectItem>
+                <SelectItem value="SCP">SCP</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={countryCode} onValueChange={setCountryCode}>
-              <SelectTrigger className="w-36 h-9">
-                <SelectValue placeholder="Country" />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="used">Used</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={countryFilter} onValueChange={setCountryFilter}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="All Countries" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Countries</SelectItem>
@@ -283,33 +375,34 @@ export default function VoucherTrackingAdmin() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={status} onValueChange={v => setStatus(v as TrackingFilter)}>
-              <SelectTrigger className="w-44 h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="unused_no_booking">Unused / Not Booked</SelectItem>
-                <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="used">Used</SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
-              </SelectContent>
-            </Select>
+            {(search || certFilter !== 'all' || statusFilter !== 'all' || countryFilter !== 'all') && (
+              <Button variant="ghost" size="sm" onClick={() => {
+                setSearch(''); setCertFilter('all'); setStatusFilter('all'); setCountryFilter('all');
+              }}>
+                Clear filters
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Table */}
       <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">
+            {loading ? 'Loading...' : `${filtered.length} voucher${filtered.length !== 1 ? 's' : ''}`}
+            {!loading && filtered.length !== vouchers.length && ` (filtered from ${vouchers.length})`}
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-16 text-gray-400">
-              <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-              Loading…
+          {loading ? (
+            <div className="flex items-center justify-center py-20 text-gray-400">
+              <RefreshCw className="w-6 h-6 animate-spin mr-3" />
+              <span>Loading vouchers...</span>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
-              <Ticket className="w-8 h-8" />
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
+              <Ticket className="w-10 h-10" />
               <span className="text-sm">No vouchers match the current filters</span>
             </div>
           ) : (
@@ -317,143 +410,165 @@ export default function VoucherTrackingAdmin() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-                    <th className="px-4 py-3 text-left font-medium">Candidate</th>
-                    <th className="px-4 py-3 text-left font-medium">Voucher</th>
-                    <th className="px-4 py-3 text-left font-medium">Exam Window</th>
-                    <th className="px-4 py-3 text-left font-medium">Status</th>
-                    <th className="px-4 py-3 text-left font-medium">Reminders Sent</th>
-                    <th className="px-4 py-3 text-left font-medium">Scheduled</th>
+                    <th
+                      className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700"
+                      onClick={() => toggleSort('user_email')}
+                    >
+                      Candidate <SortIcon field="user_email" />
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700"
+                      onClick={() => toggleSort('code')}
+                    >
+                      Voucher Code <SortIcon field="code" />
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700"
+                      onClick={() => toggleSort('certification_type')}
+                    >
+                      Type <SortIcon field="certification_type" />
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700"
+                      onClick={() => toggleSort('status')}
+                    >
+                      Status <SortIcon field="status" />
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700"
+                      onClick={() => toggleSort('expires_at')}
+                    >
+                      Expires <SortIcon field="expires_at" />
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium">Booking</th>
+                    <th className="px-4 py-3 text-left font-medium">Next Window</th>
+                    <th
+                      className="px-4 py-3 text-left font-medium cursor-pointer hover:text-gray-700"
+                      onClick={() => toggleSort('reminders_sent')}
+                    >
+                      Reminders <SortIcon field="reminders_sent" />
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filtered.map(row => (
-                    <tr
-                      key={row.voucher_id}
-                      className={cn(
-                        'hover:bg-gray-50 transition-colors',
-                        row.voucher_status === 'unused' && !row.booking_id && row.window_id &&
-                          daysUntil(row.window_end) !== null && (daysUntil(row.window_end) as number) <= 3
-                          ? 'bg-red-50'
-                          : '',
-                      )}
-                    >
-                      {/* Candidate */}
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">
-                          {row.user_first_name} {row.user_last_name}
-                        </div>
-                        <div className="text-xs text-gray-400">{row.user_email}</div>
-                        {row.user_country_code && (
-                          <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                            <Globe className="w-3 h-3" />
-                            {row.user_country_code}
+                  {filtered.map(v => {
+                    const daysExp = daysUntil(v.expires_at);
+                    const isUrgent = (v.status === 'available' || v.status === 'assigned') && daysExp !== null && daysExp <= 30;
+                    return (
+                      <tr
+                        key={v.id}
+                        className={cn('hover:bg-gray-50 transition-colors', isUrgent && 'bg-orange-50/30')}
+                      >
+                        {/* Candidate */}
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">
+                            {v.user_first_name} {v.user_last_name}
                           </div>
-                        )}
-                      </td>
-                      {/* Voucher */}
-                      <td className="px-4 py-3">
-                        <div className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded inline-block mb-1">
-                          {row.voucher_code}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          BDA-{row.certification_type}™
-                          {row.exam_language && <span className="ml-1 uppercase">({row.exam_language})</span>}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          Expires {formatDate(row.expires_at)}
-                        </div>
-                      </td>
-                      {/* Window */}
-                      <td className="px-4 py-3">
-                        {row.window_id ? (
-                          <>
-                            <div className="font-medium text-gray-700 text-xs">{row.window_name}</div>
-                            <div className="text-xs text-gray-400">
-                              {formatDate(row.window_start)} → {formatDate(row.window_end)}
+                          <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                            <Mail className="w-3 h-3" />
+                            {v.user_email}
+                          </div>
+                          {v.user_country_code && (
+                            <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                              <Globe className="w-3 h-3" />
+                              {v.user_country_code}
                             </div>
-                            {daysUntil(row.window_end) !== null && (
-                              <div className={cn(
-                                'text-xs font-medium mt-0.5',
-                                (daysUntil(row.window_end) as number) <= 3 ? 'text-red-600' : 'text-amber-600',
-                              )}>
-                                {daysUntil(row.window_end)} day{(daysUntil(row.window_end) as number) !== 1 ? 's' : ''} left
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-xs text-gray-400">No open window</span>
-                        )}
-                      </td>
-                      {/* Status */}
-                      <td className="px-4 py-3">
-                        <StatusBadge row={row} />
-                      </td>
-                      {/* Reminders */}
-                      <td className="px-4 py-3">
-                        {row.window_id ? (
-                          <>
-                            <ReminderDots sent={row.reminders_sent} last={row.last_reminder_type} />
-                            {row.last_reminder_at && (
-                              <div className="text-xs text-gray-400 mt-1">
-                                Last: {formatDate(row.last_reminder_at)}
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-xs text-gray-400">—</span>
-                        )}
-                      </td>
-                      {/* Scheduled */}
-                      <td className="px-4 py-3">
-                        {row.scheduled_date ? (
-                          <div className="flex items-center gap-1.5 text-xs text-green-700">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {formatDate(row.scheduled_date)}
+                          )}
+                        </td>
+                        {/* Voucher Code */}
+                        <td className="px-4 py-3">
+                          <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">{v.code}</code>
+                          <div className="text-xs text-gray-400 mt-1">{v.exam_language?.toUpperCase()}</div>
+                        </td>
+                        {/* Type */}
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className="text-xs font-semibold">
+                            {v.certification_type}
+                          </Badge>
+                        </td>
+                        {/* Status */}
+                        <td className="px-4 py-3">
+                          <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', statusColor(v.status))}>
+                            {v.status}
+                          </span>
+                        </td>
+                        {/* Expires */}
+                        <td className="px-4 py-3">
+                          <div className={cn('text-sm', isUrgent ? 'text-orange-600 font-medium' : 'text-gray-700')}>
+                            {formatDate(v.expires_at)}
                           </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">Not scheduled</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                          {daysExp !== null && v.status !== 'used' && v.status !== 'expired' && (
+                            <div className={cn('text-xs mt-0.5', daysExp <= 30 ? 'text-orange-500' : 'text-gray-400')}>
+                              {daysExp > 0 ? `${daysExp}d left` : 'Expired'}
+                            </div>
+                          )}
+                        </td>
+                        {/* Booking */}
+                        <td className="px-4 py-3">
+                          {v.booking_id ? (
+                            <div>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                                {v.booking_status}
+                              </span>
+                              {v.scheduled_date && (
+                                <div className="text-xs text-gray-500 mt-1">{formatDate(v.scheduled_date)}</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">No booking</span>
+                          )}
+                        </td>
+                        {/* Next Window */}
+                        <td className="px-4 py-3">
+                          {v.next_window_name ? (
+                            <div>
+                              <div className="text-xs font-medium text-gray-700">{v.next_window_name}</div>
+                              <div className="text-xs text-gray-400 mt-0.5">
+                                {formatDate(v.next_window_start)} – {formatDate(v.next_window_end)}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
+                        </td>
+                        {/* Reminders */}
+                        <td className="px-4 py-3">
+                          {v.reminders_sent > 0 ? (
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">{v.reminders_sent}</span>
+                              {v.last_reminder_type && (
+                                <div className="text-xs text-gray-400 mt-0.5">Last: {v.last_reminder_type}</div>
+                              )}
+                              {v.last_reminder_at && (
+                                <div className="text-xs text-gray-400">{formatDate(v.last_reminder_at)}</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">None sent</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
-              <div className="px-4 py-2 border-t text-xs text-gray-400 text-right">
-                {filtered.length} result{filtered.length !== 1 ? 's' : ''}
-              </div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Legend */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-gray-600">Reminder Schedule</CardTitle>
-        </CardHeader>
-        <CardContent className="pb-4">
-          <div className="flex flex-wrap gap-6 text-xs text-gray-600">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-blue-600 inline-block" />
-              <strong>Window Open</strong> — sent on the day the exam window opens
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-blue-600 inline-block" />
-              <strong>Day 5</strong> — sent 5 days after window opens
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-blue-600 inline-block" />
-              <strong>3 Days Left</strong> — sent when 3 days remain in window
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-blue-600 inline-block" />
-              <strong>Last Day</strong> — sent 1 day before window closes
-            </div>
+      {/* Reminder Schedule Info */}
+      <Card className="bg-gray-50">
+        <CardContent className="pt-4 pb-4">
+          <p className="text-xs font-medium text-gray-600 mb-2">Reminder Schedule</p>
+          <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+            <span><span className="w-2 h-2 rounded-full bg-blue-500 inline-block mr-1.5" />Window Open — sent on the day the exam window opens</span>
+            <span><span className="w-2 h-2 rounded-full bg-blue-500 inline-block mr-1.5" />Day 5 — sent 5 days after window opens</span>
+            <span><span className="w-2 h-2 rounded-full bg-blue-500 inline-block mr-1.5" />3 Days Left — sent when 3 days remain in window</span>
+            <span><span className="w-2 h-2 rounded-full bg-blue-500 inline-block mr-1.5" />Last Day — sent 1 day before window closes</span>
           </div>
-          <p className="mt-3 text-xs text-gray-400">
-            Reminders run automatically every day at 09:00 UTC via pg_cron.
-            Only candidates with unused vouchers and no active booking receive reminders.
-            Each reminder is sent at most once per voucher per window.
+          <p className="text-xs text-gray-400 mt-2">
+            Reminders run automatically every day at 09:00 UTC via pg_cron. Only candidates with unused vouchers and no active booking receive reminders. Each reminder is sent at most once per voucher per window.
           </p>
         </CardContent>
       </Card>
