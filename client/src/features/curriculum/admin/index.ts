@@ -1,4 +1,5 @@
 // Admin Pages
+export { LearningSystemAdmin } from './pages/LearningSystemAdmin';
 export { CurriculumModuleManager } from './pages/CurriculumModuleManager';
 export { AccessManagement } from './pages/AccessManagement';
 export { LessonManager } from './pages/LessonManager';

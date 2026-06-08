@@ -157,11 +157,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
 
     // Learning System Section
-    { id: 'curriculum', label: 'nav.admin.modules', path: '/admin/curriculum', icon: BookMarked, section: 'nav.admin.section.learningSystem' },
-    { id: 'curriculum-lessons', label: 'nav.admin.lessons', path: '/admin/curriculum/lessons', icon: List },
-    { id: 'curriculum-quizzes', label: 'nav.admin.validationQuizzes', path: '/admin/curriculum/quizzes', icon: FileQuestion },
-    { id: 'question-bank', label: 'nav.admin.questionBank', path: '/admin/question-bank', icon: CircleHelp },
-    { id: 'flashcards', label: 'nav.admin.flashcards', path: '/admin/flashcards', icon: Layers },
+    { id: 'learning-system-admin', label: 'Learning System', path: '/admin/learning-system-admin', icon: BookMarked, section: 'nav.admin.section.learningSystem' },
     { id: 'curriculum-access', label: 'nav.admin.curriculumAccess', path: '/admin/curriculum/access', icon: UserCog },
     { id: 'learning-system-products', label: 'nav.admin.learningSystemProducts', path: '/admin/learning-system-products', icon: Package },
 
@@ -224,11 +220,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
 
     // Learning System Section
-    { id: 'curriculum', label: 'nav.admin.modules', path: '/admin/curriculum', icon: BookMarked, section: 'nav.admin.section.learningSystem' },
-    { id: 'curriculum-lessons', label: 'nav.admin.lessons', path: '/admin/curriculum/lessons', icon: List },
-    { id: 'curriculum-quizzes', label: 'nav.admin.validationQuizzes', path: '/admin/curriculum/quizzes', icon: FileQuestion },
-    { id: 'question-bank', label: 'nav.admin.questionBank', path: '/admin/question-bank', icon: CircleHelp },
-    { id: 'flashcards', label: 'nav.admin.flashcards', path: '/admin/flashcards', icon: Layers },
+    { id: 'learning-system-admin', label: 'Learning System', path: '/admin/learning-system-admin', icon: BookMarked, section: 'nav.admin.section.learningSystem' },
     { id: 'curriculum-access', label: 'nav.admin.curriculumAccess', path: '/admin/curriculum/access', icon: UserCog },
     { id: 'learning-system-products', label: 'nav.admin.learningSystemProducts', path: '/admin/learning-system-products', icon: Package },
 
@@ -253,6 +245,8 @@ export const navigationConfig: NavigationConfig = {
     { id: 'communications', label: 'nav.admin.communications', path: '/admin/communications', icon: Mail },
     { id: 'reports', label: 'nav.admin.reportsAnalytics', path: '/admin/reports', icon: BarChart3 },
     { id: 'country-analytics', label: 'nav.admin.countryAnalytics', path: '/admin/country-analytics', icon: Globe },
+    { id: 'settings', label: 'nav.admin.settings', path: '/admin/settings', icon: Settings },
+    { id: 'security', label: 'nav.admin.security', path: '/admin/security', icon: Shield },
 
     // Sign Out
     { id: 'sign-out', label: 'nav.admin.signOut', icon: LogOut, action: 'logout' }
