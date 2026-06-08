@@ -24,6 +24,7 @@ import {
   FlaskConical,
   Play,
   Trash2,
+  BarChart3,
 } from 'lucide-react';
 
 // ============================================================================
@@ -409,6 +410,17 @@ export default function ExamSchedulingAdmin() {
                           )}
                         </td>
                         <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            {isCompleted && (
+                              <button
+                                onClick={() => navigate(`/admin/exam-report/${attempt.id}`)}
+                                className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-purple-100 text-purple-700 hover:bg-purple-200 font-medium transition-colors"
+                              >
+                                <BarChart3 className="h-3 w-3" />
+                                View Report
+                              </button>
+                            )}
+                          </div>
                           {isTestAttempt && (
                             <div className="flex items-center gap-2">
                               {!isCompleted && (

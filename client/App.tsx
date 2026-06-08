@@ -138,6 +138,7 @@ import AdminManagement from "./pages/admin/AdminManagement";
 import BulkUserUpload from "./pages/admin/BulkUserUpload";
 import TrainingBatchManagement from "./pages/admin/TrainingBatchManagement";
 import ExamSchedulingAdmin from "./pages/admin/ExamSchedulingAdmin";
+import CandidateExamReport from "./pages/admin/CandidateExamReport";
 import ExamBookingsAdmin from "./pages/admin/ExamBookingsAdmin";
 import ExamBookingDetail from "./pages/admin/ExamBookingDetail";
 import ExamWindows from "./pages/admin/ExamWindows";
@@ -606,6 +607,7 @@ const App = () => (
                   <Route path="/admin/pdp-reports" element={<PDPAnnualReportsAdmin />} />
                   <Route path="/admin/training-batches" element={<TrainingBatchManagement />} />
                   <Route path="/admin/exam-scheduling" element={<ExamSchedulingAdmin />} />
+                  <Route path="/admin/exam-report/:attemptId" element={<CandidateExamReport />} />
                   <Route path="/admin/exam-bookings" element={<ExamBookingsAdmin />} />
                   <Route path="/admin/exam-bookings/:id" element={<ExamBookingDetail />} />
                   <Route path="/admin/exam-windows" element={<ExamWindows />} />
