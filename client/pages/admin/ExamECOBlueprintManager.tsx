@@ -93,22 +93,15 @@ function useECOData(certType: CertType) {
       const enQuiz = quizzes.find(q => q.exam_language === 'en');
       const arQuiz = quizzes.find(q => q.exam_language === 'ar');
 
-      // 2. Get pool sizes per competency per language
+      // 2. Get pool sizes per competency per language using SECURITY DEFINER function
+      //    (bypasses RLS safely — admin-only function)
       const poolQueries = await Promise.all([
         enQuiz
-          ? supabase
-              .from('quiz_questions')
-              .select('competency_section, competency_name')
-              .eq('quiz_id', enQuiz.id)
-              .not('competency_name', 'is', null)
-          : { data: [] },
+          ? supabase.rpc('get_eco_pool_sizes', { p_quiz_id: enQuiz.id })
+          : { data: [], error: null },
         arQuiz
-          ? supabase
-              .from('quiz_questions')
-              .select('competency_section, competency_name')
-              .eq('quiz_id', arQuiz.id)
-              .not('competency_name', 'is', null)
-          : { data: [] },
+          ? supabase.rpc('get_eco_pool_sizes', { p_quiz_id: arQuiz.id })
+          : { data: [], error: null },
       ]);
 
       // 2b. Count untagged questions per language (competency_name IS NULL)
@@ -131,24 +124,20 @@ function useECOData(certType: CertType) {
       const untaggedEn = untaggedCounts[0].count ?? 0;
       const untaggedAr = untaggedCounts[1].count ?? 0;
 
-      const enQuestions = poolQueries[0].data || [];
-      const arQuestions = poolQueries[1].data || [];
+      // Build maps from RPC results
+      const enPoolRows: Array<{ competency_section: string; competency_name: string; question_count: number }> =
+        (poolQueries[0].data as any) || [];
+      const arPoolRows: Array<{ competency_section: string; competency_name: string; question_count: number }> =
+        (poolQueries[1].data as any) || [];
 
-      // Count per competency
-      const countMap = (questions: any[]) => {
-        const map: Record<string, { section: Domain; count: number }> = {};
-        for (const q of questions) {
-          if (!q.competency_name) continue;
-          if (!map[q.competency_name]) {
-            map[q.competency_name] = { section: q.competency_section as Domain, count: 0 };
-          }
-          map[q.competency_name].count++;
-        }
-        return map;
-      };
-
-      const enMap = countMap(enQuestions);
-      const arMap = countMap(arQuestions);
+      const enMap: Record<string, { section: Domain; count: number }> = {};
+      for (const r of enPoolRows) {
+        enMap[r.competency_name] = { section: r.competency_section as Domain, count: Number(r.question_count) };
+      }
+      const arMap: Record<string, { section: Domain; count: number }> = {};
+      for (const r of arPoolRows) {
+        arMap[r.competency_name] = { section: r.competency_section as Domain, count: Number(r.question_count) };
+      }
 
       // Merge into pool rows — all competencies from either language
       const allCompetencies = new Set([...Object.keys(enMap), ...Object.keys(arMap)]);
