@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '@/contexts/ConfirmDialogContext';
 import { cn } from '@/shared/utils/cn';
 import { QuizService } from '@/entities/quiz';
+import { supabase } from '@/shared/config/supabase.config';
 import type {
   QuizQuestion,
   QuestionWithAnswers,
@@ -73,14 +74,34 @@ export default function CertificationExamQuestionManager() {
   const { confirm } = useConfirm();
   const queryClient = useQueryClient();
 
-  // Data fetching
+  // Data fetching - get exam metadata from quizzes table
   const { data: exam, isLoading } = useQuery({
     queryKey: ['certification-exam', examId],
     queryFn: async () => {
       if (!examId) throw new Error('Exam ID is required');
-      const result = await QuizService.getQuiz(examId);
-      if (result.error) throw result.error;
-      return result.data;
+      // Get exam metadata
+      const { data: quizData, error: quizError } = await supabase
+        .from('quizzes')
+        .select('*')
+        .eq('id', examId)
+        .single();
+      if (quizError || !quizData) throw quizError || new Error('Exam not found');
+      // Get questions from certification_question_bank
+      const { data: questions, error: qError } = await supabase
+        .from('certification_question_bank')
+        .select('*, answers:certification_question_bank_answers(*)')
+        .eq('certification_type', quizData.certification_type)
+        .eq('exam_language', quizData.exam_language)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true });
+      if (qError) throw qError;
+      return {
+        ...quizData,
+        questions: (questions || []).map((q: any) => ({
+          ...q,
+          answers: (q.answers || []).sort((a: any, b: any) => a.order_index - b.order_index),
+        })),
+      };
     },
     enabled: !!examId,
   });
@@ -254,45 +275,82 @@ export default function CertificationExamQuestionManager() {
     }
 
     try {
-      // Put explanation on the correct answer (for backward compatibility with data model)
-      const dto: CreateQuestionDTO = {
-        quiz_id: examId!,
-        question_text: questionForm.question_text,
-        question_text_ar: questionForm.question_text_ar || undefined,
-        question_type: questionForm.question_type,
-        bock_domain: questionForm.bock_domain || undefined,
-        competency_section: questionForm.competency_section || undefined,
-        competency_name: questionForm.competency_name || undefined,
-        difficulty: questionForm.difficulty,
-        points: questionForm.points,
-        order_index: questionForm.order_index,
-        answers: questionForm.answers.map((a) => ({
-          answer_text: a.answer_text,
-          answer_text_ar: a.answer_text_ar || undefined,
-          is_correct: a.is_correct,
-          // Only store explanation on correct answer(s)
-          explanation: a.is_correct ? (questionForm.explanation || undefined) : undefined,
-          explanation_ar: a.is_correct ? (questionForm.explanation_ar || undefined) : undefined,
-          order_index: a.order_index,
-        })),
-      };
-
       if (isAddingQuestion) {
-        const result = await QuizService.createQuestion(dto);
-        if (result.error) throw result.error;
-
-        toast({
-          title: 'Success',
-          description: 'Question created successfully',
-        });
+        // Insert into certification_question_bank
+        const { data: newQuestion, error: qError } = await supabase
+          .from('certification_question_bank')
+          .insert({
+            certification_type: exam?.certification_type,
+            exam_language: exam?.exam_language,
+            question_text: questionForm.question_text,
+            question_text_ar: questionForm.question_text_ar || null,
+            question_type: questionForm.question_type,
+            bock_domain: questionForm.bock_domain || null,
+            competency_section: questionForm.competency_section || null,
+            competency_name: questionForm.competency_name || null,
+            difficulty: questionForm.difficulty,
+            points: questionForm.points,
+            order_index: questionForm.order_index,
+            explanation: questionForm.explanation || null,
+            explanation_ar: questionForm.explanation_ar || null,
+            is_active: true,
+          })
+          .select()
+          .single();
+        if (qError || !newQuestion) throw qError || new Error('Failed to create question');
+        // Insert answers
+        const answers = questionForm.answers.map((a, idx) => ({
+          question_id: newQuestion.id,
+          answer_text: a.answer_text,
+          answer_text_ar: a.answer_text_ar || null,
+          is_correct: a.is_correct,
+          explanation: a.is_correct ? (questionForm.explanation || null) : null,
+          explanation_ar: a.is_correct ? (questionForm.explanation_ar || null) : null,
+          order_index: idx,
+        }));
+        const { error: aError } = await supabase
+          .from('certification_question_bank_answers')
+          .insert(answers);
+        if (aError) throw aError;
+        toast({ title: 'Success', description: 'Question created successfully' });
       } else {
-        const result = await QuizService.updateQuestion(editingQuestionId!, dto);
-        if (result.error) throw result.error;
-
-        toast({
-          title: 'Success',
-          description: 'Question updated successfully',
-        });
+        // Update question in certification_question_bank
+        const { error: qError } = await supabase
+          .from('certification_question_bank')
+          .update({
+            question_text: questionForm.question_text,
+            question_text_ar: questionForm.question_text_ar || null,
+            question_type: questionForm.question_type,
+            bock_domain: questionForm.bock_domain || null,
+            competency_section: questionForm.competency_section || null,
+            competency_name: questionForm.competency_name || null,
+            difficulty: questionForm.difficulty,
+            points: questionForm.points,
+            order_index: questionForm.order_index,
+            explanation: questionForm.explanation || null,
+            explanation_ar: questionForm.explanation_ar || null,
+          })
+          .eq('id', editingQuestionId!);
+        if (qError) throw qError;
+        // Delete old answers and re-insert
+        await supabase
+          .from('certification_question_bank_answers')
+          .delete()
+          .eq('question_id', editingQuestionId!);
+        const answers = questionForm.answers.map((a, idx) => ({
+          question_id: editingQuestionId!,
+          answer_text: a.answer_text,
+          answer_text_ar: a.answer_text_ar || null,
+          is_correct: a.is_correct,
+          explanation: a.is_correct ? (questionForm.explanation || null) : null,
+          explanation_ar: a.is_correct ? (questionForm.explanation_ar || null) : null,
+          order_index: idx,
+        }));
+        const { error: aError } = await supabase
+          .from('certification_question_bank_answers')
+          .insert(answers);
+        if (aError) throw aError;
+        toast({ title: 'Success', description: 'Question updated successfully' });
       }
 
       queryClient.invalidateQueries({ queryKey: ['certification-exam', examId] });
@@ -318,8 +376,12 @@ export default function CertificationExamQuestionManager() {
     if (!confirmed) return;
 
     try {
-      const result = await QuizService.deleteQuestion(questionId);
-      if (result.error) throw result.error;
+      // Delete from certification_question_bank (CASCADE will delete answers)
+      const { error } = await supabase
+        .from('certification_question_bank')
+        .update({ is_active: false })
+        .eq('id', questionId);
+      if (error) throw error;
 
       toast({
         title: 'Success',

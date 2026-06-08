@@ -108,16 +108,20 @@ function useECOData(certType: CertType) {
       const untaggedCounts = await Promise.all([
         enQuiz
           ? supabase
-              .from('quiz_questions')
+              .from('certification_question_bank')
               .select('id', { count: 'exact', head: true })
-              .eq('quiz_id', enQuiz.id)
+              .eq('certification_type', certType)
+              .eq('exam_language', 'en')
+              .eq('is_active', true)
               .is('competency_name', null)
           : { count: 0 },
         arQuiz
           ? supabase
-              .from('quiz_questions')
+              .from('certification_question_bank')
               .select('id', { count: 'exact', head: true })
-              .eq('quiz_id', arQuiz.id)
+              .eq('certification_type', certType)
+              .eq('exam_language', 'ar')
+              .eq('is_active', true)
               .is('competency_name', null)
           : { count: 0 },
       ]);

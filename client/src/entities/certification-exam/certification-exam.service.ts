@@ -84,9 +84,11 @@ export class CertificationExamService {
       const examsWithStats = await Promise.all(
         (data || []).map(async (exam) => {
           const { data: questions } = await supabase
-            .from('quiz_questions')
+            .from('certification_question_bank')
             .select('points')
-            .eq('quiz_id', exam.id);
+            .eq('certification_type', exam.certification_type)
+            .eq('exam_language', exam.exam_language)
+            .eq('is_active', true);
 
           return {
             ...exam,
@@ -352,9 +354,11 @@ export class CertificationExamService {
         (data || []).map(async (exam) => {
           // Get question count
           const { data: questions } = await supabase
-            .from('quiz_questions')
+            .from('certification_question_bank')
             .select('points')
-            .eq('quiz_id', exam.id);
+            .eq('certification_type', exam.certification_type)
+            .eq('exam_language', exam.exam_language)
+            .eq('is_active', true);
 
           // Get user stats
           const stats = await this.getUserExamStats(exam.id);

@@ -126,7 +126,7 @@ export default function TakeCertificationExamAttempt() {
       if (!attemptId) return null;
       const { data, error } = await supabase
         .from('exam_attempt_question_set')
-        .select('order_index, quiz_questions(*, answers:quiz_answers(*))')
+        .select('order_index, certification_question_bank(*, answers:certification_question_bank_answers(*))')
         .eq('attempt_id', attemptId)
         .order('order_index');
       if (error) throw error;
@@ -329,7 +329,7 @@ export default function TakeCertificationExamAttempt() {
   // Use attempt-specific question set if available (ECO weighted), otherwise fall back to all quiz questions
   const questions: any[] = (
     attemptQuestionSet?.length
-      ? attemptQuestionSet.map((row: any) => row.quiz_questions)
+      ? attemptQuestionSet.map((row: any) => row.certification_question_bank)
       : exam?.questions
   ) || [];
   const currentQuestion = questions[currentQuestionIndex];
