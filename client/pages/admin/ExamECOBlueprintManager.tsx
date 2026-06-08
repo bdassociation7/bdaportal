@@ -40,7 +40,11 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 
 type CertType = 'CP' | 'SCP';
-type Domain = 'behavioural' | 'knowledge_based';
+type Domain = 'behavioural' | 'behavioral' | 'knowledge_based';
+
+// Helper: treat both spellings (British 'behavioural' and American 'behavioral') as the same domain
+const isBehavioural = (section: Domain | string | undefined | null): boolean =>
+  section === 'behavioural' || section === 'behavioral';
 
 interface PoolRow {
   competency_section: Domain;
@@ -158,7 +162,7 @@ function useECOData(certType: CertType) {
       // Sort: behavioral first, then knowledge_based; alphabetical within
       pool.sort((a, b) => {
         if (a.competency_section !== b.competency_section) {
-          return a.competency_section === 'behavioural' ? -1 : 1;
+          return isBehavioural(a.competency_section) ? -1 : 1;
         }
         return a.competency_name.localeCompare(b.competency_name);
       });
@@ -564,7 +568,7 @@ function BlueprintPanel({ certType }: { certType: CertType }) {
     </Alert>
   );
 
-  const behaviouralRows = data.pool.filter(r => r.competency_section === 'behavioural');
+  const behaviouralRows = data.pool.filter(r => isBehavioural(r.competency_section));
   const knowledgeRows = data.pool.filter(r => r.competency_section === 'knowledge_based');
 
   const total = Object.values(counts).reduce((s, v) => s + (v || 0), 0);
