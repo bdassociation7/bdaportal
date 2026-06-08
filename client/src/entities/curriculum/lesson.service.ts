@@ -28,7 +28,8 @@ export class LessonService {
             competency_name_ar,
             section_type,
             certification_type,
-            exam_language
+            exam_language,
+            order_index
           ),
           quiz:lesson_quiz_id (
             id,

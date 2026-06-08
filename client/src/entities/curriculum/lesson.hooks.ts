@@ -32,6 +32,15 @@ export function useLessons(filters?: LessonFilters) {
     queryFn: async () => {
       const { data, error } = await LessonService.getLessons(filters);
       if (error) throw error;
+      // Sort by module.order_index first, then lesson.order_index within each module
+      if (data) {
+        data.sort((a, b) => {
+          const modA = (a.module as any)?.order_index ?? 999;
+          const modB = (b.module as any)?.order_index ?? 999;
+          if (modA !== modB) return modA - modB;
+          return (a.order_index ?? 0) - (b.order_index ?? 0);
+        });
+      }
       return data;
     },
   });
