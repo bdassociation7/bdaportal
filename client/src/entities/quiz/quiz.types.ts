@@ -498,6 +498,8 @@ export interface QuizFilters {
   difficulty_level?: DifficultyLevel;
   is_active?: boolean;
   search?: string;
+  /** When true, excludes quizzes that belong to formal certification exams (certification_type IS NOT NULL) */
+  exclude_certification?: boolean;
 }
 
 /**

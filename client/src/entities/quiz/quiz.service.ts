@@ -45,6 +45,11 @@ export class QuizService {
         query = query.eq('certification_type', filters.certification_type);
       }
 
+      // Exclude formal certification exams from learning system quiz lists
+      if (filters?.exclude_certification) {
+        query = query.is('certification_type', null);
+      }
+
       if (filters?.difficulty_level) {
         query = query.eq('difficulty_level', filters.difficulty_level);
       }
@@ -463,6 +468,11 @@ export class QuizService {
       // Apply filters (without is_active filter for admin)
       if (filters?.certification_type) {
         query = query.eq('certification_type', filters.certification_type);
+      }
+
+      // Exclude formal certification exams from learning system quiz lists
+      if (filters?.exclude_certification) {
+        query = query.is('certification_type', null);
       }
 
       if (filters?.difficulty_level) {

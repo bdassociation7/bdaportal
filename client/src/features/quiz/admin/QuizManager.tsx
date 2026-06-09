@@ -49,11 +49,14 @@ export const QuizManager = ({ isArabic = false, className }: QuizManagerProps) =
   const navigate = useNavigate();
 
   // Filters and sorting
+  // exclude_certification=true ensures formal certification exams (BDA-CP, BDA-SCP)
+  // are never shown in the Learning System quiz manager
   const [filters, setFilters] = useState<QuizFilters>({
     certification_type: undefined,
     difficulty_level: undefined,
     is_active: undefined,
     search: undefined,
+    exclude_certification: true,
   });
 
   const [sortOptions, setSortOptions] = useState<QueryOptions>({

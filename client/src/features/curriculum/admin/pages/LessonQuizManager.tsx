@@ -113,7 +113,8 @@ export function LessonQuizManager() {
   });
 
   // Load all quizzes
-  const { data: quizzes } = useActiveQuizzes();
+  // exclude_certification=true: formal certification exams must not appear in lesson quiz dropdowns
+  const { data: quizzes } = useActiveQuizzes({ exclude_certification: true });
 
   // Filter lessons by search
   const filteredLessons = lessons?.filter(lesson =>

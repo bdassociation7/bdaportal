@@ -102,8 +102,8 @@ export function LessonEditor({ lessonId, isOpen, onClose, defaultLanguage = 'en'
     },
   });
 
-  // Load all quizzes for selection
-  const { data: quizzes, isLoading: isLoadingQuizzes } = useAllQuizzes();
+  // Load all quizzes for selection - exclude formal certification exams
+  const { data: quizzes, isLoading: isLoadingQuizzes } = useAllQuizzes({ exclude_certification: true });
 
   const createLesson = useCreateLesson();
   const updateLesson = useUpdateLesson();

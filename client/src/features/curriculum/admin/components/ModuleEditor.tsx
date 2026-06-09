@@ -74,7 +74,8 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
     queryFn: async () => {
       // Import quiz service dynamically to avoid circular dependencies
       const { QuizService } = await import('@/entities/quiz');
-      const result = await QuizService.getAllQuizzes();
+      // exclude_certification=true: formal certification exams must not appear in module quiz dropdowns
+      const result = await QuizService.getAllQuizzes({ exclude_certification: true });
       if (result.error) throw result.error;
       return result.data || [];
     },
