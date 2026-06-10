@@ -42,8 +42,8 @@ const DEFAULT_BADGE =
 
 function getCertLabel(certType: string | null): string {
   if (!certType) return 'BDA® Credential';
-  if (certType === 'CP')  return 'BDA Certified Professional (BDA-CP™)';
-  if (certType === 'SCP') return 'BDA Senior Certified Professional (BDA-SCP™)';
+  if (certType === 'CP')  return 'BDA Certified Professional (BDA-CP®)';
+  if (certType === 'SCP') return 'BDA Senior Certified Professional (BDA-SCP®)';
   return `BDA-${certType}™ Credential`;
 }
 

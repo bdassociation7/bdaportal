@@ -57,8 +57,8 @@ function getBadgeImage(certType: string | null): string {
 
 function getCertLabel(certType: string | null): string {
   if (!certType) return 'BDA® Credential';
-  if (certType === 'CP')  return 'BDA-CP™ — Certified Professional';
-  if (certType === 'SCP') return 'BDA-SCP™ — Senior Certified Professional';
+  if (certType === 'CP')  return 'BDA-CP® — Certified Professional';
+  if (certType === 'SCP') return 'BDA-SCP® — Senior Certified Professional';
   if (certType === 'Basic Member') return 'BDA® Basic Member';
   if (certType === 'Professional Member') return 'BDA® Professional Member';
   return `BDA-${certType}™`;
