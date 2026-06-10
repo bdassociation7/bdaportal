@@ -72,7 +72,7 @@ import {
   curriculumKeys,
   type RichContent,
 } from '@/entities/curriculum';
-import { useAllQuizzes } from '@/entities/quiz';
+import { InlineQuizBuilder } from '../components/InlineQuizBuilder';
 import { useToast } from '@/hooks/use-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
 
@@ -124,7 +124,8 @@ export function LessonEditorPage() {
     },
   });
 
-  const { data: quizzes, isLoading: isLoadingQuizzes } = useAllQuizzes({ exclude_certification: true });
+  // Track quiz id separately so InlineQuizBuilder can update it without re-submitting the whole form
+  const [linkedQuizId, setLinkedQuizId] = useState<string | undefined>(undefined);
 
   const createLesson = useCreateLesson();
   const updateLesson = useUpdateLesson();
@@ -169,6 +170,8 @@ export function LessonEditorPage() {
       const lessonLang = (lesson as any).exam_language as ExamLanguage;
       if (lessonLang) setExamLanguage(lessonLang);
       const isAr = lessonLang === 'ar';
+      // Sync linked quiz state
+      setLinkedQuizId(lesson.lesson_quiz_id || undefined);
       form.reset({
         module_id: lesson.module_id,
         title: isAr ? (lesson.title_ar || lesson.title) : lesson.title,
@@ -206,7 +209,7 @@ export function LessonEditorPage() {
         content_ar: examLanguage === 'ar' ? richContent : null,
         order_index: data.order_index as 1 | 2 | 3,
         estimated_duration_hours: data.estimated_duration_hours || null,
-        lesson_quiz_id: data.lesson_quiz_id || null,
+        lesson_quiz_id: linkedQuizId || data.lesson_quiz_id || null,
         quiz_required: data.quiz_required,
         quiz_passing_score: data.quiz_passing_score,
         is_published: data.is_published,
@@ -535,61 +538,22 @@ export function LessonEditorPage() {
                   Quiz Configuration
                 </h2>
 
-                {/* Info banner */}
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-amber-700">
-                    <strong>Note:</strong>{' '}
-                    Create quizzes in Quiz Management first, then link them here.
-                  </p>
+                {/* Inline Quiz Builder */}
+                <div className="mb-4">
+                  <InlineQuizBuilder
+                    quizId={linkedQuizId}
+                    language={examLanguage}
+                    lessonTitle={form.watch('title')}
+                    onQuizSaved={(qid) => {
+                      setLinkedQuizId(qid);
+                      form.setValue('lesson_quiz_id', qid);
+                    }}
+                    onQuizRemoved={() => {
+                      setLinkedQuizId(undefined);
+                      form.setValue('lesson_quiz_id', '');
+                    }}
+                  />
                 </div>
-
-                {/* Quiz Selection */}
-                <FormField
-                  control={form.control}
-                  name="lesson_quiz_id"
-                  render={({ field }) => (
-                    <FormItem className="mb-4">
-                      <FormLabel className="text-sm font-medium">
-                        Lesson Quiz
-                      </FormLabel>
-                      <Select
-                        onValueChange={(v) => field.onChange(v === '__none__' ? '' : v)}
-                        value={field.value || '__none__'}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="text-sm">
-                            <SelectValue placeholder="Select a quiz" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="__none__">
-                            <span className="text-muted-foreground text-sm">
-                              — No quiz —
-                            </span>
-                          </SelectItem>
-                          {isLoadingQuizzes ? (
-                            <SelectItem value="__loading__" disabled>Loading...</SelectItem>
-                          ) : quizzes && quizzes.length > 0 ? (
-                            quizzes.map((quiz) => (
-                              <SelectItem key={quiz.id} value={quiz.id} className="text-sm">
-                                <div className="flex flex-col">
-                                  <span>{quiz.title}</span>
-                                  {quiz.title_ar && <span className="text-xs text-gray-400" dir="rtl">{quiz.title_ar}</span>}
-                                </div>
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="__empty__" disabled>No quizzes available</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription className="text-xs">
-                        Link a quiz to validate learner understanding
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
                 {/* Quiz Required */}
                 <FormField
