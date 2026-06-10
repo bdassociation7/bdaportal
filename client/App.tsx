@@ -573,7 +573,7 @@ const App = () => (
                   <Route path="/admin/curriculum/lessons" element={<LessonManager />} />
                   <Route path="/admin/curriculum/lessons/new" element={<LessonEditorPage />} />
                   <Route path="/admin/curriculum/lessons/:id/edit" element={<LessonEditorPage />} />
-                  <Route path="/admin/curriculum/quizzes" element={<LessonQuizManager />} />
+                  <Route path="/admin/curriculum/quizzes" element={<Navigate to="/admin/question-bank" replace />} />
                   <Route path="/admin/curriculum/access" element={<AccessManagement />} />
                   <Route path="/admin/learning-system-products" element={<LearningSystemProducts />} />
                   {/* Question Bank Admin */}

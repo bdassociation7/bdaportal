@@ -159,8 +159,7 @@ export const navigationConfig: NavigationConfig = {
     // Learning System Section
     { id: 'curriculum', label: 'nav.admin.modules', path: '/admin/curriculum', icon: BookMarked, section: 'nav.admin.section.learningSystem' },
     { id: 'curriculum-lessons', label: 'nav.admin.lessons', path: '/admin/curriculum/lessons', icon: List },
-    { id: 'curriculum-quizzes', label: 'nav.admin.validationQuizzes', path: '/admin/curriculum/quizzes', icon: FileQuestion },
-    { id: 'question-bank', label: 'nav.admin.questionBank', path: '/admin/question-bank', icon: CircleHelp },
+    { id: 'question-bank', label: 'nav.admin.assessmentBank', path: '/admin/question-bank', icon: CircleHelp },
     { id: 'flashcards', label: 'nav.admin.flashcards', path: '/admin/flashcards', icon: Layers },
     { id: 'curriculum-access', label: 'nav.admin.curriculumAccess', path: '/admin/curriculum/access', icon: UserCog },
     { id: 'learning-system-products', label: 'nav.admin.learningSystemProducts', path: '/admin/learning-system-products', icon: Package },
@@ -226,8 +225,7 @@ export const navigationConfig: NavigationConfig = {
     // Learning System Section
     { id: 'curriculum', label: 'nav.admin.modules', path: '/admin/curriculum', icon: BookMarked, section: 'nav.admin.section.learningSystem' },
     { id: 'curriculum-lessons', label: 'nav.admin.lessons', path: '/admin/curriculum/lessons', icon: List },
-    { id: 'curriculum-quizzes', label: 'nav.admin.validationQuizzes', path: '/admin/curriculum/quizzes', icon: FileQuestion },
-    { id: 'question-bank', label: 'nav.admin.questionBank', path: '/admin/question-bank', icon: CircleHelp },
+    { id: 'question-bank', label: 'nav.admin.assessmentBank', path: '/admin/question-bank', icon: CircleHelp },
     { id: 'flashcards', label: 'nav.admin.flashcards', path: '/admin/flashcards', icon: Layers },
     { id: 'curriculum-access', label: 'nav.admin.curriculumAccess', path: '/admin/curriculum/access', icon: UserCog },
     { id: 'learning-system-products', label: 'nav.admin.learningSystemProducts', path: '/admin/learning-system-products', icon: Package },
