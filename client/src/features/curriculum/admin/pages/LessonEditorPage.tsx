@@ -192,7 +192,7 @@ export function LessonEditorPage() {
       return;
     }
     if (!richContent || !richContent.content || richContent.content.length === 0) {
-      toast({ title: isArabic ? 'خطأ' : 'Error', description: isArabic ? 'المحتوى مطلوب' : 'Content is required', variant: 'destructive' });
+          toast({ title: 'Error', description: 'Lesson content is required', variant: 'destructive' });
       return;
     }
     try {
@@ -230,20 +230,20 @@ export function LessonEditorPage() {
 
   // ── Labels ─────────────────────────────────────────────────────────────
   const L = {
-    title: isArabic ? 'العنوان *' : 'Title *',
-    titlePh: isArabic ? 'مثال: مقدمة في إطار عمل BDA BoCK™' : 'Ex: Introduction to BDA BoCK™ Framework',
-    desc: isArabic ? 'الوصف *' : 'Description *',
-    descPh: isArabic ? 'صف هذا الدرس بإيجاز...' : 'Briefly describe this lesson...',
-    contentPh: isArabic ? 'ابدأ كتابة محتوى الدرس...' : 'Start writing your lesson content here…',
-    module: isArabic ? 'الوحدة (الكفاءة) *' : 'Module (Competency) *',
-    selectModule: isArabic ? 'اختر وحدة' : 'Select a module',
-    order: isArabic ? 'الترتيب في الوحدة *' : 'Order in module *',
-    duration: isArabic ? 'المدة التقديرية (ساعات)' : 'Estimated duration (hours)',
-    publish: isArabic ? 'نشر الدرس' : 'Publish lesson',
-    publishDesc: isArabic ? 'الدروس المنشورة مرئية للمستخدمين' : 'Published lessons are visible to users',
-    quizRequired: isArabic ? 'الاختبار مطلوب' : 'Quiz required',
-    quizRequiredDesc: isArabic ? 'يجب إكمال الاختبار لإنهاء الدرس' : 'User must pass the quiz to complete the lesson',
-    passingScore: isArabic ? 'درجة النجاح (%)' : 'Passing Score (%)',
+    title: 'Title *',
+    titlePh: isArabic ? 'Ex: Arabic lesson title here…' : 'Ex: Introduction to BDA BoCK™ Framework',
+    desc: 'Description *',
+    descPh: 'Briefly describe this lesson…',
+    contentPh: isArabic ? 'Start writing the Arabic lesson content here…' : 'Start writing your lesson content here…',
+    module: 'Module (Competency) *',
+    selectModule: 'Select a module',
+    order: 'Order in module *',
+    duration: 'Estimated duration (hours)',
+    publish: 'Publish lesson',
+    publishDesc: 'Published lessons are visible to users',
+    quizRequired: 'Quiz required',
+    quizRequiredDesc: 'User must pass the quiz to complete the lesson',
+    passingScore: 'Passing Score (%)',
   };
 
   // ── Loading state ──────────────────────────────────────────────────────
@@ -283,12 +283,12 @@ export function LessonEditorPage() {
               <div className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5 opacity-80" />
                 <span className="font-semibold text-base">
-                  {isEditing ? (isArabic ? 'تعديل الدرس' : 'Edit Lesson') : (isArabic ? 'درس جديد' : 'New Lesson')}
+                  {isEditing ? 'Edit Lesson' : 'New Lesson'}
                 </span>
                 <Badge className={`text-xs font-bold px-2 py-0.5 ${
                   isArabic ? 'bg-emerald-800 text-white' : 'bg-blue-800 text-white'
                 }`}>
-                  {isArabic ? '🇸🇦 Arabic' : '🇬🇧 English'}
+                  {isArabic ? '🇸🇦 Arabic Lesson' : '🇬🇧 English Lesson'}
                 </Badge>
               </div>
             </div>
@@ -317,7 +317,7 @@ export function LessonEditorPage() {
                   : <EyeOff className="h-3.5 w-3.5 opacity-60" />
                 }
                 <span className="text-xs font-medium">
-                  {isPublished ? (isArabic ? 'منشور' : 'Published') : (isArabic ? 'مسودة' : 'Draft')}
+                  {isPublished ? 'Published' : 'Draft'}
                 </span>
                 <Switch
                   checked={isPublished}
@@ -336,7 +336,7 @@ export function LessonEditorPage() {
                   ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   : <Save className="mr-2 h-4 w-4" />
                 }
-                {isEditing ? (isArabic ? 'تحديث' : 'Update') : (isArabic ? 'حفظ' : 'Save Lesson')}
+                {isEditing ? 'Update' : 'Save Lesson'}
               </Button>
             </div>
           </div>
@@ -509,14 +509,12 @@ export function LessonEditorPage() {
                 <div className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4 text-gray-500" />
                   <span className="text-sm font-semibold text-gray-700">
-                    {isArabic ? 'محتوى الدرس' : 'Lesson Content'}
+                    Lesson Content {isArabic && <span className="text-emerald-300 font-normal text-xs">(Arabic)</span>}
                   </span>
                   <span className="text-xs text-red-500">*</span>
                 </div>
                 <p className="text-xs text-gray-400">
-                  {isArabic
-                    ? 'استخدم شريط الأدوات لتنسيق النص وإضافة العناوين والقوائم والصور'
-                    : 'Use the toolbar to format text, add headings, lists, links, and images'}
+                  Use the toolbar to format text, add headings, lists, links, and images
                 </p>
               </div>
               <div className="flex-1 p-6">
@@ -540,10 +538,8 @@ export function LessonEditorPage() {
                 {/* Info banner */}
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
                   <p className="text-xs text-amber-700">
-                    <strong>{isArabic ? 'ملاحظة:' : 'Note:'}</strong>{' '}
-                    {isArabic
-                      ? 'أنشئ الاختبارات أولاً في قسم إدارة الاختبارات، ثم اربطها هنا.'
-                      : 'Create quizzes in Quiz Management first, then link them here.'}
+                    <strong>Note:</strong>{' '}
+                    Create quizzes in Quiz Management first, then link them here.
                   </p>
                 </div>
 
@@ -554,7 +550,7 @@ export function LessonEditorPage() {
                   render={({ field }) => (
                     <FormItem className="mb-4">
                       <FormLabel className="text-sm font-medium">
-                        {isArabic ? 'اختبار الدرس' : 'Lesson Quiz'}
+                        Lesson Quiz
                       </FormLabel>
                       <Select
                         onValueChange={(v) => field.onChange(v === '__none__' ? '' : v)}
@@ -562,17 +558,17 @@ export function LessonEditorPage() {
                       >
                         <FormControl>
                           <SelectTrigger className="text-sm">
-                            <SelectValue placeholder={isArabic ? 'اختر اختبارًا' : 'Select a quiz'} />
+                            <SelectValue placeholder="Select a quiz" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="__none__">
                             <span className="text-muted-foreground text-sm">
-                              {isArabic ? '— بدون اختبار —' : '— No quiz —'}
+                              — No quiz —
                             </span>
                           </SelectItem>
                           {isLoadingQuizzes ? (
-                            <SelectItem value="__loading__" disabled>Loading…</SelectItem>
+                            <SelectItem value="__loading__" disabled>Loading...</SelectItem>
                           ) : quizzes && quizzes.length > 0 ? (
                             quizzes.map((quiz) => (
                               <SelectItem key={quiz.id} value={quiz.id} className="text-sm">
@@ -583,16 +579,12 @@ export function LessonEditorPage() {
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="__empty__" disabled>
-                              {isArabic ? 'لا توجد اختبارات' : 'No quizzes available'}
-                            </SelectItem>
+                            <SelectItem value="__empty__" disabled>No quizzes available</SelectItem>
                           )}
                         </SelectContent>
                       </Select>
                       <FormDescription className="text-xs">
-                        {isArabic
-                          ? 'اربط اختبارًا للتحقق من فهم المتعلم'
-                          : 'Link a quiz to validate learner understanding'}
+                        Link a quiz to validate learner understanding
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -632,7 +624,7 @@ export function LessonEditorPage() {
                         </div>
                       </FormControl>
                       <FormDescription className="text-xs">
-                        {isArabic ? 'الحد الأدنى للنجاح (0-100%)' : 'Minimum score to pass (0-100%)'}
+                        Minimum score to pass (0-100%)
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -651,7 +643,7 @@ export function LessonEditorPage() {
                     ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     : <Save className="mr-2 h-4 w-4" />
                   }
-                  {isEditing ? (isArabic ? 'تحديث الدرس' : 'Update Lesson') : (isArabic ? 'حفظ الدرس' : 'Save Lesson')}
+                  {isEditing ? 'Update Lesson' : 'Save Lesson'}
                 </Button>
               </div>
             </aside>
