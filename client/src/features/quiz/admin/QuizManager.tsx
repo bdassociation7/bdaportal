@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import {
   Plus,
   Search,
@@ -208,6 +209,7 @@ export const QuizManager = ({ isArabic = false, className }: QuizManagerProps) =
       difficulty_level: undefined,
       is_active: undefined,
       search: undefined,
+      exclude_certification: true, // always keep certification exams excluded
     });
     setSearchTerm('');
   };
@@ -224,6 +226,17 @@ export const QuizManager = ({ isArabic = false, className }: QuizManagerProps) =
 
   return (
     <div className={cn('space-y-6', className)}>
+      {/* Back to Assessment Bank */}
+      <div className="flex items-center gap-3 mb-2">
+        <button
+          onClick={() => navigate('/admin/question-bank')}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Assessment Bank
+        </button>
+      </div>
+
       {/* Statistics Header */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Quizzes */}

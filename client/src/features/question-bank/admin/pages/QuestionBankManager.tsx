@@ -89,6 +89,7 @@ type ExamLanguage = 'en' | 'ar';
 function LessonQuizzesTab() {
   const navigate = useNavigate();
   const [certType, setCertType] = useState<'CP' | 'SCP' | 'all'>('all');
+  const [langFilter, setLangFilter] = useState<'all' | 'en' | 'ar'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [moduleFilter, setModuleFilter] = useState<string>('all');
 
@@ -103,16 +104,18 @@ function LessonQuizzesTab() {
   const { data: lessons, isLoading } = useLessons({
     certification_type: certType === 'all' ? undefined : certType,
     module_id: moduleFilter === 'all' ? undefined : moduleFilter,
+    exam_language: langFilter === 'all' ? undefined : langFilter,
   });
 
   const { data: quizzes } = useActiveQuizzes({ exclude_certification: true });
 
-  const filteredLessons = useMemo(() => (
-    lessons?.filter(lesson =>
+  const filteredLessons = useMemo(() => {
+    const byLang = langFilter === 'all' ? (lessons || []) : (lessons || []).filter(l => l.exam_language === langFilter);
+    return byLang.filter(lesson =>
       lesson.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lesson.title_ar?.toLowerCase().includes(searchQuery.toLowerCase())
-    ) || []
-  ), [lessons, searchQuery]);
+      (lesson.title_ar?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+    );
+  }, [lessons, langFilter, searchQuery]);
 
   const totalLessons = filteredLessons.length;
   const linkedCount = filteredLessons.filter(l => l.lesson_quiz_id).length;
@@ -137,11 +140,27 @@ function LessonQuizzesTab() {
       <AdminFilterCard
         title="Filters"
         description="Search and filter lesson quizzes"
-        onReset={() => { setSearchQuery(''); setCertType('all'); setModuleFilter('all'); }}
+        onReset={() => { setSearchQuery(''); setCertType('all'); setLangFilter('all'); setModuleFilter('all'); }}
       >
         <div className="relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search lessons..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+        </div>
+        {/* Language Filter */}
+        <div className="flex gap-2">
+          {(['all', 'en', 'ar'] as const).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => setLangFilter(lang)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                langFilter === lang
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+              }`}
+            >
+              {lang === 'all' ? 'All Languages' : lang === 'en' ? '🇬🇧 English' : '🇸🇦 Arabic'}
+            </button>
+          ))}
         </div>
         <Select value={certType} onValueChange={(v: any) => setCertType(v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
