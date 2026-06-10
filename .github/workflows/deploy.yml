@@ -32,17 +32,16 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Deploy to Hostinger via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: 46.202.158.220
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 21
-          local-dir: ./dist/spa/
-          server-dir: /domains/bda-global.org/public_html/portal/
-          dangerous-clean-slate: true
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p 65002 -H 46.202.158.220 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy via SFTP (rsync over SSH)
+        run: |
+          rsync -avz --delete \
+            -e "ssh -p 65002 -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./dist/spa/ \
+            u746595765@46.202.158.220:/home/u746595765/domains/bda-global.org/public_html/portal/
