@@ -71,7 +71,7 @@ import { MockExamList, ExamDetail, TakeExam, ExamResults } from "./pages/mock-ex
 
 // Curriculum pages
 import { MyCurriculum, ModuleViewer, LessonViewer } from "@/features/curriculum";
-import { LearningSystemAdmin, CurriculumModuleManager, AccessManagement, LessonManager, LessonQuizManager } from "@/features/curriculum/admin";
+import { LearningSystemAdmin, CurriculumModuleManager, AccessManagement, LessonManager, LessonEditorPage, LessonQuizManager } from "@/features/curriculum/admin";
 
 // Learning System pages
 import { LearningSystemDashboard } from "@/features/learning-system";
@@ -571,6 +571,8 @@ const App = () => (
                   <Route path="/admin/learning-system-admin" element={<LearningSystemAdmin />} />
                   <Route path="/admin/curriculum" element={<CurriculumModuleManager />} />
                   <Route path="/admin/curriculum/lessons" element={<LessonManager />} />
+                  <Route path="/admin/curriculum/lessons/new" element={<LessonEditorPage />} />
+                  <Route path="/admin/curriculum/lessons/:id/edit" element={<LessonEditorPage />} />
                   <Route path="/admin/curriculum/quizzes" element={<LessonQuizManager />} />
                   <Route path="/admin/curriculum/access" element={<AccessManagement />} />
                   <Route path="/admin/learning-system-products" element={<LearningSystemProducts />} />

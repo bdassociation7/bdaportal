@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   BookOpen,
@@ -32,7 +33,6 @@ import {
   type LessonFilters,
 } from '@/entities/curriculum';
 import { LessonTable } from '../components/LessonTable';
-import { LessonEditor } from '../components/LessonEditor';
 import { LessonFilters as LessonFiltersComponent } from '../components/LessonFilters';
 import { WordImportTab } from '../components/WordImportTab';
 import { useToast } from '@/hooks/use-toast';
@@ -47,12 +47,9 @@ export function LessonManager() {
   const [pageTab, setPageTab] = useState<PageTab>('manage');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<LessonFilters>({});
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingLessonId, setEditingLessonId] = useState<string | undefined>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'all' | 'published' | 'draft'>('all');
   const [filterLanguage, setFilterLanguage] = useState<ExamLanguage>('en');
-  const [createLanguage, setCreateLanguage] = useState<ExamLanguage>('en');
-
   const isEN = filterLanguage === 'en';
 
   // Build filters based on active tab and language
@@ -86,14 +83,11 @@ export function LessonManager() {
 
   // Handlers
   const handleCreateLesson = (language: ExamLanguage = 'en') => {
-    setCreateLanguage(language);
-    setEditingLessonId(undefined);
-    setIsEditorOpen(true);
+    navigate(`/admin/curriculum/lessons/new?lang=${language}`);
   };
 
   const handleEditLesson = (lessonId: string) => {
-    setEditingLessonId(lessonId);
-    setIsEditorOpen(true);
+    navigate(`/admin/curriculum/lessons/${lessonId}/edit`);
   };
 
   const handleDeleteLesson = async (lessonId: string) => {
@@ -342,7 +336,7 @@ export function LessonManager() {
                           : t('lessons.noLessonsYet')}
                       </p>
                       {!searchQuery && Object.keys(filters).length === 0 && (
-                        <Button onClick={() => handleCreateLesson(filterLanguage)} className="mt-4">
+                        <Button onClick={() => handleCreateLesson(filterLanguage as ExamLanguage)} className="mt-4">
                           {t('lessons.createFirstLesson')}
                         </Button>
                       )}
@@ -355,16 +349,7 @@ export function LessonManager() {
         </>
       )}
 
-      {/* Editor modal */}
-      <LessonEditor
-        lessonId={editingLessonId}
-        isOpen={isEditorOpen}
-        onClose={() => {
-          setIsEditorOpen(false);
-          setEditingLessonId(undefined);
-        }}
-        defaultLanguage={editingLessonId ? undefined : createLanguage}
-      />
+
     </div>
   );
 }
