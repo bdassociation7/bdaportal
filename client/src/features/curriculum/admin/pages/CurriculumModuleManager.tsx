@@ -1,10 +1,23 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Eye, Lock, Unlock, BookMarked, FileText, CheckCircle, Brain, Globe } from 'lucide-react';
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  Lock,
+  Unlock,
+  BookMarked,
+  FileText,
+  CheckCircle,
+  Brain,
+  Globe,
+  ChevronRight,
+  Layers,
+} from 'lucide-react';
 import { CurriculumService, curriculumKeys } from '@/entities/curriculum';
 import { ModuleEditor } from '../components/ModuleEditor';
 import { ModulePreview } from '../components/ModulePreview';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { StatCard } from '../components/shared';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -13,32 +26,37 @@ type ExamLanguage = 'en' | 'ar';
 
 /**
  * Curriculum Module Manager (Admin)
- * CRUD interface for managing all 14 curriculum modules
+ * Language-tabbed interface for managing EN and AR curriculum modules separately.
+ * The curriculum is shared across both certifications (CP & SCP) — only quizzes differ.
  */
 export function CurriculumModuleManager() {
   const { t } = useLanguage();
-  const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Active language tab
+  const [activeLanguage, setActiveLanguage] = useState<ExamLanguage>('en');
+
+  // Editor / preview state
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [createLanguage, setCreateLanguage] = useState<ExamLanguage>('en');
   const [previewModule, setPreviewModule] = useState<string | null>(null);
+
+  // Section filter (per tab)
   const [filterSection, setFilterSection] = useState<'all' | 'knowledge_based' | 'behavioural'>('all');
   const [filterPublished, setFilterPublished] = useState<'all' | 'published' | 'draft'>('all');
-  const [filterLanguage, setFilterLanguage] = useState<ExamLanguage>('en');
 
-  // Fetch all modules
+  // Fetch modules for the active language tab
   const { data: modules, isLoading, refetch } = useQuery({
     queryKey: curriculumKeys.modulesList({
       section_type: filterSection === 'all' ? undefined : filterSection,
       is_published: filterPublished === 'all' ? undefined : filterPublished === 'published',
-      exam_language: filterLanguage,
+      exam_language: activeLanguage,
     }),
     queryFn: async () => {
       const result = await CurriculumService.getModules({
         section_type: filterSection === 'all' ? undefined : filterSection,
         is_published: filterPublished === 'all' ? undefined : filterPublished === 'published',
-        exam_language: filterLanguage,
+        exam_language: activeLanguage,
       });
       if (result.error) throw result.error;
       return result.data || [];
@@ -46,23 +64,13 @@ export function CurriculumModuleManager() {
   });
 
   const handleDelete = async (moduleId: string) => {
-    if (!confirm(t('curriculum.deleteConfirm'))) {
-      return;
-    }
-
+    if (!confirm(t('curriculum.deleteConfirm'))) return;
     const result = await CurriculumService.deleteModule(moduleId);
     if (!result.error) {
-      toast({
-        title: t('curriculum.moduleDeleted'),
-        description: t('curriculum.moduleDeletedDesc'),
-      });
+      toast({ title: t('curriculum.moduleDeleted'), description: t('curriculum.moduleDeletedDesc') });
       refetch();
     } else {
-      toast({
-        title: t('common.error'),
-        description: result.error.message || t('curriculum.deleteError'),
-        variant: 'destructive',
-      });
+      toast({ title: t('common.error'), description: result.error.message || t('curriculum.deleteError'), variant: 'destructive' });
     }
   };
 
@@ -75,19 +83,22 @@ export function CurriculumModuleManager() {
       });
       refetch();
     } else {
-      toast({
-        title: t('common.error'),
-        description: result.error.message || t('curriculum.publishError'),
-        variant: 'destructive',
-      });
+      toast({ title: t('common.error'), description: result.error.message || t('curriculum.publishError'), variant: 'destructive' });
     }
+  };
+
+  // Switch language tab and reset section filter
+  const handleLanguageSwitch = (lang: ExamLanguage) => {
+    setActiveLanguage(lang);
+    setFilterSection('all');
+    setFilterPublished('all');
   };
 
   if (selectedModule || isCreating) {
     return (
       <ModuleEditor
         moduleId={selectedModule || undefined}
-        defaultLanguage={isCreating ? createLanguage : undefined}
+        defaultLanguage={isCreating ? activeLanguage : undefined}
         onClose={() => {
           setSelectedModule(null);
           setIsCreating(false);
@@ -98,290 +109,271 @@ export function CurriculumModuleManager() {
   }
 
   if (previewModule) {
-    return (
-      <ModulePreview
-        moduleId={previewModule}
-        onClose={() => setPreviewModule(null)}
-      />
-    );
+    return <ModulePreview moduleId={previewModule} onClose={() => setPreviewModule(null)} />;
   }
+
+  const isEN = activeLanguage === 'en';
+  const tabColor = isEN ? 'blue' : 'emerald';
+
+  // Section label helper
+  const sectionLabel = (section: string) => {
+    if (section === 'knowledge_based') return 'Knowledge';
+    if (section === 'behavioral' || section === 'behavioural') return 'Behavioural';
+    if (section === 'intro') return 'Intro';
+    if (section === 'outro') return 'Outro';
+    return section;
+  };
+
+  const sectionBadge = (section: string) => {
+    const base = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium';
+    if (section === 'knowledge_based') return `${base} bg-blue-100 text-blue-700`;
+    if (section === 'behavioral' || section === 'behavioural') return `${base} bg-purple-100 text-purple-700`;
+    if (section === 'intro') return `${base} bg-gray-100 text-gray-600`;
+    if (section === 'outro') return `${base} bg-gray-100 text-gray-600`;
+    return `${base} bg-gray-100 text-gray-600`;
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-sky-500 via-royal-600 to-navy-800 rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
+      {/* ── Page Header ─────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-r from-sky-500 via-blue-600 to-navy-800 rounded-xl p-6 text-white shadow">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <BookMarked className="h-8 w-8" />
-              {t('curriculum.title')}
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <BookMarked className="h-7 w-7" />
+              Curriculum Modules
             </h1>
-            <p className="mt-2 opacity-90">
-              {t('curriculum.subtitle')}
+            <p className="mt-1 text-sm opacity-80">
+              Manage BDA BoCK competency modules — shared curriculum for both CP &amp; SCP certifications.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Create Module with Language Selection */}
-            <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
-              <button
-                onClick={() => {
-                  setCreateLanguage('en');
-                  setIsCreating(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 font-semibold rounded-md hover:bg-blue-50 transition"
-              >
-                <Plus className="w-4 h-4" />
-                🇬🇧 English Module
-              </button>
-              <button
-                onClick={() => {
-                  setCreateLanguage('ar');
-                  setIsCreating(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-emerald-600 font-semibold rounded-md hover:bg-emerald-50 transition"
-              >
-                <Plus className="w-4 h-4" />
-                🇸🇦 وحدة عربية
-              </button>
-            </div>
+
+          {/* Add Module Button — language-aware */}
+          <button
+            onClick={() => setIsCreating(true)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow transition
+              ${isEN
+                ? 'bg-white text-blue-600 hover:bg-blue-50'
+                : 'bg-white text-emerald-600 hover:bg-emerald-50'
+              }`}
+          >
+            <Plus className="w-4 h-4" />
+            {isEN ? '🇬🇧 Add English Module' : '🇸🇦 إضافة وحدة عربية'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Language Tabs ────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* Tab Bar */}
+        <div className="flex border-b border-gray-200">
+          {/* English Tab */}
+          <button
+            onClick={() => handleLanguageSwitch('en')}
+            className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 font-semibold text-sm transition-all
+              ${activeLanguage === 'en'
+                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+              }`}
+          >
+            <span className="text-xl">🇬🇧</span>
+            <span>English Modules</span>
+            {activeLanguage === 'en' && modules && (
+              <span className="ml-1 bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {modules.length}
+              </span>
+            )}
+          </button>
+
+          {/* Arabic Tab */}
+          <button
+            onClick={() => handleLanguageSwitch('ar')}
+            className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 font-semibold text-sm transition-all
+              ${activeLanguage === 'ar'
+                ? 'bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+              }`}
+          >
+            <span className="text-xl">🇸🇦</span>
+            <span>الوحدات العربية</span>
+            {activeLanguage === 'ar' && modules && (
+              <span className="ml-1 bg-emerald-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {modules.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-5">
+          {/* ── Stats Row ─────────────────────────────────────────── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            <StatCard label="Total Modules"    value={modules?.length || 0}                                                icon={BookMarked}  color="gray"  />
+            <StatCard label="Published"        value={modules?.filter(m => m.is_published).length || 0}                   icon={CheckCircle} color="green" />
+            <StatCard label="Drafts"           value={modules?.filter(m => !m.is_published).length || 0}                  icon={FileText}    color="amber" />
+            <StatCard label="Knowledge-Based"  value={modules?.filter(m => m.section_type === 'knowledge_based').length || 0} icon={Brain}   color="blue"  />
           </div>
-        </div>
-      </div>
 
-      {/* Language Filter - Prominent */}
-      <div className="flex items-center gap-4 bg-white rounded-lg shadow-sm p-4">
-        <Globe className="h-5 w-5 text-gray-500" />
-        <span className="font-medium text-gray-700">{t('curriculum.selectLanguage')}:</span>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setFilterLanguage('en')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-              filterLanguage === 'en'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            🇬🇧 English Modules
-          </button>
-          <button
-            onClick={() => setFilterLanguage('ar')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-              filterLanguage === 'ar'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            🇸🇦 الوحدات العربية
-          </button>
-        </div>
-      </div>
+          {/* ── Filters ───────────────────────────────────────────── */}
+          <div className="flex flex-wrap items-center gap-3 mb-5 p-3 bg-gray-50 rounded-lg">
+            <Globe className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            <span className="text-sm text-gray-500 font-medium">Filter:</span>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Section Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t('curriculum.sectionType')}
-            </label>
+            {/* Section filter */}
             <select
               value={filterSection}
-              onChange={(e) => setFilterSection(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={e => setFilterSection(e.target.value as any)}
+              className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-400 focus:border-transparent"
             >
-              <option value="all">{t('curriculum.allSections')}</option>
-              <option value="knowledge_based">{t('curriculum.knowledgeBased')}</option>
-              <option value="behavioural">{t('curriculum.behavioural')}</option>
+              <option value="all">All Sections</option>
+              <option value="knowledge_based">Knowledge-Based</option>
+              <option value="behavioural">Behavioural</option>
             </select>
-          </div>
 
-          {/* Published Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t('curriculum.publicationStatus')}
-            </label>
+            {/* Published filter */}
             <select
               value={filterPublished}
-              onChange={(e) => setFilterPublished(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={e => setFilterPublished(e.target.value as any)}
+              className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-400 focus:border-transparent"
             >
-              <option value="all">{t('curriculum.allStatus')}</option>
-              <option value="published">{t('curriculum.publishedOnly')}</option>
-              <option value="draft">{t('curriculum.draftsOnly')}</option>
+              <option value="all">All Status</option>
+              <option value="published">Published Only</option>
+              <option value="draft">Drafts Only</option>
             </select>
           </div>
-        </div>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          label={t('curriculum.totalModules')}
-          value={modules?.length || 0}
-          icon={BookMarked}
-          color="gray"
-        />
-        <StatCard
-          label={t('curriculum.published')}
-          value={modules?.filter((m) => m.is_published).length || 0}
-          icon={CheckCircle}
-          color="green"
-        />
-        <StatCard
-          label={t('curriculum.drafts')}
-          value={modules?.filter((m) => !m.is_published).length || 0}
-          icon={FileText}
-          color="amber"
-        />
-        <StatCard
-          label={t('curriculum.knowledgeBasedShort')}
-          value={modules?.filter((m) => m.section_type === 'knowledge_based').length || 0}
-          icon={Brain}
-          color="blue"
-        />
-      </div>
-
-      {/* Modules Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        {isLoading ? (
-          <div className="p-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">{t('curriculum.loadingModules')}</p>
-          </div>
-        ) : modules && modules.length > 0 ? (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('curriculum.module')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('curriculum.section')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('curriculum.quiz')}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('common.status')}
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('common.actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {modules
-                .sort((a, b) => a.order_index - b.order_index)
-                .map((module) => (
-                  <tr key={module.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <span className="font-semibold text-blue-600">
-                            {module.order_index}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <p className="font-medium text-gray-900">
-                            {module.competency_name}
-                          </p>
-                          {module.competency_name_ar && (
-                            <p className="text-sm text-gray-600" dir="rtl">
-                              {module.competency_name_ar}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500 mt-1">
-                            {module.certification_type.toUpperCase()}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-700">
-                        {module.section_type === 'knowledge_based'
-                          ? t('curriculum.knowledgeShort')
-                          : t('curriculum.behaviouralShort')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {module.quiz_id ? (
-                        <span className="text-sm text-green-600 font-medium">
-                          {t('curriculum.linked')}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-red-600">{t('curriculum.notLinked')}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {module.is_published ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                          <Unlock className="w-3 h-3" />
-                          {t('curriculum.published')}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
-                          <Lock className="w-3 h-3" />
-                          {t('curriculum.draft')}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => setPreviewModule(module.id)}
-                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition"
-                          title={t('common.preview')}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setSelectedModule(module.id)}
-                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition"
-                          title={t('common.edit')}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleTogglePublish(module.id, module.is_published)
-                          }
-                          className={`p-2 rounded transition ${
-                            module.is_published
-                              ? 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'
-                              : 'text-gray-600 hover:text-green-600 hover:bg-green-50'
-                          }`}
-                          title={module.is_published ? t('curriculum.unpublish') : t('curriculum.publish')}
-                        >
-                          {module.is_published ? (
-                            <Lock className="w-4 h-4" />
-                          ) : (
-                            <Unlock className="w-4 h-4" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(module.id)}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition"
-                          title={t('common.delete')}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+          {/* ── Table ─────────────────────────────────────────────── */}
+          {isLoading ? (
+            <div className="py-16 text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">Loading modules…</p>
+            </div>
+          ) : modules && modules.length > 0 ? (
+            <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead>
+                  <tr className={`${isEN ? 'bg-blue-50' : 'bg-emerald-50'}`}>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-8">#</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Module Name</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Section</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Quiz</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
-                ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="p-12 text-center">
-            <p className="text-gray-600 mb-4">{t('curriculum.noModulesFound')}</p>
-            <button
-              onClick={() => setIsCreating(true)}
-              className="text-blue-600 hover:underline"
-            >
-              {t('curriculum.createFirstModule')}
-            </button>
-          </div>
-        )}
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {[...modules]
+                    .sort((a, b) => a.order_index - b.order_index)
+                    .map((module) => (
+                      <tr key={module.id} className="hover:bg-gray-50 transition-colors">
+                        {/* Order index */}
+                        <td className="px-5 py-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold
+                            ${isEN ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {module.order_index}
+                          </div>
+                        </td>
+
+                        {/* Module name */}
+                        <td className="px-5 py-3">
+                          <p className="font-medium text-gray-900 text-sm">{module.competency_name}</p>
+                          {module.competency_name_ar && (
+                            <p className="text-xs text-gray-500 mt-0.5" dir="rtl">{module.competency_name_ar}</p>
+                          )}
+                        </td>
+
+                        {/* Section badge */}
+                        <td className="px-5 py-3">
+                          <span className={sectionBadge(module.section_type)}>
+                            {sectionLabel(module.section_type)}
+                          </span>
+                        </td>
+
+                        {/* Quiz link */}
+                        <td className="px-5 py-3">
+                          {module.quiz_id ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-700 font-medium">
+                              <CheckCircle className="w-3.5 h-3.5" /> Linked
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-red-500">
+                              <Layers className="w-3.5 h-3.5" /> Not linked
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Published status */}
+                        <td className="px-5 py-3">
+                          {module.is_published ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                              <Unlock className="w-3 h-3" /> Published
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">
+                              <Lock className="w-3 h-3" /> Draft
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-5 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => setPreviewModule(module.id)}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
+                              title="Preview"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setSelectedModule(module.id)}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleTogglePublish(module.id, module.is_published)}
+                              className={`p-1.5 rounded transition ${
+                                module.is_published
+                                  ? 'text-gray-400 hover:text-orange-500 hover:bg-orange-50'
+                                  : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                              }`}
+                              title={module.is_published ? 'Unpublish' : 'Publish'}
+                            >
+                              {module.is_published ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(module.id)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="py-16 text-center">
+              <BookMarked className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 mb-4">
+                No {isEN ? 'English' : 'Arabic'} modules found.
+              </p>
+              <button
+                onClick={() => setIsCreating(true)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition
+                  ${isEN ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+              >
+                <Plus className="w-4 h-4" />
+                {isEN ? 'Create first English module' : 'إنشاء أول وحدة عربية'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
