@@ -4,23 +4,29 @@
  */
 
 import { useState } from 'react';
-import { Plus, BookOpen, Filter, Search, CheckCircle, FileText, HelpCircle, Globe, Upload } from 'lucide-react';
+import {
+  Plus,
+  BookOpen,
+  Search,
+  CheckCircle,
+  FileText,
+  HelpCircle,
+  Upload,
+} from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 type ExamLanguage = 'en' | 'ar';
+
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useLessons,
-  useLessonSummary,
   useDeleteLesson,
   useTogglePublished,
   type LessonFilters,
@@ -30,7 +36,7 @@ import { LessonEditor } from '../components/LessonEditor';
 import { LessonFilters as LessonFiltersComponent } from '../components/LessonFilters';
 import { WordImportTab } from '../components/WordImportTab';
 import { useToast } from '@/hooks/use-toast';
-import { AdminPageHeader, StatCard, AdminFilterCard } from '../components/shared';
+import { StatCard } from '../components/shared';
 
 // Top-level page tabs
 type PageTab = 'manage' | 'import';
@@ -47,6 +53,8 @@ export function LessonManager() {
   const [filterLanguage, setFilterLanguage] = useState<ExamLanguage>('en');
   const [createLanguage, setCreateLanguage] = useState<ExamLanguage>('en');
 
+  const isEN = filterLanguage === 'en';
+
   // Build filters based on active tab and language
   const activeFilters: LessonFilters = {
     ...filters,
@@ -56,7 +64,6 @@ export function LessonManager() {
 
   // Queries
   const { data: lessons, isLoading } = useLessons(activeFilters);
-  const { data: summary } = useLessonSummary();
   const deleteLesson = useDeleteLesson();
   const togglePublished = useTogglePublished();
 
@@ -70,6 +77,12 @@ export function LessonManager() {
       lesson.module?.competency_name.toLowerCase().includes(query)
     );
   });
+
+  // Per-language counts from fetched lessons (all-status query)
+  const { data: allLessonsEN } = useLessons({ exam_language: 'en' });
+  const { data: allLessonsAR } = useLessons({ exam_language: 'ar' });
+  const enCount = allLessonsEN?.length ?? 0;
+  const arCount = allLessonsAR?.length ?? 0;
 
   // Handlers
   const handleCreateLesson = (language: ExamLanguage = 'en') => {
@@ -116,26 +129,50 @@ export function LessonManager() {
     }
   };
 
+  const handleLanguageSwitch = (lang: ExamLanguage) => {
+    setFilterLanguage(lang);
+    setActiveTab('all');
+    setSearchQuery('');
+    setFilters({});
+  };
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <AdminPageHeader
-        title={t('lessons.title')}
-        description={t('lessons.subtitle')}
-        icon={BookOpen}
-        action={
-          <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
-            <Button onClick={() => handleCreateLesson('en')} size="lg" className="bg-white text-blue-600 hover:bg-blue-50">
-              <Plus className="mr-2 h-4 w-4" />
-              🇬🇧 English Lesson
-            </Button>
-            <Button onClick={() => handleCreateLesson('ar')} size="lg" className="bg-white text-emerald-600 hover:bg-emerald-50">
-              <Plus className="mr-2 h-4 w-4" />
-              🇸🇦 درس عربي
-            </Button>
+    <div className="space-y-6">
+      {/* ── Page Header ─────────────────────────────────────────────── */}
+      <div className={`rounded-xl p-6 text-white shadow ${isEN
+        ? 'bg-gradient-to-r from-sky-500 via-blue-600 to-blue-800'
+        : 'bg-gradient-to-r from-emerald-500 via-green-600 to-teal-700'
+      }`}>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <BookOpen className="h-7 w-7" />
+              {t('lessons.title')}
+            </h1>
+            <p className="mt-1 text-sm opacity-80">
+              {t('lessons.subtitle')}
+            </p>
           </div>
-        }
-      />
+
+          {/* Add Lesson Button — language-aware */}
+          <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
+            <button
+              onClick={() => handleCreateLesson('en')}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-white text-blue-600 hover:bg-blue-50 shadow transition"
+            >
+              <Plus className="w-4 h-4" />
+              🇬🇧 English Lesson
+            </button>
+            <button
+              onClick={() => handleCreateLesson('ar')}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-white text-emerald-600 hover:bg-emerald-50 shadow transition"
+            >
+              <Plus className="w-4 h-4" />
+              🇸🇦 درس عربي
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* ── Page-level tabs: Manage / Word Import ── */}
       <div className="flex gap-2 border-b pb-0">
@@ -169,133 +206,152 @@ export function LessonManager() {
       {/* ── Manage Tab ── */}
       {pageTab === 'manage' && (
         <>
-          {/* Language Filter */}
-          <div className="flex items-center gap-4 bg-white rounded-lg shadow-sm p-4">
-            <Globe className="h-5 w-5 text-gray-500" />
-            <span className="font-medium text-gray-700">{t('curriculum.selectLanguage')}:</span>
-            <div className="flex gap-2">
-              <Button
-                variant={filterLanguage === 'en' ? 'default' : 'outline'}
-                onClick={() => setFilterLanguage('en')}
-                className={filterLanguage === 'en' ? 'bg-blue-600' : ''}
+          {/* ── Language Tabs ─────────────────────────────────────────── */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Tab Bar */}
+            <div className="flex border-b border-gray-200">
+              {/* English Tab */}
+              <button
+                onClick={() => handleLanguageSwitch('en')}
+                className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 font-semibold text-sm transition-all
+                  ${filterLanguage === 'en'
+                    ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
               >
-                🇬🇧 English Lessons
-              </Button>
-              <Button
-                variant={filterLanguage === 'ar' ? 'default' : 'outline'}
-                onClick={() => setFilterLanguage('ar')}
-                className={filterLanguage === 'ar' ? 'bg-emerald-600' : ''}
+                <span className="text-xl">🇬🇧</span>
+                <span>English Lessons</span>
+                <span className={`ml-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+                  filterLanguage === 'en'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {enCount}
+                </span>
+              </button>
+
+              {/* Arabic Tab */}
+              <button
+                onClick={() => handleLanguageSwitch('ar')}
+                className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 font-semibold text-sm transition-all
+                  ${filterLanguage === 'ar'
+                    ? 'bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                  }`}
               >
-                🇸🇦 الدروس العربية
-              </Button>
+                <span className="text-xl">🇸🇦</span>
+                <span>الدروس العربية</span>
+                <span className={`ml-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+                  filterLanguage === 'ar'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {arCount}
+                </span>
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-5">
+              {/* ── Stats Row ─────────────────────────────────────────── */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                <StatCard
+                  label={t('lessons.totalLessons')}
+                  value={lessons?.length || 0}
+                  icon={BookOpen}
+                  color="gray"
+                />
+                <StatCard
+                  label={t('curriculum.published')}
+                  value={lessons?.filter(l => l.is_published).length || 0}
+                  icon={CheckCircle}
+                  color="green"
+                />
+                <StatCard
+                  label={t('curriculum.drafts')}
+                  value={lessons?.filter(l => !l.is_published).length || 0}
+                  icon={FileText}
+                  color="amber"
+                />
+                <StatCard
+                  label={t('lessons.withQuiz')}
+                  value={lessons?.filter(l => l.lesson_quiz_id).length || 0}
+                  icon={HelpCircle}
+                  color="blue"
+                />
+              </div>
+
+              {/* ── Search & Filters ──────────────────────────────────── */}
+              <div className="flex flex-wrap items-center gap-3 mb-5 p-3 bg-gray-50 rounded-lg">
+                <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                <Input
+                  placeholder={t('lessons.searchPlaceholder')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 min-w-[200px] h-8 text-sm"
+                />
+                <LessonFiltersComponent filters={filters} onFiltersChange={setFilters} />
+                {(searchQuery || Object.keys(filters).length > 0) && (
+                  <button
+                    onClick={() => { setFilters({}); setSearchQuery(''); }}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline"
+                  >
+                    {t('common.reset')}
+                  </button>
+                )}
+              </div>
+
+              {/* ── Status Tabs + Table ───────────────────────────────── */}
+              <Card className="border-0 shadow-none">
+                <CardHeader className="px-0 pt-0 pb-3">
+                  <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+                    <TabsList>
+                      <TabsTrigger value="all">
+                        {t('common.all')} ({lessons?.length || 0})
+                      </TabsTrigger>
+                      <TabsTrigger value="published">
+                        {t('curriculum.published')} ({lessons?.filter(l => l.is_published).length || 0})
+                      </TabsTrigger>
+                      <TabsTrigger value="draft">
+                        {t('curriculum.drafts')} ({lessons?.filter(l => !l.is_published).length || 0})
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </CardHeader>
+                <CardContent className="px-0 pb-0">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                        <p className="text-muted-foreground">{t('lessons.loadingLessons')}</p>
+                      </div>
+                    </div>
+                  ) : filteredLessons && filteredLessons.length > 0 ? (
+                    <LessonTable
+                      lessons={filteredLessons}
+                      onEdit={handleEditLesson}
+                      onDelete={handleDeleteLesson}
+                      onTogglePublished={handleTogglePublished}
+                    />
+                  ) : (
+                    <div className="text-center py-12">
+                      <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        {searchQuery || Object.keys(filters).length > 0
+                          ? t('lessons.noLessonsMatch')
+                          : t('lessons.noLessonsYet')}
+                      </p>
+                      {!searchQuery && Object.keys(filters).length === 0 && (
+                        <Button onClick={() => handleCreateLesson(filterLanguage)} className="mt-4">
+                          {t('lessons.createFirstLesson')}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
-
-          {/* Statistics */}
-          {summary && (
-            <div className="grid gap-4 md:grid-cols-4">
-              <StatCard
-                label={t('lessons.totalLessons')}
-                value={summary.total_lessons}
-                icon={BookOpen}
-                color="gray"
-              />
-              <StatCard
-                label={t('curriculum.published')}
-                value={summary.published_lessons}
-                icon={CheckCircle}
-                color="green"
-              />
-              <StatCard
-                label={t('curriculum.drafts')}
-                value={summary.draft_lessons}
-                icon={FileText}
-                color="amber"
-              />
-              <StatCard
-                label={t('lessons.withQuiz')}
-                value={summary.lessons_with_quiz}
-                icon={HelpCircle}
-                color="blue"
-              />
-            </div>
-          )}
-
-          {/* Filters and search */}
-          <AdminFilterCard
-            title={t('common.filter')}
-            description={t('lessons.filterDescription')}
-            onReset={() => {
-              setFilters({});
-              setSearchQuery('');
-            }}
-          >
-            {/* Search bar */}
-            <div className="relative md:col-span-3">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder={t('lessons.searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Filter component */}
-            <div className="md:col-span-3">
-              <LessonFiltersComponent filters={filters} onFiltersChange={setFilters} />
-            </div>
-          </AdminFilterCard>
-
-          {/* Tabs and table */}
-          <Card>
-            <CardHeader>
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-                <TabsList>
-                  <TabsTrigger value="all">
-                    {t('common.all')} ({summary?.total_lessons || 0})
-                  </TabsTrigger>
-                  <TabsTrigger value="published">
-                    {t('curriculum.published')} ({summary?.published_lessons || 0})
-                  </TabsTrigger>
-                  <TabsTrigger value="draft">
-                    {t('curriculum.drafts')} ({summary?.draft_lessons || 0})
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">{t('lessons.loadingLessons')}</p>
-                  </div>
-                </div>
-              ) : filteredLessons && filteredLessons.length > 0 ? (
-                <LessonTable
-                  lessons={filteredLessons}
-                  onEdit={handleEditLesson}
-                  onDelete={handleDeleteLesson}
-                  onTogglePublished={handleTogglePublished}
-                />
-              ) : (
-                <div className="text-center py-12">
-                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    {searchQuery || Object.keys(filters).length > 0
-                      ? t('lessons.noLessonsMatch')
-                      : t('lessons.noLessonsYet')}
-                  </p>
-                  {!searchQuery && Object.keys(filters).length === 0 && (
-                    <Button onClick={handleCreateLesson} className="mt-4">
-                      {t('lessons.createFirstLesson')}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </>
       )}
 
