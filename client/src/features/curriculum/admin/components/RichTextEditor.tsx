@@ -31,7 +31,6 @@ import {
   Minus,
   Upload,
   X,
-  ExternalLink,
 } from 'lucide-react';
 import type { RichContent } from '@/entities/curriculum';
 
@@ -332,42 +331,6 @@ export function RichTextEditor({
             Cancel
           </button>
         </div>
-      )}
-
-      {/* ── Bubble Menu (appears on text selection) ───────────────────── */}
-      {editor && (
-        <BubbleMenu
-          editor={editor}
-          tippyOptions={{ duration: 100 }}
-          className="flex items-center gap-0.5 bg-gray-900 rounded-lg shadow-xl px-2 py-1.5"
-        >
-          <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={`p-1.5 rounded text-white hover:bg-gray-700 ${editor.isActive('bold') ? 'bg-gray-700' : ''}`} title="Bold">
-            <Bold className="w-3.5 h-3.5" />
-          </button>
-          <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={`p-1.5 rounded text-white hover:bg-gray-700 ${editor.isActive('italic') ? 'bg-gray-700' : ''}`} title="Italic">
-            <Italic className="w-3.5 h-3.5" />
-          </button>
-          <button type="button" onClick={() => editor.chain().focus().toggleUnderline().run()} className={`p-1.5 rounded text-white hover:bg-gray-700 ${editor.isActive('underline') ? 'bg-gray-700' : ''}`} title="Underline">
-            <UnderlineIcon className="w-3.5 h-3.5" />
-          </button>
-          <button type="button" onClick={() => editor.chain().focus().toggleHighlight().run()} className={`p-1.5 rounded text-white hover:bg-gray-700 ${editor.isActive('highlight') ? 'bg-gray-700' : ''}`} title="Highlight">
-            <Highlighter className="w-3.5 h-3.5" />
-          </button>
-          <div className="w-px h-4 bg-gray-600 mx-0.5" />
-          <button type="button" onClick={openLinkDialog} className={`p-1.5 rounded text-white hover:bg-gray-700 ${editor.isActive('link') ? 'bg-gray-700' : ''}`} title="Link">
-            <LinkIcon className="w-3.5 h-3.5" />
-          </button>
-          {editor.isActive('link') && (
-            <>
-              <a href={editor.getAttributes('link').href} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded text-blue-300 hover:bg-gray-700" title="Open link">
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-              <button type="button" onClick={() => editor.chain().focus().unsetLink().run()} className="p-1.5 rounded text-red-400 hover:bg-gray-700" title="Remove link">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </>
-          )}
-        </BubbleMenu>
       )}
 
       {/* ── Editor Content ────────────────────────────────────────────── */}
