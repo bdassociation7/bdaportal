@@ -86,12 +86,14 @@ function buildLinkedInUrl(v: CertificateVerification, credId: string): string {
   return `https://www.linkedin.com/profile/add?${params.toString()}`;
 }
 
-// Build LinkedIn share-as-post URL using Edge Function for dynamic OG tags
+// Build LinkedIn share-as-post URL
+// LinkedIn crawler will hit /verify/:id which is served by the portal's index.html
+// The Edge Function (credential-og) is used for SEO crawlers via meta-refresh redirect
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://dfsbzsxuursvqwnzruqt.supabase.co';
 function buildLinkedInShareUrl(credId: string): string {
-  // The Edge Function URL serves dynamic OG tags that LinkedIn crawler reads
-  const ogUrl = `${SUPABASE_URL}/functions/v1/credential-og?id=${encodeURIComponent(credId)}`;
-  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ogUrl)}`;
+  // Use the portal's public credential URL — LinkedIn will follow the canonical URL
+  const credUrl = `https://portal.bda-global.org/verify/${encodeURIComponent(credId)}`;
+  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(credUrl)}`;
 }
 
 // ============================================================================
@@ -110,9 +112,10 @@ function InfoRow({ icon, label, value, mono = false }: {
       }}>
         {icon} {label}
       </div>
-      <div style={{
+      <div dir="ltr" style={{
         fontSize: 14, fontWeight: 600, color: '#1a2a3a',
         fontFamily: mono ? 'monospace' : 'inherit',
+        unicodeBidi: 'plaintext',
       }}>
         {value}
       </div>
@@ -357,7 +360,7 @@ export default function VerifyCertificate() {
             {/* Input + button */}
             <div style={{ display: 'flex', gap: 10 }}>
               <Input
-                placeholder={searchMode === 'credential' ? 'e.g. BDA-CP-2026-A7K2M9' : 'e.g. Ahmed Al-Rashidi'}
+                placeholder={searchMode === 'credential' ? 'e.g. BDA-CP-2026-A7K2M9' : 'e.g. John Smith'}
                 value={searchMode === 'credential' ? credentialId : searchName}
                 onChange={(e) =>
                   searchMode === 'credential'

@@ -73,18 +73,22 @@
 # SPA Fallback Routing - Redirect all routes to index.html
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    
-    # Handle Angular and React Router
     RewriteBase /
-    
+
+    # ── Social Media / SEO Crawlers: serve dynamic OG tags via Supabase Edge Function ──
+    # Detect known social crawlers by User-Agent
+    RewriteCond %{HTTP_USER_AGENT} (LinkedInBot|Twitterbot|facebookexternalhit|Slackbot|WhatsApp|TelegramBot|Discordbot|pinterest|vkShare|W3C_Validator|Googlebot|bingbot|DuckDuckBot) [NC]
+    RewriteCond %{REQUEST_URI} ^/verify/([^/]+)$ [NC]
+    RewriteRule ^verify/(.+)$ https://dfsbzsxuursvqwnzruqt.supabase.co/functions/v1/credential-og?id=%1 [R=302,L]
+
     # Handle client-side routing
     # If the request is for a file or directory that exists, serve it
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    
+
     # Exclude API calls (if any local APIs are added later)
     RewriteCond %{REQUEST_URI} !^/api/
-    
+
     # Redirect everything else to index.html
     RewriteRule . /index.html [L]
 </IfModule>
