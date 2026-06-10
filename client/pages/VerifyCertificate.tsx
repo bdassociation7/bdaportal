@@ -91,9 +91,10 @@ function buildLinkedInUrl(v: CertificateVerification, credId: string): string {
 // The Edge Function (credential-og) is used for SEO crawlers via meta-refresh redirect
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://dfsbzsxuursvqwnzruqt.supabase.co';
 function buildLinkedInShareUrl(credId: string): string {
-  // Use the portal's public credential URL — LinkedIn will follow the canonical URL
-  const credUrl = `https://portal.bda-global.org/verify/${encodeURIComponent(credId)}`;
-  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(credUrl)}`;
+  // LinkedIn Bot does NOT follow redirects — must point directly to the URL that serves OG tags
+  // The Edge Function returns OG tags immediately (no redirect) with og:url pointing to portal
+  const ogUrl = `${SUPABASE_URL}/functions/v1/credential-og?id=${encodeURIComponent(credId)}`;
+  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ogUrl)}`;
 }
 
 // ============================================================================
