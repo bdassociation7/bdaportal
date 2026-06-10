@@ -86,6 +86,14 @@ function buildLinkedInUrl(v: CertificateVerification, credId: string): string {
   return `https://www.linkedin.com/profile/add?${params.toString()}`;
 }
 
+// Build LinkedIn share-as-post URL using Edge Function for dynamic OG tags
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://dfsbzsxuursvqwnzruqt.supabase.co';
+function buildLinkedInShareUrl(credId: string): string {
+  // The Edge Function URL serves dynamic OG tags that LinkedIn crawler reads
+  const ogUrl = `${SUPABASE_URL}/functions/v1/credential-og?id=${encodeURIComponent(credId)}`;
+  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ogUrl)}`;
+}
+
 // ============================================================================
 // Sub-components
 // ============================================================================
@@ -228,7 +236,7 @@ export default function VerifyCertificate() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
+    <div dir="ltr" style={{ fontFamily: "'Inter', -apple-system, sans-serif" }}>
 
       {/* ════════════════════════════════════════════════════════════════════
           HERO SECTION
@@ -577,6 +585,22 @@ export default function VerifyCertificate() {
                     >
                       <ExternalLink size={13} />
                       Add to LinkedIn
+                    </a>
+
+                    <a
+                      href={buildLinkedInShareUrl(credentialId)}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 7,
+                        padding: '9px 16px',
+                        background: '#0077b5', color: 'white',
+                        border: 'none', borderRadius: 8,
+                        fontSize: 13, fontWeight: 600, textDecoration: 'none',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <ExternalLink size={13} />
+                      Share on LinkedIn
                     </a>
 
                     <button

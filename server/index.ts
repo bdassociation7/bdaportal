@@ -10,6 +10,7 @@ import {
   handleWordPressSyncHealth,
 } from "./routes/wordpress-sync-webhook";
 import { handleGenerateCertificate } from "./routes/certificate-generate";
+import { handleCredentialOG } from "./routes/credential-og";
 
 export function createServer() {
   const app = express();
@@ -40,6 +41,11 @@ export function createServer() {
 
   // Certificate generation - generates PDF on-the-fly and returns it
   app.get("/api/certificates/generate/:credentialId", handleGenerateCertificate);
+
+  // Credential verification pages — serve dynamic OG meta tags for social crawlers
+  // These routes must be registered BEFORE the static SPA catch-all in node-build.ts
+  app.get("/verify/:credentialId", handleCredentialOG);
+  app.get("/public/verify/:credentialId", handleCredentialOG);
 
   return app;
 }
