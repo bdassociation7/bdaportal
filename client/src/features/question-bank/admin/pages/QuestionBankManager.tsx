@@ -44,15 +44,10 @@ import {
   Folder,
   FolderOpen,
   Globe,
-  BookOpen,
-  Link as LinkIcon,
-  Unlink,
-  ExternalLink,
   ClipboardList,
 } from 'lucide-react';
 import { AdminPageHeader, StatCard, AdminFilterCard } from '@/features/curriculum/admin/components/shared';
-import { useActiveQuizzes } from '@/entities/quiz';
-import { useLessons } from '@/entities/curriculum';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -84,173 +79,6 @@ import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 type ExamLanguage = 'en' | 'ar';
-
-// ─── Lesson Quiz Tab (inner component) ─────────────────────────────────────
-function LessonQuizzesTab() {
-  const navigate = useNavigate();
-  const [certType, setCertType] = useState<'CP' | 'SCP' | 'all'>('all');
-  const [langFilter, setLangFilter] = useState<'all' | 'en' | 'ar'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [moduleFilter, setModuleFilter] = useState<string>('all');
-
-  const { data: allModules } = useQuery({
-    queryKey: curriculumKeys.modulesList({}),
-    queryFn: async () => {
-      const result = await CurriculumService.getModules({});
-      return result.data || [];
-    },
-  });
-
-  const { data: lessons, isLoading } = useLessons({
-    certification_type: certType === 'all' ? undefined : certType,
-    module_id: moduleFilter === 'all' ? undefined : moduleFilter,
-    exam_language: langFilter === 'all' ? undefined : langFilter,
-  });
-
-  const { data: quizzes } = useActiveQuizzes({ exclude_certification: true });
-
-  const filteredLessons = useMemo(() => {
-    const byLang = langFilter === 'all' ? (lessons || []) : (lessons || []).filter(l => l.exam_language === langFilter);
-    return byLang.filter(lesson =>
-      lesson.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lesson.title_ar?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-    );
-  }, [lessons, langFilter, searchQuery]);
-
-  const totalLessons = filteredLessons.length;
-  const linkedCount = filteredLessons.filter(l => l.lesson_quiz_id).length;
-  const missingCount = totalLessons - linkedCount;
-
-  const getQuizName = (quizId: string | null) => {
-    if (!quizId) return null;
-    const quiz = quizzes?.find(q => q.id === quizId);
-    return quiz?.title || quiz?.title_ar || quizId;
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Total Lessons" value={totalLessons} icon={BookOpen} color="gray" />
-        <StatCard label="Linked Quizzes" value={linkedCount} icon={LinkIcon} color="green" />
-        <StatCard label="Missing Quizzes" value={missingCount} icon={Unlink} color="amber" />
-      </div>
-
-      {/* Filters */}
-      <AdminFilterCard
-        title="Filters"
-        description="Search and filter lesson quizzes"
-        onReset={() => { setSearchQuery(''); setCertType('all'); setLangFilter('all'); setModuleFilter('all'); }}
-      >
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search lessons..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
-        </div>
-        {/* Language Filter */}
-        <div className="flex gap-2">
-          {(['all', 'en', 'ar'] as const).map((lang) => (
-            <button
-              key={lang}
-              onClick={() => setLangFilter(lang)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                langFilter === lang
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
-              }`}
-            >
-              {lang === 'all' ? 'All Languages' : lang === 'en' ? '🇬🇧 English' : '🇸🇦 Arabic'}
-            </button>
-          ))}
-        </div>
-        <Select value={certType} onValueChange={(v: any) => setCertType(v)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="CP">CP</SelectItem>
-            <SelectItem value="SCP">SCP</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={moduleFilter} onValueChange={setModuleFilter}>
-          <SelectTrigger><SelectValue placeholder="Filter by Module" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Modules</SelectItem>
-            {allModules?.map((module) => (
-              <SelectItem key={module.id} value={module.id}>{module.competency_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </AdminFilterCard>
-
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
-          <span className="font-medium text-gray-700">Lessons ({filteredLessons.length})</span>
-          <Button size="sm" onClick={() => navigate('/admin/quizzes/new?type=lesson_validation')} className="bg-blue-600 text-white hover:bg-blue-700">
-            <Plus className="mr-2 h-4 w-4" /> Create Quiz
-          </Button>
-        </div>
-        {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading...</div>
-        ) : filteredLessons.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">No lessons found</div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">Lesson</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">Module</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">Quiz</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLessons.map((lesson) => (
-                <tr key={lesson.id} className="border-b hover:bg-gray-50">
-                  <td className="py-3 px-4">
-                    <div className="font-medium">{lesson.title}</div>
-                    {lesson.title_ar && <div className="text-sm text-muted-foreground">{lesson.title_ar}</div>}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700">{lesson.module?.competency_name || lesson.module_id}</td>
-                  <td className="py-3 px-4">
-                    {lesson.lesson_quiz_id ? (
-                      <span className="text-sm">{getQuizName(lesson.lesson_quiz_id)}</span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    {lesson.lesson_quiz_id ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                        <LinkIcon className="h-3 w-3" /> Linked
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                        <Unlink className="h-3 w-3" /> Not Linked
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {lesson.lesson_quiz_id && (
-                        <Button size="sm" variant="ghost" onClick={() => navigate(`/admin/quizzes/${lesson.lesson_quiz_id}`)}>
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/admin/curriculum/lessons?editId=${lesson.id}`)}>
-                        {lesson.lesson_quiz_id ? 'View Quiz' : 'Link Quiz'}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export function QuestionBankManager() {
@@ -421,9 +249,6 @@ export function QuestionBankManager() {
 
   const texts = t[language];
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<'practice' | 'quizzes'>('practice');
-
   // State
   const [viewMode, setViewMode] = useState<'table' | 'tree'>('tree');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -565,7 +390,7 @@ export function QuestionBankManager() {
       {/* Header */}
       <AdminPageHeader
         title="Assessment Bank"
-        description="Manage practice question sets and lesson validation quizzes"
+        description="Manage practice question sets for the BDA learning curriculum"
         icon={ClipboardList}
         action={
           <div className="flex gap-3">
@@ -603,37 +428,7 @@ export function QuestionBankManager() {
         }
       />
 
-      {/* Main Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6">
-        <button
-          onClick={() => setActiveTab('practice')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'practice'
-              ? 'bg-white shadow text-blue-700'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <FileQuestion className="h-4 w-4" />
-          Practice Question Sets
-        </button>
-        <button
-          onClick={() => setActiveTab('quizzes')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'quizzes'
-              ? 'bg-white shadow text-green-700'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <BookOpen className="h-4 w-4" />
-          Lesson Quizzes
-        </button>
-      </div>
-
-      {/* Lesson Quizzes Tab Content */}
-      {activeTab === 'quizzes' && <LessonQuizzesTab />}
-
-      {/* Practice Question Sets Tab Content */}
-      {activeTab !== 'quizzes' && (<>
+      {/* Practice Question Sets */}
 
       {/* Language Filter */}
       <div className="flex items-center gap-4 bg-white rounded-lg shadow-sm p-4 mb-6">
@@ -1054,7 +849,6 @@ export function QuestionBankManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </> )}
     </div>
   );
 }
