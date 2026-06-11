@@ -47,8 +47,8 @@ function FlashcardDisplay({
   card,
   isFlipped,
   onFlip,
-  isFavorite,
-  onToggleFavorite,
+  isFavourite,
+  onToggleFavourite,
 }: FlashcardDisplayProps) {
   return (
     <div
@@ -78,7 +78,7 @@ function FlashcardDisplay({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onToggleFavorite();
+                onToggleFavourite();
               }}
               className={`p-2 rounded-full transition-colors ${
                 isFavourite
@@ -86,7 +86,7 @@ function FlashcardDisplay({
                   : 'bg-gray-100 text-gray-400 hover:text-yellow-500'
               }`}
             >
-              <Star className="w-5 h-5" fill={isFavorite ? 'currentColor' : 'none'} />
+              <Star className="w-5 h-5" fill={isFavourite ? 'currentColor' : 'none'} />
             </button>
             <div
               className={`px-2 py-1 rounded-full text-xs font-medium ${
