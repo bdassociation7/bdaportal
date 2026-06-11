@@ -227,8 +227,11 @@ export function PracticeSession() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [sessionResult, setSessionResult] = useState<PracticeSessionResult | null>(null);
 
+  // Read certificationTarget from navigation state (passed by QuestionBankDashboard)
+  const certificationTarget = (location.state as { certType?: 'CP' | 'SCP' } | null)?.certType;
+
   const { data: questionSet, isLoading: isLoadingSet } = useQuestionSet(setId);
-  const { data: questions, isLoading: isLoadingQuestions } = useQuestionsWithAttempts(user?.id, setId);
+  const { data: questions, isLoading: isLoadingQuestions } = useQuestionsWithAttempts(user?.id, setId, certificationTarget);
 
   const recordAttempt = useRecordAttempt();
   const completeSession = useCompletePracticeSession();

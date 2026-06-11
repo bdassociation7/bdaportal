@@ -300,10 +300,12 @@ function CompetencyAccordion({
   competencyName,
   subUnits,
   basePath,
+  certType,
 }: {
   competencyName: string;
   subUnits: Record<string, QuestionSetWithProgress[]>;
   basePath: string;
+  certType: 'CP' | 'SCP';
 }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -345,7 +347,7 @@ function CompetencyAccordion({
                       <QuestionSetCard
                         key={set.id}
                         questionSet={set}
-                        onClick={() => navigate(`${basePath}/question-bank/${set.id}`)}
+                        onClick={() => navigate(`${basePath}/question-bank/${set.id}`, { state: { certType } })}
                       />
                     ))}
                   </div>
@@ -586,6 +588,7 @@ export function QuestionBankDashboard() {
                     competencyName={name}
                     subUnits={subUnits}
                     basePath={basePath}
+                    certType={certType}
                   />
                 );
               })}
@@ -615,6 +618,7 @@ export function QuestionBankDashboard() {
                     competencyName={name}
                     subUnits={subUnits}
                     basePath={basePath}
+                    certType={certType}
                   />
                 );
               })}
@@ -636,7 +640,7 @@ export function QuestionBankDashboard() {
                 <QuestionSetCard
                   key={set.id}
                   questionSet={set}
-                  onClick={() => navigate(`${basePath}/question-bank/${set.id}`)}
+                  onClick={() => navigate(`${basePath}/question-bank/${set.id}`, { state: { certType } })}
                 />
               ))}
             </div>

@@ -387,10 +387,13 @@ export class QuestionBankService {
 
   /**
    * Get questions with user's last attempt
+   * @param certificationTarget - 'CP' | 'SCP' | undefined — filters questions by target cert.
+   *   A question is included if its certification_target matches OR is NULL (applies to both).
    */
   static async getQuestionsWithAttempts(
     userId: string,
-    questionSetId: string
+    questionSetId: string,
+    certificationTarget?: 'CP' | 'SCP'
   ): Promise<ServiceResponse<PracticeQuestionWithAttempt[]>> {
     try {
       // Get all published questions
@@ -402,6 +405,13 @@ export class QuestionBankService {
         .order('order_index', { ascending: true });
 
       if (questionsError) throw questionsError;
+
+      // Filter by certification_target: include questions that match the cert OR are NULL (both)
+      const filteredQuestions = certificationTarget
+        ? (questions || []).filter(
+            (q) => q.certification_target === null || q.certification_target === certificationTarget
+          )
+        : (questions || []);
 
       // Get user's latest attempts for each question
       const { data: attempts, error: attemptsError } = await supabase
@@ -423,7 +433,7 @@ export class QuestionBankService {
 
       // Combine questions with attempts
       const questionsWithAttempts: PracticeQuestionWithAttempt[] = (
-        questions || []
+        filteredQuestions
       ).map((q) => ({
         ...q,
         last_attempt: attemptMap.get(q.id) || null,

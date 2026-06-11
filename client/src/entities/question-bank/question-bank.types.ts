@@ -51,6 +51,8 @@ export interface PracticeQuestion {
   tags: string[];
   points: number;
   is_published: boolean;
+  /** NULL = applies to both CP and SCP; 'CP' = BDA-CP only; 'SCP' = BDA-SCP only */
+  certification_target: 'CP' | 'SCP' | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -169,6 +171,8 @@ export interface PracticeQuestionInsert {
   tags?: string[];
   points?: number;
   is_published?: boolean;
+  /** NULL = both CP & SCP; 'CP' = BDA-CP only; 'SCP' = BDA-SCP only */
+  certification_target?: 'CP' | 'SCP' | null;
 }
 
 export interface PracticeQuestionUpdate {
@@ -184,6 +188,8 @@ export interface PracticeQuestionUpdate {
   tags?: string[];
   points?: number;
   is_published?: boolean;
+  /** NULL = both CP & SCP; 'CP' = BDA-CP only; 'SCP' = BDA-SCP only */
+  certification_target?: 'CP' | 'SCP' | null;
 }
 
 // ============================================================================

@@ -304,6 +304,16 @@ function QuestionCard({ question, index, onEdit, onDelete, onTogglePublish }: Qu
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Certification Target Badge */}
+          {(question as any).certification_target && (
+            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+              (question as any).certification_target === 'CP'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-purple-100 text-purple-700'
+            }`}>
+              {(question as any).certification_target === 'CP' ? 'BDA-CP' : 'BDA-SCP'}
+            </span>
+          )}
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
             question.difficulty_level === 'easy' ? 'bg-green-100 text-green-700'
             : question.difficulty_level === 'hard' ? 'bg-red-100 text-red-700'
@@ -413,6 +423,7 @@ function QuestionDialog({
     tags: defaultValues?.tags || [],
     points: defaultValues?.points || 1,
     is_published: defaultValues?.is_published ?? true,
+    certification_target: (defaultValues as any)?.certification_target ?? null as 'CP' | 'SCP' | null,
   });
 
   useEffect(() => {
@@ -426,6 +437,7 @@ function QuestionDialog({
         difficulty_level: defaultValues?.difficulty_level || 'medium',
         order_index: defaultValues?.order_index || nextOrderIndex,
         tags: defaultValues?.tags || [],
+        certification_target: (defaultValues as any)?.certification_target ?? null as 'CP' | 'SCP' | null,
         points: defaultValues?.points || 1,
         is_published: defaultValues?.is_published ?? true,
       });
@@ -465,6 +477,7 @@ function QuestionDialog({
       tags: formData.tags,
       points: formData.points,
       is_published: formData.is_published,
+      certification_target: formData.certification_target,
     };
 
     onSubmit(submitData);
@@ -530,6 +543,32 @@ function QuestionDialog({
               placeholder="Explain why the correct answer is correct"
               rows={2}
             />
+          </div>
+
+          {/* Certification Target */}
+          <div>
+            <Label>Certification Target</Label>
+            <Select
+              value={formData.certification_target ?? 'both'}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  certification_target: value === 'both' ? null : (value as 'CP' | 'SCP'),
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select certification target" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="both">Both CP &amp; SCP</SelectItem>
+                <SelectItem value="CP">BDA-CP Only</SelectItem>
+                <SelectItem value="SCP">BDA-SCP Only</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500 mt-1">
+              &quot;Both&quot; means the question appears for all certification levels.
+            </p>
           </div>
 
           {/* Metadata */}

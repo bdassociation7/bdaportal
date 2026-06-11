@@ -44,8 +44,8 @@ export const questionBankKeys = {
   questions: () => [...questionBankKeys.all, 'questions'] as const,
   questionsList: (setId: string, filters?: QuestionFilters) =>
     [...questionBankKeys.questions(), setId, { filters }] as const,
-  questionsWithAttempts: (userId: string, setId: string) =>
-    [...questionBankKeys.questions(), 'attempts', userId, setId] as const,
+  questionsWithAttempts: (userId: string, setId: string, certTarget?: 'CP' | 'SCP') =>
+    [...questionBankKeys.questions(), 'attempts', userId, setId, certTarget] as const,
   question: (id: string) => [...questionBankKeys.questions(), id] as const,
 
   // Progress
@@ -162,19 +162,22 @@ export function useQuestions(
 
 /**
  * Get questions with user's attempts
+ * @param certificationTarget - 'CP' | 'SCP' | undefined — filters questions by cert target
  */
 export function useQuestionsWithAttempts(
   userId: string | undefined,
-  questionSetId: string | undefined
+  questionSetId: string | undefined,
+  certificationTarget?: 'CP' | 'SCP'
 ) {
   return useQuery({
-    queryKey: questionBankKeys.questionsWithAttempts(userId || '', questionSetId || ''),
+    queryKey: questionBankKeys.questionsWithAttempts(userId || '', questionSetId || '', certificationTarget),
     queryFn: async () => {
       if (!userId || !questionSetId)
         throw new Error('User ID and Question set ID required');
       const result = await QuestionBankService.getQuestionsWithAttempts(
         userId,
-        questionSetId
+        questionSetId,
+        certificationTarget
       );
       if (result.error) throw result.error;
       return result.data!;
