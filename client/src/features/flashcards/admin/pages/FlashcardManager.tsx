@@ -411,7 +411,7 @@ export function FlashcardManager() {
             <SelectItem value="all">{texts.allSections}</SelectItem>
             <SelectItem value="introduction">{texts.introduction}</SelectItem>
             <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
-            <SelectItem value="behavioural">{texts.behavioral}</SelectItem>
+            <SelectItem value="behavioral">{texts.behavioral}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={publishedFilter} onValueChange={setPublishedFilter}>
@@ -700,7 +700,7 @@ function DeckDialog({
                 <SelectContent>
                   <SelectItem value="introduction">{texts.introduction}</SelectItem>
                   <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
-                  <SelectItem value="behavioural">{texts.behavioural}</SelectItem>
+                  <SelectItem value="behavioral">{texts.behavioural}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

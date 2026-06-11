@@ -309,7 +309,7 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
                 required
               >
                 <option value="intro">Intro</option>
-                <option value="behavioural">Behavioural Domain</option>
+                <option value="behavioral">Behavioural Domain</option>
                 <option value="knowledge_based">Knowledge-Based Domain</option>
                 <option value="outro">Outro</option>
               </select>

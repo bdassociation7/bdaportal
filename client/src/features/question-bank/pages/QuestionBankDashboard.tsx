@@ -559,7 +559,7 @@ export function QuestionBankDashboard() {
         {/* ── Behavioural Competencies ───────────────────────────────────── */}
         {Object.keys(groupedSets.behavioural).length > 0 && (
           <AccordionSection
-            title={t('behavioural', false)}
+            title={t('behavioral', false)}
             subtitle={`${Object.keys(groupedSets.behavioural).length} ${t('competencies', false)}`}
             icon={<Layers className="w-5 h-5 text-purple-600" />}
             color="bg-purple-50"

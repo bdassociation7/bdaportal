@@ -40,7 +40,7 @@ export function CurriculumModuleManager() {
   const [previewModule, setPreviewModule] = useState<string | null>(null);
 
   // Section filter (per tab)
-  const [filterSection, setFilterSection] = useState<'all' | 'knowledge_based' | 'behavioural'>('all');
+  const [filterSection, setFilterSection] = useState<'all' | 'knowledge_based' | 'behavioral'>('all');
   const [filterPublished, setFilterPublished] = useState<'all' | 'published' | 'draft'>('all');
 
   // Fetch English modules only
@@ -108,7 +108,7 @@ export function CurriculumModuleManager() {
   // Section label helper
   const sectionLabel = (section: string) => {
     if (section === 'knowledge_based') return 'Knowledge';
-    if (section === 'behavioral' || section === 'behavioural') return 'Behavioural';
+    if (section === 'behavioral' || section === 'behavioral') return 'Behavioural';
     if (section === 'intro') return 'Intro';
     if (section === 'outro') return 'Outro';
     return section;
@@ -117,7 +117,7 @@ export function CurriculumModuleManager() {
   const sectionBadge = (section: string) => {
     const base = 'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium';
     if (section === 'knowledge_based') return `${base} bg-blue-100 text-blue-700`;
-    if (section === 'behavioral' || section === 'behavioural') return `${base} bg-purple-100 text-purple-700`;
+    if (section === 'behavioral' || section === 'behavioral') return `${base} bg-purple-100 text-purple-700`;
     if (section === 'intro') return `${base} bg-gray-100 text-gray-600`;
     if (section === 'outro') return `${base} bg-gray-100 text-gray-600`;
     return `${base} bg-gray-100 text-gray-600`;
@@ -176,7 +176,7 @@ export function CurriculumModuleManager() {
             >
               <option value="all">All Sections</option>
               <option value="knowledge_based">Knowledge-Based</option>
-              <option value="behavioural">Behavioural</option>
+              <option value="behavioral">Behavioural</option>
             </select>
 
             {/* Published filter */}

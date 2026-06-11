@@ -335,7 +335,7 @@ function CurriculumTab({ language }: CurriculumTabProps) {
   const [addLessonModuleId, setAddLessonModuleId] = useState<string | null>(null);
   const [importWordModuleId, setImportWordModuleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterSection, setFilterSection] = useState<'all' | 'knowledge_based' | 'behavioural'>('all');
+  const [filterSection, setFilterSection] = useState<'all' | 'knowledge_based' | 'behavioral'>('all');
 
   // Fetch modules
   const { data: modules, isLoading, refetch } = useQuery({
@@ -444,7 +444,7 @@ function CurriculumTab({ language }: CurriculumTabProps) {
   }
 
   const knowledgeCount = (modules || []).filter((m) => m.section_type === 'knowledge_based').length;
-  const behaviouralCount = (modules || []).filter((m) => m.section_type === 'behavioural').length;
+  const behaviouralCount = (modules || []).filter((m) => m.section_type === 'behavioral').length;
   const publishedCount = (modules || []).filter((m) => m.is_published).length;
 
   return (
@@ -487,7 +487,7 @@ function CurriculumTab({ language }: CurriculumTabProps) {
         >
           <option value="all">All Sections</option>
           <option value="knowledge_based">Knowledge-Based</option>
-          <option value="behavioural">Behavioural</option>
+          <option value="behavioral">Behavioural</option>
         </select>
         <div className="flex-1" />
         <Button

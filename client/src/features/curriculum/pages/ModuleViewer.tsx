@@ -130,13 +130,13 @@ export function ModuleViewer() {
   const sectionLabel =
     module.section_type === 'intro' ? 'Program Introduction'
     : module.section_type === 'outro' ? 'Program Wrap-Up'
-    : module.section_type === 'behavioural' ? 'Behavioural Competency'
+    : module.section_type === 'behavioral' ? 'Behavioural Competency'
     : 'Knowledge-Based Competency';
 
   const sectionBadgeStyle =
     module.section_type === 'intro' || module.section_type === 'outro'
       ? { background: '#ede9fe', color: '#6d28d9' }
-      : module.section_type === 'behavioural'
+      : module.section_type === 'behavioral'
       ? { background: BDA.blueMid, color: BDA.navy }
       : { background: '#e0f2fe', color: '#0369a1' };
 

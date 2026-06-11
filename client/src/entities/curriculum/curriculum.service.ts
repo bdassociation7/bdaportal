@@ -223,7 +223,7 @@ export class CurriculumService {
       // Order by section_type (behavioral=1, knowledge_based=2) then order_index
       // This ensures Behavioral competencies appear first
       const { data: modules, error: modulesError } = await query
-        .order('section_type', { ascending: true }) // 'behavioural' < 'knowledge_based' alphabetically
+        .order('section_type', { ascending: true }) // 'behavioral' < 'knowledge_based' alphabetically
         .order('order_index', { ascending: true });
 
       if (modulesError) throw modulesError;
@@ -341,7 +341,7 @@ export class CurriculumService {
 
       if (nextInSection) {
         nextModule = nextInSection;
-      } else if (module.section_type === 'behavioural') {
+      } else if (module.section_type === 'behavioral') {
         // At end of behavioral, get first knowledge_based in SAME LANGUAGE
         const { data: firstKnowledge } = await supabase
           .from('curriculum_modules')

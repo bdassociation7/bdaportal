@@ -74,7 +74,7 @@ export interface Quiz {
 /**
  * Competency section for BDA BoCK
  */
-export type CompetencySection = 'behavioural' | 'knowledge_based';
+export type CompetencySection = 'behavioral' | 'knowledge_based';
 
 /**
  * Quiz Question from database
