@@ -129,6 +129,25 @@ export class QuestionBankService {
 
       if (setsError) throw setsError;
 
+      // Fetch question certification_target counts for all sets in one query
+      // to compute the correct question_count per certification type
+      const { data: questionTargets, error: qtError } = await supabase
+        .from('curriculum_practice_questions')
+        .select('question_set_id, certification_target')
+        .eq('is_published', true);
+
+      if (qtError) throw qtError;
+
+      // Build a map: setId -> { CP: count, SCP: count, both: count }
+      const certCountMap = new Map<string, { CP: number; SCP: number; both: number }>();
+      (questionTargets || []).forEach((q) => {
+        const entry = certCountMap.get(q.question_set_id) || { CP: 0, SCP: 0, both: 0 };
+        if (q.certification_target === 'CP') entry.CP += 1;
+        else if (q.certification_target === 'SCP') entry.SCP += 1;
+        else entry.both += 1; // NULL = both
+        certCountMap.set(q.question_set_id, entry);
+      });
+
       // Get user progress for all sets
       const { data: progress, error: progressError } = await supabase
         .from('user_question_bank_progress')
@@ -142,12 +161,22 @@ export class QuestionBankService {
         progress?.map((p) => [p.question_set_id, p]) || []
       );
 
-      // Combine sets with progress
+      // Combine sets with progress and computed question_count per cert type
+      const certType = certificationType as 'CP' | 'SCP';
       const setsWithProgress: QuestionSetWithProgress[] = (sets || []).map(
-        (set) => ({
-          ...set,
-          progress: progressMap.get(set.id) || null,
-        })
+        (set) => {
+          const counts = certCountMap.get(set.id);
+          // Compute the number of questions visible for this cert type:
+          // questions targeting this cert + questions targeting both (null)
+          const certQuestionCount = counts
+            ? (certType === 'CP' ? counts.CP + counts.both : counts.SCP + counts.both)
+            : set.question_count;
+          return {
+            ...set,
+            question_count: certQuestionCount,
+            progress: progressMap.get(set.id) || null,
+          };
+        }
       );
 
       return { data: setsWithProgress };
