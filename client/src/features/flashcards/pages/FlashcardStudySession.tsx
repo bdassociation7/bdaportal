@@ -288,7 +288,7 @@ export function FlashcardStudySession() {
   };
 
   // Handle favorite toggle
-  const handleToggleFavorite = async () => {
+  const handleToggleFavourite = async () => {
     if (!currentCard || !user || !deckId) return;
 
     const currentFavorite = currentCard.progress?.is_favorited || false;
