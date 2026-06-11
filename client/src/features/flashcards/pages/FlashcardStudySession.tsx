@@ -248,12 +248,14 @@ export function FlashcardStudySession() {
 
   // Start session on mount
   useEffect(() => {
-    if (user && deckId && !sessionId) {
+    if (user && deckId) {
       startSession
         .mutateAsync({ userId: user.id, deckId })
-        .then((session) => setSessionId(session.id));
+        .then((session) => setSessionId(session.id))
+        .catch((err) => console.error('Failed to start study session:', err));
     }
-  }, [user, deckId, sessionId, startSession]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, deckId]);
 
   // Handle rating selection
   const handleRating = async (rating: StudyRating) => {
