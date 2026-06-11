@@ -686,7 +686,7 @@ export function QuestionBankManager() {
                         : 'bg-purple-100 text-purple-700'
                     }`}
                   >
-                    {set.section_type === 'knowledge' ? texts.knowledge : texts.behavioural}
+                    {set.section_type === 'knowledge' ? texts.knowledge : texts.behavioral}
                   </span>
                 </td>
                 <td className="py-3 px-4 text-center">
@@ -853,11 +853,14 @@ function QuestionSetDialog({
     exam_language: (defaultValues as any)?.exam_language || defaultLanguage,
   });
 
-  // Fetch English modules only
+  // Map question-set section_type to curriculum_modules section_type
+  const moduleSectionType = formData.section_type === 'behavioral' ? 'behavioral' : 'knowledge_based';
+
+  // Fetch English modules filtered by section_type
   const { data: modules } = useQuery({
-    queryKey: curriculumKeys.modulesList({ exam_language: 'en' }),
+    queryKey: curriculumKeys.modulesList({ exam_language: 'en', section_type: moduleSectionType }),
     queryFn: async () => {
-      const result = await CurriculumService.getModules({ exam_language: 'en' });
+      const result = await CurriculumService.getModules({ exam_language: 'en', section_type: moduleSectionType as any });
       return result.data || [];
     },
   });
@@ -890,7 +893,7 @@ function QuestionSetDialog({
               <Select
                 value={formData.section_type}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, section_type: value as any })
+                  setFormData({ ...formData, section_type: value as any, competency_id: null, sub_unit_id: null })
                 }
               >
                 <SelectTrigger>
@@ -898,7 +901,7 @@ function QuestionSetDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
-                  <SelectItem value="behavioral">{texts.behavioural}</SelectItem>
+                  <SelectItem value="behavioral">{texts.behavioral}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -43,7 +43,7 @@ export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps
   };
 
   // If quiz is already completed successfully
-  if (hasPassedQuiz) {
+  if (hasPassedQuiz && !isPlayingQuiz) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="max-w-md w-full p-8 text-center">
@@ -65,6 +65,10 @@ export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps
             <Button onClick={onBack} className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Lesson
+            </Button>
+            <Button variant="outline" onClick={() => setIsPlayingQuiz(true)} className="w-full">
+              <PlayCircle className="mr-2 h-4 w-4" />
+              Retake Quiz
             </Button>
           </div>
         </Card>
