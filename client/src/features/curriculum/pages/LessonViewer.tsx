@@ -53,27 +53,9 @@ export function LessonViewer() {
     return '/learning-system/training-kits';
   }, [location.pathname]);
 
-  // Get language from URL params for back navigation
-  const searchParams = new URLSearchParams(location.search);
-  const urlLang = searchParams.get('lang');
-
-  // Helper to get back URL with language preserved (uses lesson's module language)
-  const getBackUrl = (moduleLang?: string) => {
-    const lang = urlLang || moduleLang;
-    if (lang) {
-      return `${basePath}?lang=${lang}`;
-    }
-    return basePath;
-  };
-
-  // Helper to get module URL with language preserved
-  const getModuleUrl = (modId: string, moduleLang?: string) => {
-    const lang = urlLang || moduleLang;
-    if (lang) {
-      return `${basePath}/module/${modId}?lang=${lang}`;
-    }
-    return `${basePath}/module/${modId}`;
-  };
+  // Helpers for back/module navigation (EN only)
+  const getBackUrl = () => basePath;
+  const getModuleUrl = (modId: string) => `${basePath}/module/${modId}`;
 
   // Fetch lesson data
   const { data: lesson, isLoading: isLoadingLesson } = useLesson(lessonId);
@@ -267,7 +249,7 @@ export function LessonViewer() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(getModuleUrl(lesson.module_id, lesson.module?.exam_language))}
+                onClick={() => navigate(getModuleUrl(lesson.module_id))}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
@@ -281,9 +263,7 @@ export function LessonViewer() {
                   </span>
                 </div>
                 <h1 className="text-xl font-bold">
-                  {(urlLang === 'AR' || lesson.module?.exam_language === 'ar')
-                    ? (lesson.title_ar || lesson.title)
-                    : lesson.title}
+                  {lesson.title}
                 </h1>
               </div>
             </div>
@@ -304,9 +284,7 @@ export function LessonViewer() {
           {lesson.description && (
             <div className="p-6 border-b bg-blue-50">
               <p className="text-sm text-gray-700">
-                {(urlLang === 'AR' || lesson.module?.exam_language === 'ar')
-                  ? (lesson.description_ar || lesson.description)
-                  : lesson.description}
+                {lesson.description}
               </p>
             </div>
           )}
@@ -328,10 +306,7 @@ export function LessonViewer() {
             <div className="px-6 py-4 border-b">
               <h3 className="font-semibold mb-2">Learning Objectives:</h3>
               <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                {((urlLang === 'AR' || lesson.module?.exam_language === 'ar') && lesson.learning_objectives_ar?.length
-                  ? lesson.learning_objectives_ar
-                  : lesson.learning_objectives
-                ).map((objective, index) => (
+                {lesson.learning_objectives.map((objective, index) => (
                   <li key={index}>{objective}</li>
                 ))}
               </ul>
@@ -346,7 +321,7 @@ export function LessonViewer() {
           >
             <LessonContent
               content={lesson.content}
-              contentAr={(urlLang === 'AR' || lesson.module?.exam_language === 'ar') ? lesson.content_ar : undefined}
+              contentAr={undefined}
             />
           </div>
 
@@ -391,7 +366,7 @@ export function LessonViewer() {
           moduleId={lesson.module_id}
           userId={user?.id}
           basePath={basePath}
-          moduleLang={urlLang || lesson.module?.exam_language}
+          moduleLang={undefined}
         />
       </div>
     </div>

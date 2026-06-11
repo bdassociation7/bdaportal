@@ -33,7 +33,7 @@ interface CurriculumDashboardProps {
   nextModule?: CurriculumModuleWithStatus | null;
   basePath?: string;
   backPath?: string;
-  selectedLanguage?: 'EN' | 'AR';
+  selectedLanguage?: 'EN';
 }
 
 export function CurriculumDashboard({
@@ -49,7 +49,7 @@ export function CurriculumDashboard({
   selectedLanguage = 'EN',
 }: CurriculumDashboardProps) {
   const navigate = useNavigate();
-  const isArabicContent = selectedLanguage === 'AR';
+
 
   const expiryDate = new Date(access.expires_at);
   const daysUntilExpiry = Math.ceil(
@@ -66,9 +66,7 @@ export function CurriculumDashboard({
   const progressPct = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
 
   const getModuleName = (m: CurriculumModuleWithStatus) => {
-    const raw = isArabicContent
-      ? (m.competency_name_ar || m.competency_name || 'Untitled')
-      : (m.competency_name || m.competency_name_ar || 'Untitled');
+    const raw = m.competency_name || 'Untitled';
     return raw.replace(/^Module\s+\d+:\s*/i, '');
   };
 
@@ -110,11 +108,7 @@ export function CurriculumDashboard({
               </h1>
               <p className="text-sm mt-0.5" style={{ color: '#64748b' }}>
                 Body of Competency & Knowledge (BoCK) · 16 Modules · 52 Lessons
-                {isArabicContent && (
-                  <span className="ml-2 font-semibold" style={{ color: BDA.blue }}>
-                    · Arabic Content
-                  </span>
-                )}
+
               </p>
             </div>
           </div>
@@ -223,7 +217,7 @@ export function CurriculumDashboard({
                   <h3
                     className="text-lg font-bold"
                     style={{ fontFamily: "'Playfair Display', serif" }}
-                    dir={isArabicContent ? 'rtl' : 'ltr'}
+
                   >
                     {getModuleName(nextModule)}
                   </h3>
@@ -278,7 +272,7 @@ export function CurriculumDashboard({
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {introModules.map((m) => (
-                      <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={isArabicContent} />
+                      <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={false} />
                     ))}
                   </div>
                 </section>
@@ -296,7 +290,7 @@ export function CurriculumDashboard({
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {behaviouralModules.map((m) => (
-                      <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={isArabicContent} />
+                      <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={false} />
                     ))}
                   </div>
                 </section>
@@ -314,7 +308,7 @@ export function CurriculumDashboard({
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {knowledgeModules.map((m) => (
-                      <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={isArabicContent} />
+                      <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={false} />
                     ))}
                   </div>
                 </section>
@@ -332,7 +326,7 @@ export function CurriculumDashboard({
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {outroModules.map((m) => (
-                      <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={isArabicContent} />
+                      <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={false} />
                     ))}
                   </div>
                 </section>

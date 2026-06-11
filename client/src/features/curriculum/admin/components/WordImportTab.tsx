@@ -417,7 +417,7 @@ function ImportItemRow({
 
   // Group lessons by language for the dropdown
   const enLessons = lessons.filter((l) => l.exam_language === 'en');
-  const arLessons = lessons.filter((l) => l.exam_language === 'ar');
+
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 border rounded-lg bg-gray-50">
@@ -486,18 +486,7 @@ function ImportItemRow({
                   ))}
                 </>
               )}
-              {arLessons.length > 0 && (
-                <>
-                  <div className="px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-50">
-                    🇸🇦 Arabic Lessons
-                  </div>
-                  {arLessons.map((l) => (
-                    <SelectItem key={l.id} value={l.id} className="text-xs">
-                      M{String(l.module_index).padStart(2, '0')}_L{l.order_index} — {l.title}
-                    </SelectItem>
-                  ))}
-                </>
-              )}
+
             </SelectContent>
           </Select>
         </div>

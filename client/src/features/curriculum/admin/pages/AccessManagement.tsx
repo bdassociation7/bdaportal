@@ -943,7 +943,7 @@ export function AccessManagement() {
 
               <div>
                 <Label>{texts.examLanguage} *</Label>
-                <Select
+<Select
                   value={grantFormData.examLanguage}
                   onValueChange={(value) =>
                     setGrantFormData({
@@ -957,7 +957,6 @@ export function AccessManagement() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="en">{texts.languageEnglish}</SelectItem>
-                    <SelectItem value="ar">{texts.languageArabic}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

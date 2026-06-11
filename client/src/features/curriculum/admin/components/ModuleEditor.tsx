@@ -563,35 +563,13 @@ export function ModuleEditor({ moduleId, defaultLanguage, onClose }: ModuleEdito
               >
                 <option value="">— No quiz linked —</option>
                 {quizzes && quizzes.length > 0 && (
-                  <>
-                    {quizzes.filter(q => !(q as any).title_ar || (q as any).exam_language === 'en').length > 0 && (
-                      <optgroup label="🇬🇧 English Quizzes">
-                        {quizzes
-                          .filter(q => !(q as any).title_ar && !(q as any).exam_language?.startsWith('ar'))
-                          .map((quiz) => (
-                            <option key={quiz.id} value={quiz.id}>{quiz.title}</option>
-                          ))}
-                      </optgroup>
-                    )}
-                    {quizzes.filter(q => (q as any).exam_language === 'ar' || (q as any).title_ar).length > 0 && (
-                      <optgroup label="🇸🇦 Arabic Quizzes">
-                        {quizzes
-                          .filter(q => (q as any).exam_language === 'ar' || (q as any).title_ar)
-                          .map((quiz) => (
-                            <option key={quiz.id} value={quiz.id}>
-                              {(quiz as any).title_ar || quiz.title}
-                            </option>
-                          ))}
-                      </optgroup>
-                    )}
-                    {quizzes.filter(q => !((q as any).exam_language === 'ar' || (q as any).title_ar) && !(!((q as any).title_ar) && !((q as any).exam_language?.startsWith('ar')))).length === 0 && quizzes.filter(q => true).length > 0 && quizzes.filter(q => (q as any).exam_language !== 'ar' && !(q as any).title_ar).length > 0 && (
-                      <optgroup label="📚 All Quizzes">
-                        {quizzes.map((quiz) => (
-                          <option key={quiz.id} value={quiz.id}>{quiz.title}</option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </>
+                  <optgroup label="🇬🇧 English Quizzes">
+                    {quizzes
+                      .filter(q => (q as any).exam_language !== 'ar')
+                      .map((quiz) => (
+                        <option key={quiz.id} value={quiz.id}>{quiz.title}</option>
+                      ))}
+                  </optgroup>
                 )}
               </select>
               <p className="text-xs text-gray-400 mt-1.5">

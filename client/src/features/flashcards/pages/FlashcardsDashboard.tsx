@@ -1,11 +1,10 @@
 /**
- * Flashcards Dashboard — Arabic-First Design
- * - Fully Arabic when lang=AR, fully English when lang=EN
+ * Flashcards Dashboard — English Only
  * - BDA Brand Colors: #0d1f4e, #1C4A8B, #0f91e0
  */
 
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useDecksWithProgress,
@@ -15,7 +14,6 @@ import {
   useFlashcardsAccess,
   useUserAccesses,
   useLanguageAccess,
-  type Language,
 } from '@/entities/curriculum';
 import type { FlashcardDeckWithProgress } from '@/entities/flashcards';
 import {
@@ -130,10 +128,9 @@ function t(key: string, isAR: boolean): string {
 interface DeckCardProps {
   deck: FlashcardDeckWithProgress;
   onClick: () => void;
-  isAR: boolean;
 }
 
-function DeckCard({ deck, onClick, isAR }: DeckCardProps) {
+function DeckCard({ deck, onClick }: DeckCardProps) {
   const progress = deck.progress;
   const totalProgress = progress
     ? progress.cards_new + progress.cards_learning + progress.cards_reviewing + progress.cards_mastered
@@ -142,7 +139,7 @@ function DeckCard({ deck, onClick, isAR }: DeckCardProps) {
     ? Math.round((progress!.cards_mastered / deck.card_count) * 100)
     : 0;
   const hasProgress = totalProgress > 0;
-  const title = isAR && deck.title_ar ? deck.title_ar : deck.title;
+  const title = deck.title;
 
   return (
     <div
@@ -162,7 +159,7 @@ function DeckCard({ deck, onClick, isAR }: DeckCardProps) {
         <div className="absolute bottom-3 inset-x-4 flex items-end justify-between">
           <div className="text-white">
             <p className="text-2xl font-bold">{deck.card_count}</p>
-            <p className="text-xs opacity-80">{t('cards', isAR)}</p>
+            <p className="text-xs opacity-80">{t('cards', false)}</p>
           </div>
           {progress && progress.study_streak_days > 0 && (
             <div className="flex items-center gap-1 bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs font-semibold">
@@ -180,7 +177,7 @@ function DeckCard({ deck, onClick, isAR }: DeckCardProps) {
         {hasProgress && (
           <div>
             <div className="flex justify-between text-xs text-slate-400 mb-1">
-              <span>{masteryPct}% {t('mastery', isAR)}</span>
+              <span>{masteryPct}% {t('mastery', false)}</span>
               <span>{progress!.cards_mastered}/{deck.card_count}</span>
             </div>
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden flex">
@@ -194,7 +191,7 @@ function DeckCard({ deck, onClick, isAR }: DeckCardProps) {
         {deck.estimated_study_time_minutes && (
           <div className="flex items-center gap-1 text-slate-400 text-xs mt-2">
             <Clock className="w-3 h-3" />
-            {deck.estimated_study_time_minutes} {t('min', isAR)}
+            {deck.estimated_study_time_minutes} {t('min', false)}
           </div>
         )}
       </div>
@@ -203,11 +200,11 @@ function DeckCard({ deck, onClick, isAR }: DeckCardProps) {
       <div className="px-4 py-3 border-t border-[#f0f6ff] flex items-center justify-between group-hover:bg-[#f0f6ff] transition-colors">
         <span className="text-sm font-semibold text-[#1C4A8B] flex items-center gap-1.5">
           {hasProgress
-            ? <><RotateCcw className="w-3.5 h-3.5" />{t('continueStudy', isAR)}</>
-            : <><Play className="w-3.5 h-3.5 fill-current" />{t('startStudy', isAR)}</>
+            ? <><RotateCcw className="w-3.5 h-3.5" />{t('continueStudy', false)}</>
+            : <><Play className="w-3.5 h-3.5 fill-current" />{t('startStudy', false)}</>
           }
         </span>
-        <ChevronLeft className={`w-4 h-4 text-slate-300 ${isAR ? '' : 'rotate-180'}`} />
+        <ChevronLeft className="w-4 h-4 text-slate-300 rotate-180" />
       </div>
     </div>
   );
@@ -246,12 +243,11 @@ function AccordionSection({
 
 // ─── Competency Sub-Accordion ─────────────────────────────────────────────────
 function CompetencyAccordion({
-  competencyName, subUnits, basePath, isAR,
+  competencyName, subUnits, basePath,
 }: {
   competencyName: string;
   subUnits: Record<string, FlashcardDeckWithProgress[]>;
   basePath: string;
-  isAR: boolean;
 }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -268,7 +264,7 @@ function CompetencyAccordion({
           <span className="font-semibold text-[#0d1f4e] text-sm">{competencyName}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">{Object.keys(subUnits).length} {t('subLessons', isAR)} · {totalDecks} {t('decks', isAR)}</span>
+          <span className="text-xs text-slate-400">{Object.keys(subUnits).length} {t('subLessons', false)} · {totalDecks} {t('decks', false)}</span>
           {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </button>
@@ -277,7 +273,7 @@ function CompetencyAccordion({
           {Object.entries(subUnits).map(([subUnitId, decks]) => {
             const subUnit = decks[0]?.sub_unit;
             if (!subUnit) return null;
-            const subTitle = isAR && subUnit.title_ar ? subUnit.title_ar : subUnit.title;
+            const subTitle = subUnit.title;
             return (
               <div key={subUnitId}>
                 <p className="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
@@ -291,8 +287,7 @@ function CompetencyAccordion({
                     <DeckCard
                       key={deck.id}
                       deck={deck}
-                      isAR={isAR}
-                      onClick={() => navigate(`${basePath}/flashcards/${deck.id}?lang=${isAR ? 'AR' : 'EN'}`)}
+                      onClick={() => navigate(`${basePath}/flashcards/${deck.id}`)}
                     />
                   ))}
                 </div>
@@ -309,32 +304,20 @@ function CompetencyAccordion({
 export function FlashcardsDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const { user } = useAuth();
-
-  const langFromUrl = searchParams.get('lang') as Language | null;
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>(langFromUrl || 'EN');
-  const isAR = selectedLanguage === 'AR';
-
-  useEffect(() => {
-    if (langFromUrl && langFromUrl !== selectedLanguage) setSelectedLanguage(langFromUrl);
-  }, [langFromUrl]);
 
   const basePath = useMemo(() => {
     return location.pathname.startsWith('/ecp/') ? '/ecp/learning-system' : '/learning-system';
   }, [location.pathname]);
 
-  const langQuery = `?lang=${selectedLanguage}`;
-
   const { data: accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(user?.id);
-  const { data: hasFlashcardsAccess, isLoading: accessLoading } = useFlashcardsAccess(user?.id, selectedLanguage);
-  const { data: languageAccess, isLoading: languageAccessLoading } = useLanguageAccess(user?.id, selectedLanguage);
+  const { data: hasFlashcardsAccess, isLoading: accessLoading } = useFlashcardsAccess(user?.id, 'EN');
+  const { data: languageAccess, isLoading: languageAccessLoading } = useLanguageAccess(user?.id, 'EN');
 
   const certificationType = languageAccess?.certification_type || 'CP';
-  const dbLanguage = selectedLanguage.toLowerCase() as 'en' | 'ar';
 
-  const { data: decks, isLoading: isLoadingDecks } = useDecksWithProgress(user?.id, certificationType, dbLanguage);
-  const { data: stats } = useFlashcardStats(user?.id, certificationType, dbLanguage);
+  const { data: decks, isLoading: isLoadingDecks } = useDecksWithProgress(user?.id, certificationType, 'en');
+  const { data: stats } = useFlashcardStats(user?.id, certificationType, 'en');
 
   const groupedDecks = useMemo(() => {
     if (!decks) return { introduction: [], knowledge: {}, behavioural: {}, standalone: [] };
@@ -370,7 +353,7 @@ export function FlashcardsDashboard() {
       <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff]">
         <div className="text-center">
           <div className="w-14 h-14 rounded-full border-4 border-[#dbeafe] border-t-[#1C4A8B] animate-spin mx-auto mb-5" />
-          <p className="text-slate-500 font-medium">{t('loading', isAR)}</p>
+          <p className="text-slate-500 font-medium">{t('loading', false)}</p>
         </div>
       </div>
     );
@@ -379,25 +362,25 @@ export function FlashcardsDashboard() {
   // ── Access Denied ─────────────────────────────────────────────────────────
   if (!hasFlashcardsAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff] px-4" dir={isAR ? 'rtl' : 'ltr'}>
+      <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff] px-4">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-[#dbeafe] p-10 text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">{t('accessRequired', isAR)}</h2>
-          <p className="text-slate-500 mb-8 text-sm leading-relaxed">{t('accessRequiredSub', isAR)}</p>
+          <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">{t('accessRequired', false)}</h2>
+          <p className="text-slate-500 mb-8 text-sm leading-relaxed">{t('accessRequiredSub', false)}</p>
           <div className="space-y-3">
             <button
-              onClick={() => navigate(`${basePath}${langQuery}`)}
+              onClick={() => navigate(basePath)}
               className="w-full bg-gradient-to-r from-[#1C4A8B] to-[#0d1f4e] text-white font-semibold py-3 px-6 rounded-xl hover:opacity-90 transition-opacity"
             >
-              {t('backToLearning', isAR)}
+              {t('backToLearning', false)}
             </button>
             <button
               onClick={() => window.location.href = 'https://bda-global.org/shop'}
               className="w-full border border-[#dbeafe] text-[#1C4A8B] font-semibold py-3 px-6 rounded-xl hover:bg-[#f0f6ff] transition-colors"
             >
-              {t('visitShop', isAR)}
+              {t('visitShop', false)}
             </button>
           </div>
         </div>
@@ -407,7 +390,7 @@ export function FlashcardsDashboard() {
 
   // ── Main Dashboard ────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f0f6ff]" dir={isAR ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-[#f0f6ff]">
 
       {/* ── Hero Header ──────────────────────────────────────────────────── */}
       <div
@@ -420,11 +403,11 @@ export function FlashcardsDashboard() {
         <div className="relative container mx-auto px-6 py-10 max-w-6xl">
           {/* Back */}
           <button
-            onClick={() => navigate(`${basePath}${langQuery}`)}
+            onClick={() => navigate(basePath)}
             className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm mb-6 group"
           >
-            <ArrowRight className={`w-4 h-4 transition-transform ${isAR ? 'group-hover:translate-x-1' : 'rotate-180 group-hover:-translate-x-1'}`} />
-            {t('backToLearning', isAR)}
+            <ArrowRight className="w-4 h-4 transition-transform rotate-180 group-hover:-translate-x-1" />
+            {t('backToLearning', false)}
           </button>
 
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -435,19 +418,19 @@ export function FlashcardsDashboard() {
                 </div>
                 <span className="text-white/70 text-sm font-medium">BDA Learning System</span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-2">{t('flashcards', isAR)}</h1>
-              <p className="text-white/70 text-base">{t('flashcardsSub', isAR)}</p>
+              <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-2">{t('flashcards', false)}</h1>
+              <p className="text-white/70 text-base">{t('flashcardsSub', false)}</p>
             </div>
 
             {/* Stats */}
             {stats && (
               <div className="flex flex-wrap gap-3">
                 {[
-                  { icon: <Calendar className="w-4 h-4" />, value: stats.cardsDueToday, label: t('dueToday', isAR) },
-                  { icon: <CheckCircle className="w-4 h-4" />, value: stats.cardsMastered, label: t('mastered', isAR) },
-                  { icon: <TrendingUp className="w-4 h-4" />, value: stats.cardsLearning + stats.cardsReviewing, label: t('learning', isAR) },
-                  { icon: <Flame className="w-4 h-4" />, value: stats.studyStreak, label: t('studyStreak', isAR) },
-                  { icon: <Clock className="w-4 h-4" />, value: `${Math.floor(stats.totalStudyTimeMinutes / 60)}${t('h', isAR)}`, label: t('studyTime', isAR) },
+                  { icon: <Calendar className="w-4 h-4" />, value: stats.cardsDueToday, label: t('dueToday', false) },
+                  { icon: <CheckCircle className="w-4 h-4" />, value: stats.cardsMastered, label: t('mastered', false) },
+                  { icon: <TrendingUp className="w-4 h-4" />, value: stats.cardsLearning + stats.cardsReviewing, label: t('learning', false) },
+                  { icon: <Flame className="w-4 h-4" />, value: stats.studyStreak, label: t('studyStreak', false) },
+                  { icon: <Clock className="w-4 h-4" />, value: `${Math.floor(stats.totalStudyTimeMinutes / 60)}${t('h', false)}`, label: t('studyTime', false) },
                 ].map((s, i) => (
                   <div key={i} className="flex flex-col items-center gap-1 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 border border-white/20 min-w-[80px]">
                     <div className="text-white/60">{s.icon}</div>
@@ -471,9 +454,9 @@ export function FlashcardsDashboard() {
               <Flame className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="font-bold text-lg">{t('dueAlert', isAR)}</h2>
-              <p className="text-white/80 text-sm mt-0.5">
-                {t('dueAlertSub', isAR).replace('{n}', String(stats.cardsDueToday))}
+            <h2 className="font-bold text-lg">{t('dueAlert', false)}</h2>
+            <p className="text-white/80 text-sm mt-0.5">
+              {t('dueAlertSub', false).replace('{n}', String(stats.cardsDueToday))}
               </p>
             </div>
           </div>
@@ -482,8 +465,8 @@ export function FlashcardsDashboard() {
         {/* Introduction */}
         {groupedDecks.introduction.length > 0 && (
           <AccordionSection
-            title={t('introduction', isAR)}
-            subtitle={t('introSub', isAR)}
+            title={t('introduction', false)}
+            subtitle={t('introSub', false)}
             icon={<BookOpen className="w-5 h-5 text-slate-600" />}
             color="bg-slate-100"
             count={groupedDecks.introduction.length}
@@ -491,8 +474,8 @@ export function FlashcardsDashboard() {
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
               {groupedDecks.introduction.map((deck) => (
-                <DeckCard key={deck.id} deck={deck} isAR={isAR}
-                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}${langQuery}`)} />
+                <DeckCard key={deck.id} deck={deck}
+                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}`)} />
               ))}
             </div>
           </AccordionSection>
@@ -501,8 +484,8 @@ export function FlashcardsDashboard() {
         {/* Behavioural */}
         {Object.keys(groupedDecks.behavioural).length > 0 && (
           <AccordionSection
-            title={t('behavioural', isAR)}
-            subtitle={`${Object.keys(groupedDecks.behavioral).length} ${isAR ? 'كفاءة' : 'Competencies'}`}
+            title={t('behavioural', false)}
+            subtitle={`${Object.keys(groupedDecks.behavioural).length} Competencies`}
             icon={<Layers className="w-5 h-5 text-purple-600" />}
             color="bg-purple-50"
             count={Object.values(groupedDecks.behavioural).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
@@ -513,8 +496,8 @@ export function FlashcardsDashboard() {
                 const firstDeck = Object.values(subUnits)[0]?.[0];
                 const competency = firstDeck?.competency;
                 if (!competency) return null;
-                const name = isAR && competency.competency_name_ar ? competency.competency_name_ar : competency.competency_name;
-                return <CompetencyAccordion key={cId} competencyName={name} subUnits={subUnits} basePath={basePath} isAR={isAR} />;
+                const name = competency.competency_name;
+                return <CompetencyAccordion key={cId} competencyName={name} subUnits={subUnits} basePath={basePath} />;
               })}
             </div>
           </AccordionSection>
@@ -523,8 +506,8 @@ export function FlashcardsDashboard() {
         {/* Knowledge */}
         {Object.keys(groupedDecks.knowledge).length > 0 && (
           <AccordionSection
-            title={t('knowledge', isAR)}
-            subtitle={`${Object.keys(groupedDecks.knowledge).length} ${isAR ? 'كفاءة' : 'Competencies'}`}
+            title={t('knowledge', false)}
+            subtitle={`${Object.keys(groupedDecks.knowledge).length} Competencies`}
             icon={<Brain className="w-5 h-5 text-blue-600" />}
             color="bg-blue-50"
             count={Object.values(groupedDecks.knowledge).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
@@ -535,8 +518,8 @@ export function FlashcardsDashboard() {
                 const firstDeck = Object.values(subUnits)[0]?.[0];
                 const competency = firstDeck?.competency;
                 if (!competency) return null;
-                const name = isAR && competency.competency_name_ar ? competency.competency_name_ar : competency.competency_name;
-                return <CompetencyAccordion key={cId} competencyName={name} subUnits={subUnits} basePath={basePath} isAR={isAR} />;
+                const name = competency.competency_name;
+                return <CompetencyAccordion key={cId} competencyName={name} subUnits={subUnits} basePath={basePath} />;
               })}
             </div>
           </AccordionSection>
@@ -545,16 +528,16 @@ export function FlashcardsDashboard() {
         {/* Standalone */}
         {groupedDecks.standalone.length > 0 && (
           <AccordionSection
-            title={t('additional', isAR)}
-            subtitle={`${groupedDecks.standalone.length} ${t('decksAvailable', isAR)}`}
+            title={t('additional', false)}
+            subtitle={`${groupedDecks.standalone.length} ${t('decksAvailable', false)}`}
             icon={<Star className="w-5 h-5 text-amber-600" />}
             color="bg-amber-50"
             count={groupedDecks.standalone.length}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
               {groupedDecks.standalone.map((deck) => (
-                <DeckCard key={deck.id} deck={deck} isAR={isAR}
-                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}${langQuery}`)} />
+                <DeckCard key={deck.id} deck={deck}
+                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}`)} />
               ))}
             </div>
           </AccordionSection>
@@ -564,13 +547,13 @@ export function FlashcardsDashboard() {
         {decks?.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-[#dbeafe]">
             <Layers className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-[#0d1f4e] mb-2">{t('noDecks', isAR)}</h2>
-            <p className="text-slate-400 mb-6 text-sm">{t('noDecksSub', isAR)}</p>
+            <h2 className="text-xl font-bold text-[#0d1f4e] mb-2">{t('noDecks', false)}</h2>
+            <p className="text-slate-400 mb-6 text-sm">{t('noDecksSub', false)}</p>
             <button
-              onClick={() => navigate(`${basePath}${langQuery}`)}
+              onClick={() => navigate(basePath)}
               className="bg-[#1C4A8B] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#0d1f4e] transition-colors"
             >
-              {t('backToLearning', isAR)}
+              {t('backToLearning', false)}
             </button>
           </div>
         )}

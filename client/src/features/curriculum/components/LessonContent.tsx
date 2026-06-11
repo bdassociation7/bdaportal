@@ -11,16 +11,13 @@ import type { Json } from '@/shared/database.types';
 
 interface LessonContentProps {
   content: Json;
-  contentAr?: Json | null;
+  contentAr?: Json | null; // kept for backward compat, not used
 }
 
-export function LessonContent({ content, contentAr }: LessonContentProps) {
-  // Determine which content to display
-  // If contentAr has actual content, this is an Arabic lesson
-  // Otherwise, use English content
-  const isArabicLesson = contentAr && typeof contentAr === 'object' && 'type' in contentAr;
-  const displayContent = isArabicLesson ? contentAr : content;
-  const isRTL = isArabicLesson;
+export function LessonContent({ content }: LessonContentProps) {
+  // Always display English content
+  const displayContent = content;
+  const isRTL = false;
 
   // Helper function to render TipTap/Lexical JSON content
   const renderContent = (jsonContent: Json): React.ReactNode => {
@@ -211,7 +208,7 @@ export function LessonContent({ content, contentAr }: LessonContentProps) {
   // Render the appropriate content based on lesson language
   // No tabs - each lesson is single-language
   return (
-    <div className="lesson-content" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="lesson-content" dir="ltr">
       {renderContent(displayContent)}
     </div>
   );

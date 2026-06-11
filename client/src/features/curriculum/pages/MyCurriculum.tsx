@@ -1,28 +1,25 @@
-import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useCurriculumDashboard,
   useUserAccesses,
   useLanguageAccess,
   useInitializeLessonProgress,
-  type Language,
 } from '@/entities/curriculum';
 import { CurriculumDashboard } from '../components/CurriculumDashboard';
 import { AccessDenied } from '../components/AccessDenied';
 import { CurriculumLoading } from '../components/CurriculumLoading';
 
 /**
- * My Curriculum Page
- * Entry point for curriculum learning system
- * - Checks language-based access (EN/AR)
- * - Shows language selector if user has multiple languages
+ * My Curriculum Page — English Only
+ * Entry point for the Training Kits learning system (EN only).
+ * - Checks EN access only
  * - Shows 14 BoCK modules (7 knowledge + 7 behavioral)
  * - Sequential unlocking with quiz gates
  */
 export function MyCurriculum() {
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
 
   // Determine base path for navigation (supports both /learning-system and /ecp/learning-system)
@@ -31,48 +28,19 @@ export function MyCurriculum() {
     : '/learning-system';
   const basePath = `${learningSystemPath}/training-kits`;
 
-  // Get language from URL param, default to EN
-  const langFromUrl = searchParams.get('lang') as Language | null;
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>(langFromUrl || 'EN');
+  // Get all user accesses (EN only check)
+  const { data: accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(user?.id);
 
-  // Sync URL param with state
-  const handleLanguageChange = (lang: Language) => {
-    setSelectedLanguage(lang);
-    setSearchParams({ lang });
-  };
-
-  // Get all user accesses to determine available languages
-  const { data: accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(
-    user?.id
-  );
-
-  // Check access for selected language
+  // Check EN access
   const {
     data: languageAccess,
     isLoading: languageAccessLoading,
-  } = useLanguageAccess(user?.id, selectedLanguage);
-
-  // Auto-select available language on first load (only if not set via URL)
-  useEffect(() => {
-    if (accessSummary && !languageAccessLoading && !langFromUrl) {
-      // If user has both languages, keep current selection (defaults to EN)
-      if (accessSummary.has_en && accessSummary.has_ar) {
-        // Both available - no auto-switch needed, user can choose via LanguageSelector
-        return;
-      }
-      // If current selection has no access, switch to available language
-      if (accessSummary.has_en && !accessSummary.has_ar && selectedLanguage !== 'EN') {
-        handleLanguageChange('EN');
-      } else if (accessSummary.has_ar && !accessSummary.has_en && selectedLanguage !== 'AR') {
-        handleLanguageChange('AR');
-      }
-    }
-  }, [accessSummary, selectedLanguage, languageAccessLoading, langFromUrl]);
+  } = useLanguageAccess(user?.id, 'EN');
 
   // Determine certification type from language access (or default to CP)
   const certificationType = languageAccess?.certification_type || 'CP';
 
-  // Main hook: loads modules and progress for certification type AND language
+  // Main hook: loads modules and progress for EN only
   const {
     isLoading: dashboardLoading,
     isError,
@@ -91,7 +59,7 @@ export function MyCurriculum() {
     user?.id,
     user?.email,
     certificationType,
-    selectedLanguage  // Pass selected language to filter modules
+    'EN'
   );
 
   // Initialize progress mutation
@@ -101,12 +69,7 @@ export function MyCurriculum() {
   // Initialize user progress when they first access the curriculum
   useEffect(() => {
     if (!user?.id || !hasAccess || hasInitialized.current) return;
-
-    // Mark as initialized to prevent duplicate calls
     hasInitialized.current = true;
-
-    // Initialize progress for this certification type
-    // This will create progress records for all lessons if they don't exist
     initializeProgress.mutate({
       userId: user.id,
       certificationType: certificationType,
@@ -143,27 +106,10 @@ export function MyCurriculum() {
     );
   }
 
-  // No access state - check language-based access
-  // Trust accessSummary which checks both EN and AR at once
-  const hasLanguageAccess = languageAccess?.has_access || false;
-  const hasAnyAccessFromSummary = accessSummary?.has_en || accessSummary?.has_ar;
+  // No access state — EN only
+  const hasENAccess = languageAccess?.has_access || accessSummary?.has_en || false;
 
-  // If accessSummary shows user has access to the selected language, trust it
-  // This handles cases where languageAccess RPC might have temporary issues
-  const userHasAccessToSelectedLanguage =
-    (selectedLanguage === 'EN' && accessSummary?.has_en) ||
-    (selectedLanguage === 'AR' && accessSummary?.has_ar);
-
-  if (!hasLanguageAccess && !userHasAccessToSelectedLanguage && !accessSummaryLoading) {
-    // Check if user has access in another language
-    if (hasAnyAccessFromSummary) {
-      // User has access to a different language than currently selected
-      // For single-language access: useEffect will auto-switch
-      // For dual-language access: this shouldn't happen since userHasAccessToSelectedLanguage would be true
-      return <CurriculumLoading />;
-    }
-
-    // User has no access at all
+  if (!hasENAccess && !accessSummaryLoading) {
     return (
       <AccessDenied
         reason={languageAccess?.reason || 'no_active_access'}
@@ -172,9 +118,7 @@ export function MyCurriculum() {
     );
   }
 
-  // Main curriculum interface
-  // Language is already selected from the main Learning System dashboard
-  // No language selector shown here to maintain isolation between EN/AR systems
+  // Main curriculum interface — EN only
   return (
     <div className="min-h-screen bg-gray-50">
       <CurriculumDashboard
@@ -187,7 +131,7 @@ export function MyCurriculum() {
         nextModule={nextModule}
         basePath={basePath}
         backPath={learningSystemPath}
-        selectedLanguage={selectedLanguage}
+        selectedLanguage="EN"
       />
     </div>
   );

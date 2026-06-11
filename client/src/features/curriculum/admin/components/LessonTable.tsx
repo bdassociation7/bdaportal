@@ -43,15 +43,14 @@ interface LessonTableProps {
 
 /**
  * Compute the expected Word filename for a lesson.
- * Format: M<module_order_padded2>_L<lesson_order>_<EN|AR>.docx
- * e.g.  M09_L1_EN.docx  |  M01_L3_AR.docx
+ * Format: M<module_order_padded2>_L<lesson_order>_EN.docx
+ * e.g.  M09_L1_EN.docx
  */
 function getExpectedFilename(lesson: Lesson): string | null {
   const moduleOrder = lesson.module?.order_index;
   const lessonOrder = lesson.order_index;
-  const lang = (lesson.exam_language ?? lesson.module?.exam_language ?? 'en').toUpperCase();
   if (!moduleOrder) return null;
-  return `M${String(moduleOrder).padStart(2, '0')}_L${lessonOrder}_${lang}.docx`;
+  return `M${String(moduleOrder).padStart(2, '0')}_L${lessonOrder}_EN.docx`;
 }
 
 /** Small inline copy-to-clipboard button */
@@ -133,7 +132,7 @@ export function LessonTable({
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs text-xs">
                     Expected Word filename for auto-import.<br />
-                    Format: <code>M&lt;module&gt;_L&lt;lesson&gt;_&lt;EN|AR&gt;.docx</code>
+                    Format: <code>M&lt;module&gt;_L&lt;lesson&gt;_EN.docx</code>
                   </TooltipContent>
                 </Tooltip>
               </TableHead>

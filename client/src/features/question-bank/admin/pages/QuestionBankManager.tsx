@@ -78,7 +78,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-type ExamLanguage = 'en' | 'ar';
+type ExamLanguage = 'en';
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export function QuestionBankManager() {
@@ -255,8 +255,8 @@ export function QuestionBankManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sectionFilter, setSectionFilter] = useState<string>('all');
   const [publishedFilter, setPublishedFilter] = useState<string>('all');
-  const [filterLanguage, setFilterLanguage] = useState<ExamLanguage>('en');
-  const [createLanguage, setCreateLanguage] = useState<ExamLanguage>('en');
+  const filterLanguage: ExamLanguage = 'en';
+  const createLanguage: ExamLanguage = 'en';
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingSet, setEditingSet] = useState<QuestionSetWithCompetency | null>(
     null
@@ -270,7 +270,7 @@ export function QuestionBankManager() {
     section_type:
       sectionFilter !== 'all' ? (sectionFilter as any) : undefined,
     is_published: publishedFilter === 'all' ? undefined : publishedFilter === 'published',
-    exam_language: filterLanguage,
+    exam_language: 'en',
   });
   const { data: stats } = useAdminQuestionBankStats('CP');
 
@@ -285,7 +285,6 @@ export function QuestionBankManager() {
       const search = searchTerm.toLowerCase();
       return (
         set.title.toLowerCase().includes(search) ||
-        set.title_ar?.toLowerCase().includes(search) ||
         set.competency?.competency_name.toLowerCase().includes(search)
       );
     }
@@ -402,55 +401,22 @@ export function QuestionBankManager() {
               <Download className="w-4 h-4 mr-2" />
               {texts.export}
             </Button>
-            <div className="flex items-center gap-2 bg-white/10 rounded-lg p-1">
-              <Button
+            <Button
                 onClick={() => {
-                  setCreateLanguage('en');
                   setIsCreateDialogOpen(true);
                 }}
                 className="bg-white text-blue-600 hover:bg-blue-50"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                🇬🇧 {texts.createEnglishSet}
+                {texts.createEnglishSet}
               </Button>
-              <Button
-                onClick={() => {
-                  setCreateLanguage('ar');
-                  setIsCreateDialogOpen(true);
-                }}
-                className="bg-white text-emerald-600 hover:bg-emerald-50"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                🇸🇦 {texts.createArabicSet}
-              </Button>
-            </div>
           </div>
         }
       />
 
       {/* Practice Question Sets */}
 
-      {/* Language Filter */}
-      <div className="flex items-center gap-4 bg-white rounded-lg shadow-sm p-4 mb-6">
-        <Globe className="h-5 w-5 text-gray-500" />
-        <span className="font-medium text-gray-700">{texts.selectLanguage}:</span>
-        <div className="flex gap-2">
-          <Button
-            variant={filterLanguage === 'en' ? 'default' : 'outline'}
-            onClick={() => setFilterLanguage('en')}
-            className={filterLanguage === 'en' ? 'bg-blue-600' : ''}
-          >
-            🇬🇧 {texts.englishQuestionSets}
-          </Button>
-          <Button
-            variant={filterLanguage === 'ar' ? 'default' : 'outline'}
-            onClick={() => setFilterLanguage('ar')}
-            className={filterLanguage === 'ar' ? 'bg-emerald-600' : ''}
-          >
-            🇸🇦 {texts.arabicQuestionSets}
-          </Button>
-        </div>
-      </div>
+
 
       {/* Stats Cards */}
       {stats && (
@@ -873,9 +839,7 @@ function QuestionSetDialog({
   texts,
   defaultLanguage = 'en',
 }: QuestionSetDialogProps) {
-  const [examLanguage, setExamLanguage] = useState<ExamLanguage>(
-    (defaultValues as any)?.exam_language || defaultLanguage
-  );
+  const examLanguage: ExamLanguage = 'en';
   const [formData, setFormData] = useState<Partial<QuestionSetInsert>>({
     certification_type: defaultValues?.certification_type || 'CP',
     section_type: defaultValues?.section_type || 'knowledge',
@@ -893,19 +857,11 @@ function QuestionSetDialog({
     exam_language: (defaultValues as any)?.exam_language || defaultLanguage,
   });
 
-  // Update exam_language when defaultLanguage changes
-  useEffect(() => {
-    if (!defaultValues) {
-      setExamLanguage(defaultLanguage);
-      setFormData(prev => ({ ...prev, exam_language: defaultLanguage }));
-    }
-  }, [defaultLanguage, defaultValues]);
-
-  // Fetch modules for competency selector (filtered by exam language)
+  // Fetch English modules only
   const { data: modules } = useQuery({
-    queryKey: curriculumKeys.modulesList({ exam_language: examLanguage }),
+    queryKey: curriculumKeys.modulesList({ exam_language: 'en' }),
     queryFn: async () => {
-      const result = await CurriculumService.getModules({ exam_language: examLanguage });
+      const result = await CurriculumService.getModules({ exam_language: 'en' });
       return result.data || [];
     },
   });
@@ -917,17 +873,9 @@ function QuestionSetDialog({
   );
 
   const handleSubmit = () => {
-    // Language-aware validation: only require fields for the active exam language
-    if (examLanguage === 'ar') {
-      if (!formData.title_ar) {
-        toast.error('Arabic title is required / العنوان بالعربية مطلوب');
-        return;
-      }
-    } else {
-      if (!formData.title) {
-        toast.error(texts.titleRequired);
-        return;
-      }
+    if (!formData.title) {
+      toast.error(texts.titleRequired);
+      return;
     }
     onSubmit(formData as QuestionSetInsert);
   };
@@ -936,12 +884,7 @@ function QuestionSetDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {title}
-            <span className={`text-sm px-2 py-1 rounded ${examLanguage === 'en' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-              {examLanguage === 'en' ? '🇬🇧 English' : '🇸🇦 Arabic'}
-            </span>
-          </DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -1003,9 +946,7 @@ function QuestionSetDialog({
                     <SelectItem value="none">{texts.none}</SelectItem>
                     {modules?.map((module) => (
                       <SelectItem key={module.id} value={module.id}>
-                        {module.order_index}. {examLanguage === 'ar' && module.competency_name_ar
-                          ? module.competency_name_ar
-                          : module.competency_name || module.competency_name_ar || 'Untitled'}
+                        {module.order_index}. {module.competency_name || 'Untitled'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1030,9 +971,7 @@ function QuestionSetDialog({
                     <SelectItem value="none">{texts.noneOption}</SelectItem>
                     {lessons?.map((lesson) => (
                       <SelectItem key={lesson.id} value={lesson.id}>
-                        {lesson.order_index}. {examLanguage === 'ar' && lesson.title_ar
-                          ? lesson.title_ar
-                          : lesson.title || lesson.title_ar || 'Untitled'}
+                        {lesson.order_index}. {lesson.title || 'Untitled'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1041,25 +980,8 @@ function QuestionSetDialog({
             </div>
           </div>
 
-          {/* EN/AR Language Tabs */}
-          <Tabs defaultValue="en" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger
-                value="en"
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-              >
-                {texts.englishVersion}
-              </TabsTrigger>
-              <TabsTrigger
-                value="ar"
-                className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-              >
-                {texts.arabicVersion}
-              </TabsTrigger>
-            </TabsList>
-
-            {/* English Tab */}
-            <TabsContent value="en" className="space-y-4">
+          {/* Title & Description */}
+          <div className="space-y-4">
               <div>
                 <Label>{texts.titleEnglish}</Label>
                 <Input
@@ -1082,38 +1004,7 @@ function QuestionSetDialog({
                   rows={3}
                 />
               </div>
-            </TabsContent>
-
-            {/* Arabic Tab */}
-            <TabsContent value="ar" className="space-y-4">
-              <div>
-                <Label>{texts.titleArabic}</Label>
-                <Input
-                  value={formData.title_ar || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title_ar: e.target.value })
-                  }
-                  placeholder={texts.enterTitleAr}
-                  dir="rtl"
-                  className="text-right"
-                />
-              </div>
-
-              <div>
-                <Label>{texts.descriptionArabic}</Label>
-                <Textarea
-                  value={formData.description_ar || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description_ar: e.target.value })
-                  }
-                  placeholder={texts.enterDescriptionAr}
-                  dir="rtl"
-                  className="text-right"
-                  rows={3}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>

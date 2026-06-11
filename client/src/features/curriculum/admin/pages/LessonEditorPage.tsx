@@ -1,5 +1,5 @@
 /**
- * LessonEditorPage — Full-page lesson editor
+ * LessonEditorPage — Full-page lesson editor — English Only
  *
  * Layout: 3-column
  *  ┌──────────────────────────────────────────────────────────┐
@@ -11,7 +11,6 @@
  *
  * Routes:
  *   /admin/curriculum/lessons/new?lang=en
- *   /admin/curriculum/lessons/new?lang=ar
  *   /admin/curriculum/lessons/:id/edit
  */
 
@@ -90,12 +89,11 @@ const lessonSchema = z.object({
 });
 
 type LessonFormData = z.infer<typeof lessonSchema>;
-type ExamLanguage = 'en' | 'ar';
 
 // ─── Helper: expected filename ──────────────────────────────────────────────
-function buildExpectedFilename(moduleOrder: number | undefined, lessonOrder: number, lang: ExamLanguage): string | null {
+function buildExpectedFilename(moduleOrder: number | undefined, lessonOrder: number): string | null {
   if (!moduleOrder) return null;
-  return `M${String(moduleOrder).padStart(2, '0')}_L${lessonOrder}_${lang.toUpperCase()}.docx`;
+  return `M${String(moduleOrder).padStart(2, '0')}_L${lessonOrder}_EN.docx`;
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────
@@ -106,25 +104,19 @@ export function LessonEditorPage() {
   const { toast } = useToast();
 
   const isEditing = !!id;
-  const defaultLang = (searchParams.get('lang') as ExamLanguage) || 'en';
-
-  const [examLanguage, setExamLanguage] = useState<ExamLanguage>(defaultLang);
   const [richContent, setRichContent] = useState<RichContent | null>(null);
-
-  const isArabic = examLanguage === 'ar';
 
   // ── Queries ────────────────────────────────────────────────────────────
   const { data: lesson, isLoading: isLoadingLesson } = useLesson(id, isEditing);
 
   const { data: modules } = useQuery({
-    queryKey: curriculumKeys.modulesList({ exam_language: examLanguage }),
+    queryKey: curriculumKeys.modulesList({ exam_language: 'en' }),
     queryFn: async () => {
-      const result = await CurriculumService.getModules({ exam_language: examLanguage });
+      const result = await CurriculumService.getModules({ exam_language: 'en' });
       return result.data || [];
     },
   });
 
-  // Track quiz id separately so InlineQuizBuilder can update it without re-submitting the whole form
   const [linkedQuizId, setLinkedQuizId] = useState<string | undefined>(undefined);
 
   const createLesson = useCreateLesson();
@@ -156,26 +148,20 @@ export function LessonEditorPage() {
     id
   );
 
-  // Derive module order for expected filename
   const selectedModule = modules?.find(m => m.id === selectedModuleId);
   const expectedFilename = buildExpectedFilename(
     selectedModule?.order_index ?? undefined,
-    selectedOrderIndex,
-    examLanguage
+    selectedOrderIndex
   );
 
   // ── Load lesson data when editing ─────────────────────────────────────
   useEffect(() => {
     if (lesson && isEditing) {
-      const lessonLang = (lesson as any).exam_language as ExamLanguage;
-      if (lessonLang) setExamLanguage(lessonLang);
-      const isAr = lessonLang === 'ar';
-      // Sync linked quiz state
       setLinkedQuizId(lesson.lesson_quiz_id || undefined);
       form.reset({
         module_id: lesson.module_id,
-        title: isAr ? (lesson.title_ar || lesson.title) : lesson.title,
-        description: isAr ? (lesson.description_ar || lesson.description || '') : (lesson.description || ''),
+        title: lesson.title,
+        description: lesson.description || '',
         order_index: lesson.order_index,
         estimated_duration_hours: lesson.estimated_duration_hours || 1,
         lesson_quiz_id: lesson.lesson_quiz_id || '',
@@ -183,8 +169,7 @@ export function LessonEditorPage() {
         quiz_passing_score: lesson.quiz_passing_score,
         is_published: lesson.is_published,
       });
-      const contentToLoad = isAr ? (lesson.content_ar || lesson.content) : lesson.content;
-      setRichContent(contentToLoad as RichContent || null);
+      setRichContent(lesson.content as RichContent || null);
     }
   }, [lesson, isEditing, form]);
 
@@ -195,25 +180,25 @@ export function LessonEditorPage() {
       return;
     }
     if (!richContent || !richContent.content || richContent.content.length === 0) {
-          toast({ title: 'Error', description: 'Lesson content is required', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Lesson content is required', variant: 'destructive' });
       return;
     }
     try {
       const lessonData = {
         module_id: data.module_id,
         title: data.title,
-        title_ar: examLanguage === 'ar' ? data.title : null,
-        description: examLanguage === 'en' ? data.description : null,
-        description_ar: examLanguage === 'ar' ? data.description : null,
-        content: examLanguage === 'en' ? richContent : {},
-        content_ar: examLanguage === 'ar' ? richContent : null,
+        title_ar: null,
+        description: data.description,
+        description_ar: null,
+        content: richContent,
+        content_ar: null,
         order_index: data.order_index as 1 | 2 | 3,
         estimated_duration_hours: data.estimated_duration_hours || null,
         lesson_quiz_id: linkedQuizId || data.lesson_quiz_id || null,
         quiz_required: data.quiz_required,
         quiz_passing_score: data.quiz_passing_score,
         is_published: data.is_published,
-        exam_language: examLanguage,
+        exam_language: 'en' as const,
       };
 
       if (isEditing) {
@@ -230,24 +215,6 @@ export function LessonEditorPage() {
   };
 
   const isSaving = createLesson.isPending || updateLesson.isPending;
-
-  // ── Labels ─────────────────────────────────────────────────────────────
-  const L = {
-    title: 'Title *',
-    titlePh: isArabic ? 'Ex: Arabic lesson title here…' : 'Ex: Introduction to BDA BoCK™ Framework',
-    desc: 'Description *',
-    descPh: 'Briefly describe this lesson…',
-    contentPh: isArabic ? 'Start writing the Arabic lesson content here…' : 'Start writing your lesson content here…',
-    module: 'Module (Competency) *',
-    selectModule: 'Select a module',
-    order: 'Order in module *',
-    duration: 'Estimated duration (hours)',
-    publish: 'Publish lesson',
-    publishDesc: 'Published lessons are visible to users',
-    quizRequired: 'Quiz required',
-    quizRequiredDesc: 'User must pass the quiz to complete the lesson',
-    passingScore: 'Passing Score (%)',
-  };
 
   // ── Loading state ──────────────────────────────────────────────────────
   if (isEditing && isLoadingLesson) {
@@ -267,13 +234,8 @@ export function LessonEditorPage() {
       <div className="min-h-screen bg-gray-50 flex flex-col">
 
         {/* ── Top Bar ─────────────────────────────────────────────────── */}
-        <div className={`sticky top-0 z-30 border-b shadow-sm ${
-          isArabic
-            ? 'bg-gradient-to-r from-emerald-600 to-teal-700'
-            : 'bg-gradient-to-r from-blue-600 to-sky-700'
-        }`}>
+        <div className="sticky top-0 z-30 border-b shadow-sm bg-gradient-to-r from-blue-600 to-sky-700">
           <div className="flex items-center justify-between px-6 py-3 text-white">
-            {/* Left: back + title */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/admin/curriculum/lessons')}
@@ -288,17 +250,13 @@ export function LessonEditorPage() {
                 <span className="font-semibold text-base">
                   {isEditing ? 'Edit Lesson' : 'New Lesson'}
                 </span>
-                <Badge className={`text-xs font-bold px-2 py-0.5 ${
-                  isArabic ? 'bg-emerald-800 text-white' : 'bg-blue-800 text-white'
-                }`}>
-                  {isArabic ? '🇸🇦 Arabic Lesson' : '🇬🇧 English Lesson'}
+                <Badge className="text-xs font-bold px-2 py-0.5 bg-blue-800 text-white">
+                  🇬🇧 English Lesson
                 </Badge>
               </div>
             </div>
 
-            {/* Right: expected filename + publish toggle + save */}
             <div className="flex items-center gap-3">
-              {/* Expected filename */}
               {expectedFilename && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -313,15 +271,9 @@ export function LessonEditorPage() {
                 </Tooltip>
               )}
 
-              {/* Publish toggle */}
               <div className="flex items-center gap-2 bg-white/15 rounded-lg px-3 py-1.5">
-                {isPublished
-                  ? <Eye className="h-3.5 w-3.5" />
-                  : <EyeOff className="h-3.5 w-3.5 opacity-60" />
-                }
-                <span className="text-xs font-medium">
-                  {isPublished ? 'Published' : 'Draft'}
-                </span>
+                {isPublished ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5 opacity-60" />}
+                <span className="text-xs font-medium">{isPublished ? 'Published' : 'Draft'}</span>
                 <Switch
                   checked={isPublished}
                   onCheckedChange={(v) => form.setValue('is_published', v)}
@@ -329,16 +281,12 @@ export function LessonEditorPage() {
                 />
               </div>
 
-              {/* Save button */}
               <Button
                 onClick={form.handleSubmit(onSubmit)}
                 disabled={isSaving || isOrderAvailable === false}
                 className="bg-white text-blue-700 hover:bg-blue-50 font-semibold shadow"
               >
-                {isSaving
-                  ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  : <Save className="mr-2 h-4 w-4" />
-                }
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 {isEditing ? 'Update' : 'Save Lesson'}
               </Button>
             </div>
@@ -362,25 +310,20 @@ export function LessonEditorPage() {
                   name="module_id"
                   render={({ field }) => (
                     <FormItem className="mb-4">
-                      <FormLabel className="text-sm font-medium">{L.module}</FormLabel>
+                      <FormLabel className="text-sm font-medium">Module (Competency) *</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="text-sm">
-                            <SelectValue placeholder={L.selectModule} />
+                            <SelectValue placeholder="Select a module" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {modules?.map((module) => (
                             <SelectItem key={module.id} value={module.id} className="text-sm">
-                              <div className="flex flex-col">
-                                <span className="font-medium">
-                                  {module.order_index ? `M${String(module.order_index).padStart(2,'0')} — ` : ''}
-                                  {module.competency_name}
-                                </span>
-                                {module.competency_name_ar && (
-                                  <span className="text-xs text-gray-400" dir="rtl">{module.competency_name_ar}</span>
-                                )}
-                              </div>
+                              <span className="font-medium">
+                                {module.order_index ? `M${String(module.order_index).padStart(2,'0')} — ` : ''}
+                                {module.competency_name}
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -398,7 +341,7 @@ export function LessonEditorPage() {
                     <FormItem className="mb-4">
                       <FormLabel className="text-sm font-medium flex items-center gap-1.5">
                         <Hash className="h-3.5 w-3.5 text-gray-400" />
-                        {L.order}
+                        Order in module *
                       </FormLabel>
                       <Select onValueChange={field.onChange} value={field.value?.toString()}>
                         <FormControl>
@@ -407,21 +350,21 @@ export function LessonEditorPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="1">{isArabic ? '1 — الدرس الأول' : '1 — First lesson'}</SelectItem>
-                          <SelectItem value="2">{isArabic ? '2 — الدرس الثاني' : '2 — Second lesson'}</SelectItem>
-                          <SelectItem value="3">{isArabic ? '3 — الدرس الثالث' : '3 — Third lesson'}</SelectItem>
+                          <SelectItem value="1">1 — First lesson</SelectItem>
+                          <SelectItem value="2">2 — Second lesson</SelectItem>
+                          <SelectItem value="3">3 — Third lesson</SelectItem>
                         </SelectContent>
                       </Select>
                       {isOrderAvailable === false && (
                         <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
                           <AlertCircle className="h-3 w-3" />
-                          {isArabic ? 'هذا الترتيب مستخدم بالفعل' : 'This order is already taken'}
+                          This order is already taken
                         </p>
                       )}
                       {isOrderAvailable === true && selectedModuleId && (
                         <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
                           <CheckCircle className="h-3 w-3" />
-                          {isArabic ? 'متاح' : 'Available'}
+                          Available
                         </p>
                       )}
                       <FormMessage />
@@ -435,11 +378,10 @@ export function LessonEditorPage() {
                   name="title"
                   render={({ field }) => (
                     <FormItem className="mb-4">
-                      <FormLabel className="text-sm font-medium">{L.title}</FormLabel>
+                      <FormLabel className="text-sm font-medium">Title *</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={L.titlePh}
-                          dir={isArabic ? 'rtl' : 'ltr'}
+                          placeholder="Ex: Introduction to BDA BoCK™ Framework"
                           className="text-sm"
                           {...field}
                         />
@@ -455,11 +397,10 @@ export function LessonEditorPage() {
                   name="description"
                   render={({ field }) => (
                     <FormItem className="mb-4">
-                      <FormLabel className="text-sm font-medium">{L.desc}</FormLabel>
+                      <FormLabel className="text-sm font-medium">Description *</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder={L.descPh}
-                          dir={isArabic ? 'rtl' : 'ltr'}
+                          placeholder="Briefly describe this lesson…"
                           rows={4}
                           className="text-sm resize-none"
                           {...field}
@@ -478,7 +419,7 @@ export function LessonEditorPage() {
                     <FormItem className="mb-4">
                       <FormLabel className="text-sm font-medium flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5 text-gray-400" />
-                        {L.duration}
+                        Estimated duration (hours)
                       </FormLabel>
                       <FormControl>
                         <Input type="number" min="0" max="100" step="0.5" className="text-sm" {...field} />
@@ -489,7 +430,6 @@ export function LessonEditorPage() {
                 />
               </div>
 
-              {/* Expected filename info box */}
               {expectedFilename && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <div className="flex items-start gap-2">
@@ -511,9 +451,7 @@ export function LessonEditorPage() {
               <div className="border-b px-6 py-3 bg-gray-50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    Lesson Content {isArabic && <span className="text-emerald-300 font-normal text-xs">(Arabic)</span>}
-                  </span>
+                  <span className="text-sm font-semibold text-gray-700">Lesson Content</span>
                   <span className="text-xs text-red-500">*</span>
                 </div>
                 <p className="text-xs text-gray-400">
@@ -524,8 +462,7 @@ export function LessonEditorPage() {
                 <RichTextEditor
                   content={richContent}
                   onChange={setRichContent}
-                  placeholder={L.contentPh}
-                  dir={isArabic ? 'rtl' : 'ltr'}
+                  placeholder="Start writing your lesson content here…"
                 />
               </div>
             </main>
@@ -538,11 +475,10 @@ export function LessonEditorPage() {
                   Quiz Configuration
                 </h2>
 
-                {/* Inline Quiz Builder */}
                 <div className="mb-4">
                   <InlineQuizBuilder
                     quizId={linkedQuizId}
-                    language={examLanguage}
+                    language="en"
                     lessonTitle={form.watch('title')}
                     onQuizSaved={(qid) => {
                       setLinkedQuizId(qid);
@@ -555,7 +491,6 @@ export function LessonEditorPage() {
                   />
                 </div>
 
-                {/* Quiz Required */}
                 <FormField
                   control={form.control}
                   name="quiz_required"
@@ -563,8 +498,8 @@ export function LessonEditorPage() {
                     <FormItem className="mb-4">
                       <div className="flex items-center justify-between rounded-lg border p-3">
                         <div>
-                          <FormLabel className="text-sm font-medium">{L.quizRequired}</FormLabel>
-                          <FormDescription className="text-xs mt-0.5">{L.quizRequiredDesc}</FormDescription>
+                          <FormLabel className="text-sm font-medium">Quiz required</FormLabel>
+                          <FormDescription className="text-xs mt-0.5">User must pass the quiz to complete the lesson</FormDescription>
                         </div>
                         <FormControl>
                           <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -574,13 +509,12 @@ export function LessonEditorPage() {
                   )}
                 />
 
-                {/* Passing Score */}
                 <FormField
                   control={form.control}
                   name="quiz_passing_score"
                   render={({ field }) => (
                     <FormItem className="mb-4">
-                      <FormLabel className="text-sm font-medium">{L.passingScore}</FormLabel>
+                      <FormLabel className="text-sm font-medium">Passing Score (%)</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input type="number" min="0" max="100" className="text-sm pr-8" {...field} />
@@ -596,17 +530,13 @@ export function LessonEditorPage() {
                 />
               </div>
 
-              {/* Bottom save button (duplicate for convenience) */}
               <div className="pt-2 border-t">
                 <Button
                   type="submit"
                   className="w-full"
                   disabled={isSaving || isOrderAvailable === false}
                 >
-                  {isSaving
-                    ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    : <Save className="mr-2 h-4 w-4" />
-                  }
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                   {isEditing ? 'Update Lesson' : 'Save Lesson'}
                 </Button>
               </div>

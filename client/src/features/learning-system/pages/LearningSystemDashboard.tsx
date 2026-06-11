@@ -1,16 +1,15 @@
 /**
- * BDA Learning System Dashboard — SHRM-Inspired Design
- * - EN/AR fully separated (no switching within the page)
- * - No language switcher buttons
+ * BDA Learning System Dashboard — English Only
+ * - EN only (AR removed from learning system)
  * - Hero section with progress ring + stats
  * - Tool cards: Training Kits, Question Bank, Flashcards
  * - Recommended Learning Path
  * - BDA Brand Colors only (#0d1f4e, #1C4A8B, #0f91e0)
  */
 
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
-import { useUserAccesses, useOverallProgress, type Language } from '@/entities/curriculum';
+import { useUserAccesses, useOverallProgress } from '@/entities/curriculum';
 import { useQuestionBankStats } from '@/entities/question-bank';
 import { useFlashcardStats } from '@/entities/flashcards';
 import {
@@ -158,29 +157,21 @@ function ToolCard({ icon, title, description, stats, cta, onClick, badge, highli
 export function LearningSystemDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const { user } = useAuth();
 
   const basePath = location.pathname.startsWith('/ecp/')
     ? '/ecp/learning-system'
     : '/learning-system';
 
-  // Determine language from URL param — default to EN
-  const langParam = searchParams.get('lang') as Language | null;
-  const effectiveLanguage: Language = langParam === 'AR' ? 'AR' : 'EN';
-  const isAR = effectiveLanguage === 'AR';
-
   const { data: accessSummary, isLoading: isLoadingAccess } = useUserAccesses(user?.id);
 
-  const statsLanguage = effectiveLanguage.toLowerCase() as 'en' | 'ar';
+  const { data: trainingProgress } = useOverallProgress(user?.id, 'CP', 'en');
+  const { data: questionBankStats } = useQuestionBankStats(user?.id, 'CP', 'en');
+  const { data: flashcardStats } = useFlashcardStats(user?.id, 'CP', 'en');
 
-  const { data: trainingProgress } = useOverallProgress(user?.id, 'CP', statsLanguage);
-  const { data: questionBankStats } = useQuestionBankStats(user?.id, 'CP', statsLanguage);
-  const { data: flashcardStats } = useFlashcardStats(user?.id, 'CP', statsLanguage);
+  const hasAccess = accessSummary?.has_en;
 
-  const hasAccess = isAR ? accessSummary?.has_ar : accessSummary?.has_en;
-
-  const displayAccess = accessSummary?.accesses?.find((a) => a.language === effectiveLanguage)
+  const displayAccess = accessSummary?.accesses?.find((a) => a.language === 'EN')
     || accessSummary?.accesses?.[0];
 
   const expiryDate = displayAccess?.expires_at ? new Date(displayAccess.expires_at) : null;
@@ -200,9 +191,7 @@ export function LearningSystemDashboard() {
       <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff]">
         <div className="text-center">
           <div className="w-14 h-14 rounded-full border-4 border-[#dbeafe] border-t-[#1C4A8B] animate-spin mx-auto mb-5" />
-          <p className="text-slate-500 font-medium">
-            {isAR ? 'جاري تحميل نظام التعلم...' : 'Loading your learning system...'}
-          </p>
+          <p className="text-slate-500 font-medium">Loading your learning system...</p>
         </div>
       </div>
     );
@@ -216,19 +205,15 @@ export function LearningSystemDashboard() {
           <div className="w-20 h-20 bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
             <BookOpen className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">
-            {isAR ? 'الوصول مطلوب' : 'Access Required'}
-          </h2>
+          <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">Access Required</h2>
           <p className="text-slate-500 mb-8 text-sm leading-relaxed">
-            {isAR
-              ? 'تحتاج إلى شراء نظام التعلم BDA للوصول إلى مجموعات التدريب وبنك الأسئلة والبطاقات التعليمية.'
-              : 'You need to purchase the BDA Learning System to access Training Kits, Question Bank, and Flashcards.'}
+            You need to purchase the BDA Learning System to access Training Kits, Question Bank, and Flashcards.
           </p>
           <button
             onClick={() => window.open('https://bda-global.org/en/store/bda-learning-system/', '_blank')}
             className="w-full bg-gradient-to-r from-[#1C4A8B] to-[#0d1f4e] text-white font-semibold py-3.5 px-6 rounded-xl hover:opacity-90 transition-opacity shadow-md"
           >
-            {isAR ? 'اشترِ الآن' : 'Purchase Now'}
+            Purchase Now
           </button>
         </div>
       </div>
@@ -237,7 +222,7 @@ export function LearningSystemDashboard() {
 
   // ── Main Dashboard ────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f0f6ff]" dir={isAR ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-[#f0f6ff]">
 
       {/* ══════════════════════════════════════════════════════════════════════
           HERO SECTION
@@ -256,48 +241,37 @@ export function LearningSystemDashboard() {
             <div className="flex items-center gap-2 bg-white/15 border border-white/25 rounded-full px-4 py-1.5">
               <Award className="w-4 h-4 text-white/80" />
               <span className="text-xs font-semibold text-white/90 tracking-wide uppercase">
-                {isAR ? 'نظام التعلم BDA' : 'BDA Learning System'}
+                BDA Learning System
               </span>
             </div>
-            {effectiveLanguage === 'EN' && (
-              <span className="bg-white/10 border border-white/20 rounded-full px-3 py-1 text-xs text-white/70">
-                English
-              </span>
-            )}
-            {effectiveLanguage === 'AR' && (
-              <span className="bg-white/10 border border-white/20 rounded-full px-3 py-1 text-xs text-white/70">
-                العربية
-              </span>
-            )}
+            <span className="bg-white/10 border border-white/20 rounded-full px-3 py-1 text-xs text-white/70">
+              English
+            </span>
           </div>
 
           <div className="flex flex-col lg:flex-row items-start lg:items-center gap-10">
             {/* Left: Title + CTA */}
             <div className="flex-1">
               <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-3">
-                {isAR ? 'مرحباً بك في نظام التعلم' : 'Welcome to Your Learning System'}
+                Welcome to Your Learning System
               </h1>
               <p className="text-white/70 text-base leading-relaxed max-w-xl mb-8">
-                {isAR
-                  ? 'منهج متكامل يغطي جميع كفاءات BDA — مجموعات التدريب وبنك الأسئلة والبطاقات التعليمية.'
-                  : 'A complete curriculum covering all BDA competencies — Training Kits, Question Bank, and Flashcards.'}
+                A complete curriculum covering all BDA competencies — Training Kits, Question Bank, and Flashcards.
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={() => navigate(`${basePath}/training-kits?lang=${effectiveLanguage}`)}
+                  onClick={() => navigate(`${basePath}/training-kits`)}
                   className="flex items-center gap-2 bg-white text-[#1C4A8B] font-bold py-3 px-7 rounded-xl hover:bg-[#f0f6ff] transition-colors shadow-lg text-sm"
                 >
                   <Play className="w-4 h-4 fill-current" />
-                  {pct > 0
-                    ? (isAR ? 'متابعة التعلم' : 'Continue Learning')
-                    : (isAR ? 'ابدأ التعلم' : 'Start Learning')}
+                  {pct > 0 ? 'Continue Learning' : 'Start Learning'}
                 </button>
                 <button
-                  onClick={() => navigate(`${basePath}/competency-analytics?lang=${effectiveLanguage}`)}
+                  onClick={() => navigate(`${basePath}/competency-analytics`)}
                   className="flex items-center gap-2 bg-white/15 hover:bg-white/25 border border-white/30 font-medium py-3 px-6 rounded-xl transition-colors text-sm"
                 >
                   <BarChart2 className="w-4 h-4" />
-                  {isAR ? 'تحليلاتي' : 'My Analytics'}
+                  My Analytics
                 </button>
               </div>
             </div>
@@ -309,9 +283,7 @@ export function LearningSystemDashboard() {
                 <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-6 border border-white/20 shadow-inner">
                   <ProgressRing pct={pct} size={130} />
                 </div>
-                <p className="text-white/60 text-sm font-medium">
-                  {isAR ? 'التقدم الكلي' : 'Overall Progress'}
-                </p>
+                <p className="text-white/60 text-sm font-medium">Overall Progress</p>
               </div>
 
               {/* Stats row */}
@@ -319,22 +291,22 @@ export function LearningSystemDashboard() {
                 <HeroStat
                   icon={<BookOpen className="w-5 h-5" />}
                   value={`${completedModules}/${totalModules}`}
-                  label={isAR ? 'الوحدات المكتملة' : 'Modules Done'}
+                  label="Modules Done"
                 />
                 <HeroStat
                   icon={<HelpCircle className="w-5 h-5" />}
                   value={questionBankStats?.questionsAttempted || 0}
-                  label={isAR ? 'أسئلة مُمارَسة' : 'Questions Practiced'}
+                  label="Questions Practiced"
                 />
                 <HeroStat
                   icon={<Layers className="w-5 h-5" />}
                   value={flashcardStats?.cardsMastered || 0}
-                  label={isAR ? 'بطاقات محفوظة' : 'Cards Mastered'}
+                  label="Cards Mastered"
                 />
                 <HeroStat
                   icon={<Clock className="w-5 h-5" />}
                   value={`${Math.floor(((trainingProgress?.totalTimeSpent || 0) + (flashcardStats?.totalStudyTimeMinutes || 0)) / 60)}h`}
-                  label={isAR ? 'وقت الدراسة' : 'Study Time'}
+                  label="Study Time"
                 />
               </div>
             </div>
@@ -371,11 +343,11 @@ export function LearningSystemDashboard() {
               </div>
               <div>
                 <p className="font-semibold text-[#0d1f4e] text-sm">
-                  {isAR ? 'صالح حتى' : 'Access valid until'} {format(expiryDate, 'MMMM d, yyyy')}
+                  Access valid until {format(expiryDate, 'MMMM d, yyyy')}
                 </p>
                 <p className={`text-xs mt-0.5 ${isExpiringSoon ? 'text-amber-600' : 'text-slate-400'}`}>
-                  {daysUntilExpiry} {isAR ? 'يوم متبقي' : 'days remaining'}
-                  {isExpiringSoon && (isAR ? ' — يُنصح بالتجديد قريباً' : ' — Consider renewing soon')}
+                  {daysUntilExpiry} days remaining
+                  {isExpiringSoon && ' — Consider renewing soon'}
                 </p>
               </div>
             </div>
@@ -384,7 +356,7 @@ export function LearningSystemDashboard() {
                 onClick={() => window.open('https://bda-global.org/en/store/bda-learning-system/', '_blank')}
                 className="text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-4 py-2 rounded-xl transition-colors"
               >
-                {isAR ? 'تجديد الوصول' : 'Renew Access'}
+                Renew Access
               </button>
             )}
           </div>
@@ -396,25 +368,19 @@ export function LearningSystemDashboard() {
             <Target className="w-6 h-6 text-[#1C4A8B]" />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-[#0d1f4e] text-base mb-1">
-              {isAR ? 'تركيز اليوم' : "Today's Focus"}
-            </h3>
+            <h3 className="font-bold text-[#0d1f4e] text-base mb-1">Today's Focus</h3>
             <p className="text-slate-500 text-sm leading-relaxed">
               {pct === 0
-                ? (isAR
-                  ? 'ابدأ بالوحدة 0: مقدمة البرنامج — تعرف على رحلة التعلم في BDA و14 كفاءة.'
-                  : 'Start with Module 0: Program Introduction — get familiar with the BDA Learning Journey and the 14 Competencies.')
-                : (isAR
-                  ? `أنت أتممت ${pct}% من المنهج. استمر — الاتساق هو مفتاح الاستعداد للشهادة.`
-                  : `You're ${pct}% through the curriculum. Keep going — consistency is the key to certification readiness.`)}
+                ? 'Start with Module 0: Program Introduction — get familiar with the BDA Learning Journey and the 14 Competencies.'
+                : `You're ${pct}% through the curriculum. Keep going — consistency is the key to certification readiness.`}
             </p>
           </div>
           <button
-            onClick={() => navigate(`${basePath}/training-kits?lang=${effectiveLanguage}`)}
+            onClick={() => navigate(`${basePath}/training-kits`)}
             className="flex items-center gap-2 bg-[#1C4A8B] text-white text-sm font-semibold px-5 py-3 rounded-xl hover:bg-[#0d1f4e] transition-colors whitespace-nowrap shadow-sm"
           >
             <Zap className="w-4 h-4" />
-            {isAR ? 'الذهاب للمنهج' : 'Go to Curriculum'}
+            Go to Curriculum
           </button>
         </div>
 
@@ -423,54 +389,42 @@ export function LearningSystemDashboard() {
           <ToolCard
             highlight
             icon={<BookOpen className="w-6 h-6" />}
-            title={isAR ? 'مجموعات التدريب' : 'Training Kits'}
-            description={
-              isAR
-                ? 'منهج متكامل منظم وفق 14 كفاءة BDA. ابنِ أساسك المعرفي.'
-                : 'Complete curriculum organized by the 14 BDA competencies. Build your knowledge foundation.'
-            }
+            title="Training Kits"
+            description="Complete curriculum organized by the 14 BDA competencies. Build your knowledge foundation."
             stats={[
-              { label: isAR ? 'وحدات' : 'Modules', value: totalModules },
-              { label: isAR ? 'دروس' : 'Lessons', value: totalLessons },
-              { label: isAR ? 'مكتمل' : 'Completed', value: `${pct}%` },
+              { label: 'Modules', value: totalModules },
+              { label: 'Lessons', value: totalLessons },
+              { label: 'Completed', value: `${pct}%` },
             ]}
-            cta={pct > 0 ? (isAR ? 'متابعة التعلم' : 'Continue Learning') : (isAR ? 'ابدأ التعلم' : 'Start Learning')}
-            onClick={() => navigate(`${basePath}/training-kits?lang=${effectiveLanguage}`)}
+            cta={pct > 0 ? 'Continue Learning' : 'Start Learning'}
+            onClick={() => navigate(`${basePath}/training-kits`)}
           />
 
           <ToolCard
-            badge={isAR ? 'جديد' : 'NEW'}
+            badge="NEW"
             icon={<HelpCircle className="w-6 h-6" />}
-            title={isAR ? 'بنك الأسئلة' : 'Question Bank'}
-            description={
-              isAR
-                ? 'تدرب على أسئلة الاختيار من متعدد. احصل على تغذية راجعة فورية عبر جميع الكفاءات.'
-                : 'Practice with multiple-choice questions. Get instant feedback across all competencies.'
-            }
+            title="Question Bank"
+            description="Practice with multiple-choice questions. Get instant feedback across all competencies."
             stats={[
-              { label: isAR ? 'إجمالي الأسئلة' : 'Total Questions', value: questionBankStats?.totalQuestions || 0 },
-              { label: isAR ? 'مُحاوَل' : 'Attempted', value: questionBankStats?.questionsAttempted || 0 },
-              { label: isAR ? 'متوسط الدرجة' : 'Avg Score', value: `${Math.round(questionBankStats?.averageScore || 0)}%` },
+              { label: 'Total Questions', value: questionBankStats?.totalQuestions || 0 },
+              { label: 'Attempted', value: questionBankStats?.questionsAttempted || 0 },
+              { label: 'Avg Score', value: `${Math.round(questionBankStats?.averageScore || 0)}%` },
             ]}
-            cta={isAR ? 'تدرب الآن' : 'Practice Now'}
-            onClick={() => navigate(`${basePath}/question-bank?lang=${effectiveLanguage}`)}
+            cta="Practice Now"
+            onClick={() => navigate(`${basePath}/question-bank`)}
           />
 
           <ToolCard
             icon={<Layers className="w-6 h-6" />}
-            title={isAR ? 'البطاقات التعليمية' : 'Flashcards'}
-            description={
-              isAR
-                ? 'بطاقات التكرار المتباعد للحفظ السريع. أتقن المفاهيم الأساسية بكفاءة.'
-                : 'Spaced repetition cards for rapid recall. Master key concepts efficiently.'
-            }
+            title="Flashcards"
+            description="Spaced repetition cards for rapid recall. Master key concepts efficiently."
             stats={[
-              { label: isAR ? 'إجمالي البطاقات' : 'Total Cards', value: flashcardStats?.totalCards || 0 },
-              { label: isAR ? 'مستحقة اليوم' : 'Due Today', value: flashcardStats?.cardsDueToday || 0 },
-              { label: isAR ? 'محفوظة' : 'Mastered', value: flashcardStats?.cardsMastered || 0 },
+              { label: 'Total Cards', value: flashcardStats?.totalCards || 0 },
+              { label: 'Due Today', value: flashcardStats?.cardsDueToday || 0 },
+              { label: 'Mastered', value: flashcardStats?.cardsMastered || 0 },
             ]}
-            cta={isAR ? 'ادرس البطاقات' : 'Study Flashcards'}
-            onClick={() => navigate(`${basePath}/flashcards?lang=${effectiveLanguage}`)}
+            cta="Study Flashcards"
+            onClick={() => navigate(`${basePath}/flashcards`)}
           />
         </div>
 
@@ -478,30 +432,30 @@ export function LearningSystemDashboard() {
         <div className="bg-white rounded-2xl border border-[#dbeafe] p-6 shadow-sm">
           <h2 className="text-lg font-bold text-[#0d1f4e] mb-6 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-[#0f91e0]" />
-            {isAR ? 'مسار التعلم الموصى به' : 'Recommended Learning Path'}
+            Recommended Learning Path
           </h2>
           <div className="flex flex-col md:flex-row items-stretch gap-0">
             {[
               {
                 step: 1,
-                title: isAR ? 'مجموعات التدريب' : 'Training Kits',
-                sub: isAR ? 'اقرأ المحتوى أولاً' : 'Read the content first',
+                title: 'Training Kits',
+                sub: 'Read the content first',
                 icon: <BookOpen className="w-5 h-5" />,
-                action: () => navigate(`${basePath}/training-kits?lang=${effectiveLanguage}`),
+                action: () => navigate(`${basePath}/training-kits`),
               },
               {
                 step: 2,
-                title: isAR ? 'البطاقات التعليمية' : 'Flashcards',
-                sub: isAR ? 'احفظ المفاهيم الأساسية' : 'Memorize key concepts',
+                title: 'Flashcards',
+                sub: 'Memorize key concepts',
                 icon: <Layers className="w-5 h-5" />,
-                action: () => navigate(`${basePath}/flashcards?lang=${effectiveLanguage}`),
+                action: () => navigate(`${basePath}/flashcards`),
               },
               {
                 step: 3,
-                title: isAR ? 'بنك الأسئلة' : 'Question Bank',
-                sub: isAR ? 'اختبر معرفتك' : 'Test your knowledge',
+                title: 'Question Bank',
+                sub: 'Test your knowledge',
                 icon: <HelpCircle className="w-5 h-5" />,
-                action: () => navigate(`${basePath}/question-bank?lang=${effectiveLanguage}`),
+                action: () => navigate(`${basePath}/question-bank`),
               },
             ].map((item, idx, arr) => (
               <div key={item.step} className="flex flex-col md:flex-row items-center flex-1">
@@ -528,10 +482,10 @@ export function LearningSystemDashboard() {
         {/* Program Overview Strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { icon: <BookOpen className="w-5 h-5" />, value: '16', label: isAR ? 'وحدة تعليمية' : 'Learning Modules' },
-            { icon: <Layers className="w-5 h-5" />, value: '52', label: isAR ? 'درس' : 'Lessons' },
-            { icon: <Users className="w-5 h-5" />, value: '14', label: isAR ? 'كفاءة BDA' : 'BDA Competencies' },
-            { icon: <Award className="w-5 h-5" />, value: 'BoCK', label: isAR ? 'هيكل المعارف' : 'Body of Knowledge' },
+            { icon: <BookOpen className="w-5 h-5" />, value: '16', label: 'Learning Modules' },
+            { icon: <Layers className="w-5 h-5" />, value: '52', label: 'Lessons' },
+            { icon: <Users className="w-5 h-5" />, value: '14', label: 'BDA Competencies' },
+            { icon: <Award className="w-5 h-5" />, value: 'BoCK', label: 'Body of Knowledge' },
           ].map((item, i) => (
             <div key={i} className="bg-white rounded-2xl border border-[#dbeafe] p-5 flex flex-col items-center gap-2 shadow-sm hover:shadow-md transition-shadow">
               <div className="p-2.5 bg-[#f0f6ff] rounded-xl text-[#1C4A8B]">{item.icon}</div>
@@ -544,11 +498,11 @@ export function LearningSystemDashboard() {
         {/* Analytics CTA */}
         <div className="flex justify-center pb-6">
           <button
-            onClick={() => navigate(`${basePath}/competency-analytics?lang=${effectiveLanguage}`)}
+            onClick={() => navigate(`${basePath}/competency-analytics`)}
             className="inline-flex items-center gap-2 bg-white border border-[#dbeafe] text-[#1C4A8B] px-7 py-3.5 rounded-xl text-sm font-semibold hover:bg-[#f0f6ff] transition-colors shadow-sm"
           >
             <TrendingUp className="w-4 h-4" />
-            {isAR ? 'عرض تحليلات الكفاءات' : 'View My Competency Analytics'}
+            View My Competency Analytics
           </button>
         </div>
       </div>

@@ -7,7 +7,7 @@
  * - Tab 3: Flashcards (deck management)
  * - Tab 4: Access Management
  *
- * Language toggle (EN / AR) applies globally across all tabs.
+ * English only — Arabic content is hidden from the Learning System.
  */
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -64,7 +64,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/shared/utils/cn';
 import { AccessManagement } from './AccessManagement';
 
-type ExamLanguage = 'en' | 'ar';
+type ExamLanguage = 'en';
 type AdminTab = 'curriculum' | 'quizzes' | 'flashcards' | 'access';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -106,14 +106,11 @@ function ModuleRow({
   );
 
   const filteredLessons = useMemo(
-    () => (lessons || []).filter((l) => l.exam_language === language).sort((a, b) => a.order_index - b.order_index),
-    [lessons, language]
+    () => (lessons || []).filter((l) => l.exam_language === 'en').sort((a, b) => a.order_index - b.order_index),
+    [lessons]
   );
 
-  const moduleName =
-    language === 'ar' && module.competency_name_ar
-      ? module.competency_name_ar
-      : module.competency_name;
+  const moduleName = module.competency_name;
 
   const sectionColor =
     module.section_type === 'knowledge_based'
@@ -215,7 +212,7 @@ function ModuleRow({
             </div>
           ) : filteredLessons.length === 0 ? (
             <p className="text-sm text-gray-400 italic py-1">
-              No {language === 'ar' ? 'Arabic' : 'English'} lessons yet.
+              No English lessons yet.
             </p>
           ) : (
             filteredLessons.map((lesson) => {
@@ -233,13 +230,13 @@ function ModuleRow({
                   {/* Title */}
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-800 truncate">
-                      {language === 'ar' && lesson.title_ar ? lesson.title_ar : lesson.title}
+                      {lesson.title}
                     </p>
                     {/* Quiz badge */}
                     {linkedQuiz ? (
                       <span className="text-xs text-green-600 flex items-center gap-1 mt-0.5">
                         <CheckCircle2 className="h-3 w-3" />
-                        Quiz: {language === 'ar' && linkedQuiz.title_ar ? linkedQuiz.title_ar : linkedQuiz.title}
+                        Quiz: {linkedQuiz.title}
                       </span>
                     ) : (
                       <span className="text-xs text-amber-500 flex items-center gap-1 mt-0.5">
@@ -549,8 +546,7 @@ function QuizzesTab({ language }: { language: ExamLanguage }) {
     const q = search.toLowerCase();
     return (quizzes || []).filter(
       (quiz) =>
-        quiz.title.toLowerCase().includes(q) ||
-        (quiz.title_ar || '').toLowerCase().includes(q)
+              quiz.title.toLowerCase().includes(q)
     );
   }, [quizzes, search]);
 
@@ -608,7 +604,7 @@ function QuizzesTab({ language }: { language: ExamLanguage }) {
             >
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 text-sm truncate">
-                  {language === 'ar' && quiz.title_ar ? quiz.title_ar : quiz.title}
+                  {quiz.title}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-gray-400">{quiz.certification_type}</span>
@@ -676,8 +672,7 @@ function FlashcardsTab({ language }: { language: ExamLanguage }) {
     const q = search.toLowerCase();
     return (decks || []).filter(
       (d) =>
-        d.title.toLowerCase().includes(q) ||
-        (d.title_ar || '').toLowerCase().includes(q)
+        d.title.toLowerCase().includes(q)
     );
   }, [decks, search]);
 
@@ -735,7 +730,7 @@ function FlashcardsTab({ language }: { language: ExamLanguage }) {
             >
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 text-sm truncate">
-                  {language === 'ar' && deck.title_ar ? deck.title_ar : deck.title}
+                  {deck.title}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-gray-400">{deck.certification_type}</span>
@@ -783,7 +778,7 @@ function FlashcardsTab({ language }: { language: ExamLanguage }) {
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 export function LearningSystemAdmin() {
-  const [language, setLanguage] = useState<ExamLanguage>('en');
+  const language: ExamLanguage = 'en';
   const [activeTab, setActiveTab] = useState<AdminTab>('curriculum');
 
   return (
@@ -801,28 +796,10 @@ export function LearningSystemAdmin() {
             </p>
           </div>
 
-          {/* Language Toggle */}
-          <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1">
-            <button
-              onClick={() => setLanguage('en')}
-              className={cn(
-                'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5',
-                language === 'en' ? 'bg-white text-navy-800' : 'text-white/80 hover:text-white'
-              )}
-            >
-              <Globe className="h-3.5 w-3.5" />
-              English
-            </button>
-            <button
-              onClick={() => setLanguage('ar')}
-              className={cn(
-                'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5',
-                language === 'ar' ? 'bg-white text-navy-800' : 'text-white/80 hover:text-white'
-              )}
-            >
-              <Globe className="h-3.5 w-3.5" />
-              العربية
-            </button>
+          {/* English Only Badge */}
+          <div className="flex items-center gap-1 bg-white/10 rounded-lg px-3 py-1.5">
+            <Globe className="h-3.5 w-3.5 text-white" />
+            <span className="text-sm font-medium text-white">English</span>
           </div>
         </div>
       </div>

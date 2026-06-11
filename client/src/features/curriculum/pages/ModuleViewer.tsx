@@ -60,18 +60,9 @@ export function ModuleViewer() {
     return '/learning-system/training-kits';
   }, [location.pathname]);
 
-  const searchParams = new URLSearchParams(location.search);
-  const urlLang = searchParams.get('lang');
+  const getBackUrl = () => basePath;
 
-  const getBackUrl = (moduleLang?: string) => {
-    const lang = urlLang || moduleLang;
-    return lang ? `${basePath}?lang=${lang}` : basePath;
-  };
-
-  const withLang = (path: string) => {
-    if (urlLang) return `${path}?lang=${urlLang}`;
-    return path;
-  };
+  const withLang = (path: string) => path;
 
   const { data: moduleData, isLoading, error } = useModuleDetail(user?.id, moduleId!);
 
@@ -127,15 +118,11 @@ export function ModuleViewer() {
   }
 
   const { module, progress, nextModule } = moduleData;
-  const isArabic = module.exam_language === 'ar';
-
   // Strip "Module N: " prefix from title if present
   const stripModulePrefix = (title: string) => title.replace(/^Module\s+\d+:\s*/i, '');
 
-  const moduleTitle = stripModulePrefix(
-    isArabic ? (module.competency_name_ar || module.competency_name) : module.competency_name
-  );
-  const moduleDesc = isArabic ? (module.description_ar || module.description) : module.description;
+  const moduleTitle = stripModulePrefix(module.competency_name);
+  const moduleDesc = module.description;
   const progressPct = progress?.progress_percentage || 0;
   const isCompleted = progress?.status === 'completed';
 
@@ -154,14 +141,14 @@ export function ModuleViewer() {
       : { background: '#e0f2fe', color: '#0369a1' };
 
   const nextModuleTitle = nextModule
-    ? stripModulePrefix(isArabic ? (nextModule.competency_name_ar || nextModule.competency_name) : nextModule.competency_name)
+    ? stripModulePrefix(nextModule.competency_name)
     : null;
 
   return (
     <div
       className={`min-h-screen ${isFullscreen ? 'fixed inset-0 z-50 overflow-auto' : ''}`}
       style={{ background: BDA.bluePale, fontFamily: "'Inter', 'Segoe UI', sans-serif" }}
-      dir={isArabic ? 'rtl' : 'ltr'}
+
     >
       {/* ─── TOP BAR ─── */}
       <div
@@ -178,7 +165,7 @@ export function ModuleViewer() {
                   size="sm"
                   className="flex-shrink-0 gap-1.5 font-medium"
                   style={{ color: BDA.navy }}
-                  onClick={() => navigate(getBackUrl(module.exam_language))}
+                  onClick={() => navigate(getBackUrl())}
                 >
                   <ArrowLeft className="h-4 w-4" />
                   <span className="hidden sm:inline">Curriculum</span>
@@ -238,7 +225,7 @@ export function ModuleViewer() {
                 size="sm"
                 className="gap-1.5"
                 style={{ borderColor: BDA.border, color: BDA.navy }}
-                onClick={() => { setIsFullscreen(false); navigate(getBackUrl(module.exam_language)); }}
+                onClick={() => { setIsFullscreen(false); navigate(getBackUrl()); }}
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Curriculum
@@ -298,7 +285,7 @@ export function ModuleViewer() {
                   <h3 className="text-sm font-semibold" style={{ color: BDA.navy }}>Learning Objectives</h3>
                 </div>
                 <ul className="space-y-2">
-                  {(isArabic && module.learning_objectives_ar
+                  {(false && module.learning_objectives_ar
                     ? module.learning_objectives_ar
                     : module.learning_objectives
                   ).map((obj: string, i: number) => (

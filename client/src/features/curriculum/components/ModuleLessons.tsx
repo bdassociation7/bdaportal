@@ -43,7 +43,7 @@ export function ModuleLessons({
   const { data: lessons, isLoading: isLoadingLessons } = useLessonsByModule(moduleId);
   const { data: allProgress, isLoading: isLoadingProgress } = useLessonProgress(userId, progressFilters);
 
-  const isArabic = examLanguage === 'ar';
+
 
   if (isLoadingLessons || isLoadingProgress) {
     return (
@@ -76,8 +76,7 @@ export function ModuleLessons({
   ).length;
 
   const handleLessonClick = (lesson: Lesson) => {
-    const lang = isArabic ? 'AR' : 'EN';
-    navigate(`${basePath}/modules/${moduleId}/lessons/${lesson.id}?lang=${lang}`);
+    navigate(`${basePath}/modules/${moduleId}/lessons/${lesson.id}`);
   };
 
   return (
@@ -98,7 +97,7 @@ export function ModuleLessons({
           const progress = getLessonProgress(lesson.id);
           const isCompleted = progress?.status === 'completed';
           const isInProgress = progress?.status === 'in_progress';
-          const displayTitle = isArabic ? (lesson.title_ar || lesson.title) : lesson.title;
+          const displayTitle = lesson.title;
 
           // Style per status
           const rowStyle = isCompleted
@@ -139,7 +138,7 @@ export function ModuleLessons({
                 <p
                   className="text-sm font-medium leading-snug"
                   style={{ color: BDA.navyDark }}
-                  dir={isArabic ? 'rtl' : 'ltr'}
+
                 >
                   {displayTitle}
                 </p>

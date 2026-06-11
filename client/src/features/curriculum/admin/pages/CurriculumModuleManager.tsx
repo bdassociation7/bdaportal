@@ -22,19 +22,17 @@ import { useToast } from '@/components/ui/use-toast';
 import { StatCard } from '../components/shared';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-type ExamLanguage = 'en' | 'ar';
-
 /**
  * Curriculum Module Manager (Admin)
- * Language-tabbed interface for managing EN and AR curriculum modules separately.
+ * English only — Arabic content is hidden from the Learning System.
  * The curriculum is shared across both certifications (CP & SCP) — only quizzes differ.
  */
 export function CurriculumModuleManager() {
   const { t } = useLanguage();
   const { toast } = useToast();
 
-  // Active language tab
-  const [activeLanguage, setActiveLanguage] = useState<ExamLanguage>('en');
+  // Always English
+  const activeLanguage = 'en' as const;
 
   // Editor / preview state
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
@@ -45,18 +43,18 @@ export function CurriculumModuleManager() {
   const [filterSection, setFilterSection] = useState<'all' | 'knowledge_based' | 'behavioural'>('all');
   const [filterPublished, setFilterPublished] = useState<'all' | 'published' | 'draft'>('all');
 
-  // Fetch modules for the active language tab
+  // Fetch English modules only
   const { data: modules, isLoading, refetch } = useQuery({
     queryKey: curriculumKeys.modulesList({
       section_type: filterSection === 'all' ? undefined : filterSection,
       is_published: filterPublished === 'all' ? undefined : filterPublished === 'published',
-      exam_language: activeLanguage,
+      exam_language: 'en',
     }),
     queryFn: async () => {
       const result = await CurriculumService.getModules({
         section_type: filterSection === 'all' ? undefined : filterSection,
         is_published: filterPublished === 'all' ? undefined : filterPublished === 'published',
-        exam_language: activeLanguage,
+        exam_language: 'en',
       });
       if (result.error) throw result.error;
       return result.data || [];
@@ -87,18 +85,11 @@ export function CurriculumModuleManager() {
     }
   };
 
-  // Switch language tab and reset section filter
-  const handleLanguageSwitch = (lang: ExamLanguage) => {
-    setActiveLanguage(lang);
-    setFilterSection('all');
-    setFilterPublished('all');
-  };
-
   if (selectedModule || isCreating) {
     return (
       <ModuleEditor
         moduleId={selectedModule || undefined}
-        defaultLanguage={isCreating ? activeLanguage : undefined}
+        defaultLanguage={isCreating ? 'en' : undefined}
         onClose={() => {
           setSelectedModule(null);
           setIsCreating(false);
@@ -112,8 +103,7 @@ export function CurriculumModuleManager() {
     return <ModulePreview moduleId={previewModule} onClose={() => setPreviewModule(null)} />;
   }
 
-  const isEN = activeLanguage === 'en';
-  const tabColor = isEN ? 'blue' : 'emerald';
+  const isEN = true;
 
   // Section label helper
   const sectionLabel = (section: string) => {
@@ -148,61 +138,20 @@ export function CurriculumModuleManager() {
             </p>
           </div>
 
-          {/* Add Module Button — language-aware */}
+          {/* Add Module Button */}
           <button
             onClick={() => setIsCreating(true)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow transition
-              ${isEN
-                ? 'bg-white text-blue-600 hover:bg-blue-50'
-                : 'bg-white text-emerald-600 hover:bg-emerald-50'
-              }`}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow transition bg-white text-blue-600 hover:bg-blue-50"
           >
             <Plus className="w-4 h-4" />
-            {isEN ? '🇬🇧 Add English Module' : '🇸🇦 إضافة وحدة عربية'}
+            Add Module
           </button>
         </div>
       </div>
 
-      {/* ── Language Tabs ────────────────────────────────────────────── */}
+      {/* ── Modules Table ────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Tab Bar */}
-        <div className="flex border-b border-gray-200">
-          {/* English Tab */}
-          <button
-            onClick={() => handleLanguageSwitch('en')}
-            className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 font-semibold text-sm transition-all
-              ${activeLanguage === 'en'
-                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-              }`}
-          >
-            <span className="text-xl">🇬🇧</span>
-            <span>English Modules</span>
-            {activeLanguage === 'en' && modules && (
-              <span className="ml-1 bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                {modules.length}
-              </span>
-            )}
-          </button>
-
-          {/* Arabic Tab */}
-          <button
-            onClick={() => handleLanguageSwitch('ar')}
-            className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 font-semibold text-sm transition-all
-              ${activeLanguage === 'ar'
-                ? 'bg-emerald-50 text-emerald-700 border-b-2 border-emerald-600'
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-              }`}
-          >
-            <span className="text-xl">🇸🇦</span>
-            <span>الوحدات العربية</span>
-            {activeLanguage === 'ar' && modules && (
-              <span className="ml-1 bg-emerald-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                {modules.length}
-              </span>
-            )}
-          </button>
-        </div>
+        <div>
 
         {/* Tab Content */}
         <div className="p-5">
@@ -252,7 +201,7 @@ export function CurriculumModuleManager() {
             <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="min-w-full divide-y divide-gray-100">
                 <thead>
-                  <tr className={`${isEN ? 'bg-blue-50' : 'bg-emerald-50'}`}>
+                    <tr className="bg-blue-50">
                     <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-8">#</th>
                     <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Module Name</th>
                     <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Section</th>
@@ -268,8 +217,7 @@ export function CurriculumModuleManager() {
                       <tr key={module.id} className="hover:bg-gray-50 transition-colors">
                         {/* Order index */}
                         <td className="px-5 py-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold
-                            ${isEN ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold bg-blue-100 text-blue-700">
                             {module.order_index}
                           </div>
                         </td>
@@ -277,9 +225,6 @@ export function CurriculumModuleManager() {
                         {/* Module name */}
                         <td className="px-5 py-3">
                           <p className="font-medium text-gray-900 text-sm">{module.competency_name}</p>
-                          {module.competency_name_ar && (
-                            <p className="text-xs text-gray-500 mt-0.5" dir="rtl">{module.competency_name_ar}</p>
-                          )}
                         </td>
 
                         {/* Section badge */}
@@ -361,18 +306,18 @@ export function CurriculumModuleManager() {
             <div className="py-16 text-center">
               <BookMarked className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 mb-4">
-                No {isEN ? 'English' : 'Arabic'} modules found.
+                No modules found.
               </p>
               <button
                 onClick={() => setIsCreating(true)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition
-                  ${isEN ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition bg-blue-600 text-white hover:bg-blue-700"
               >
                 <Plus className="w-4 h-4" />
-                {isEN ? 'Create first English module' : 'إنشاء أول وحدة عربية'}
+                Create first module
               </button>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

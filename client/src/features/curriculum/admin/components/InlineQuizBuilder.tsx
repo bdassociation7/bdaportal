@@ -39,8 +39,8 @@ interface DraftQuestion {
 interface InlineQuizBuilderProps {
   /** ID of the existing linked quiz (if any) */
   quizId?: string;
-  /** Language of the lesson – used to label the quiz automatically */
-  language: 'en' | 'ar';
+  /** Language of the lesson – always EN */
+  language?: 'en';
   /** Lesson title – used to auto-name the quiz */
   lessonTitle?: string;
   /** Called after a quiz is created/updated with the new quiz ID */
@@ -195,8 +195,8 @@ export const InlineQuizBuilder: React.FC<InlineQuizBuilderProps> = ({
           ? `${lessonTitle} – Quiz`
           : `Lesson Quiz`;
         const { data: newQuiz, error: quizErr } = await QuizService.createQuiz({
-          title: language === 'en' ? autoTitle : `${autoTitle} (EN)`,
-          title_ar: language === 'ar' ? autoTitle : undefined,
+          title: autoTitle,
+          title_ar: undefined,
           certification_type: 'CP',  // lesson quizzes are not certification exams
           difficulty_level: 'medium',
           time_limit_minutes: 10,

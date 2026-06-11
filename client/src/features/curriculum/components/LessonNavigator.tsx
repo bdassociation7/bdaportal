@@ -46,8 +46,6 @@ export function LessonNavigator({
     return lang ? `${path}?lang=${lang}` : path;
   };
 
-  const isArabic = moduleLang?.toLowerCase() === 'ar';
-
   return (
     <div className="mt-8 space-y-4">
       {/* Lesson Progress Dots */}
@@ -94,7 +92,7 @@ export function LessonNavigator({
                     isCurrent ? 'text-blue-600 font-medium' : 'text-muted-foreground'
                   }`}
                 >
-                  {isArabic ? ((lesson as any).title_ar || lesson.title) : lesson.title}
+                  {lesson.title}
                 </span>
               </button>
             );

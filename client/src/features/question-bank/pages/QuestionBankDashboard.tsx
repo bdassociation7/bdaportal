@@ -1,12 +1,11 @@
 /**
- * Question Bank Dashboard — Arabic-First Design
- * - Fully Arabic when lang=AR, fully English when lang=EN
- * - CP / SCP separated (SHRM-style)
+ * Question Bank Dashboard — English Only
+ * - CP / SCP separated
  * - BDA Brand Colors: #0d1f4e, #1C4A8B, #0f91e0
  */
 
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useQuestionSetsWithProgress,
@@ -16,7 +15,6 @@ import {
   useQuestionBankAccess,
   useUserAccesses,
   useLanguageAccess,
-  type Language,
 } from '@/entities/curriculum';
 import {
   ArrowRight,
@@ -149,10 +147,9 @@ function t(key: string, isAR: boolean): string {
 interface QuestionSetCardProps {
   questionSet: QuestionSetWithProgress;
   onClick: () => void;
-  isAR: boolean;
 }
 
-function QuestionSetCard({ questionSet, onClick, isAR }: QuestionSetCardProps) {
+function QuestionSetCard({ questionSet, onClick }: QuestionSetCardProps) {
   const progress = questionSet.progress;
   const isCompleted = progress?.completed_at !== null && progress?.completed_at !== undefined;
   const hasAttempted = (progress?.attempts_count || 0) > 0;
@@ -160,7 +157,7 @@ function QuestionSetCard({ questionSet, onClick, isAR }: QuestionSetCardProps) {
   const bestScore = progress?.best_score_percentage || 0;
   const passingScore = questionSet.passing_score || 70;
 
-  const title = isAR && questionSet.title_ar ? questionSet.title_ar : questionSet.title;
+  const title = questionSet.title;
 
   return (
     <div
@@ -179,14 +176,14 @@ function QuestionSetCard({ questionSet, onClick, isAR }: QuestionSetCardProps) {
           {isCompleted && (
             <span className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0">
               <CheckCircle className="w-3 h-3" />
-              {t('passed', isAR)}
+              {t('passed', false)}
             </span>
           )}
         </div>
         {questionSet.is_final_test && (
           <div className="flex items-center gap-1 mt-2 text-orange-600 text-xs font-medium">
             <Target className="w-3 h-3" />
-            {t('finalTest', isAR)}
+            {t('finalTest', false)}
           </div>
         )}
       </div>
@@ -196,22 +193,22 @@ function QuestionSetCard({ questionSet, onClick, isAR }: QuestionSetCardProps) {
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="text-center">
             <p className="text-lg font-bold text-[#1C4A8B]">{questionSet.question_count}</p>
-            <p className="text-xs text-slate-400">{t('questions', isAR)}</p>
+            <p className="text-xs text-slate-400">{t('questions', false)}</p>
           </div>
           <div className="text-center">
             <p className="text-lg font-bold text-[#0f91e0]">{progress?.attempts_count || 0}</p>
-            <p className="text-xs text-slate-400">{t('attempts', isAR)}</p>
+            <p className="text-xs text-slate-400">{t('attempts', false)}</p>
           </div>
           <div className="text-center">
             <p className="text-lg font-bold text-purple-600">{bestScore}%</p>
-            <p className="text-xs text-slate-400">{t('bestScore', isAR)}</p>
+            <p className="text-xs text-slate-400">{t('bestScore', false)}</p>
           </div>
         </div>
 
         {hasAttempted && (
           <div>
             <div className="flex justify-between text-xs text-slate-400 mb-1">
-              <span>{t('lastScore', isAR)}</span>
+              <span>{t('lastScore', false)}</span>
               <span className={lastScore >= passingScore ? 'text-green-600 font-semibold' : 'text-amber-600 font-semibold'}>
                 {lastScore}%
               </span>
@@ -222,14 +219,14 @@ function QuestionSetCard({ questionSet, onClick, isAR }: QuestionSetCardProps) {
                 style={{ width: `${lastScore}%` }}
               />
             </div>
-            <p className="text-xs text-slate-300 mt-1">{t('passingScore', isAR)}: {passingScore}%</p>
+            <p className="text-xs text-slate-300 mt-1">{t('passingScore', false)}: {passingScore}%</p>
           </div>
         )}
 
         {questionSet.time_limit_minutes && (
           <div className="flex items-center gap-1 text-slate-400 text-xs mt-2">
             <Clock className="w-3 h-3" />
-            {questionSet.time_limit_minutes} {t('min', isAR)}
+            {questionSet.time_limit_minutes} {t('min', false)}
           </div>
         )}
       </div>
@@ -241,12 +238,12 @@ function QuestionSetCard({ questionSet, onClick, isAR }: QuestionSetCardProps) {
       >
         <span className="text-sm font-semibold text-[#1C4A8B] flex items-center gap-1.5">
           {hasAttempted ? (
-            <><RefreshCw className="w-3.5 h-3.5" />{t('practiceAgain', isAR)}</>
+            <><RefreshCw className="w-3.5 h-3.5" />{t('practiceAgain', false)}</>
           ) : (
-            <><Play className="w-3.5 h-3.5 fill-current" />{t('startPractice', isAR)}</>
+            <><Play className="w-3.5 h-3.5 fill-current" />{t('startPractice', false)}</>
           )}
         </span>
-        <ChevronLeft className={`w-4 h-4 text-slate-300 ${isAR ? '' : 'rotate-180'}`} />
+        <ChevronLeft className="w-4 h-4 text-slate-300 rotate-180" />
       </div>
     </div>
   );
@@ -303,12 +300,10 @@ function CompetencyAccordion({
   competencyName,
   subUnits,
   basePath,
-  isAR,
 }: {
   competencyName: string;
   subUnits: Record<string, QuestionSetWithProgress[]>;
   basePath: string;
-  isAR: boolean;
 }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -325,7 +320,7 @@ function CompetencyAccordion({
           <span className="font-semibold text-[#0d1f4e] text-sm">{competencyName}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">{Object.keys(subUnits).length} {t('subLessons', isAR)} · {totalSets} {t('sets', isAR)}</span>
+          <span className="text-xs text-slate-400">{Object.keys(subUnits).length} {t('subLessons', false)} · {totalSets} {t('sets', false)}</span>
           {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </button>
@@ -336,7 +331,7 @@ function CompetencyAccordion({
             .map(([subUnitId, sets]) => {
               const subUnit = sets[0]?.sub_unit;
               if (!subUnit) return null;
-              const subTitle = isAR && subUnit.title_ar ? subUnit.title_ar : subUnit.title;
+              const subTitle = subUnit.title;
               return (
                 <div key={subUnitId}>
                   <p className="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
@@ -350,8 +345,7 @@ function CompetencyAccordion({
                       <QuestionSetCard
                         key={set.id}
                         questionSet={set}
-                        isAR={isAR}
-                        onClick={() => navigate(`${basePath}/question-bank/${set.id}?lang=${isAR ? 'AR' : 'EN'}`)}
+                        onClick={() => navigate(`${basePath}/question-bank/${set.id}`)}
                       />
                     ))}
                   </div>
@@ -368,16 +362,7 @@ function CompetencyAccordion({
 export function QuestionBankDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const { user } = useAuth();
-
-  const langFromUrl = searchParams.get('lang') as Language | null;
-  const [selectedLanguage, setSelectedLanguage] = useState<Language>(langFromUrl || 'EN');
-  const isAR = selectedLanguage === 'AR';
-
-  useEffect(() => {
-    if (langFromUrl && langFromUrl !== selectedLanguage) setSelectedLanguage(langFromUrl);
-  }, [langFromUrl]);
 
   const basePath = useMemo(() => {
     return location.pathname.startsWith('/ecp/') ? '/ecp/learning-system' : '/learning-system';
@@ -387,11 +372,11 @@ export function QuestionBankDashboard() {
   const [certType, setCertType] = useState<'CP' | 'SCP'>('CP');
 
   const { data: accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(user?.id);
-  const { data: hasQuestionBankAccess, isLoading: accessLoading } = useQuestionBankAccess(user?.id, selectedLanguage);
-  const { data: languageAccess, isLoading: languageAccessLoading } = useLanguageAccess(user?.id, selectedLanguage);
+  const { data: hasQuestionBankAccess, isLoading: accessLoading } = useQuestionBankAccess(user?.id, 'EN');
+  const { data: languageAccess, isLoading: languageAccessLoading } = useLanguageAccess(user?.id, 'EN');
 
-  const { data: questionSets, isLoading: isLoadingSets } = useQuestionSetsWithProgress(user?.id, certType, selectedLanguage);
-  const { data: stats } = useQuestionBankStats(user?.id, certType, selectedLanguage.toLowerCase() as 'en' | 'ar');
+  const { data: questionSets, isLoading: isLoadingSets } = useQuestionSetsWithProgress(user?.id, certType, 'EN');
+  const { data: stats } = useQuestionBankStats(user?.id, certType, 'en');
 
   // Group hierarchically
   const groupedSets = useMemo(() => {
@@ -430,7 +415,7 @@ export function QuestionBankDashboard() {
       <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff]">
         <div className="text-center">
           <div className="w-14 h-14 rounded-full border-4 border-[#dbeafe] border-t-[#1C4A8B] animate-spin mx-auto mb-5" />
-          <p className="text-slate-500 font-medium">{t('loading', isAR)}</p>
+          <p className="text-slate-500 font-medium">{t('loading', false)}</p>
         </div>
       </div>
     );
@@ -440,24 +425,24 @@ export function QuestionBankDashboard() {
   if (!hasQuestionBankAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff] px-4">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-[#dbeafe] p-10 text-center" dir={isAR ? 'rtl' : 'ltr'}>
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-[#dbeafe] p-10 text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">{t('accessRequired', isAR)}</h2>
-          <p className="text-slate-500 mb-8 text-sm leading-relaxed">{t('accessRequiredSub', isAR)}</p>
+          <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">{t('accessRequired', false)}</h2>
+          <p className="text-slate-500 mb-8 text-sm leading-relaxed">{t('accessRequiredSub', false)}</p>
           <div className="space-y-3">
             <button
-              onClick={() => navigate(`${basePath}?lang=${selectedLanguage}`)}
+              onClick={() => navigate(basePath)}
               className="w-full bg-gradient-to-r from-[#1C4A8B] to-[#0d1f4e] text-white font-semibold py-3 px-6 rounded-xl hover:opacity-90 transition-opacity"
             >
-              {t('backToLearning', isAR)}
+              {t('backToLearning', false)}
             </button>
             <button
               onClick={() => window.location.href = 'https://bda-global.org/shop'}
               className="w-full border border-[#dbeafe] text-[#1C4A8B] font-semibold py-3 px-6 rounded-xl hover:bg-[#f0f6ff] transition-colors"
             >
-              {t('visitShop', isAR)}
+              {t('visitShop', false)}
             </button>
           </div>
         </div>
@@ -467,7 +452,7 @@ export function QuestionBankDashboard() {
 
   // ── Main Dashboard ────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f0f6ff]" dir={isAR ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-[#f0f6ff]">
 
       {/* ── Hero Header ──────────────────────────────────────────────────── */}
       <div
@@ -480,11 +465,11 @@ export function QuestionBankDashboard() {
         <div className="relative container mx-auto px-6 py-10 max-w-6xl">
           {/* Back */}
           <button
-            onClick={() => navigate(`${basePath}?lang=${selectedLanguage}`)}
+            onClick={() => navigate(basePath)}
             className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm mb-6 group"
           >
-            <ArrowRight className={`w-4 h-4 transition-transform ${isAR ? 'group-hover:translate-x-1' : 'rotate-180 group-hover:-translate-x-1'}`} />
-            {t('backToLearning', isAR)}
+            <ArrowRight className="w-4 h-4 transition-transform rotate-180 group-hover:-translate-x-1" />
+            {t('backToLearning', false)}
           </button>
 
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -496,19 +481,19 @@ export function QuestionBankDashboard() {
                 <span className="text-white/70 text-sm font-medium">BDA Learning System</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-2">
-                {t('questionBank', isAR)}
+                {t('questionBank', false)}
               </h1>
-              <p className="text-white/70 text-base">{t('questionBankSub', isAR)}</p>
+              <p className="text-white/70 text-base">{t('questionBankSub', false)}</p>
             </div>
 
             {/* Stats Row */}
             {stats && (
               <div className="flex flex-wrap gap-3">
                 {[
-                  { icon: <HelpCircle className="w-4 h-4" />, value: stats.questionsAttempted, label: t('questionsAttempted', isAR) },
-                  { icon: <CheckCircle className="w-4 h-4" />, value: `${stats.questionsAttempted > 0 ? Math.round((stats.questionsCorrect / stats.questionsAttempted) * 100) : 0}%`, label: t('accuracy', isAR) },
-                  { icon: <TrendingUp className="w-4 h-4" />, value: `${Math.round(stats.averageScore)}%`, label: t('avgScore', isAR) },
-                  { icon: <Star className="w-4 h-4" />, value: `${stats.setsCompleted}/${stats.totalQuestionSets}`, label: t('setsCompleted', isAR) },
+                  { icon: <HelpCircle className="w-4 h-4" />, value: stats.questionsAttempted, label: t('questionsAttempted', false) },
+                  { icon: <CheckCircle className="w-4 h-4" />, value: `${stats.questionsAttempted > 0 ? Math.round((stats.questionsCorrect / stats.questionsAttempted) * 100) : 0}%`, label: t('accuracy', false) },
+                  { icon: <TrendingUp className="w-4 h-4" />, value: `${Math.round(stats.averageScore)}%`, label: t('avgScore', false) },
+                  { icon: <Star className="w-4 h-4" />, value: `${stats.setsCompleted}/${stats.totalQuestionSets}`, label: t('setsCompleted', false) },
                 ].map((s, i) => (
                   <div key={i} className="flex flex-col items-center gap-1 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 border border-white/20 min-w-[90px]">
                     <div className="text-white/60">{s.icon}</div>
@@ -527,7 +512,7 @@ export function QuestionBankDashboard() {
 
         {/* ── CP / SCP Selector ─────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-[#dbeafe] p-6 shadow-sm">
-          <p className="text-sm font-semibold text-slate-500 mb-4">{t('certSelect', isAR)}</p>
+          <p className="text-sm font-semibold text-slate-500 mb-4">{t('certSelect', false)}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(['CP', 'SCP'] as const).map((type) => {
               const isSelected = certType === type;
@@ -551,14 +536,14 @@ export function QuestionBankDashboard() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-[#1C4A8B]/10 text-[#1C4A8B]'}`}>
-                        {isCP ? t('certCPShort', isAR) : t('certSCPShort', isAR)}
+                        {isCP ? t('certCPShort', false) : t('certSCPShort', false)}
                       </span>
                     </div>
                     <p className={`font-bold text-sm leading-snug ${isSelected ? 'text-white' : 'text-[#0d1f4e]'}`}>
-                      {isCP ? t('certCP', isAR) : t('certSCP', isAR)}
+                      {isCP ? t('certCP', false) : t('certSCP', false)}
                     </p>
                     <p className={`text-xs mt-0.5 ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>
-                      {isCP ? t('certCPDesc', isAR) : t('certSCPDesc', isAR)}
+                      {isCP ? t('certCPDesc', false) : t('certSCPDesc', false)}
                     </p>
                   </div>
                   {isSelected && (
@@ -573,8 +558,8 @@ export function QuestionBankDashboard() {
         {/* ── Introduction Sets ─────────────────────────────────────────── */}
         {groupedSets.introduction.length > 0 && (
           <AccordionSection
-            title={t('introduction', isAR)}
-            subtitle={t('introSub', isAR)}
+            title={t('introduction', false)}
+            subtitle={t('introSub', false)}
             icon={<BookOpen className="w-5 h-5 text-slate-600" />}
             color="bg-slate-100"
             count={groupedSets.introduction.length}
@@ -585,8 +570,7 @@ export function QuestionBankDashboard() {
                 <QuestionSetCard
                   key={set.id}
                   questionSet={set}
-                  isAR={isAR}
-                  onClick={() => navigate(`${basePath}/question-bank/${set.id}?lang=${selectedLanguage}`)}
+                  onClick={() => navigate(`${basePath}/question-bank/${set.id}`)}
                 />
               ))}
             </div>
@@ -596,8 +580,8 @@ export function QuestionBankDashboard() {
         {/* ── Behavioural Competencies ───────────────────────────────────── */}
         {Object.keys(groupedSets.behavioural).length > 0 && (
           <AccordionSection
-            title={t('behavioural', isAR)}
-            subtitle={`${Object.keys(groupedSets.behavioral).length} ${t('competencies', isAR)}`}
+            title={t('behavioural', false)}
+            subtitle={`${Object.keys(groupedSets.behavioural).length} ${t('competencies', false)}`}
             icon={<Layers className="w-5 h-5 text-purple-600" />}
             color="bg-purple-50"
             count={Object.values(groupedSets.behavioural).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
@@ -608,14 +592,13 @@ export function QuestionBankDashboard() {
                 const firstSet = Object.values(subUnits)[0]?.[0];
                 const competency = firstSet?.competency;
                 if (!competency) return null;
-                const name = isAR && competency.competency_name_ar ? competency.competency_name_ar : competency.competency_name;
+                const name = competency.competency_name;
                 return (
                   <CompetencyAccordion
                     key={cId}
                     competencyName={name}
                     subUnits={subUnits}
                     basePath={basePath}
-                    isAR={isAR}
                   />
                 );
               })}
@@ -626,8 +609,8 @@ export function QuestionBankDashboard() {
         {/* ── Knowledge Competencies ────────────────────────────────────── */}
         {Object.keys(groupedSets.knowledge).length > 0 && (
           <AccordionSection
-            title={t('knowledge', isAR)}
-            subtitle={`${Object.keys(groupedSets.knowledge).length} ${t('competencies', isAR)}`}
+            title={t('knowledge', false)}
+            subtitle={`${Object.keys(groupedSets.knowledge).length} ${t('competencies', false)}`}
             icon={<Brain className="w-5 h-5 text-blue-600" />}
             color="bg-blue-50"
             count={Object.values(groupedSets.knowledge).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
@@ -638,14 +621,13 @@ export function QuestionBankDashboard() {
                 const firstSet = Object.values(subUnits)[0]?.[0];
                 const competency = firstSet?.competency;
                 if (!competency) return null;
-                const name = isAR && competency.competency_name_ar ? competency.competency_name_ar : competency.competency_name;
+                const name = competency.competency_name;
                 return (
                   <CompetencyAccordion
                     key={cId}
                     competencyName={name}
                     subUnits={subUnits}
                     basePath={basePath}
-                    isAR={isAR}
                   />
                 );
               })}
@@ -656,8 +638,8 @@ export function QuestionBankDashboard() {
         {/* ── Standalone Sets ───────────────────────────────────────────── */}
         {groupedSets.standalone.length > 0 && (
           <AccordionSection
-            title={t('practiceSets', isAR)}
-            subtitle={t('practiceSetsSub', isAR)}
+            title={t('practiceSets', false)}
+            subtitle={t('practiceSetsSub', false)}
             icon={<Target className="w-5 h-5 text-amber-600" />}
             color="bg-amber-50"
             count={groupedSets.standalone.length}
@@ -667,8 +649,7 @@ export function QuestionBankDashboard() {
                 <QuestionSetCard
                   key={set.id}
                   questionSet={set}
-                  isAR={isAR}
-                  onClick={() => navigate(`${basePath}/question-bank/${set.id}?lang=${selectedLanguage}`)}
+                  onClick={() => navigate(`${basePath}/question-bank/${set.id}`)}
                 />
               ))}
             </div>
@@ -679,13 +660,13 @@ export function QuestionBankDashboard() {
         {questionSets?.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-[#dbeafe]">
             <HelpCircle className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-[#0d1f4e] mb-2">{t('noSets', isAR)}</h2>
-            <p className="text-slate-400 mb-6 text-sm">{t('noSetsSub', isAR)}</p>
+            <h2 className="text-xl font-bold text-[#0d1f4e] mb-2">{t('noSets', false)}</h2>
+            <p className="text-slate-400 mb-6 text-sm">{t('noSetsSub', false)}</p>
             <button
-              onClick={() => navigate(`${basePath}?lang=${selectedLanguage}`)}
+              onClick={() => navigate(basePath)}
               className="bg-[#1C4A8B] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#0d1f4e] transition-colors"
             >
-              {t('backToLearning', isAR)}
+              {t('backToLearning', false)}
             </button>
           </div>
         )}
