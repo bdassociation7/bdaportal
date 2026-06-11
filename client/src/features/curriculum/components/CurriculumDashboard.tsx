@@ -279,7 +279,7 @@ export function CurriculumDashboard({
               )}
 
               {/* Behavioural Competencies */}
-              {behaviouralModules.length > 0 && (
+              {behavioralModules.length > 0 && (
                 <section className="mb-10">
                   <SectionHeader
                     icon={<Zap className="w-5 h-5" />}
@@ -289,7 +289,7 @@ export function CurriculumDashboard({
                     iconColor={BDA.navy}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {behaviouralModules.map((m) => (
+                    {behavioralModules.map((m) => (
                       <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={false} />
                     ))}
                   </div>
