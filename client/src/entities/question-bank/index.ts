@@ -74,7 +74,7 @@ export {
   // Progress hooks
   useSetProgress,
   useQuestionBankStats,
-  useFavoritedQuestions,
+  useFavouritedQuestions,
 
   // Admin hooks
   useAdminQuestionBankStats,

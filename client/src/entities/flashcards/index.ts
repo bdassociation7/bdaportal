@@ -80,7 +80,7 @@ export {
 
   // Stats hooks
   useFlashcardStats,
-  useFavoritedCards,
+  useFavouritedCards,
 
   // Admin hooks
   useAdminFlashcardStats,

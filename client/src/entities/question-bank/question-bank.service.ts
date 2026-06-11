@@ -652,7 +652,7 @@ export class QuestionBankService {
       // Update the most recent attempt for this question
       const { error } = await supabase
         .from('user_question_attempts')
-        .update({ is_favourited: isFavourited })
+        .update({ is_favorited: isFavourited })
         .eq('user_id', userId)
         .eq('question_id', questionId)
         .order('attempted_at', { ascending: false })
@@ -685,7 +685,7 @@ export class QuestionBankService {
         .from('user_question_attempts')
         .select('question_id')
         .eq('user_id', userId)
-        .eq('is_favourited', true);
+        .eq('is_favorited', true);
 
       if (attemptsError) throw attemptsError;
 

@@ -708,7 +708,7 @@ export class FlashcardService {
             user_id: userId,
             flashcard_id: cardId,
             deck_id: deckId,
-            is_favourited: isFavourited,
+            is_favorited: isFavourited,
           },
           {
             onConflict: 'user_id,flashcard_id',
@@ -932,7 +932,7 @@ export class FlashcardService {
       // Get card progress counts
       const { data: cardProgress, error: cardProgressError } = await supabase
         .from('user_flashcard_progress')
-        .select('status, is_favourited')
+        .select('status, is_favorited')
         .eq('user_id', userId)
         .in('deck_id', deckIds);
 
@@ -949,7 +949,7 @@ export class FlashcardService {
 
       cardProgress?.forEach((p) => {
         counts[p.status as keyof typeof counts]++;
-        if (p.is_favorited) counts.favorited++;
+        if ((p as any).is_favorited) counts.favorited++
       });
 
       // Get cards due today
@@ -1016,7 +1016,7 @@ export class FlashcardService {
         .from('user_flashcard_progress')
         .select('flashcard_id')
         .eq('user_id', userId)
-        .eq('is_favourited', true);
+        .eq('is_favorited', true);
 
       if (progressError) throw progressError;
 

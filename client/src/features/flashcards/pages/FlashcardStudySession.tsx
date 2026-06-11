@@ -294,7 +294,7 @@ export function FlashcardStudySession() {
       userId: user.id,
       cardId: currentCard.id,
       deckId,
-      isFavorited: !currentFavorite,
+      isFavourited: !currentFavorite,
     });
   };
 
@@ -493,7 +493,7 @@ export function FlashcardStudySession() {
               card={currentCard}
               isFlipped={isFlipped}
               onFlip={() => setIsFlipped(!isFlipped)}
-              isFavourite={currentCard.progress?.is_favourited || false}
+              isFavourite={currentCard.progress?.is_favorited || false}
               onToggleFavourite={handleToggleFavourite}
             />
 
