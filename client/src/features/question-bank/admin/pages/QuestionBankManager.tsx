@@ -473,7 +473,6 @@ export function QuestionBankManager() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{texts.allSections}</SelectItem>
-            <SelectItem value="introduction">{texts.introduction}</SelectItem>
             <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
             <SelectItem value="behavioural">{texts.behavioral}</SelectItem>
           </SelectContent>
@@ -682,15 +681,12 @@ export function QuestionBankManager() {
                 <td className="py-3 px-4">
                   <span
                     className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      set.section_type === 'introduction'
-                        ? 'bg-gray-100 text-gray-700'
-                        : set.section_type === 'knowledge'
+                      set.section_type === 'knowledge'
                         ? 'bg-blue-100 text-blue-700'
                         : 'bg-purple-100 text-purple-700'
                     }`}
                   >
-                    {set.section_type === 'introduction' ? texts.introduction :
-                     set.section_type === 'knowledge' ? texts.knowledge : texts.behavioural}
+                    {set.section_type === 'knowledge' ? texts.knowledge : texts.behavioural}
                   </span>
                 </td>
                 <td className="py-3 px-4 text-center">
@@ -901,7 +897,6 @@ function QuestionSetDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="introduction">{texts.introduction}</SelectItem>
                   <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
                   <SelectItem value="behavioural">{texts.behavioural}</SelectItem>
                 </SelectContent>

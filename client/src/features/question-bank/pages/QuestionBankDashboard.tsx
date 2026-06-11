@@ -380,15 +380,14 @@ export function QuestionBankDashboard() {
 
   // Group hierarchically
   const groupedSets = useMemo(() => {
-    if (!questionSets) return { introduction: [], knowledge: {}, behavioural: {}, standalone: [] };
+    if (!questionSets) return { knowledge: {}, behavioural: {}, standalone: [] };
 
-    const introSets: QuestionSetWithProgress[] = [];
     const knowledge: Record<string, Record<string, QuestionSetWithProgress[]>> = {};
     const behavioural: Record<string, Record<string, QuestionSetWithProgress[]>> = {};
     const standalone: QuestionSetWithProgress[] = [];
 
     questionSets.forEach((set) => {
-      if (set.section_type === 'introduction') { introSets.push(set); return; }
+      if (set.section_type === 'introduction') { return; } // skip introduction
       if (set.competency && set.sub_unit) {
         const cId = set.competency.id;
         const sId = set.sub_unit.id;
@@ -406,7 +405,7 @@ export function QuestionBankDashboard() {
       }
     });
 
-    return { introduction: introSets, knowledge, behavioural, standalone };
+    return { knowledge, behavioural, standalone };
   }, [questionSets]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
@@ -555,27 +554,7 @@ export function QuestionBankDashboard() {
           </div>
         </div>
 
-        {/* ── Introduction Sets ─────────────────────────────────────────── */}
-        {groupedSets.introduction.length > 0 && (
-          <AccordionSection
-            title={t('introduction', false)}
-            subtitle={t('introSub', false)}
-            icon={<BookOpen className="w-5 h-5 text-slate-600" />}
-            color="bg-slate-100"
-            count={groupedSets.introduction.length}
-            defaultOpen
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-              {groupedSets.introduction.map((set) => (
-                <QuestionSetCard
-                  key={set.id}
-                  questionSet={set}
-                  onClick={() => navigate(`${basePath}/question-bank/${set.id}`)}
-                />
-              ))}
-            </div>
-          </AccordionSection>
-        )}
+        {/* Introduction section hidden — competencies only */}
 
         {/* ── Behavioural Competencies ───────────────────────────────────── */}
         {Object.keys(groupedSets.behavioural).length > 0 && (
