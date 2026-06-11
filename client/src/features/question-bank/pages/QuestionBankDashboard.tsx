@@ -412,8 +412,6 @@ export function QuestionBankDashboard() {
 
     questionSets.forEach((set) => {
       if (set.section_type === 'introduction') { return; } // skip introduction
-      // Skip sets with no questions for this certification type
-      if (set.question_count === 0) { return; }
       if (set.competency) {
         const cId = set.competency.id;
         // Use sub_unit id if available, otherwise use a placeholder key '__no_sub__'
