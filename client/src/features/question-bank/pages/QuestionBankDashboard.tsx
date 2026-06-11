@@ -322,15 +322,37 @@ function CompetencyAccordion({
           <span className="font-semibold text-[#0d1f4e] text-sm">{competencyName}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">{Object.keys(subUnits).length} {t('subLessons', false)} · {totalSets} {t('sets', false)}</span>
+          <span className="text-xs text-slate-400">
+            {Object.keys(subUnits).filter(k => k !== '__no_sub__').length > 0
+              ? `${Object.keys(subUnits).filter(k => k !== '__no_sub__').length} ${t('subLessons', false)} · `
+              : ''}{totalSets} {t('sets', false)}
+          </span>
           {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </button>
       {open && (
         <div className="p-4 space-y-4">
           {Object.entries(subUnits)
-            .sort(([, a], [, b]) => (a[0]?.sub_unit?.order_index || 0) - (b[0]?.sub_unit?.order_index || 0))
+            .sort(([keyA, a], [keyB, b]) => {
+              if (keyA === '__no_sub__') return -1;
+              if (keyB === '__no_sub__') return 1;
+              return (a[0]?.sub_unit?.order_index || 0) - (b[0]?.sub_unit?.order_index || 0);
+            })
             .map(([subUnitId, sets]) => {
+              // Sets without sub_unit — render directly without sub-lesson header
+              if (subUnitId === '__no_sub__') {
+                return (
+                  <div key="__no_sub__" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {sets.map((set) => (
+                      <QuestionSetCard
+                        key={set.id}
+                        questionSet={set}
+                        onClick={() => navigate(`${basePath}/question-bank/${set.id}`, { state: { certType } })}
+                      />
+                    ))}
+                  </div>
+                );
+              }
               const subUnit = sets[0]?.sub_unit;
               if (!subUnit) return null;
               const subTitle = subUnit.title;
@@ -390,17 +412,20 @@ export function QuestionBankDashboard() {
 
     questionSets.forEach((set) => {
       if (set.section_type === 'introduction') { return; } // skip introduction
-      if (set.competency && set.sub_unit) {
+      if (set.competency) {
         const cId = set.competency.id;
-        const sId = set.sub_unit.id;
+        // Use sub_unit id if available, otherwise use a placeholder key '__no_sub__'
+        const sId = set.sub_unit ? set.sub_unit.id : '__no_sub__';
         if (set.section_type === 'knowledge_based' || set.section_type === 'knowledge') {
           if (!knowledge[cId]) knowledge[cId] = {};
           if (!knowledge[cId][sId]) knowledge[cId][sId] = [];
           knowledge[cId][sId].push(set);
-        } else {
+        } else if (set.section_type === 'behavioral' || set.section_type === 'behavioural') {
           if (!behavioural[cId]) behavioural[cId] = {};
           if (!behavioural[cId][sId]) behavioural[cId][sId] = [];
           behavioural[cId][sId].push(set);
+        } else {
+          standalone.push(set);
         }
       } else {
         standalone.push(set);

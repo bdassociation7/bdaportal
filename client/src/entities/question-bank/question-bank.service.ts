@@ -118,7 +118,6 @@ export class QuestionBankService {
             order_index
           )
         `)
-        .eq('certification_type', certificationType)
         .eq('is_published', true);
 
       // Filter by exam language if provided (convert to lowercase for DB)
