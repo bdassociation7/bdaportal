@@ -100,9 +100,9 @@ function t(key: string, isAR: boolean): string {
     questionBank: 'Question Bank',
     questionBankSub: 'Practice with MCQs and track your performance',
     certSelect: 'Select Certification Level',
-    certCP: 'Business Development Professional',
+    certCP: 'BDA Certified Professional',
     certCPShort: 'BDA-CP',
-    certSCP: 'Senior Business Development Professional',
+    certSCP: 'BDA Senior Certified Professional',
     certSCPShort: 'BDA-SCP',
     certCPDesc: 'Application & Understanding Level',
     certSCPDesc: 'Strategic & Leadership Level',
@@ -520,33 +520,41 @@ export function QuestionBankDashboard() {
                 <button
                   key={type}
                   onClick={() => setCertType(type)}
-                  className={`relative flex items-center gap-4 p-5 rounded-xl border-2 transition-all text-right ${
+                  className={`relative flex items-center gap-5 p-5 rounded-2xl border-2 transition-all text-left ${
                     isSelected
-                      ? 'border-[#1C4A8B] bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] text-white shadow-lg'
-                      : 'border-[#dbeafe] bg-[#f8faff] hover:border-[#1C4A8B]/40 text-[#0d1f4e]'
+                      ? 'border-[#1C4A8B] bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] text-white shadow-xl scale-[1.01]'
+                      : 'border-[#dbeafe] bg-[#f8faff] hover:border-[#1C4A8B]/50 hover:shadow-md text-[#0d1f4e]'
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-white/15' : 'bg-[#f0f6ff]'}`}>
-                    {isCP
-                      ? <Award className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-[#1C4A8B]'}`} />
-                      : <BarChart2 className={`w-6 h-6 ${isSelected ? 'text-white' : 'text-[#1C4A8B]'}`} />
-                    }
+                  {/* Badge Image */}
+                  <div className="w-20 h-20 flex-shrink-0 drop-shadow-md">
+                    <img
+                      src={isCP ? '/bda-cp-badge.webp' : '/bda-scp-badge.webp'}
+                      alt={isCP ? 'BDA-CP Badge' : 'BDA-SCP Badge'}
+                      className="w-full h-full object-contain"
+                    />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-[#1C4A8B]/10 text-[#1C4A8B]'}`}>
-                        {isCP ? t('certCPShort', false) : t('certSCPShort', false)}
-                      </span>
-                    </div>
-                    <p className={`font-bold text-sm leading-snug ${isSelected ? 'text-white' : 'text-[#0d1f4e]'}`}>
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mb-1.5 ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-[#1C4A8B]/10 text-[#1C4A8B]'
+                    }`}>
+                      {isCP ? t('certCPShort', false) : t('certSCPShort', false)}
+                    </span>
+                    <p className={`font-bold text-base leading-tight mb-1 ${
+                      isSelected ? 'text-white' : 'text-[#0d1f4e]'
+                    }`}>
                       {isCP ? t('certCP', false) : t('certSCP', false)}
                     </p>
-                    <p className={`text-xs mt-0.5 ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>
+                    <p className={`text-xs leading-relaxed ${
+                      isSelected ? 'text-white/70' : 'text-slate-400'
+                    }`}>
                       {isCP ? t('certCPDesc', false) : t('certSCPDesc', false)}
                     </p>
                   </div>
+                  {/* Selected check */}
                   {isSelected && (
-                    <CheckCircle className="w-5 h-5 text-white/80 absolute top-3 left-3" />
+                    <CheckCircle className="w-5 h-5 text-white/80 absolute top-3 right-3" />
                   )}
                 </button>
               );
