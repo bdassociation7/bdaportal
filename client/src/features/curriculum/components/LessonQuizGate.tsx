@@ -26,8 +26,7 @@ export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps
 
   const passingScore = lesson.quiz_passing_score || 70;
   const hasPassedQuiz =
-    progress.status === 'completed' ||
-    (progress.best_quiz_score !== null && progress.best_quiz_score >= passingScore);
+    progress.best_quiz_score !== null && progress.best_quiz_score >= passingScore;
 
   // Handle quiz completion from QuizPlayer
   const handleQuizComplete = (results: QuizResults) => {
