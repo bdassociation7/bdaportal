@@ -325,6 +325,7 @@ export function LearningSystemDashboard() {
             certType={displayAccess?.certification_type ?? 'CP'}
             totalModules={totalModules}
             completedModules={completedModules}
+            accessExpiresAt={displayAccess?.expires_at ?? null}
           />
         )}
 

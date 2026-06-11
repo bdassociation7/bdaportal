@@ -37,6 +37,7 @@ interface ExamGoalWidgetProps {
   certType: string;           // 'CP' | 'SCP'
   totalModules: number;       // total curriculum modules
   completedModules: number;   // modules the user has completed
+  accessExpiresAt?: string | null; // user's learning system access expiry date
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -54,13 +55,23 @@ function weeksUntil(dateStr: string): number {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ExamGoalWidget({ certType, totalModules, completedModules }: ExamGoalWidgetProps) {
+export function ExamGoalWidget({ certType, totalModules, completedModules, accessExpiresAt }: ExamGoalWidgetProps) {
   const [expanded, setExpanded] = useState(false);
   const [selectedWindowKey, setSelectedWindowKey] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const { data: windows, isLoading: windowsLoading } = useExamWindows(certType);
+  const { data: allWindows, isLoading: windowsLoading } = useExamWindows(certType);
+
+  // Filter windows to only show those within the user's access period
+  // If accessExpiresAt is set, only show windows that start before the access expiry
+  const windows = accessExpiresAt
+    ? (allWindows ?? []).filter((w) => {
+        const windowStart = new Date(w.start_date);
+        const accessExpiry = new Date(accessExpiresAt);
+        return windowStart <= accessExpiry;
+      })
+    : (allWindows ?? []);
   const { data: goal, isLoading: goalLoading } = useLearningGoal(certType);
   const { data: hasVoucher, isLoading: voucherLoading } = useHasVoucher(certType);
   const upsertGoal = useUpsertLearningGoal();
@@ -195,12 +206,12 @@ export function ExamGoalWidget({ certType, totalModules, completedModules }: Exa
                 </p>
                 <div className="flex flex-wrap gap-3 mt-3">
                   <a
-                    href="https://bda-global.org/en/certifications/bda-practice-questions/"
+                    href="/mock-exams"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 underline hover:text-amber-900"
                   >
-                    Practice Questions
+                    Practice Exams
                     <ExternalLink className="w-3 h-3" />
                   </a>
                   <span className="text-amber-400 text-xs">|</span>
