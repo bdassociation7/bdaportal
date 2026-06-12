@@ -54,8 +54,8 @@ export class CertificationService {
       // Générer un credential_id unique
       const credentialId = await this.generateCredentialId(dto.certification_type);
 
-      // Calculer la date d'expiration (3 ans pour CP, 5 ans pour SCP)
-      const yearsValid = dto.certification_type === 'CP' ? 3 : 5;
+      // Calculer la date d'expiration (3 ans pour CP et SCP)
+      const yearsValid = 3;
       const issuedDate = new Date();
       const expiryDate = new Date();
       expiryDate.setFullYear(expiryDate.getFullYear() + yearsValid);
