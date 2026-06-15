@@ -111,6 +111,7 @@ import PartnershipProducts from "./pages/admin/PartnershipProducts";
 import MembershipProducts from "./pages/admin/MembershipProducts";
 import CertificationExamsAdmin from "./pages/admin/CertificationExams";
 import CertificationExamQuestionManager from "./pages/admin/CertificationExamQuestionManager";
+import ExamQuestionBank from "./pages/admin/ExamQuestionBank";
 import Vouchers from "./pages/admin/Vouchers";
 import CustomersVouchers from "./pages/admin/CustomersVouchers";
 import ContentManagement from "./pages/admin/ContentManagement";
@@ -552,6 +553,7 @@ const App = () => (
                   <Route path="/admin/exams/:examId/questions" element={<ExamQuestionManager />} />
                   <Route path="/admin/certification-exams" element={<CertificationExamsAdmin />} />
                   <Route path="/admin/certification-exams/:examId/questions" element={<CertificationExamQuestionManager />} />
+                  <Route path="/admin/exam-question-bank" element={<ExamQuestionBank />} />
                   <Route path="/admin/certification-products" element={<CertificationProducts />} />
                   <Route path="/admin/mock-exam-products" element={<MockExamProducts />} />
                   <Route path="/admin/membership-benefit-books" element={<MembershipBenefitBooks />} />

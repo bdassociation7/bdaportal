@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { CertificationExamService, type CertificationExam } from '@/entities/certification-exam';
 import { useToast } from '@/components/ui/use-toast';
 import { useConfirm } from '@/contexts/ConfirmDialogContext';
-import { Plus, Edit, Trash2, Eye, EyeOff, BarChart3, ListChecks, Globe } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, BarChart3, ListChecks, Globe, BookOpen } from 'lucide-react';
 import type { ExamLanguage } from '@/entities/certification-exam';
 import CertificationExamForm from './components/CertificationExamForm';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -150,16 +150,25 @@ export default function CertificationExamsAdmin() {
             </h1>
             <p className="mt-2 opacity-90">{t('certificationExams.subtitle')}</p>
           </div>
-          <button
-            onClick={() => {
-              setSelectedExam(null);
-              setShowForm(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
-          >
-            <Plus size={20} />
-            {t('certificationExams.createNew')}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/admin/exam-question-bank')}
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 text-white border border-white/30 rounded-lg hover:bg-white/30 transition font-medium"
+            >
+              <BookOpen size={20} />
+              Manage Question Bank
+            </button>
+            <button
+              onClick={() => {
+                setSelectedExam(null);
+                setShowForm(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
+            >
+              <Plus size={20} />
+              {t('certificationExams.createNew')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -321,18 +330,17 @@ export default function CertificationExamsAdmin() {
               </div>
             </div>
 
-            {/* Questions Button */}
-            <button
-              onClick={() => navigate(`/admin/certification-exams/${exam.id}/questions`)}
-              className={`w-full mb-3 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition ${
+            {/* Questions Info - managed from Exam Question Bank page */}
+            <div
+              className={`w-full mb-3 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
                 exam.certification_type === 'CP'
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                  : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                  ? 'bg-green-50 text-green-600 border border-green-100'
+                  : 'bg-purple-50 text-purple-600 border border-purple-100'
               }`}
             >
               <ListChecks size={16} />
-              {t('certificationExams.manageQuestions')} ({exam.question_count || 0})
-            </button>
+              <span>{exam.question_count || 0} Questions in Bank</span>
+            </div>
 
             {/* Actions */}
             <div className="flex gap-2">
