@@ -25,6 +25,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
@@ -96,7 +102,7 @@ type QuestionForm = {
   question_text_ar: string;
   question_type: 'multiple_choice' | 'true_false' | 'multi_select';
   bock_domain: string;
-  competency_section: 'behavioural' | 'knowledge_based' | '';
+  competency_section: 'behavioral' | 'behavioural' | 'knowledge_based' | '';
   competency_name: string;
   difficulty: 'easy' | 'medium' | 'hard';
   points: number;
@@ -200,6 +206,13 @@ export default function ExamQuestionBank() {
     });
   };
 
+  const normalizeCompetencySection = (section: string | null | undefined): 'behavioral' | 'knowledge_based' | '' => {
+    if (!section) return '';
+    if (section === 'behavioural' || section === 'behavioral') return 'behavioral';
+    if (section === 'knowledge_based') return 'knowledge_based';
+    return '';
+  };
+
   const handleEditQuestion = (question: any, questionIndex: number) => {
     setIsAddingQuestion(false);
     setEditingQuestionId(question.id);
@@ -209,7 +222,7 @@ export default function ExamQuestionBank() {
       question_text_ar: question.question_text_ar || '',
       question_type: question.question_type || 'multiple_choice',
       bock_domain: question.bock_domain || '',
-      competency_section: (question.competency_section || '') as 'behavioural' | 'knowledge_based' | '',
+      competency_section: normalizeCompetencySection(question.competency_section),
       competency_name: question.competency_name || '',
       difficulty: question.difficulty || 'medium',
       points: question.points || 1,
@@ -494,23 +507,17 @@ export default function ExamQuestionBank() {
         </div>
       )}
 
-      {/* Question Form (Add/Edit) */}
-      {(isAddingQuestion || editingQuestionId) && (
+      {/* Question Form (Add/Edit) - shown inline only for Add New */}
+      {isAddingQuestion && (
         <Card className="border-2 border-blue-500 shadow-lg">
           <CardHeader className="bg-blue-50 border-b border-blue-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
-                  {isAddingQuestion ? (
-                    <Plus className="h-6 w-6 text-white" />
-                  ) : (
-                    <Edit className="h-6 w-6 text-white" />
-                  )}
+                  <Plus className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl">
-                    {isAddingQuestion ? 'Add New Question' : 'Edit Question'}
-                  </CardTitle>
+                  <CardTitle className="text-xl">Add New Question</CardTitle>
                   <p className="text-sm text-gray-600 mt-1">
                     {currentTab.label} — {currentTab.lang === 'ar' ? 'Arabic' : 'English'} Exam
                   </p>
@@ -616,7 +623,7 @@ export default function ExamQuestionBank() {
                     <SelectValue placeholder="Select section..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="behavioural">Behavioural</SelectItem>
+                    <SelectItem value="behavioral">Behavioural</SelectItem>
                     <SelectItem value="knowledge_based">Knowledge Based</SelectItem>
                   </SelectContent>
                 </Select>
@@ -632,7 +639,7 @@ export default function ExamQuestionBank() {
                       <SelectValue placeholder="Select competency..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {(questionForm.competency_section === 'behavioural'
+                      {(questionForm.competency_section === 'behavioral' || questionForm.competency_section === 'behavioural'
                         ? BDA_COMPETENCIES.behavioral
                         : BDA_COMPETENCIES.knowledge_based
                       ).map((c) => (
@@ -921,7 +928,7 @@ export default function ExamQuestionBank() {
                       )}
                       {question.competency_section && (
                         <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">
-                          {question.competency_section === 'behavioural' ? 'Behavioural' : 'Knowledge'}
+                          {(question.competency_section === 'behavioural' || question.competency_section === 'behavioral') ? 'Behavioural' : 'Knowledge'}
                         </Badge>
                       )}
                       {question.competency_name && (
@@ -957,6 +964,237 @@ export default function ExamQuestionBank() {
           ))}
         </div>
       )}
+
+      {/* Edit Question Dialog (Modal) */}
+      <Dialog open={!!editingQuestionId} onOpenChange={(open) => { if (!open) handleCancelEdit(); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-blue-600" />
+              Edit Question
+              <span className="text-sm font-normal text-gray-500 ml-2">{currentTab.label} — {currentTab.lang === 'ar' ? 'Arabic' : 'English'} Exam</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-2">
+            {/* Language Indicator */}
+            <div className={cn(
+              'p-3 rounded-lg border-2 flex items-center gap-3',
+              currentTab.lang === 'ar' ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'
+            )}>
+              <span className="text-2xl">{currentTab.lang === 'ar' ? '🇸🇦' : '🇬🇧'}</span>
+              <div>
+                <p className={cn('font-semibold', currentTab.lang === 'ar' ? 'text-emerald-800' : 'text-blue-800')}>
+                  {currentTab.lang === 'ar' ? 'امتحان عربي' : 'English Exam'}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {currentTab.lang === 'ar' ? 'جميع الأسئلة والإجابات بالعربية فقط' : 'All questions and answers in English only'}
+                </p>
+              </div>
+            </div>
+
+            {/* Question Text */}
+            {currentTab.lang === 'en' ? (
+              <div className="space-y-2 p-4 bg-blue-50/50 rounded-lg border border-blue-100">
+                <Label className="text-blue-800 font-semibold">Question Text <span className="text-red-500">*</span></Label>
+                <Textarea
+                  value={questionForm.question_text}
+                  onChange={(e) => setQuestionForm((prev) => ({ ...prev, question_text: e.target.value }))}
+                  placeholder="Enter question text in English"
+                  rows={4}
+                  className="bg-white"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2 p-4 bg-emerald-50/50 rounded-lg border border-emerald-100">
+                <Label className="text-emerald-800 font-semibold">نص السؤال <span className="text-red-500">*</span></Label>
+                <Textarea
+                  value={questionForm.question_text_ar}
+                  onChange={(e) => setQuestionForm((prev) => ({ ...prev, question_text_ar: e.target.value }))}
+                  placeholder="أدخل نص السؤال بالعربية"
+                  rows={4}
+                  dir="rtl"
+                  className="bg-white"
+                />
+              </div>
+            )}
+
+            {/* Metadata */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Question Type</Label>
+                <Select value={questionForm.question_type} onValueChange={(v: any) => setQuestionForm((prev) => ({ ...prev, question_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
+                    <SelectItem value="true_false">True / False</SelectItem>
+                    <SelectItem value="multi_select">Multi Select</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Difficulty</Label>
+                <Select value={questionForm.difficulty} onValueChange={(v: any) => setQuestionForm((prev) => ({ ...prev, difficulty: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="easy">Easy</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="hard">Hard</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Competency Section</Label>
+                <Select
+                  value={questionForm.competency_section}
+                  onValueChange={(v: any) => setQuestionForm((prev) => ({ ...prev, competency_section: v, competency_name: '' }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select section..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="behavioral">Behavioural</SelectItem>
+                    <SelectItem value="knowledge_based">Knowledge Based</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {questionForm.competency_section && (
+                <div className="space-y-2">
+                  <Label>Competency Name</Label>
+                  <Select
+                    value={questionForm.competency_name}
+                    onValueChange={(v) => setQuestionForm((prev) => ({ ...prev, competency_name: v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select competency..." /></SelectTrigger>
+                    <SelectContent>
+                      {(questionForm.competency_section === 'behavioral' || questionForm.competency_section === 'behavioural'
+                        ? BDA_COMPETENCIES.behavioral
+                        : BDA_COMPETENCIES.knowledge_based
+                      ).map((c) => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>BoCK Domain</Label>
+                <Input
+                  value={questionForm.bock_domain}
+                  onChange={(e) => setQuestionForm((prev) => ({ ...prev, bock_domain: e.target.value }))}
+                  placeholder="e.g., Business Development Strategy"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Points</Label>
+                <Input
+                  type="number" min={1}
+                  value={questionForm.points}
+                  onChange={(e) => setQuestionForm((prev) => ({ ...prev, points: parseInt(e.target.value) || 1 }))}
+                />
+              </div>
+            </div>
+
+            {/* Answers */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Answer Options <span className="text-red-500">*</span></Label>
+                <Button type="button" variant="outline" size="sm" onClick={handleAddAnswer}>
+                  <Plus className="h-4 w-4 mr-1" />Add Answer
+                </Button>
+              </div>
+              {questionForm.question_type === 'multiple_choice' || questionForm.question_type === 'true_false' ? (
+                <RadioGroup
+                  value={questionForm.answers.find((a) => a.is_correct)?.tempId || ''}
+                  onValueChange={handleSetCorrectAnswer}
+                >
+                  {questionForm.answers.map((answer, idx) => (
+                    <div key={answer.tempId} className={cn(
+                      'flex items-start gap-3 p-3 rounded-lg border-2 transition-colors',
+                      answer.is_correct ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-gray-50'
+                    )}>
+                      <RadioGroupItem value={answer.tempId} id={`edit-answer-${answer.tempId}`} className="mt-1" />
+                      <div className="flex-1 space-y-2">
+                        {currentTab.lang === 'en' ? (
+                          <Input
+                            value={answer.answer_text}
+                            onChange={(e) => handleAnswerChange(answer.tempId, 'answer_text', e.target.value)}
+                            placeholder={`Answer ${String.fromCharCode(65 + idx)}`}
+                            className="bg-white"
+                          />
+                        ) : (
+                          <Input
+                            value={answer.answer_text_ar}
+                            onChange={(e) => handleAnswerChange(answer.tempId, 'answer_text_ar', e.target.value)}
+                            placeholder={`الإجابة ${idx + 1}`}
+                            dir="rtl"
+                            className="bg-white"
+                          />
+                        )}
+                        {answer.is_correct && (
+                          <span className="inline-flex items-center gap-1 text-xs text-green-700 font-medium">
+                            <CheckCircle2 className="h-3 w-3" />Correct Answer
+                          </span>
+                        )}
+                      </div>
+                      {questionForm.answers.length > 2 && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveAnswer(answer.tempId)} className="text-red-500 hover:text-red-700">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </RadioGroup>
+              ) : (
+                <div className="space-y-2">
+                  {questionForm.answers.map((answer, idx) => (
+                    <div key={answer.tempId} className={cn(
+                      'flex items-start gap-3 p-3 rounded-lg border-2 transition-colors',
+                      answer.is_correct ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-gray-50'
+                    )}>
+                      <input type="checkbox" checked={answer.is_correct} onChange={(e) => handleAnswerChange(answer.tempId, 'is_correct', e.target.checked)} className="mt-1 h-4 w-4 rounded border-gray-300 text-green-600" />
+                      <div className="flex-1">
+                        {currentTab.lang === 'en' ? (
+                          <Input value={answer.answer_text} onChange={(e) => handleAnswerChange(answer.tempId, 'answer_text', e.target.value)} placeholder={`Answer ${String.fromCharCode(65 + idx)}`} className="bg-white" />
+                        ) : (
+                          <Input value={answer.answer_text_ar} onChange={(e) => handleAnswerChange(answer.tempId, 'answer_text_ar', e.target.value)} placeholder={`الإجابة ${idx + 1}`} dir="rtl" className="bg-white" />
+                        )}
+                      </div>
+                      {questionForm.answers.length > 2 && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveAnswer(answer.tempId)} className="text-red-500 hover:text-red-700">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Explanation */}
+            <div className="space-y-2 p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <Label className="text-amber-800 font-semibold">Explanation (shown after exam)</Label>
+              {currentTab.lang === 'en' ? (
+                <Textarea value={questionForm.explanation} onChange={(e) => setQuestionForm((prev) => ({ ...prev, explanation: e.target.value }))} placeholder="Explain why the correct answer is right..." rows={2} className="bg-white" />
+              ) : (
+                <Textarea value={questionForm.explanation_ar} onChange={(e) => setQuestionForm((prev) => ({ ...prev, explanation_ar: e.target.value }))} placeholder="اشرح لماذا الإجابة الصحيحة هي الأنسب..." rows={2} dir="rtl" className="bg-white" />
+              )}
+            </div>
+
+            {/* Save/Cancel */}
+            <div className="flex justify-end gap-3 pt-2 border-t">
+              <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
+                <X className="h-4 w-4 mr-2" />Cancel
+              </Button>
+              <Button onClick={handleSaveQuestion} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
+                {isSaving ? (
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
