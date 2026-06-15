@@ -1,5 +1,5 @@
 # Supabase configuration for BDA Portal
-
+project_id = "dfsbzsxuursvqwnzruqt"
 [api]
 enabled = true
 port = 54321
