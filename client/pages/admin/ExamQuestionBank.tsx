@@ -147,22 +147,48 @@ export default function ExamQuestionBank() {
   const currentTab = TABS.find((t) => t.key === activeTab)!;
 
   // Fetch questions for the active tab
+  // Strategy: first fetch quiz metadata (which has a permissive SELECT policy for all authenticated users),
+  // then use cert_type + exam_language to fetch questions (same approach as CertificationExamQuestionManager)
   const { data: questions = [], isLoading, refetch } = useQuery({
-    queryKey: ['exam-question-bank', activeTab],
+    queryKey: ['exam-question-bank', activeTab, currentTab.certType, currentTab.lang],
     queryFn: async () => {
+      const certType = currentTab.certType;
+      const lang = currentTab.lang;
+
+      // Step 1: Get quiz metadata to establish auth context (same as CertificationExamQuestionManager)
+      const { data: quizData, error: quizError } = await supabase
+        .from('quizzes')
+        .select('id, certification_type, exam_language')
+        .eq('certification_type', certType)
+        .eq('exam_language', lang)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (quizError) {
+        console.error('ExamQuestionBank quiz fetch error:', quizError);
+        throw quizError;
+      }
+
+      // Step 2: Fetch questions using cert_type + language
       const { data, error } = await supabase
         .from('certification_question_bank')
         .select('*, answers:certification_question_bank_answers(*)')
-        .eq('certification_type', currentTab.certType)
-        .eq('exam_language', currentTab.lang)
+        .eq('certification_type', certType)
+        .eq('exam_language', lang)
         .eq('is_active', true)
-        .order('order_index', { ascending: true });
-      if (error) throw error;
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('ExamQuestionBank fetch error:', error);
+        throw error;
+      }
+
       return (data || []).map((q: any) => ({
         ...q,
         answers: (q.answers || []).sort((a: any, b: any) => a.order_index - b.order_index),
       }));
     },
+    staleTime: 0,
   });
 
   const handleAddQuestion = () => {
@@ -239,7 +265,6 @@ export default function ExamQuestionBank() {
             competency_name: questionForm.competency_name || null,
             difficulty: questionForm.difficulty,
             points: questionForm.points,
-            order_index: questionForm.order_index,
             explanation: questionForm.explanation || null,
             explanation_ar: questionForm.explanation_ar || null,
             is_active: true,
@@ -276,7 +301,6 @@ export default function ExamQuestionBank() {
             competency_name: questionForm.competency_name || null,
             difficulty: questionForm.difficulty,
             points: questionForm.points,
-            order_index: questionForm.order_index,
             explanation: questionForm.explanation || null,
             explanation_ar: questionForm.explanation_ar || null,
           })
