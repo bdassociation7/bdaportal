@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { BookOpen, Download, Clock, FileText, Search, Filter, Gift, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { BookOpen, Download, Clock, FileText, Search, Filter, Gift, Sparkles, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { useUserBooks, useBookDownload, useUserBookCredits } from '@/entities/books';
+import { useUserBooks, useBookDownload, useUserBookCredits, useRedeemBookCredit } from '@/entities/books';
 import type { BookFilters, BookCredit } from '@/entities/books';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { BookCreditRedemptionDialog } from '@/components/BookCreditRedemptionDialog';
@@ -127,6 +127,35 @@ export default function MyBooks() {
 
   // Fetch book credits
   const { data: bookCredits, refetch: refetchCredits } = useUserBookCredits(user?.email || '');
+  const redeemMutation = useRedeemBookCredit();
+  const autoRedeemedRef = useRef<Set<string>>(new Set());
+
+  // Auto-redeem woocommerce_order credits with a single available language
+  useEffect(() => {
+    if (!bookCredits || bookCredits.length === 0) return;
+
+    const directPurchaseCredits = bookCredits.filter(
+      (credit) =>
+        credit.source_type === 'woocommerce_order' &&
+        credit.available_languages.length === 1 &&
+        !autoRedeemedRef.current.has(credit.id)
+    );
+
+    directPurchaseCredits.forEach((credit) => {
+      autoRedeemedRef.current.add(credit.id);
+      redeemMutation.mutate(
+        { credit_id: credit.id, language: credit.available_languages[0] },
+        {
+          onSuccess: () => {
+            refetchCredits();
+          },
+          onError: () => {
+            autoRedeemedRef.current.delete(credit.id);
+          },
+        }
+      );
+    });
+  }, [bookCredits]);
 
   const handleOpenRedemption = (credit: BookCredit) => {
     setSelectedCredit(credit);
@@ -222,8 +251,8 @@ export default function MyBooks() {
         </CardContent>
       </Card>
 
-      {/* Book Credits Section */}
-      {bookCredits && bookCredits.length > 0 && (
+      {/* Book Credits Section - only show for membership credits that need language selection */}
+      {bookCredits && bookCredits.some((c) => c.source_type !== 'woocommerce_order') && (
         <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
           <CardContent className="p-4">
             <div className={`flex items-start gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
@@ -242,9 +271,11 @@ export default function MyBooks() {
                   {texts.bookCreditsDesc}
                 </p>
 
-                {/* Credits List */}
+                {/* Credits List - only show membership credits that need language selection */}
                 <div className="space-y-2">
-                  {bookCredits.map((credit) => (
+                  {bookCredits
+                    .filter((credit) => credit.source_type !== 'woocommerce_order')
+                    .map((credit) => (
                     <div
                       key={credit.id}
                       className={`flex items-center justify-between p-3 bg-white rounded-lg border border-green-200 ${language === 'ar' ? 'flex-row-reverse' : ''}`}
@@ -262,6 +293,26 @@ export default function MyBooks() {
                       >
                         {texts.chooseLanguage}
                       </Button>
+                    </div>
+                  ))}
+                  {/* Show processing state for woocommerce_order credits being auto-redeemed */}
+                  {bookCredits
+                    .filter((credit) => credit.source_type === 'woocommerce_order')
+                    .map((credit) => (
+                    <div
+                      key={credit.id}
+                      className={`flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200 ${language === 'ar' ? 'flex-row-reverse' : ''}`}
+                    >
+                      <div className={`flex-1 ${language === 'ar' ? 'text-right' : ''}`}>
+                        <p className="font-medium text-gray-900">{credit.book_product_group_name}</p>
+                        <p className="text-sm text-gray-600">
+                          {language === 'ar' ? 'جارٍ تفعيل الوصول...' : 'Activating access...'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-blue-600 text-sm">
+                        <CheckCircle className="h-4 w-4 animate-pulse" />
+                        {language === 'ar' ? 'جارٍ المعالجة' : 'Processing...'}
+                      </div>
                     </div>
                   ))}
                 </div>
