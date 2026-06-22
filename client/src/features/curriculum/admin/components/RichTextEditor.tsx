@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -93,6 +93,7 @@ export function RichTextEditor({
       const json = editor.getJSON() as RichContent;
       onChange(json);
     },
+    immediatelyRender: false,
     editorProps: {
       attributes: {
         class: `prose prose-lg max-w-none focus:outline-none min-h-[450px] px-6 py-4 ${isRTL ? 'text-right' : ''}`,
@@ -148,6 +149,18 @@ export function RichTextEditor({
     // reset input
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [editor]);
+
+  // ── Sync external content changes into editor (e.g. after Word import) ──
+  useEffect(() => {
+    if (!editor || !content) return;
+    // Only update if the editor content is different from the new content
+    const currentJson = JSON.stringify(editor.getJSON());
+    const newJson = JSON.stringify(content);
+    if (currentJson !== newJson) {
+      editor.commands.setContent(content, false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
 
   if (!editor) return null;
 
