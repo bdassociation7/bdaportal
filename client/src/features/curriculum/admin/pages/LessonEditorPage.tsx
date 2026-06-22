@@ -14,7 +14,7 @@
  *   /admin/curriculum/lessons/:id/edit
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,6 +34,7 @@ import {
   Eye,
   EyeOff,
   Info,
+  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,6 +75,7 @@ import {
 import { InlineQuizBuilder } from '../components/InlineQuizBuilder';
 import { useToast } from '@/hooks/use-toast';
 import { RichTextEditor } from '../components/RichTextEditor';
+import { convertWordToTipTap } from '../utils/word-to-tiptap';
 
 // ─── Validation ────────────────────────────────────────────────────────────
 const lessonSchema = z.object({
@@ -105,6 +107,40 @@ export function LessonEditorPage() {
 
   const isEditing = !!id;
   const [richContent, setRichContent] = useState<RichContent | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Word Import Handler ────────────────────────────────────────────────
+  const handleWordFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const result = await convertWordToTipTap(file);
+      if (result.success && result.content) {
+        setRichContent(result.content as RichContent);
+        toast({
+          title: '✅ Word file imported',
+          description: `Content loaded successfully. Click "${isEditing ? 'Update' : 'Save'}" to save.${result.warnings?.length ? ` (${result.warnings.length} warnings)` : ''}`,
+        });
+      } else {
+        toast({
+          title: 'Import failed',
+          description: result.error || 'Could not parse Word file',
+          variant: 'destructive',
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Import error',
+        description: err?.message || 'Unexpected error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   // ── Queries ────────────────────────────────────────────────────────────
   const { data: lesson, isLoading: isLoadingLesson } = useLesson(id, isEditing);
@@ -258,17 +294,37 @@ export function LessonEditorPage() {
 
             <div className="flex items-center gap-3">
               {expectedFilename && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1.5 bg-white/15 rounded-lg px-3 py-1.5 cursor-default">
-                      <FileText className="h-3.5 w-3.5 opacity-70" />
-                      <code className="text-xs font-mono">{expectedFilename}</code>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    Expected Word filename for auto-import
-                  </TooltipContent>
-                </Tooltip>
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".docx"
+                    className="hidden"
+                    onChange={handleWordFileChange}
+                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="bg-white/15 hover:bg-white/25 text-white border-0 text-xs"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isImporting}
+                      >
+                        {isImporting ? (
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Upload className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        {isImporting ? 'Importing…' : `Import ${expectedFilename}`}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      Click to upload and import Word file into the editor
+                    </TooltipContent>
+                  </Tooltip>
+                </>
               )}
 
               <div className="flex items-center gap-2 bg-white/15 rounded-lg px-3 py-1.5">
@@ -439,7 +495,7 @@ export function LessonEditorPage() {
                       <code className="text-xs bg-white border border-blue-200 rounded px-1.5 py-0.5 text-blue-800 font-mono">
                         {expectedFilename}
                       </code>
-                      <p className="text-xs text-blue-600 mt-1">Upload this file in Word Import tab</p>
+                      <p className="text-xs text-blue-600 mt-1">Click "Import" button in the top bar to upload</p>
                     </div>
                   </div>
                 </div>
