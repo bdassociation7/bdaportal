@@ -405,6 +405,7 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
             p_woocommerce_product_id: item.product_id,
             p_duration_months: partnershipProduct.license_duration_months || 12,
             p_max_programs: partnershipProduct.max_programs || 5,
+            p_tier: partnershipProduct.tier || 'standard',
             p_notes: `Product: ${item.name} (ID: ${item.product_id})`,
           }
         )

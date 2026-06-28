@@ -248,6 +248,7 @@ export interface PdpProgramResult<T> {
 // =============================================================================
 
 export type PDPLicenseStatus = 'active' | 'suspended' | 'expired' | 'pending' | 'expiring_soon';
+export type PDPPartnershipTier = 'standard' | 'advanced' | 'premium';
 export type LicenseRequestType = 'renewal' | 'slot_increase' | 'scope_update' | 'suspension_appeal';
 export type LicenseRequestStatus = 'pending' | 'under_review' | 'approved' | 'rejected' | 'cancelled';
 
@@ -262,6 +263,7 @@ export interface PDPLicense {
   max_programs: number;
   programs_used: number;
   program_submission_enabled: boolean;
+  tier: PDPPartnershipTier;
   agreement_signed_date?: string;
   agreement_document_url?: string;
   renewal_requested: boolean;
@@ -327,6 +329,7 @@ export interface ProgramSlotStatus {
   max_programs: number;
   programs_used: number;
   remaining_slots: number;
+  tier: PDPPartnershipTier | null;
 }
 
 // =============================================================================
