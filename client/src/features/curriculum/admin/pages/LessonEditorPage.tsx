@@ -503,8 +503,13 @@ export function LessonEditorPage() {
             </aside>
 
             {/* ── MAIN: Rich Text Editor ─────────────────────────────── */}
+            {/*
+              overflow-y-auto makes this the scroll container.
+              The RichTextEditor toolbar uses sticky top-0 relative to this element.
+            */}
             <main className="flex-1 flex flex-col overflow-y-auto bg-white">
-              <div className="border-b px-6 py-3 bg-gray-50 flex items-center justify-between">
+              {/* Section header — also sticky so it stays visible */}
+              <div className="sticky top-0 z-10 border-b px-6 py-3 bg-gray-50 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4 text-gray-500" />
                   <span className="text-sm font-semibold text-gray-700">Lesson Content</span>

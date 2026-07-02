@@ -9,6 +9,7 @@ import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import CharacterCount from '@tiptap/extension-character-count';
+import { Table, TableRow, TableHeader, TableCell } from '@tiptap/extension-table';
 import {
   Bold,
   Italic,
@@ -45,7 +46,9 @@ interface RichTextEditorProps {
  * Rich Text Editor Component — Full-featured TipTap editor
  * Supports: headings, bold, italic, underline, highlight, alignment,
  *           bullet/ordered lists, blockquote, code, links, images (URL + upload),
- *           horizontal rule, undo/redo, character count
+ *           tables, horizontal rule, undo/redo, character count
+ *
+ * Toolbar is sticky so it stays visible while scrolling the content.
  */
 export function RichTextEditor({
   content,
@@ -87,6 +90,22 @@ export function RichTextEditor({
       TextStyle,
       Highlight.configure({ multicolor: false }),
       CharacterCount,
+      // ── Table support ────────────────────────────────────────────────
+      Table.configure({
+        resizable: false,
+        HTMLAttributes: {
+          class: 'tiptap-table',
+        },
+      }),
+      TableRow.configure({
+        HTMLAttributes: { class: 'tiptap-table-row' },
+      }),
+      TableHeader.configure({
+        HTMLAttributes: { class: 'tiptap-table-header' },
+      }),
+      TableCell.configure({
+        HTMLAttributes: { class: 'tiptap-table-cell' },
+      }),
     ],
     content: content || undefined,
     onUpdate: ({ editor }) => {
@@ -146,14 +165,12 @@ export function RichTextEditor({
       }
     };
     reader.readAsDataURL(file);
-    // reset input
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [editor]);
 
   // ── Sync external content changes into editor (e.g. after Word import) ──
   useEffect(() => {
     if (!editor || !content) return;
-    // Only update if the editor content is different from the new content
     const currentJson = JSON.stringify(editor.getJSON());
     const newJson = JSON.stringify(content);
     if (currentJson !== newJson) {
@@ -198,172 +215,215 @@ export function RichTextEditor({
   const wordCount = editor.storage.characterCount?.words() ?? 0;
 
   return (
-    <div className="border border-gray-300 rounded-xl overflow-hidden shadow-sm flex flex-col">
+    <>
+      {/* ── Table styles injected globally ────────────────────────────── */}
+      <style>{`
+        .tiptap-table {
+          border-collapse: collapse;
+          width: 100%;
+          margin: 1.25rem 0;
+          font-size: 0.9rem;
+          overflow: hidden;
+          border-radius: 6px;
+          border: 1px solid #d1d5db;
+        }
+        .tiptap-table-header {
+          background-color: #1e3a5f;
+          color: #ffffff;
+          font-weight: 600;
+          padding: 10px 14px;
+          text-align: left;
+          border: 1px solid #1e3a5f;
+        }
+        .tiptap-table-cell {
+          padding: 9px 14px;
+          border: 1px solid #e5e7eb;
+          vertical-align: top;
+        }
+        .tiptap-table tr:nth-child(even) .tiptap-table-cell {
+          background-color: #f8fafc;
+        }
+        .tiptap-table tr:hover .tiptap-table-cell {
+          background-color: #eff6ff;
+        }
+        /* Selected cell highlight */
+        .tiptap-table .selectedCell {
+          background-color: #dbeafe !important;
+        }
+      `}</style>
 
-      {/* ── Toolbar ───────────────────────────────────────────────────── */}
-      <div className="bg-gray-50 border-b border-gray-200 px-3 py-2 flex flex-wrap items-center gap-0.5">
+      <div className="border border-gray-300 rounded-xl shadow-sm flex flex-col">
 
-        {/* History */}
-        <ToolBtn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo (Ctrl+Z)">
-          <Undo className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Redo (Ctrl+Y)">
-          <Redo className="w-4 h-4" />
-        </ToolBtn>
+        {/* ── Sticky Toolbar ────────────────────────────────────────────── */}
+        {/*
+          sticky top-0 z-20 ensures the toolbar stays visible while the
+          editor content scrolls within the parent container.
+        */}
+        <div className="sticky top-[48px] z-20 bg-gray-50 border-b border-gray-200 px-3 py-2 flex flex-wrap items-center gap-0.5 shadow-sm">
 
-        <Divider />
-
-        {/* Headings */}
-        <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Heading 1">
-          <Heading1 className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Heading 2">
-          <Heading2 className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Heading 3">
-          <Heading3 className="w-4 h-4" />
-        </ToolBtn>
-
-        <Divider />
-
-        {/* Text formatting */}
-        <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold (Ctrl+B)">
-          <Bold className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic (Ctrl+I)">
-          <Italic className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Underline (Ctrl+U)">
-          <UnderlineIcon className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} title="Highlight">
-          <Highlighter className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} title="Inline Code">
-          <Code className="w-4 h-4" />
-        </ToolBtn>
-
-        <Divider />
-
-        {/* Alignment */}
-        <ToolBtn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="Align Left">
-          <AlignLeft className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="Align Center">
-          <AlignCenter className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="Align Right">
-          <AlignRight className="w-4 h-4" />
-        </ToolBtn>
-
-        <Divider />
-
-        {/* Lists */}
-        <ToolBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Bullet List">
-          <List className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Numbered List">
-          <ListOrdered className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Blockquote">
-          <Quote className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal Rule">
-          <Minus className="w-4 h-4" />
-        </ToolBtn>
-
-        <Divider />
-
-        {/* Link */}
-        <ToolBtn onClick={openLinkDialog} active={editor.isActive('link')} title="Insert / Edit Link">
-          <LinkIcon className="w-4 h-4" />
-        </ToolBtn>
-        {editor.isActive('link') && (
-          <ToolBtn onClick={() => editor.chain().focus().unsetLink().run()} title="Remove Link">
-            <X className="w-4 h-4 text-red-500" />
+          {/* History */}
+          <ToolBtn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo (Ctrl+Z)">
+            <Undo className="w-4 h-4" />
           </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Redo (Ctrl+Y)">
+            <Redo className="w-4 h-4" />
+          </ToolBtn>
+
+          <Divider />
+
+          {/* Headings */}
+          <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Heading 1">
+            <Heading1 className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Heading 2">
+            <Heading2 className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Heading 3">
+            <Heading3 className="w-4 h-4" />
+          </ToolBtn>
+
+          <Divider />
+
+          {/* Text formatting */}
+          <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold (Ctrl+B)">
+            <Bold className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic (Ctrl+I)">
+            <Italic className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Underline (Ctrl+U)">
+            <UnderlineIcon className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} title="Highlight">
+            <Highlighter className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} title="Inline Code">
+            <Code className="w-4 h-4" />
+          </ToolBtn>
+
+          <Divider />
+
+          {/* Alignment */}
+          <ToolBtn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="Align Left">
+            <AlignLeft className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="Align Center">
+            <AlignCenter className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="Align Right">
+            <AlignRight className="w-4 h-4" />
+          </ToolBtn>
+
+          <Divider />
+
+          {/* Lists */}
+          <ToolBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Bullet List">
+            <List className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Numbered List">
+            <ListOrdered className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Blockquote">
+            <Quote className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal Rule">
+            <Minus className="w-4 h-4" />
+          </ToolBtn>
+
+          <Divider />
+
+          {/* Link */}
+          <ToolBtn onClick={openLinkDialog} active={editor.isActive('link')} title="Insert / Edit Link">
+            <LinkIcon className="w-4 h-4" />
+          </ToolBtn>
+          {editor.isActive('link') && (
+            <ToolBtn onClick={() => editor.chain().focus().unsetLink().run()} title="Remove Link">
+              <X className="w-4 h-4 text-red-500" />
+            </ToolBtn>
+          )}
+
+          <Divider />
+
+          {/* Image */}
+          <ToolBtn onClick={() => setImageDialogOpen(true)} title="Insert Image by URL">
+            <ImageIcon className="w-4 h-4" />
+          </ToolBtn>
+          <ToolBtn onClick={() => fileInputRef.current?.click()} title="Upload Image from Device">
+            <Upload className="w-4 h-4" />
+          </ToolBtn>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageUpload}
+          />
+        </div>
+
+        {/* ── Link Dialog ───────────────────────────────────────────────── */}
+        {linkDialogOpen && (
+          <div className="sticky top-[96px] z-20 border-b border-blue-200 bg-blue-50 px-4 py-3 flex items-center gap-3">
+            <LinkIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+            <input
+              autoFocus
+              type="url"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') applyLink(); if (e.key === 'Escape') setLinkDialogOpen(false); }}
+              placeholder="https://example.com"
+              className="flex-1 text-sm border border-blue-300 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <button type="button" onClick={applyLink} className="text-sm font-medium bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">
+              Apply
+            </button>
+            <button type="button" onClick={() => setLinkDialogOpen(false)} className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1.5">
+              Cancel
+            </button>
+          </div>
         )}
 
-        <Divider />
+        {/* ── Image URL Dialog ──────────────────────────────────────────── */}
+        {imageDialogOpen && (
+          <div className="sticky top-[96px] z-20 border-b border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3">
+            <ImageIcon className="w-4 h-4 text-green-500 flex-shrink-0" />
+            <input
+              autoFocus
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') applyImageUrl(); if (e.key === 'Escape') setImageDialogOpen(false); }}
+              placeholder="https://example.com/image.png"
+              className="flex-1 text-sm border border-green-300 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-400"
+            />
+            <button type="button" onClick={applyImageUrl} className="text-sm font-medium bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700">
+              Insert
+            </button>
+            <button type="button" onClick={() => setImageDialogOpen(false)} className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1.5">
+              Cancel
+            </button>
+          </div>
+        )}
 
-        {/* Image */}
-        <ToolBtn onClick={() => setImageDialogOpen(true)} title="Insert Image by URL">
-          <ImageIcon className="w-4 h-4" />
-        </ToolBtn>
-        <ToolBtn onClick={() => fileInputRef.current?.click()} title="Upload Image from Device">
-          <Upload className="w-4 h-4" />
-        </ToolBtn>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleImageUpload}
-        />
-      </div>
-
-      {/* ── Link Dialog ───────────────────────────────────────────────── */}
-      {linkDialogOpen && (
-        <div className="border-b border-blue-200 bg-blue-50 px-4 py-3 flex items-center gap-3">
-          <LinkIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
-          <input
-            autoFocus
-            type="url"
-            value={linkUrl}
-            onChange={(e) => setLinkUrl(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') applyLink(); if (e.key === 'Escape') setLinkDialogOpen(false); }}
-            placeholder="https://example.com"
-            className="flex-1 text-sm border border-blue-300 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <button type="button" onClick={applyLink} className="text-sm font-medium bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">
-            Apply
-          </button>
-          <button type="button" onClick={() => setLinkDialogOpen(false)} className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1.5">
-            Cancel
-          </button>
+        {/* ── Editor Content ────────────────────────────────────────────── */}
+        <div className="bg-white flex-1">
+          <EditorContent editor={editor} />
         </div>
-      )}
 
-      {/* ── Image URL Dialog ──────────────────────────────────────────── */}
-      {imageDialogOpen && (
-        <div className="border-b border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3">
-          <ImageIcon className="w-4 h-4 text-green-500 flex-shrink-0" />
-          <input
-            autoFocus
-            type="url"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') applyImageUrl(); if (e.key === 'Escape') setImageDialogOpen(false); }}
-            placeholder="https://example.com/image.png"
-            className="flex-1 text-sm border border-green-300 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-400"
-          />
-          <button type="button" onClick={applyImageUrl} className="text-sm font-medium bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700">
-            Insert
-          </button>
-          <button type="button" onClick={() => setImageDialogOpen(false)} className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1.5">
-            Cancel
-          </button>
+        {/* ── Status Bar ────────────────────────────────────────────────── */}
+        <div className="bg-gray-50 border-t border-gray-200 px-4 py-2 flex items-center justify-between text-xs text-gray-500">
+          <span>{charCount.toLocaleString()} characters · {wordCount.toLocaleString()} words</span>
+          <span className="text-gray-400">
+            {editor.isActive('heading', { level: 1 }) ? 'Heading 1' :
+             editor.isActive('heading', { level: 2 }) ? 'Heading 2' :
+             editor.isActive('heading', { level: 3 }) ? 'Heading 3' :
+             editor.isActive('bulletList') ? 'Bullet List' :
+             editor.isActive('orderedList') ? 'Ordered List' :
+             editor.isActive('blockquote') ? 'Blockquote' :
+             editor.isActive('table') ? 'Table' :
+             'Paragraph'}
+          </span>
         </div>
-      )}
-
-      {/* ── Editor Content ────────────────────────────────────────────── */}
-      <div className="bg-white flex-1 overflow-y-auto">
-        <EditorContent editor={editor} />
       </div>
-
-      {/* ── Status Bar ────────────────────────────────────────────────── */}
-      <div className="bg-gray-50 border-t border-gray-200 px-4 py-2 flex items-center justify-between text-xs text-gray-500">
-        <span>{charCount.toLocaleString()} characters · {wordCount.toLocaleString()} words</span>
-        <span className="text-gray-400">
-          {editor.isActive('heading', { level: 1 }) ? 'Heading 1' :
-           editor.isActive('heading', { level: 2 }) ? 'Heading 2' :
-           editor.isActive('heading', { level: 3 }) ? 'Heading 3' :
-           editor.isActive('bulletList') ? 'Bullet List' :
-           editor.isActive('orderedList') ? 'Ordered List' :
-           editor.isActive('blockquote') ? 'Blockquote' :
-           'Paragraph'}
-        </span>
-      </div>
-    </div>
+    </>
   );
 }
