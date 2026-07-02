@@ -252,7 +252,7 @@ export function RichTextEditor({
         }
       `}</style>
 
-      <div className="border border-gray-300 rounded-xl shadow-sm flex flex-col">
+      <div className="border border-gray-300 rounded-xl shadow-sm">
 
         {/* ── Sticky Toolbar ────────────────────────────────────────────── */}
         {/*
@@ -405,7 +405,7 @@ export function RichTextEditor({
         )}
 
         {/* ── Editor Content ────────────────────────────────────────────── */}
-        <div className="bg-white flex-1">
+        <div className="bg-white">
           <EditorContent editor={editor} />
         </div>
 
