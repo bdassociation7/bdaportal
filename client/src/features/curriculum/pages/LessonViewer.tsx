@@ -420,8 +420,8 @@ export function LessonViewer() {
 
         {/* ── Table of Contents Sidebar ────────────────────────────────────── */}
         {hasToc && tocOpen && (
-          <aside className="hidden lg:block w-64 xl:w-72 shrink-0">
-            <div className="sticky top-[72px] max-h-[calc(100vh-100px)] overflow-y-auto">
+          <aside className="hidden lg:block w-64 xl:w-72 shrink-0" style={{ alignSelf: 'flex-start' }}>
+            <div className="sticky top-[72px]" style={{ maxHeight: 'calc(100vh - 90px)', overflowY: 'auto' }}>
               <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
                   On this page
