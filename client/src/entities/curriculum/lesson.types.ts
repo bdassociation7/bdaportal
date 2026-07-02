@@ -40,7 +40,7 @@ export interface CreateLessonDTO {
   learning_objectives?: string[];
   learning_objectives_ar?: string[];
   estimated_duration_hours?: number;
-  order_index: 1 | 2 | 3; // Must be 1, 2, or 3
+  order_index: number; // Lesson order within module
   lesson_quiz_id?: string;
   quiz_required?: boolean;
   quiz_passing_score?: number;
@@ -59,7 +59,7 @@ export interface UpdateLessonDTO {
   learning_objectives?: string[];
   learning_objectives_ar?: string[];
   estimated_duration_hours?: number;
-  order_index?: 1 | 2 | 3;
+  order_index?: number;
   lesson_quiz_id?: string;
   quiz_required?: boolean;
   quiz_passing_score?: number;
@@ -75,7 +75,7 @@ export interface LessonFilters {
   certification_type?: 'CP' | 'SCP';
   section_type?: 'knowledge_based' | 'behavioral';
   is_published?: boolean;
-  order_index?: 1 | 2 | 3;
+  order_index?: number;
   has_quiz?: boolean;
   exam_language?: ExamLanguage;
 }

@@ -82,7 +82,7 @@ const lessonSchema = z.object({
   module_id: z.string().uuid('Please select a module'),
   title: z.string().min(3, 'Title must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  order_index: z.coerce.number().min(1).max(3),
+  order_index: z.coerce.number().min(1).max(20),
   estimated_duration_hours: z.coerce.number().min(0).max(100).optional(),
   lesson_quiz_id: z.string().uuid().optional().or(z.literal('')),
   quiz_required: z.boolean().default(true),
@@ -180,7 +180,7 @@ export function LessonEditorPage() {
 
   const { data: isOrderAvailable } = useCheckOrderIndex(
     selectedModuleId,
-    selectedOrderIndex as 1 | 2 | 3,
+    selectedOrderIndex,
     id
   );
 
@@ -228,7 +228,7 @@ export function LessonEditorPage() {
         description_ar: null,
         content: richContent,
         content_ar: null,
-        order_index: data.order_index as 1 | 2 | 3,
+        order_index: data.order_index as number,
         estimated_duration_hours: data.estimated_duration_hours || null,
         lesson_quiz_id: linkedQuizId || data.lesson_quiz_id || null,
         quiz_required: data.quiz_required,
@@ -406,9 +406,11 @@ export function LessonEditorPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="1">1 — First lesson</SelectItem>
-                          <SelectItem value="2">2 — Second lesson</SelectItem>
-                          <SelectItem value="3">3 — Third lesson</SelectItem>
+                          {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                            <SelectItem key={n} value={String(n)}>
+                              {n} — Lesson {n}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       {isOrderAvailable === false && (

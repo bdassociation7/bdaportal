@@ -271,7 +271,7 @@ export class LessonService {
    */
   static async isOrderIndexAvailable(
     moduleId: string,
-    orderIndex: 1 | 2 | 3,
+    orderIndex: number,
     excludeLessonId?: string
   ): Promise<boolean> {
     try {

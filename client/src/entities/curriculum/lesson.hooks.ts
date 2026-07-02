@@ -201,7 +201,7 @@ export function useTogglePublished() {
  */
 export function useCheckOrderIndex(
   moduleId: string | undefined,
-  orderIndex: 1 | 2 | 3,
+  orderIndex: number,
   excludeLessonId?: string
 ) {
   return useQuery({
