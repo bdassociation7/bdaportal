@@ -3,7 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
+import BaseImage from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
@@ -38,6 +38,21 @@ import {
   PanelRight,
 } from 'lucide-react';
 import type { RichContent } from '@/entities/curriculum';
+
+// ── Custom Image extension: adds 'style' attribute for float/alignment ──────
+const Image = BaseImage.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      style: {
+        default: null,
+        parseHTML: (el: HTMLElement) => el.getAttribute('style') || null,
+        renderHTML: (attrs: Record<string, unknown>) =>
+          attrs.style ? { style: attrs.style as string } : {},
+      },
+    };
+  },
+});
 
 interface RichTextEditorProps {
   content: RichContent | null;
