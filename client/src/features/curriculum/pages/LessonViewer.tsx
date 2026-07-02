@@ -3,24 +3,21 @@
  * View an individual lesson (1 of the 42 sub-competencies)
  *
  * Features:
- * - Rich content display (TipTap/Lexical JSON)
- * - Reading progress tracking
- * - Time spent tracking
+ * - Rich content display (TipTap JSON) — full-page, no scroll-box
+ * - Reading progress tracking (page scroll)
  * - Auto-completion upon reading
  * - Navigation to next lesson
- * - Sequential unlocking system
  */
 
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
   useLessonProgressById,
-  useIsLessonUnlocked,
   useLesson,
   useUpdateLessonProgress,
 } from '@/entities/curriculum';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { ArrowLeft, Lock, Clock, CheckCircle, BookOpen, Award } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, BookOpen, Award, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LessonContent } from '../components/LessonContent';
 import { LessonProgressTracker } from '../components/LessonProgressTracker';
@@ -35,57 +32,38 @@ export function LessonViewer() {
 
   const [readingProgress, setReadingProgress] = useState(0);
   const [showOptionalQuiz, setShowOptionalQuiz] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
+
   const timeTrackerRef = useRef<NodeJS.Timeout>();
   const progressUpdateTimeoutRef = useRef<NodeJS.Timeout>();
-
-  // Use refs to store values needed in scroll handler without causing re-renders
   const progressPercentageRef = useRef<number>(0);
-  const hasScrollListenerRef = useRef(false);
   const saveProgressRef = useRef<((scrollProgress: number) => void) | null>(null);
+  const autoCompleteAttemptedRef = useRef<string | null>(null);
 
-  // Detect base path from current location (ECP vs individual learning system)
+  // Detect base path
   const basePath = useMemo(() => {
     const path = location.pathname;
-    if (path.startsWith('/ecp/learning-system')) {
-      return '/ecp/learning-system/training-kits';
-    }
+    if (path.startsWith('/ecp/learning-system')) return '/ecp/learning-system/training-kits';
     return '/learning-system/training-kits';
   }, [location.pathname]);
 
-  // Helpers for back/module navigation (EN only)
-  const getBackUrl = () => basePath;
   const getModuleUrl = (modId: string) => `${basePath}/module/${modId}`;
 
-  // Fetch lesson data
   const { data: lesson, isLoading: isLoadingLesson } = useLesson(lessonId);
-
-  // Fetch user progress for this lesson
-  const { data: progress, isLoading: isLoadingProgress } = useLessonProgressById(
-    user?.id,
-    lessonId
-  );
-
-  // Mutation to update progress
+  const { data: progress, isLoading: isLoadingProgress } = useLessonProgressById(user?.id, lessonId);
   const updateProgress = useUpdateLessonProgress();
 
-  // SHRM-style: All lessons are always accessible — no sequential lock
-  const canAccessLesson = true;
-  const isCheckingUnlock = false;
-
-  // Keep progress percentage ref in sync (doesn't cause re-renders)
+  // Keep progress ref in sync
   useEffect(() => {
     progressPercentageRef.current = progress?.progress_percentage || 0;
   }, [progress?.progress_percentage]);
 
-  // Keep save progress function in ref (updated via effect, called via ref to avoid dependency issues)
+  // Keep save function in ref
   useEffect(() => {
     saveProgressRef.current = (scrollProgress: number) => {
       if (!user?.id || !lessonId) return;
-
       updateProgress.mutate({
         userId: user.id,
-        lessonId: lessonId,
+        lessonId,
         updates: {
           progress_percentage: scrollProgress,
           status: scrollProgress === 100 ? 'completed' : 'in_progress',
@@ -95,126 +73,86 @@ export function LessonViewer() {
     };
   }, [user?.id, lessonId, updateProgress]);
 
-  // Ref to track if auto-complete has been attempted for this lesson
-  const autoCompleteAttemptedRef = useRef<string | null>(null);
-
-  // Auto-complete for short content that doesn't need scrolling
+  // Page-level scroll tracking
   useEffect(() => {
-    if (!canAccessLesson || !contentRef.current || !user?.id || !lessonId) return;
-    if (progress?.status === 'completed') return; // Already completed
-    if (autoCompleteAttemptedRef.current === lessonId) return; // Already attempted for this lesson
+    if (!lessonId || !user?.id) return;
 
-    const element = contentRef.current;
+    const handleScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrollProgress = docHeight > 0 ? Math.round((scrollTop / docHeight) * 100) : 0;
+      const clamped = Math.min(scrollProgress, 100);
+
+      setReadingProgress(clamped);
+
+      if (progressUpdateTimeoutRef.current) clearTimeout(progressUpdateTimeoutRef.current);
+
+      if (clamped > progressPercentageRef.current) {
+        progressUpdateTimeoutRef.current = setTimeout(() => {
+          saveProgressRef.current?.(clamped);
+          progressPercentageRef.current = clamped;
+        }, 1000);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (progressUpdateTimeoutRef.current) clearTimeout(progressUpdateTimeoutRef.current);
+    };
+  }, [lessonId, user?.id]);
+
+  // Auto-complete for short content
+  useEffect(() => {
+    if (!user?.id || !lessonId) return;
+    if (progress?.status === 'completed') return;
+    if (autoCompleteAttemptedRef.current === lessonId) return;
 
     const checkAndAutoComplete = () => {
-      const scrollableHeight = element.scrollHeight - element.clientHeight;
-      // If content fits without scrolling (less than 10px to scroll)
-      if (scrollableHeight <= 10) {
-        autoCompleteAttemptedRef.current = lessonId; // Mark as attempted
+      const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      if (docHeight <= 10) {
+        autoCompleteAttemptedRef.current = lessonId;
         setReadingProgress(100);
         updateProgress.mutate({
           userId: user.id,
-          lessonId: lessonId,
-          updates: {
-            progress_percentage: 100,
-            status: 'completed',
-            completed_at: new Date().toISOString(),
-          },
+          lessonId,
+          updates: { progress_percentage: 100, status: 'completed', completed_at: new Date().toISOString() },
         });
       }
     };
 
-    // Check after content renders
-    const timeout = setTimeout(checkAndAutoComplete, 1000);
-    return () => clearTimeout(timeout);
-  }, [canAccessLesson, user?.id, lessonId, progress?.status]);
+    const t = setTimeout(checkAndAutoComplete, 1200);
+    return () => clearTimeout(t);
+  }, [user?.id, lessonId, progress?.status]);
 
-  // Track reading progress on scroll - only set up listener once when canAccessLesson becomes true
+  // Time tracking
   useEffect(() => {
-    // Only set up the listener once canAccessLesson is true
-    if (!canAccessLesson) return;
-    if (!contentRef.current) return;
-    if (hasScrollListenerRef.current) return;
-
-    const element = contentRef.current;
-
-    const handleScroll = () => {
-      if (!element) return;
-
-      const scrollTop = element.scrollTop;
-      const scrollHeight = element.scrollHeight - element.clientHeight;
-      const scrollProgress = scrollHeight > 0 ? Math.round((scrollTop / scrollHeight) * 100) : 0;
-
-      setReadingProgress(Math.min(scrollProgress, 100));
-
-      // Debounce progress updates to avoid mutation storm
-      if (progressUpdateTimeoutRef.current) {
-        clearTimeout(progressUpdateTimeoutRef.current);
-      }
-
-      // Update progress in database if increased (debounced, using ref for current value)
-      if (scrollProgress > progressPercentageRef.current) {
-        progressUpdateTimeoutRef.current = setTimeout(() => {
-          saveProgressRef.current?.(scrollProgress);
-          // Update ref immediately so we don't send duplicate updates
-          progressPercentageRef.current = scrollProgress;
-        }, 1000); // Wait 1 second after scrolling stops
-      }
-    };
-
-    element.addEventListener('scroll', handleScroll);
-    hasScrollListenerRef.current = true;
-
-    return () => {
-      element.removeEventListener('scroll', handleScroll);
-      hasScrollListenerRef.current = false;
-      if (progressUpdateTimeoutRef.current) {
-        clearTimeout(progressUpdateTimeoutRef.current);
-      }
-    };
-  }, [canAccessLesson]); // Only depends on canAccessLesson - all other values accessed via refs
-
-  // Track time spent (increment every minute)
-  useEffect(() => {
-    if (!user || !lessonId || !canAccessLesson) return;
-
-    timeTrackerRef.current = setInterval(() => {
-      // Note: Time tracking can be added to lesson_progress table if needed
-      // For now, we just keep the user engaged
-    }, 60000); // Every 1 minute
-
-    return () => {
-      if (timeTrackerRef.current) {
-        clearInterval(timeTrackerRef.current);
-      }
-    };
-  }, [user, lessonId, canAccessLesson]);
+    if (!user || !lessonId) return;
+    timeTrackerRef.current = setInterval(() => {}, 60000);
+    return () => { if (timeTrackerRef.current) clearInterval(timeTrackerRef.current); };
+  }, [user, lessonId]);
 
   const isLoading = isLoadingLesson || isLoadingProgress;
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Loading lesson...</p>
         </div>
       </div>
     );
   }
 
-  // Lesson not found
   if (!lesson) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md">
           <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Lesson Not Found</h2>
-          <p className="text-muted-foreground mb-6">
-            This lesson does not exist or has been deleted.
-          </p>
-          <Button onClick={() => navigate(getModuleUrl(moduleId || '', urlLang || undefined))}>
+          <p className="text-muted-foreground mb-6">This lesson does not exist or has been deleted.</p>
+          <Button onClick={() => navigate(getModuleUrl(moduleId || ''))}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Module
           </Button>
@@ -223,144 +161,144 @@ export function LessonViewer() {
     );
   }
 
-  // No lock check needed — all lessons are open (SHRM-style)
-
-  // Show optional quiz if user requested it
   if (showOptionalQuiz && lesson.lesson_quiz_id && progress) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <LessonQuizGate
-          lesson={lesson}
-          progress={progress}
-          onBack={() => setShowOptionalQuiz(false)}
-        />
+        <LessonQuizGate lesson={lesson} progress={progress} onBack={() => setShowOptionalQuiz(false)} />
       </div>
     );
   }
 
-  // Main lesson viewer
+  const isCompleted = readingProgress >= 100 || progress?.status === 'completed';
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate(getModuleUrl(lesson.module_id))}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
+    <div className="min-h-screen bg-[#f8f9fb]">
 
-              <div className="border-l pl-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <BookOpen className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Lesson {lesson.order_index} / 3
-                  </span>
-                </div>
-                <h1 className="text-xl font-bold">
-                  {lesson.title}
-                </h1>
-              </div>
+      {/* ── Sticky top bar ───────────────────────────────────────────────── */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+
+          {/* Left: back + breadcrumb */}
+          <div className="flex items-center gap-3 min-w-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0 text-gray-600 hover:text-gray-900"
+              onClick={() => navigate(getModuleUrl(lesson.module_id))}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              Back
+            </Button>
+
+            <div className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 min-w-0">
+              <BookOpen className="h-4 w-4 shrink-0" />
+              <span className="truncate font-medium text-gray-800">{lesson.title}</span>
+              <span className="shrink-0 text-gray-400">· Lesson {lesson.order_index}</span>
             </div>
+          </div>
 
-            {/* Progress Indicator */}
-            <LessonProgressTracker
-              progress={progress}
-              readingProgress={readingProgress}
-            />
+          {/* Right: progress tracker */}
+          <div className="shrink-0">
+            <LessonProgressTracker progress={progress} readingProgress={readingProgress} />
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          {/* Lesson Info */}
-          {lesson.description && (
-            <div className="p-6 border-b bg-blue-50">
-              <p className="text-sm text-gray-700">
-                {lesson.description}
-              </p>
-            </div>
-          )}
-
-          {/* Estimated Duration */}
-          {lesson.estimated_duration_hours && (
-            <div className="px-6 py-3 border-b bg-gray-50">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>
-                  Estimated duration: {lesson.estimated_duration_hours} hour{lesson.estimated_duration_hours > 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Learning Objectives */}
-          {lesson.learning_objectives && lesson.learning_objectives.length > 0 && (
-            <div className="px-6 py-4 border-b">
-              <h3 className="font-semibold mb-2">Learning Objectives:</h3>
-              <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-                {lesson.learning_objectives.map((objective, index) => (
-                  <li key={index}>{objective}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Lesson Content */}
+        {/* Reading progress bar */}
+        <div className="h-0.5 bg-gray-100">
           <div
-            ref={contentRef}
-            className="p-6 overflow-y-auto"
-            style={{ maxHeight: 'calc(100vh - 400px)' }}
-          >
-            <LessonContent
-              content={lesson.content}
-              contentAr={undefined}
-            />
-          </div>
+            className="h-full bg-blue-600 transition-all duration-300"
+            style={{ width: `${readingProgress}%` }}
+          />
+        </div>
+      </header>
 
-          {/* Footer Actions */}
-          <div className="px-6 py-4 border-t bg-gray-50">
-            {readingProgress >= 100 || progress?.status === 'completed' ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-green-600 justify-center">
-                  <CheckCircle className="h-5 w-5" />
-                  <span className="font-medium">Lesson completed!</span>
-                </div>
+      {/* ── Main content ─────────────────────────────────────────────────── */}
+      <main className="max-w-3xl mx-auto px-6 py-10">
 
-                {/* Optional Quiz Button */}
-                {lesson.lesson_quiz_id && (
-                  <div className="flex justify-center">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowOptionalQuiz(true)}
-                      className="w-auto"
-                    >
-                      <Award className="mr-2 h-4 w-4" />
-                      Practice Quiz (Optional)
-                    </Button>
-                  </div>
-                )}
+        {/* Lesson title */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-3">
+            {lesson.title}
+          </h1>
 
-                <p className="text-sm text-muted-foreground text-center">
-                  Use the navigation below to continue to the next lesson
-                </p>
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground text-center">
-                Scroll down to complete the lesson
-              </div>
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+            {lesson.estimated_duration_hours && (
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-4 w-4" />
+                {lesson.estimated_duration_hours} hour{lesson.estimated_duration_hours > 1 ? 's' : ''} estimated
+              </span>
+            )}
+            {isCompleted && (
+              <span className="flex items-center gap-1.5 text-green-600 font-medium">
+                <CheckCircle className="h-4 w-4" />
+                Completed
+              </span>
             )}
           </div>
         </div>
 
-        {/* Lesson Navigator */}
+        {/* Description / intro card */}
+        {lesson.description && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-6 py-4 mb-8">
+            <p className="text-gray-700 leading-relaxed text-[1.02rem]">{lesson.description}</p>
+          </div>
+        )}
+
+        {/* Learning Objectives */}
+        {lesson.learning_objectives && lesson.learning_objectives.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-xl px-6 py-5 mb-8 shadow-sm">
+            <h2 className="text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <ChevronRight className="h-4 w-4 text-blue-600" />
+              Learning Objectives
+            </h2>
+            <ul className="space-y-2">
+              {lesson.learning_objectives.map((obj, i) => (
+                <li key={i} className="flex items-start gap-2 text-gray-700 text-sm leading-relaxed">
+                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+                  {obj}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* ── Lesson body content ────────────────────────────────────────── */}
+        <article className="bg-white border border-gray-200 rounded-xl px-8 py-10 shadow-sm mb-8">
+          <LessonContent content={lesson.content} contentAr={undefined} />
+        </article>
+
+        {/* ── Completion banner ──────────────────────────────────────────── */}
+        {isCompleted && (
+          <div className="bg-green-50 border border-green-200 rounded-xl px-6 py-5 mb-6 text-center shadow-sm">
+            <div className="flex items-center justify-center gap-2 text-green-700 font-semibold text-lg mb-1">
+              <CheckCircle className="h-5 w-5" />
+              Lesson Completed!
+            </div>
+            <p className="text-sm text-green-600">
+              Great work. Use the navigation below to continue to the next lesson.
+            </p>
+            {lesson.lesson_quiz_id && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 border-green-300 text-green-700 hover:bg-green-100"
+                onClick={() => setShowOptionalQuiz(true)}
+              >
+                <Award className="mr-2 h-4 w-4" />
+                Practice Quiz (Optional)
+              </Button>
+            )}
+          </div>
+        )}
+
+        {!isCompleted && (
+          <p className="text-center text-sm text-gray-400 mb-6">
+            Scroll to the bottom to mark this lesson as complete.
+          </p>
+        )}
+
+        {/* ── Lesson navigator ───────────────────────────────────────────── */}
         <LessonNavigator
           currentLesson={lesson}
           moduleId={lesson.module_id}
@@ -368,7 +306,7 @@ export function LessonViewer() {
           basePath={basePath}
           moduleLang={undefined}
         />
-      </div>
+      </main>
     </div>
   );
 }
