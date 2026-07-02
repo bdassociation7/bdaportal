@@ -317,8 +317,8 @@ export function LessonViewer() {
         </div>
       </header>
 
-      {/* ── Two-column layout: content + TOC sidebar ─────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex gap-8 items-start">
+      {/* 25002500 Main content (with right padding for fixed TOC) 25002500250025002500250025002500250025002500250025002500250025002500250025002500 */}
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 ${hasToc && tocOpen ? 'lg:pr-[308px]' : ''}`}>
 
         {/* ── Main content column ──────────────────────────────────────────── */}
         <main className="flex-1 min-w-0">
@@ -418,10 +418,13 @@ export function LessonViewer() {
           />
         </main>
 
-        {/* ── Table of Contents Sidebar ────────────────────────────────────── */}
+        {/* ── Table of Contents Sidebar (fixed) ──────────────────────────────── */}
         {hasToc && tocOpen && (
-          <aside className="hidden lg:block w-64 xl:w-72 shrink-0" style={{ alignSelf: 'flex-start' }}>
-            <div className="sticky top-[72px]" style={{ maxHeight: 'calc(100vh - 90px)', overflowY: 'auto' }}>
+          <aside
+            className="hidden lg:block"
+            style={{ position: 'fixed', top: '72px', right: '24px', width: '272px', maxHeight: 'calc(100vh - 90px)', overflowY: 'auto', zIndex: 10 }}
+          >
+            <div>
               <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
                   On this page
