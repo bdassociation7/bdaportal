@@ -89,6 +89,11 @@ export function RichTextEditor({
           class: 'max-w-full rounded-lg my-4 shadow-sm',
         },
         allowBase64: true,
+        resize: {
+          enabled: true,
+          minWidth: 60,
+          minHeight: 40,
+        },
       }),
       Placeholder.configure({ placeholder }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -313,6 +318,39 @@ export function RichTextEditor({
         /* Selected cell highlight */
         .tiptap-table .selectedCell {
           background-color: #dbeafe !important;
+        }
+        /* ── Image resize handles ─────────────────────────────────── */
+        .ProseMirror [data-resize-state] {
+          position: relative;
+          display: inline-block;
+          line-height: 0;
+        }
+        .ProseMirror [data-resize-state] img {
+          display: block;
+        }
+        /* Resize handle dots */
+        .ProseMirror [data-resize-state] > [style*="position: absolute"] {
+          width: 10px !important;
+          height: 10px !important;
+          background: #2563eb;
+          border: 2px solid #fff;
+          border-radius: 50%;
+          z-index: 10;
+          cursor: nwse-resize;
+        }
+        /* Show handles only when image is selected */
+        .ProseMirror-selectednode [data-resize-state] > [style*="position: absolute"],
+        [data-resize-state="true"] > [style*="position: absolute"] {
+          opacity: 1;
+        }
+        /* Hide handles when not selected */
+        .ProseMirror [data-resize-state="false"] > [style*="position: absolute"] {
+          opacity: 0;
+        }
+        /* Blue ring on selected image */
+        .ProseMirror-selectednode [data-resize-state] img {
+          outline: 2px solid #2563eb;
+          outline-offset: 2px;
         }
       `}</style>
 
