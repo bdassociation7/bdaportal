@@ -33,6 +33,9 @@ import {
   Minus,
   Upload,
   X,
+  Trash2,
+  PanelLeft,
+  PanelRight,
 } from 'lucide-react';
 import type { RichContent } from '@/entities/curriculum';
 
@@ -47,10 +50,12 @@ interface RichTextEditorProps {
  * Rich Text Editor Component — Full-featured TipTap editor
  * Supports: headings, bold, italic, underline, highlight, alignment,
  *           bullet/ordered lists, blockquote, code, links, images (URL + upload),
+ *           image resize (drag handles) + image alignment toolbar,
  *           tables, horizontal rule, undo/redo, character count
  *
  * Toolbar is sticky so it stays visible while scrolling the content.
  * BubbleMenu appears next to selected text for quick formatting.
+ * Image toolbar appears when clicking an image (size presets + alignment).
  */
 export function RichTextEditor({
   content,
@@ -80,11 +85,19 @@ export function RichTextEditor({
         autolink: true,
         linkOnPaste: true,
       }),
+      // ── Image with resize handles ────────────────────────────────────
       Image.configure({
-        HTMLAttributes: {
-          class: 'max-w-full rounded-lg my-4 shadow-sm',
-        },
         allowBase64: true,
+        resize: {
+          enabled: true,
+          directions: ['right', 'bottom', 'bottom-right'],
+          minWidth: 60,
+          minHeight: 40,
+          alwaysPreserveAspectRatio: false,
+        },
+        HTMLAttributes: {
+          class: 'tiptap-image rounded-lg shadow-sm',
+        },
       }),
       Placeholder.configure({ placeholder }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -238,16 +251,38 @@ export function RichTextEditor({
   );
 
   const BubbleDivider = () => <div className="w-px h-4 bg-gray-500 mx-0.5 self-center" />;
-
   const Divider = () => <div className="w-px h-5 bg-gray-300 mx-0.5" />;
 
   const charCount = editor.storage.characterCount?.characters() ?? 0;
   const wordCount = editor.storage.characterCount?.words() ?? 0;
 
+  // ── Image size preset helper ───────────────────────────────────────────
+  const setImageWidth = (width: number | null) => {
+    if (!editor) return;
+    const { state } = editor;
+    const { selection } = state;
+    const node = state.doc.nodeAt(selection.from);
+    if (node?.type.name === 'image') {
+      editor.chain().focus().updateAttributes('image', {
+        width: width ?? undefined,
+        height: undefined,
+      }).run();
+    }
+  };
+
+  // ── Image alignment / float helper ────────────────────────────────────
+  const setImageStyle = (styleValue: string) => {
+    if (!editor) return;
+    editor.chain().focus().updateAttributes('image', { style: styleValue }).run();
+  };
+
+  const isImageSelected = editor.isActive('image');
+
   return (
     <>
-      {/* ── Table styles injected globally ────────────────────────────── */}
+      {/* ── Styles ────────────────────────────────────────────────────── */}
       <style>{`
+        /* ── Table styles ─────────────────────────────────────────────── */
         .tiptap-table {
           border-collapse: collapse;
           width: 100%;
@@ -276,11 +311,50 @@ export function RichTextEditor({
         .tiptap-table tr:hover .tiptap-table-cell {
           background-color: #eff6ff;
         }
-        /* Selected cell highlight */
         .tiptap-table .selectedCell {
           background-color: #dbeafe !important;
         }
-        /* Bubble menu animation */
+
+        /* ── Image resize styles ──────────────────────────────────────── */
+        .tiptap-image {
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 1rem auto;
+          cursor: default;
+        }
+        /* TipTap v3 resize wrapper */
+        .ProseMirror .tiptap-resizable-node-view-wrapper {
+          display: inline-block;
+          position: relative;
+          max-width: 100%;
+        }
+        .ProseMirror .tiptap-resizable-node-view-wrapper.ProseMirror-selectednode {
+          outline: 2px solid #3b82f6;
+          border-radius: 6px;
+        }
+        /* Resize handles */
+        .ProseMirror .tiptap-resizable-node-view-handle {
+          position: absolute;
+          width: 10px;
+          height: 10px;
+          background: #3b82f6;
+          border: 2px solid #fff;
+          border-radius: 50%;
+          z-index: 10;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .ProseMirror .tiptap-resizable-node-view-handle[data-direction="right"] {
+          right: -5px; top: 50%; transform: translateY(-50%); cursor: ew-resize;
+        }
+        .ProseMirror .tiptap-resizable-node-view-handle[data-direction="bottom"] {
+          bottom: -5px; left: 50%; transform: translateX(-50%); cursor: ns-resize;
+        }
+        .ProseMirror .tiptap-resizable-node-view-handle[data-direction="bottom-right"] {
+          bottom: -5px; right: -5px; cursor: nwse-resize;
+        }
+
+        /* ── Bubble menu animation ────────────────────────────────────── */
         .tiptap-bubble-menu {
           animation: bubbleFadeIn 0.12s ease-out;
         }
@@ -290,17 +364,16 @@ export function RichTextEditor({
         }
       `}</style>
 
-      {/* ── Floating Bubble Menu (appears on text selection) ──────────── */}
+      {/* ── Floating Bubble Menu for text selection ───────────────────── */}
       <BubbleMenu
         editor={editor}
-        tippyOptions={{
-          duration: 100,
-          placement: 'top',
-          offset: [0, 8],
+        shouldShow={({ editor }) => {
+          // Show only when text is selected (not image)
+          return !editor.isActive('image') && !editor.state.selection.empty;
         }}
+        tippyOptions={{ duration: 100, placement: 'top', offset: [0, 8] }}
         className="tiptap-bubble-menu flex items-center gap-0.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl px-1.5 py-1"
       >
-        {/* Headings */}
         <BubbleBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Heading 1">
           <Heading1 className="w-3.5 h-3.5" />
         </BubbleBtn>
@@ -310,17 +383,14 @@ export function RichTextEditor({
         <BubbleBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Heading 3">
           <Heading3 className="w-3.5 h-3.5" />
         </BubbleBtn>
-
         <BubbleDivider />
-
-        {/* Text formatting */}
-        <BubbleBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold (Ctrl+B)">
+        <BubbleBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold">
           <Bold className="w-3.5 h-3.5" />
         </BubbleBtn>
-        <BubbleBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic (Ctrl+I)">
+        <BubbleBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic">
           <Italic className="w-3.5 h-3.5" />
         </BubbleBtn>
-        <BubbleBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Underline (Ctrl+U)">
+        <BubbleBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Underline">
           <UnderlineIcon className="w-3.5 h-3.5" />
         </BubbleBtn>
         <BubbleBtn onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} title="Highlight">
@@ -329,10 +399,7 @@ export function RichTextEditor({
         <BubbleBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} title="Inline Code">
           <Code className="w-3.5 h-3.5" />
         </BubbleBtn>
-
         <BubbleDivider />
-
-        {/* Alignment */}
         <BubbleBtn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="Align Left">
           <AlignLeft className="w-3.5 h-3.5" />
         </BubbleBtn>
@@ -342,10 +409,7 @@ export function RichTextEditor({
         <BubbleBtn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="Align Right">
           <AlignRight className="w-3.5 h-3.5" />
         </BubbleBtn>
-
         <BubbleDivider />
-
-        {/* Lists */}
         <BubbleBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Bullet List">
           <List className="w-3.5 h-3.5" />
         </BubbleBtn>
@@ -355,10 +419,7 @@ export function RichTextEditor({
         <BubbleBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Blockquote">
           <Quote className="w-3.5 h-3.5" />
         </BubbleBtn>
-
         <BubbleDivider />
-
-        {/* Link */}
         <BubbleBtn onClick={openLinkDialog} active={editor.isActive('link')} title="Insert / Edit Link">
           <LinkIcon className="w-3.5 h-3.5" />
         </BubbleBtn>
@@ -367,6 +428,95 @@ export function RichTextEditor({
             <X className="w-3.5 h-3.5 text-red-400" />
           </BubbleBtn>
         )}
+      </BubbleMenu>
+
+      {/* ── Image Toolbar (appears when image is selected) ─────────────── */}
+      <BubbleMenu
+        editor={editor}
+        shouldShow={({ editor }) => editor.isActive('image')}
+        tippyOptions={{ duration: 100, placement: 'top', offset: [0, 8] }}
+        className="tiptap-bubble-menu flex items-center gap-0.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl px-1.5 py-1"
+      >
+        {/* Size presets */}
+        <span className="text-gray-400 text-xs px-1 select-none">Size:</span>
+        {[
+          { label: 'S', width: 200, title: 'Small (200px)' },
+          { label: 'M', width: 400, title: 'Medium (400px)' },
+          { label: 'L', width: 600, title: 'Large (600px)' },
+          { label: '100%', width: null, title: 'Full width' },
+        ].map(({ label, width, title }) => (
+          <button
+            key={label}
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); setImageWidth(width); }}
+            title={title}
+            className="px-2 py-1 rounded text-xs font-medium text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
+          >
+            {label}
+          </button>
+        ))}
+
+        <BubbleDivider />
+
+        {/* Alignment / Float */}
+        <span className="text-gray-400 text-xs px-1 select-none">Layout:</span>
+        {/* Float left — text wraps on the right */}
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); setImageStyle('float:left; margin:0.5rem 1.25rem 0.5rem 0; clear:left;'); }}
+          title="Float Left — text wraps on right"
+          className="p-1.5 rounded text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
+        >
+          <PanelLeft className="w-3.5 h-3.5" />
+        </button>
+        {/* Centre — no float */}
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); setImageStyle('display:block; margin:1rem auto; float:none; clear:both;'); }}
+          title="Centre (no float)"
+          className="p-1.5 rounded text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
+        >
+          <AlignCenter className="w-3.5 h-3.5" />
+        </button>
+        {/* Float right — text wraps on the left */}
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); setImageStyle('float:right; margin:0.5rem 0 0.5rem 1.25rem; clear:right;'); }}
+          title="Float Right — text wraps on left"
+          className="p-1.5 rounded text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
+        >
+          <PanelRight className="w-3.5 h-3.5" />
+        </button>
+        {/* Align left (no float) */}
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); setImageStyle('display:block; margin:1rem 0; float:none; clear:both;'); }}
+          title="Align left (no float)"
+          className="p-1.5 rounded text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
+        >
+          <AlignLeft className="w-3.5 h-3.5" />
+        </button>
+        {/* Align right (no float) */}
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); setImageStyle('display:block; margin:1rem 0 1rem auto; float:none; clear:both;'); }}
+          title="Align right (no float)"
+          className="p-1.5 rounded text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
+        >
+          <AlignRight className="w-3.5 h-3.5" />
+        </button>
+
+        <BubbleDivider />
+
+        {/* Delete image */}
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteSelection().run(); }}
+          title="Delete image"
+          className="p-1.5 rounded text-red-400 hover:bg-red-900 hover:text-red-300 transition-colors"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
       </BubbleMenu>
 
       <div className="border border-gray-300 rounded-xl shadow-sm">
@@ -471,6 +621,14 @@ export function RichTextEditor({
             className="hidden"
             onChange={handleImageUpload}
           />
+
+          {/* Image quick actions (shown when image is selected) */}
+          {isImageSelected && (
+            <>
+              <Divider />
+              <span className="text-xs text-blue-600 font-medium px-1">Image selected — use toolbar above image</span>
+            </>
+          )}
         </div>
 
         {/* ── Link Dialog ───────────────────────────────────────────────── */}
@@ -526,7 +684,8 @@ export function RichTextEditor({
         <div className="bg-gray-50 border-t border-gray-200 px-4 py-2 flex items-center justify-between text-xs text-gray-500">
           <span>{charCount.toLocaleString()} characters · {wordCount.toLocaleString()} words</span>
           <span className="text-gray-400">
-            {editor.isActive('heading', { level: 1 }) ? 'Heading 1' :
+            {editor.isActive('image') ? 'Image — click to resize or use toolbar' :
+             editor.isActive('heading', { level: 1 }) ? 'Heading 1' :
              editor.isActive('heading', { level: 2 }) ? 'Heading 2' :
              editor.isActive('heading', { level: 3 }) ? 'Heading 3' :
              editor.isActive('bulletList') ? 'Bullet List' :

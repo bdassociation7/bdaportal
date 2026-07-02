@@ -146,20 +146,37 @@ export function LessonContent({ content }: LessonContentProps) {
         return <hr key={key} className="my-8 border-gray-200" />;
 
       // ── Image ─────────────────────────────────────────────────────────
-      case 'image':
+      case 'image': {
+        // Parse inline style string into a React style object
+        const parseStyle = (s: string): React.CSSProperties =>
+          Object.fromEntries(
+            s.split(';').filter(Boolean).map((rule) => {
+              const [k, ...rest] = rule.split(':');
+              const val = rest.join(':').trim();
+              const key = k.trim().replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase());
+              return [key, val];
+            })
+          );
+        const rawStyle = node.attrs?.style || '';
+        const imgStyle: React.CSSProperties = rawStyle
+          ? { maxWidth: '100%', height: 'auto', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', ...parseStyle(rawStyle) }
+          : { maxWidth: '100%', height: 'auto', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'block', margin: '1rem auto' };
+        if (node.attrs?.width) imgStyle.width = node.attrs.width;
+        const isFloated = rawStyle.includes('float:left') || rawStyle.includes('float:right');
         return (
-          <figure key={key} className="mb-6">
+          <figure key={key} className="mb-4" style={isFloated ? { overflow: 'hidden' } : {}}>
             <img
               src={node.attrs?.src}
               alt={node.attrs?.alt || ''}
               title={node.attrs?.title}
-              className="max-w-full h-auto rounded-lg shadow-sm mx-auto"
+              style={imgStyle}
             />
             {node.attrs?.title && (
               <figcaption className="mt-2 text-sm text-gray-500 italic text-center">{node.attrs.title}</figcaption>
             )}
           </figure>
         );
+      }
 
       // ── Table ─────────────────────────────────────────────────────────
       case 'table':
