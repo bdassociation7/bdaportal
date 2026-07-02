@@ -130,17 +130,26 @@ function renderNode(node: ContentNode, index: number): React.ReactNode {
         </ol>
       );
 
-    case 'listItem':
+    case 'listItem': {
+      // TipTap wraps list item text in a paragraph node.
+      // Flatten it so bullet + text appear on the same line.
+      const itemContent: React.ReactNode[] = [];
+      node.content?.forEach((child, i) => {
+        if (child.type === 'paragraph') {
+          // Inline content directly
+          child.content?.forEach((inline, j) => {
+            itemContent.push(renderNode(inline, j));
+          });
+        } else {
+          itemContent.push(renderNode(child, i));
+        }
+      });
       return (
-        <li key={index} className="leading-[1.85] pl-1">
-          {node.content?.map((child, i) => {
-            if (child.type === 'paragraph') {
-              return child.content?.map((inline, j) => renderNode(inline, j));
-            }
-            return renderNode(child, i);
-          })}
+        <li key={index} className="leading-[1.85]">
+          {itemContent}
         </li>
       );
+    }
 
     // ── Blockquote ────────────────────────────────────────────────────────
     case 'blockquote':
