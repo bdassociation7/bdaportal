@@ -8,9 +8,16 @@
 import React from 'react';
 import type { Json } from '@/shared/database.types';
 
+type TocItem = {
+  id: string;
+  text: string;
+  level: 1 | 2 | 3;
+};
+
 interface LessonContentProps {
   content: Json;
   contentAr?: Json | null; // kept for backward compat, not used
+  tocItems?: TocItem[];
 }
 
 type TipTapNode = {
@@ -21,8 +28,21 @@ type TipTapNode = {
   marks?: { type: string; attrs?: Record<string, any> }[];
 };
 
-export function LessonContent({ content }: LessonContentProps) {
+/** Extract plain text from a TipTap inline content array */
+function extractText(nodes: TipTapNode[] | undefined): string {
+  if (!nodes) return '';
+  return nodes.map((n) => n.text || extractText(n.content)).join('');
+}
+
+export function LessonContent({ content, tocItems = [] }: LessonContentProps) {
   const displayContent = content;
+
+  // Build a map from heading text to its TOC id for anchor linking
+  const tocIdMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    tocItems.forEach((item) => map.set(item.text, item.id));
+    return map;
+  }, [tocItems]);
 
   // ── Inline marks renderer ─────────────────────────────────────────────
   const renderInline = (nodes: TipTapNode[] | undefined, keyPrefix = ''): React.ReactNode => {
@@ -76,7 +96,19 @@ export function LessonContent({ content }: LessonContentProps) {
           3: 'text-xl font-semibold text-gray-800 mt-6 mb-2',
         };
         const Tag = `h${level}` as 'h1' | 'h2' | 'h3';
-        return <Tag key={key} className={cls[level] || 'text-lg font-semibold mt-4 mb-2'} style={style}>{renderInline(node.content, `h${key}`)}</Tag>;
+        // Attach data-toc-id for TOC scroll targeting
+        const headingText = extractText(node.content);
+        const tocId = tocIdMap.get(headingText.trim());
+        return (
+          <Tag
+            key={key}
+            className={cls[level] || 'text-lg font-semibold mt-4 mb-2'}
+            style={style}
+            {...(tocId ? { 'data-toc-id': tocId } : {})}
+          >
+            {renderInline(node.content, `h${key}`)}
+          </Tag>
+        );
       }
 
       // ── Paragraph ─────────────────────────────────────────────────────
