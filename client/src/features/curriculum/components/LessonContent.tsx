@@ -70,6 +70,11 @@ export function LessonContent({ content, tocItems = [] }: LessonContentProps) {
               el = <mark key={key} className="bg-yellow-200 rounded px-0.5">{el}</mark>; break;
             case 'link':
               el = <a key={key} href={mark.attrs?.href} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline hover:text-blue-800">{el}</a>; break;
+            case 'textStyle':
+              if (mark.attrs?.color) {
+                el = <span key={key} style={{ color: mark.attrs.color }}>{el}</span>;
+              }
+              break;
             default: break;
           }
         }

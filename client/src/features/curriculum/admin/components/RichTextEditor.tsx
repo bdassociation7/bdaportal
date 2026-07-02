@@ -7,6 +7,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
 import CharacterCount from '@tiptap/extension-character-count';
 import { Table, TableRow, TableHeader, TableCell } from '@tiptap/extension-table';
@@ -32,6 +33,7 @@ import {
   Minus,
   Upload,
   X,
+  Palette,
 } from 'lucide-react';
 import type { RichContent } from '@/entities/curriculum';
 
@@ -69,6 +71,27 @@ export function RichTextEditor({
   // Floating bubble toolbar position state
   const [bubblePos, setBubblePos] = useState<{ top: number; left: number } | null>(null);
 
+  // Color picker state
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+
+  // Preset text colors
+  const TEXT_COLORS = [
+    { label: 'Default',   value: '' },
+    { label: 'Black',     value: '#000000' },
+    { label: 'Dark Gray', value: '#374151' },
+    { label: 'Gray',      value: '#6B7280' },
+    { label: 'Red',       value: '#DC2626' },
+    { label: 'Orange',    value: '#EA580C' },
+    { label: 'Amber',     value: '#D97706' },
+    { label: 'Green',     value: '#16A34A' },
+    { label: 'Teal',      value: '#0D9488' },
+    { label: 'Blue',      value: '#2563EB' },
+    { label: 'Indigo',    value: '#4F46E5' },
+    { label: 'Purple',    value: '#9333EA' },
+    { label: 'Pink',      value: '#DB2777' },
+    { label: 'White',     value: '#FFFFFF' },
+  ];
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -99,6 +122,7 @@ export function RichTextEditor({
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Underline,
       TextStyle,
+      Color,
       Highlight.configure({ multicolor: false }),
       CharacterCount,
       // ── Table support ────────────────────────────────────────────────
@@ -398,6 +422,31 @@ export function RichTextEditor({
             >
               <Highlighter className="w-3.5 h-3.5" />
             </BubbleBtn>
+            {/* Bubble color swatches */}
+            <BubbleDivider />
+            {['#DC2626','#EA580C','#16A34A','#2563EB','#9333EA'].map((c) => (
+              <button
+                key={c}
+                type="button"
+                title={c}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  editor.chain().focus().setColor(c).run();
+                }}
+                className="w-4 h-4 rounded-full border border-gray-600 flex-shrink-0 hover:scale-110 transition-transform"
+                style={{ backgroundColor: c }}
+              />
+            ))}
+            <button
+              type="button"
+              title="Remove color"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                editor.chain().focus().unsetColor().run();
+              }}
+              className="w-4 h-4 rounded-full border border-gray-500 flex-shrink-0 hover:scale-110 transition-transform text-gray-400"
+              style={{ backgroundImage: 'linear-gradient(135deg, #555 25%, transparent 25%, transparent 75%, #555 75%)' }}
+            />
             <BubbleDivider />
             <BubbleBtn
               onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -484,6 +533,53 @@ export function RichTextEditor({
           <ToolBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} title="Inline Code">
             <Code className="w-4 h-4" />
           </ToolBtn>
+
+          {/* Text Color */}
+          <div className="relative">
+            <button
+              type="button"
+              title="Text Color"
+              onClick={() => setColorPickerOpen((v) => !v)}
+              className="p-1.5 rounded transition-colors text-gray-700 hover:bg-blue-100 hover:text-blue-700 flex flex-col items-center gap-0"
+            >
+              <Palette className="w-4 h-4" />
+              <span
+                className="block w-4 h-1 rounded-full mt-0.5"
+                style={{ backgroundColor: editor.getAttributes('textStyle').color || '#374151' }}
+              />
+            </button>
+            {colorPickerOpen && (
+              <div
+                className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 w-[200px]"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Text Color</p>
+                <div className="grid grid-cols-7 gap-1.5">
+                  {TEXT_COLORS.map((c) => (
+                    <button
+                      key={c.value || 'default'}
+                      type="button"
+                      title={c.label}
+                      onClick={() => {
+                        if (c.value === '') {
+                          editor.chain().focus().unsetColor().run();
+                        } else {
+                          editor.chain().focus().setColor(c.value).run();
+                        }
+                        setColorPickerOpen(false);
+                      }}
+                      className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                      style={{
+                        backgroundColor: c.value || 'transparent',
+                        borderColor: c.value === (editor.getAttributes('textStyle').color || '') ? '#2563eb' : '#e5e7eb',
+                        backgroundImage: c.value === '' ? 'linear-gradient(135deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%)' : undefined,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           <Divider />
 
