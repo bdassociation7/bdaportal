@@ -76,20 +76,22 @@ export function RichTextEditor({
 
   // Preset text colors
   const TEXT_COLORS = [
-    { label: 'Default',   value: '' },
-    { label: 'Black',     value: '#000000' },
-    { label: 'Dark Gray', value: '#374151' },
-    { label: 'Gray',      value: '#6B7280' },
-    { label: 'Red',       value: '#DC2626' },
-    { label: 'Orange',    value: '#EA580C' },
-    { label: 'Amber',     value: '#D97706' },
-    { label: 'Green',     value: '#16A34A' },
-    { label: 'Teal',      value: '#0D9488' },
-    { label: 'Blue',      value: '#2563EB' },
-    { label: 'Indigo',    value: '#4F46E5' },
-    { label: 'Purple',    value: '#9333EA' },
-    { label: 'Pink',      value: '#DB2777' },
-    { label: 'White',     value: '#FFFFFF' },
+    { label: 'Default',      value: '' },
+    { label: 'BDA Navy',     value: '#1C4A8C' },
+    { label: 'BDA Blue',     value: '#1092E1' },
+    { label: 'Black',        value: '#000000' },
+    { label: 'Dark Gray',    value: '#374151' },
+    { label: 'Gray',         value: '#6B7280' },
+    { label: 'Red',          value: '#DC2626' },
+    { label: 'Orange',       value: '#EA580C' },
+    { label: 'Amber',        value: '#D97706' },
+    { label: 'Green',        value: '#16A34A' },
+    { label: 'Teal',         value: '#0D9488' },
+    { label: 'Blue',         value: '#2563EB' },
+    { label: 'Indigo',       value: '#4F46E5' },
+    { label: 'Purple',       value: '#9333EA' },
+    { label: 'Pink',         value: '#DB2777' },
+    { label: 'White',        value: '#FFFFFF' },
   ];
 
   const editor = useEditor({
@@ -424,7 +426,7 @@ export function RichTextEditor({
             </BubbleBtn>
             {/* Bubble color swatches */}
             <BubbleDivider />
-            {['#DC2626','#EA580C','#16A34A','#2563EB','#9333EA'].map((c) => (
+            {['#1C4A8C','#1092E1','#DC2626','#16A34A','#9333EA'].map((c) => (
               <button
                 key={c}
                 type="button"
