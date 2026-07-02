@@ -178,30 +178,14 @@ function renderNode(node: ContentNode, index: number): React.ReactNode {
       return <hr key={index} className="my-8 border-gray-200" />;
 
     // ── Image ─────────────────────────────────────────────────────────────
-    case 'image': {
-      // Parse inline style string into a React style object
-      const parseStyle = (s: string): React.CSSProperties =>
-        Object.fromEntries(
-          s.split(';').filter(Boolean).map((rule) => {
-            const [k, ...rest] = rule.split(':');
-            const val = rest.join(':').trim();
-            const camelKey = k.trim().replace(/-([a-z])/g, (_: string, c: string) => c.toUpperCase());
-            return [camelKey, val];
-          })
-        );
-      const rawStyle = node.attrs?.style || '';
-      const imgStyle: React.CSSProperties = rawStyle
-        ? { maxWidth: '100%', height: 'auto', borderRadius: '0.75rem', boxShadow: '0 2px 6px rgba(0,0,0,0.12)', ...parseStyle(rawStyle) }
-        : { maxWidth: '100%', height: 'auto', borderRadius: '0.75rem', boxShadow: '0 2px 6px rgba(0,0,0,0.12)', display: 'block', margin: '1rem auto' };
-      if (node.attrs?.width) imgStyle.width = node.attrs.width;
-      const isFloated = rawStyle.includes('float:left') || rawStyle.includes('float:right');
+    case 'image':
       return (
-        <figure key={index} className="my-4" style={isFloated ? { overflow: 'hidden' } : {}}>
+        <figure key={index} className="my-6 text-center">
           <img
             src={node.attrs?.src}
             alt={node.attrs?.alt || ''}
             title={node.attrs?.title || ''}
-            style={imgStyle}
+            className="max-w-full mx-auto rounded-xl shadow-md"
           />
           {node.attrs?.title && (
             <figcaption className="mt-2 text-sm text-gray-500 italic">
@@ -210,7 +194,6 @@ function renderNode(node: ContentNode, index: number): React.ReactNode {
           )}
         </figure>
       );
-    }
 
     // ── Table ─────────────────────────────────────────────────────────────
     case 'table':
