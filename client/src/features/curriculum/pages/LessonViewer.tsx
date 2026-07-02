@@ -213,7 +213,7 @@ export function LessonViewer() {
       </header>
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <main className="max-w-4xl mx-auto px-6 sm:px-10 py-10">
+      <main className="w-full px-6 sm:px-12 lg:px-20 py-10">
 
         {/* Lesson title */}
         <div className="mb-8">
@@ -264,7 +264,7 @@ export function LessonViewer() {
         )}
 
         {/* ── Lesson body content ────────────────────────────────────────── */}
-        <article className="bg-white rounded-xl px-8 sm:px-12 py-10 mb-8">
+        <article className="bg-white rounded-xl px-8 sm:px-14 py-10 mb-8">
           <LessonContent content={lesson.content} contentAr={undefined} />
         </article>
 
