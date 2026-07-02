@@ -265,7 +265,9 @@ export function LessonViewer() {
 
         {/* ── Lesson body content ────────────────────────────────────────── */}
         <article className="bg-white rounded-xl px-8 sm:px-14 py-10 mb-8">
-          <LessonContent content={lesson.content} contentAr={undefined} />
+          <div className="prose prose-gray max-w-none">
+            <LessonContent content={lesson.content} contentAr={undefined} />
+          </div>
         </article>
 
         {/* ── Completion banner ──────────────────────────────────────────── */}
