@@ -271,27 +271,29 @@ export function RichTextEditor({
   const charCount = editor.storage.characterCount?.characters() ?? 0;
   const wordCount = editor.storage.characterCount?.words() ?? 0;
 
-  // ── Image size preset helper ───────────────────────────────────────────
-  const setImageWidth = (width: number | null) => {
+  // ── Helper: detect NodeSelection (duck-typing, no external import needed) ──
+  const isNodeSel = (sel: unknown): sel is { from: number; to: number } =>
+    typeof sel === 'object' && sel !== null && 'node' in sel;
+
+  // ── Image attribute setter — uses setNodeMarkup directly (works with NodeSelection) ──
+  const setImageAttr = useCallback((attrs: Record<string, unknown>) => {
     if (!editor) return;
-    const { state } = editor;
+    const { state, view } = editor;
     const { selection } = state;
+    // NodeSelection has a .node property; TextSelection does not
+    if (!isNodeSel(selection)) return;
     const node = state.doc.nodeAt(selection.from);
-    if (node?.type.name === 'image') {
-      editor.chain().focus().updateAttributes('image', {
-        width: width ?? undefined,
-        height: undefined,
-      }).run();
-    }
-  };
+    if (!node || node.type.name !== 'image') return;
+    const tr = state.tr.setNodeMarkup(selection.from, undefined, {
+      ...node.attrs,
+      ...attrs,
+    });
+    view.dispatch(tr);
+    view.focus();
+  }, [editor]);
 
-  // ── Image alignment / float helper ────────────────────────────────────
-  const setImageStyle = (styleValue: string) => {
-    if (!editor) return;
-    editor.chain().focus().updateAttributes('image', { style: styleValue }).run();
-  };
-
-  const isImageSelected = editor.isActive('image');
+  const isImageSelected = isNodeSel(editor.state.selection) &&
+    editor.state.doc.nodeAt(editor.state.selection.from)?.type.name === 'image';
 
   return (
     <>
@@ -448,7 +450,13 @@ export function RichTextEditor({
       {/* ── Image Toolbar (appears when image is selected) ─────────────── */}
       <BubbleMenu
         editor={editor}
-        shouldShow={({ editor }) => editor.isActive('image')}
+        shouldShow={({ state }) => {
+          const { selection } = state;
+          // NodeSelection has a .node property; TextSelection does not
+          if (!('node' in selection)) return false;
+          const node = state.doc.nodeAt(selection.from);
+          return node?.type.name === 'image';
+        }}
         tippyOptions={{ duration: 100, placement: 'top', offset: [0, 8] }}
         className="tiptap-bubble-menu flex items-center gap-0.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl px-1.5 py-1"
       >
@@ -463,7 +471,7 @@ export function RichTextEditor({
           <button
             key={label}
             type="button"
-            onMouseDown={(e) => { e.preventDefault(); setImageWidth(width); }}
+            onMouseDown={(e) => { e.preventDefault(); setImageAttr({ width: width ?? undefined, height: undefined }); }}
             title={title}
             className="px-2 py-1 rounded text-xs font-medium text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
           >
@@ -478,7 +486,7 @@ export function RichTextEditor({
         {/* Float left — text wraps on the right */}
         <button
           type="button"
-          onMouseDown={(e) => { e.preventDefault(); setImageStyle('float:left; margin:0.5rem 1.25rem 0.5rem 0; clear:left;'); }}
+          onMouseDown={(e) => { e.preventDefault(); setImageAttr({ style: 'float:left; margin:0.5rem 1.25rem 0.5rem 0; clear:left;' }); }}
           title="Float Left — text wraps on right"
           className="p-1.5 rounded text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
         >
@@ -487,7 +495,7 @@ export function RichTextEditor({
         {/* Centre — no float */}
         <button
           type="button"
-          onMouseDown={(e) => { e.preventDefault(); setImageStyle('display:block; margin:1rem auto; float:none; clear:both;'); }}
+          onMouseDown={(e) => { e.preventDefault(); setImageAttr({ style: 'display:block; margin:1rem auto; float:none; clear:both;' }); }}
           title="Centre (no float)"
           className="p-1.5 rounded text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
         >
@@ -496,7 +504,7 @@ export function RichTextEditor({
         {/* Float right — text wraps on the left */}
         <button
           type="button"
-          onMouseDown={(e) => { e.preventDefault(); setImageStyle('float:right; margin:0.5rem 0 0.5rem 1.25rem; clear:right;'); }}
+          onMouseDown={(e) => { e.preventDefault(); setImageAttr({ style: 'float:right; margin:0.5rem 0 0.5rem 1.25rem; clear:right;' }); }}
           title="Float Right — text wraps on left"
           className="p-1.5 rounded text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
         >
@@ -505,7 +513,7 @@ export function RichTextEditor({
         {/* Align left (no float) */}
         <button
           type="button"
-          onMouseDown={(e) => { e.preventDefault(); setImageStyle('display:block; margin:1rem 0; float:none; clear:both;'); }}
+          onMouseDown={(e) => { e.preventDefault(); setImageAttr({ style: 'display:block; margin:1rem 0; float:none; clear:both;' }); }}
           title="Align left (no float)"
           className="p-1.5 rounded text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
         >
@@ -514,7 +522,7 @@ export function RichTextEditor({
         {/* Align right (no float) */}
         <button
           type="button"
-          onMouseDown={(e) => { e.preventDefault(); setImageStyle('display:block; margin:1rem 0 1rem auto; float:none; clear:both;'); }}
+          onMouseDown={(e) => { e.preventDefault(); setImageAttr({ style: 'display:block; margin:1rem 0 1rem auto; float:none; clear:both;' }); }}
           title="Align right (no float)"
           className="p-1.5 rounded text-gray-200 hover:bg-gray-600 hover:text-white transition-colors"
         >
