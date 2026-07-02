@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
@@ -49,6 +50,7 @@ interface RichTextEditorProps {
  *           tables, horizontal rule, undo/redo, character count
  *
  * Toolbar is sticky so it stays visible while scrolling the content.
+ * BubbleMenu appears next to selected text for quick formatting.
  */
 export function RichTextEditor({
   content,
@@ -209,6 +211,34 @@ export function RichTextEditor({
     </button>
   );
 
+  // ── Bubble menu button helper (compact, dark theme) ────────────────────
+  const BubbleBtn = ({
+    onClick,
+    active = false,
+    title,
+    children,
+  }: {
+    onClick: () => void;
+    active?: boolean;
+    title: string;
+    children: React.ReactNode;
+  }) => (
+    <button
+      type="button"
+      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+      title={title}
+      className={`p-1.5 rounded transition-colors
+        ${active
+          ? 'bg-white text-gray-900'
+          : 'text-gray-200 hover:bg-gray-600 hover:text-white'}
+      `}
+    >
+      {children}
+    </button>
+  );
+
+  const BubbleDivider = () => <div className="w-px h-4 bg-gray-500 mx-0.5 self-center" />;
+
   const Divider = () => <div className="w-px h-5 bg-gray-300 mx-0.5" />;
 
   const charCount = editor.storage.characterCount?.characters() ?? 0;
@@ -250,15 +280,98 @@ export function RichTextEditor({
         .tiptap-table .selectedCell {
           background-color: #dbeafe !important;
         }
+        /* Bubble menu animation */
+        .tiptap-bubble-menu {
+          animation: bubbleFadeIn 0.12s ease-out;
+        }
+        @keyframes bubbleFadeIn {
+          from { opacity: 0; transform: translateY(4px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
       `}</style>
+
+      {/* ── Floating Bubble Menu (appears on text selection) ──────────── */}
+      <BubbleMenu
+        editor={editor}
+        tippyOptions={{
+          duration: 100,
+          placement: 'top',
+          offset: [0, 8],
+        }}
+        className="tiptap-bubble-menu flex items-center gap-0.5 bg-gray-800 border border-gray-700 rounded-lg shadow-xl px-1.5 py-1"
+      >
+        {/* Headings */}
+        <BubbleBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive('heading', { level: 1 })} title="Heading 1">
+          <Heading1 className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        <BubbleBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })} title="Heading 2">
+          <Heading2 className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        <BubbleBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })} title="Heading 3">
+          <Heading3 className="w-3.5 h-3.5" />
+        </BubbleBtn>
+
+        <BubbleDivider />
+
+        {/* Text formatting */}
+        <BubbleBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title="Bold (Ctrl+B)">
+          <Bold className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        <BubbleBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title="Italic (Ctrl+I)">
+          <Italic className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        <BubbleBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive('underline')} title="Underline (Ctrl+U)">
+          <UnderlineIcon className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        <BubbleBtn onClick={() => editor.chain().focus().toggleHighlight().run()} active={editor.isActive('highlight')} title="Highlight">
+          <Highlighter className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        <BubbleBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} title="Inline Code">
+          <Code className="w-3.5 h-3.5" />
+        </BubbleBtn>
+
+        <BubbleDivider />
+
+        {/* Alignment */}
+        <BubbleBtn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="Align Left">
+          <AlignLeft className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        <BubbleBtn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="Align Centre">
+          <AlignCenter className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        <BubbleBtn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="Align Right">
+          <AlignRight className="w-3.5 h-3.5" />
+        </BubbleBtn>
+
+        <BubbleDivider />
+
+        {/* Lists */}
+        <BubbleBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')} title="Bullet List">
+          <List className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        <BubbleBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Numbered List">
+          <ListOrdered className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        <BubbleBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive('blockquote')} title="Blockquote">
+          <Quote className="w-3.5 h-3.5" />
+        </BubbleBtn>
+
+        <BubbleDivider />
+
+        {/* Link */}
+        <BubbleBtn onClick={openLinkDialog} active={editor.isActive('link')} title="Insert / Edit Link">
+          <LinkIcon className="w-3.5 h-3.5" />
+        </BubbleBtn>
+        {editor.isActive('link') && (
+          <BubbleBtn onClick={() => editor.chain().focus().unsetLink().run()} title="Remove Link">
+            <X className="w-3.5 h-3.5 text-red-400" />
+          </BubbleBtn>
+        )}
+      </BubbleMenu>
 
       <div className="border border-gray-300 rounded-xl shadow-sm">
 
         {/* ── Sticky Toolbar ────────────────────────────────────────────── */}
-        {/*
-          sticky top-0 z-20 ensures the toolbar stays visible while the
-          editor content scrolls within the parent container.
-        */}
         <div className="sticky top-[48px] z-20 bg-gray-50 border-b border-gray-200 px-3 py-2 flex flex-wrap items-center gap-0.5 shadow-sm">
 
           {/* History */}
@@ -307,7 +420,7 @@ export function RichTextEditor({
           <ToolBtn onClick={() => editor.chain().focus().setTextAlign('left').run()} active={editor.isActive({ textAlign: 'left' })} title="Align Left">
             <AlignLeft className="w-4 h-4" />
           </ToolBtn>
-          <ToolBtn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="Align Center">
+          <ToolBtn onClick={() => editor.chain().focus().setTextAlign('center').run()} active={editor.isActive({ textAlign: 'center' })} title="Align Centre">
             <AlignCenter className="w-4 h-4" />
           </ToolBtn>
           <ToolBtn onClick={() => editor.chain().focus().setTextAlign('right').run()} active={editor.isActive({ textAlign: 'right' })} title="Align Right">
