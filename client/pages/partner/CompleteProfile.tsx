@@ -38,6 +38,7 @@ export default function PartnerCompleteProfile() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [profileStatus, setProfileStatus] = useState(checkProfileCompletion(user?.profile || null));
 
   useEffect(() => {
@@ -67,11 +68,12 @@ export default function PartnerCompleteProfile() {
         description: 'Your partner profile has been completed successfully!',
       });
 
+      // Set redirecting flag BEFORE checkAuth to prevent ProfileCompletionGuard
+      // from triggering a competing navigation on mobile (race condition fix)
+      setIsRedirecting(true);
+
       // Refresh user profile to ensure updated name is reflected in state
       await checkAuth();
-
-      // Give React time to propagate the updated state before navigating
-      await new Promise(resolve => setTimeout(resolve, 300));
 
       // Rediriger vers le dashboard approprié
       const dashboardPath = isECP ? '/ecp/dashboard' : isPDP ? '/pdp/dashboard' : '/dashboard';
@@ -88,13 +90,13 @@ export default function PartnerCompleteProfile() {
     }
   };
 
-  // Si le profil est déjà complet, rediriger
+  // Si le profil est déjà complet, rediriger (sauf si on est en train de rediriger manuellement)
   useEffect(() => {
-    if (profileStatus.isComplete) {
+    if (profileStatus.isComplete && !isRedirecting) {
       const dashboardPath = isECP ? '/ecp/dashboard' : isPDP ? '/pdp/dashboard' : '/dashboard';
       navigate(dashboardPath);
     }
-  }, [profileStatus.isComplete, navigate, isECP, isPDP]);
+  }, [profileStatus.isComplete, isRedirecting, navigate, isECP, isPDP]);
 
   const partnerType = isECP ? 'ECP (Endorsed Certification Partner)' : isPDP ? 'PDP (Professional Development Partner)' : 'Partner';
 

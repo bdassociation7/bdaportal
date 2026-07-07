@@ -37,6 +37,7 @@ export default function CompleteProfile() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [profileStatus, setProfileStatus] = useState(checkProfileCompletion(user?.profile || null));
 
   useEffect(() => {
@@ -66,12 +67,12 @@ export default function CompleteProfile() {
         description: 'Your profile has been completed successfully!',
       });
 
-      // Refresh user profile to ensure updated name is reflected in state
-      // We call checkAuth which re-fetches from DB, then navigate
-      await checkAuth();
+      // Set redirecting flag BEFORE checkAuth to prevent ProfileCompletionGuard
+      // from triggering a competing navigation on mobile (race condition fix)
+      setIsRedirecting(true);
 
-      // Give React time to propagate the updated state before navigating
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Refresh user profile to ensure updated name is reflected in state
+      await checkAuth();
 
       // Rediriger vers le dashboard
       navigate('/dashboard', { replace: true });
@@ -87,12 +88,12 @@ export default function CompleteProfile() {
     }
   };
 
-  // Si le profil est déjà complet, rediriger
+  // Si le profil est déjà complet, rediriger (sauf si on est en train de rediriger manuellement)
   useEffect(() => {
-    if (profileStatus.isComplete) {
+    if (profileStatus.isComplete && !isRedirecting) {
       navigate('/dashboard');
     }
-  }, [profileStatus.isComplete, navigate]);
+  }, [profileStatus.isComplete, isRedirecting, navigate]);
 
   const handleLogout = async () => {
     await logout();
