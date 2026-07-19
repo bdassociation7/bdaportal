@@ -186,6 +186,9 @@ function InfoRow({ icon, label, value, mono = false }: {
 export default function VerifyCertificate() {
   const { credentialId: urlCredentialId } = useParams<{ credentialId?: string }>();
   const navigate = useNavigate();
+  // Detect if we're under /public/verify or /verify
+  const isPublicRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/');
+  const BASE_PATH = isPublicRoute ? '/public/verify' : '/verify';
 
   // Search form state
   const [holderName, setHolderName]     = useState('');
@@ -248,7 +251,7 @@ export default function VerifyCertificate() {
       const result = await verifyCertificate(credId);
       if (result.error) throw new Error(result.error.message);
       setVerification(result.data);
-      navigate(`/verify/${credId}`, { replace: true });
+      navigate(`${BASE_PATH}/${credId}`, { replace: true });
     } catch (error) {
       setVerification({
         is_valid: false, status: 'error',
@@ -270,7 +273,7 @@ export default function VerifyCertificate() {
     setHasSearched(false);
     setVerification(null);
     setSelectedCredId(null);
-    navigate('/verify', { replace: true });
+    navigate(BASE_PATH, { replace: true });
   };
 
   const handleCopyLink = () => {
@@ -505,7 +508,7 @@ export default function VerifyCertificate() {
                             }}>
                               {r.is_valid ? <><CheckCircle size={10} /> Active</> :
                                r.status === 'expired' ? <><AlertTriangle size={10} /> Expired</> :
-                               <><XCircle size={10} /> {r.status}</>}
+                               <><XCircle size={10} /> Inactive</>}
                             </span>
                           </td>
                           <td style={{ padding: '9px 14px', color: '#555' }}>{formatDate(r.expiry_date)}</td>
