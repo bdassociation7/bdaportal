@@ -216,8 +216,6 @@ export default function SubmitProgram() {
       activity_type: formData.activity_type!,
       delivery_mode: formData.delivery_mode,
       duration_hours: formData.duration_hours,
-      valid_from: formData.valid_from!,
-      valid_until: formData.valid_until!,
       target_audience: formData.target_audience || undefined,
       prerequisites: formData.prerequisites || undefined,
       learning_outcomes: formData.learning_outcomes,
@@ -242,8 +240,7 @@ export default function SubmitProgram() {
           formData.activity_type &&
           formData.max_pdc_credits &&
           formData.max_pdc_credits > 0 &&
-          formData.valid_from &&
-          formData.valid_until
+          true
         );
       case 2:
         return selectedCompetencies.length > 0;
@@ -547,28 +544,6 @@ export default function SubmitProgram() {
                   onChange={(e) => handleInputChange("max_pdc_credits", parseInt(e.target.value))}
                 />
                 <p className="text-xs text-gray-500">Maximum PDC credits that can be earned</p>
-              </div>
-            </div>
-
-            {/* Validity Period */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="valid_from">Valid From *</Label>
-                <Input
-                  id="valid_from"
-                  type="date"
-                  value={formData.valid_from}
-                  onChange={(e) => handleInputChange("valid_from", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="valid_until">Valid Until *</Label>
-                <Input
-                  id="valid_until"
-                  type="date"
-                  value={formData.valid_until}
-                  onChange={(e) => handleInputChange("valid_until", e.target.value)}
-                />
               </div>
             </div>
 
@@ -884,15 +859,7 @@ export default function SubmitProgram() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600">Valid From:</span>{" "}
-                  <span className="font-medium">{formData.valid_from}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Valid Until:</span>{" "}
-                  <span className="font-medium">{formData.valid_until}</span>
-                </div>
+              <div className="grid grid-cols-2 md:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">Language:</span>{" "}
                   <span className="font-medium">

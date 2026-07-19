@@ -198,22 +198,6 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
       errors.max_pdc_credits = 'PDC credits must be between 1 and 40';
     }
 
-    if (!formData.valid_from) {
-      errors.valid_from = 'Valid from date is required';
-    }
-
-    if (!formData.valid_until) {
-      errors.valid_until = 'Valid until date is required';
-    }
-
-    if (formData.valid_from && formData.valid_until) {
-      const from = new Date(formData.valid_from);
-      const until = new Date(formData.valid_until);
-      if (until <= from) {
-        errors.valid_until = 'Valid until date must be after valid from date';
-      }
-    }
-
     if (formData.session_start_date && formData.session_end_date) {
       const start = new Date(formData.session_start_date);
       const end = new Date(formData.session_end_date);
@@ -441,48 +425,7 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
             </div>
           </div>
 
-          {/* Accreditation Validity Period */}
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
-              <Award className="h-4 w-4" /> Accreditation Validity
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="valid_from">
-                  Valid From <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="valid_from"
-                  type="date"
-                  value={formData.valid_from}
-                  onChange={e => handleInputChange('valid_from', e.target.value)}
-                />
-                {validationErrors.valid_from && (
-                  <p className="text-sm text-red-500 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.valid_from}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="valid_until">
-                  Valid Until <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="valid_until"
-                  type="date"
-                  value={formData.valid_until}
-                  onChange={e => handleInputChange('valid_until', e.target.value)}
-                />
-                {validationErrors.valid_until && (
-                  <p className="text-sm text-red-500 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {validationErrors.valid_until}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
+
 
           {/* Session / Event Dates */}
           <div>

@@ -16,7 +16,6 @@ import {
   Globe,
   ExternalLink,
   ArrowLeft,
-  Calendar,
   Target,
   BookOpen,
   CheckCircle2,
@@ -464,18 +463,6 @@ export default function ProgramDetail() {
                     </div>
                   </div>
                 )}
-
-                {/* Validity */}
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-400 mb-0.5">Valid Period</p>
-                    <p className="font-medium text-gray-800 text-xs leading-relaxed">
-                      {formatLong(program.valid_from)}<br />
-                      — {formatLong(program.valid_until)}
-                    </p>
-                  </div>
-                </div>
 
                 {/* Type */}
                 <div className="flex items-start gap-3">

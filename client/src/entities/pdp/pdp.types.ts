@@ -85,8 +85,8 @@ export interface CreateProgramDTO {
   description_ar?: string;
   max_pdc_credits: number;
   activity_type: ActivityType;
-  valid_from: string;
-  valid_until: string;
+  valid_from?: string;
+  valid_until?: string;
   learning_outcomes?: string[];
   duration_hours?: number;
   delivery_mode?: DeliveryMode;

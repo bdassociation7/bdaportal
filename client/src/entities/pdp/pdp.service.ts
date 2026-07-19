@@ -175,6 +175,13 @@ export class PDPService {
         .eq('id', user.id)
         .single();
 
+      // Get partner license dates (valid_from/until = partnership period)
+      const { data: partnerData } = await supabase
+        .from('partners')
+        .select('license_valid_from, license_valid_until')
+        .eq('id', user.id)
+        .single();
+
       // Generate program ID
       const { data: programIdData } = await supabase.rpc('generate_pdp_program_id', {
         p_provider_id: user.id,
@@ -194,6 +201,9 @@ export class PDPService {
           program_id: programIdData || fallbackId,
           created_by: user.id,
           status: 'draft',
+          // Override valid dates with partnership period automatically
+          valid_from: partnerData?.license_valid_from || programData.valid_from,
+          valid_until: partnerData?.license_valid_until || programData.valid_until,
         })
         .select()
         .single();
@@ -258,9 +268,27 @@ export class PDPService {
   static async submitProgramForReview(id: string): Promise<ServiceResult<PDPProgram>> {
     // Auto-approve programs on submission - admin can view for visibility only
     const now = new Date().toISOString();
-    const validFrom = now.split('T')[0];
-    // Default validity: 1 year from submission
-    const validUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Get the program's existing valid_from/until (already set from partnership period)
+    const { data: program } = await supabase
+      .from('pdp_programs')
+      .select('valid_from, valid_until, provider_id')
+      .eq('id', id)
+      .single();
+
+    // Try to get partner license dates as fallback
+    let validFrom = program?.valid_from || now.split('T')[0];
+    let validUntil = program?.valid_until || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    if (program?.provider_id && (!program.valid_from || !program.valid_until)) {
+      const { data: partnerData } = await supabase
+        .from('partners')
+        .select('license_valid_from, license_valid_until')
+        .eq('id', program.provider_id)
+        .single();
+      if (partnerData?.license_valid_from) validFrom = partnerData.license_valid_from;
+      if (partnerData?.license_valid_until) validUntil = partnerData.license_valid_until;
+    }
 
     return this.updateProgram(id, {
       status: 'approved',
