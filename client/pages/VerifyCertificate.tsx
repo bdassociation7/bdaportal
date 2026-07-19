@@ -87,8 +87,6 @@ const SORTED_COUNTRIES = Object.entries(COUNTRY_NAMES).sort((a, b) => a[1].local
 const CERTIFICATION_TYPES = [
   { value: 'CP',  label: 'BDA-CP® — Certified Professional' },
   { value: 'SCP', label: 'BDA-SCP® — Senior Certified Professional' },
-  { value: 'Basic Member',        label: 'BDA® Basic Member' },
-  { value: 'Professional Member', label: 'BDA® Professional Member' },
 ];
 
 const BADGE_IMAGES: Record<string, string> = {
@@ -490,7 +488,13 @@ export default function VerifyCertificate() {
                           </td>
                           <td style={{ padding: '9px 14px', fontFamily: 'monospace', color: '#555', fontSize: 12 }}>{r.credential_id}</td>
                           <td style={{ padding: '9px 14px', color: '#555' }}>
-                            {r.country_code ? (COUNTRY_NAMES[r.country_code.toUpperCase()] || r.country_code) : '—'}
+                            {(() => {
+                              const cc = r.country_code;
+                              if (!cc) return '—';
+                              // If it looks like a phone code (+966, +1, etc.) show dash
+                              if (cc.startsWith('+') || /^\d/.test(cc)) return '—';
+                              return COUNTRY_NAMES[cc.toUpperCase()] || cc;
+                            })()}
                           </td>
                           <td style={{ padding: '9px 14px' }}>
                             <span style={{
