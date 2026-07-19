@@ -219,8 +219,9 @@ export default function VerifyCertificate() {
   }, [urlCredentialId]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const hasAnyFilter = () =>
-    holderName.trim() || country || certType || credentialId.trim();
+  // Holder Name is required (at least 1 character)
+  const hasRequiredFilter = () => holderName.trim().length >= 1;
+  const hasAnyFilter = hasRequiredFilter;
 
   const handleSearch = async () => {
     if (!hasAnyFilter()) return;
@@ -324,7 +325,7 @@ export default function VerifyCertificate() {
           </h1>
           <p style={{ fontSize: 13, color: '#555', margin: '8px 0 0', lineHeight: 1.65 }}>
             The Certified Directory may be used to verify a credential holder's certification.
-            Enter one or more fields below and click <strong>Search</strong> to find matching records.
+            Enter the holder's name (or part of it) along with any additional filters, then click <strong>Search</strong>.
             The search results will provide the credential holder's name, certification type, country, and validity status.
           </p>
         </div>
@@ -340,13 +341,13 @@ export default function VerifyCertificate() {
           {/* Row 1: Holder Name + Country */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px 32px', marginBottom: 18 }}>
             <div>
-              <label style={labelStyle}>Holder Name</label>
+              <label style={labelStyle}>Holder Name <span style={{ color: '#c0392b' }}>*</span></label>
               <Input
-                placeholder="e.g. John Smith"
+                placeholder="Enter at least one character…"
                 value={holderName}
                 onChange={(e) => setHolderName(e.target.value)}
                 onKeyPress={handleKeyPress}
-                style={inputStyle}
+                style={{ ...inputStyle, borderColor: holderName.trim() ? '#ccc' : '#e5a000' }}
               />
             </div>
             <div>
