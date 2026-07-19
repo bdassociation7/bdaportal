@@ -18,8 +18,15 @@ export class PartnersService {
         .order('created_at', { ascending: false });
 
       // Apply filters
+      // When filtering by ecp or pdp, also include dual_partner (who have both types)
       if (filters.partner_type) {
-        query = query.eq('partner_type', filters.partner_type);
+        if (filters.partner_type === 'ecp') {
+          query = query.in('partner_type', ['ecp', 'dual_partner']);
+        } else if (filters.partner_type === 'pdp') {
+          query = query.in('partner_type', ['pdp', 'dual_partner']);
+        } else {
+          query = query.eq('partner_type', filters.partner_type);
+        }
       }
 
       if (filters.is_active !== undefined) {
