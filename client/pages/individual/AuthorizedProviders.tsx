@@ -79,7 +79,7 @@ function resolveCountry(raw: string | undefined | null): string {
 
 interface Partner {
   id: string;
-  partner_type: 'ecp' | 'pdp';
+  partner_type: 'ecp' | 'pdp' | 'dual_partner';
   company_name: string;
   company_name_ar?: string;
   contact_person: string;
@@ -128,20 +128,23 @@ function usePartnerDetails(partnerId: string | null) {
         .single();
       if (partnerError) throw partnerError;
       let relatedData: { programs?: any[]; trainers?: any[] } = {};
-      if (partner.partner_type === 'pdp') {
+      const isPdp = partner.partner_type === 'pdp' || partner.partner_type === 'dual_partner';
+      const isEcp = partner.partner_type === 'ecp' || partner.partner_type === 'dual_partner';
+      if (isPdp) {
         const { data: programs } = await (supabase as any)
           .from('pdp_programs')
           .select('*')
           .eq('provider_id', partnerId)
           .eq('status', 'approved');
-        relatedData = { programs: programs || [] };
-      } else if (partner.partner_type === 'ecp') {
+        relatedData = { ...relatedData, programs: programs || [] };
+      }
+      if (isEcp) {
         const { data: trainers } = await (supabase as any)
           .from('ecp_trainers')
           .select('*')
           .eq('partner_id', partnerId)
           .eq('status', 'approved');
-        relatedData = { trainers: trainers || [] };
+        relatedData = { ...relatedData, trainers: trainers || [] };
       }
       return { partner, ...relatedData };
     },
@@ -184,7 +187,10 @@ export default function AuthorisedProviders() {
       const kw = keyword.toLowerCase();
       const matchesKeyword = !keyword || name.includes(kw) || city.includes(kw) || desc.includes(kw);
       const matchesCountry = !selectedCountry || p.country === selectedCountry;
-      const matchesType = selectedType === 'all' || p.partner_type === selectedType;
+      const matchesType =
+        selectedType === 'all' ||
+        p.partner_type === selectedType ||
+        (p.partner_type === 'dual_partner' && (selectedType === 'ecp' || selectedType === 'pdp'));
       return matchesKeyword && matchesCountry && matchesType;
     });
   }, [partners, keyword, selectedCountry, selectedType]);
@@ -381,10 +387,12 @@ export default function AuthorisedProviders() {
                           className={`text-xs px-1.5 py-0 ${
                             partner.partner_type === 'ecp'
                               ? 'border-blue-300 text-blue-700 bg-blue-50'
+                              : partner.partner_type === 'dual_partner'
+                              ? 'border-purple-300 text-purple-700 bg-purple-50'
                               : 'border-indigo-300 text-indigo-700 bg-indigo-50'
                           }`}
                         >
-                          {partner.partner_type?.toUpperCase()}
+                          {partner.partner_type === 'dual_partner' ? 'ECP + PDP' : partner.partner_type?.toUpperCase()}
                         </Badge>
                         {(partner.city || partner.country) && (
                           <span className="text-xs text-gray-400 flex items-center gap-0.5">
@@ -467,9 +475,11 @@ export default function AuthorisedProviders() {
                   <Badge className={`mt-1 ${
                     partnerDetails.partner.partner_type === 'ecp'
                       ? 'bg-blue-100 text-blue-800'
+                      : partnerDetails.partner.partner_type === 'dual_partner'
+                      ? 'bg-purple-100 text-purple-800'
                       : 'bg-indigo-100 text-indigo-800'
                   }`}>
-                    {partnerDetails.partner.partner_type?.toUpperCase()}
+                    {partnerDetails.partner.partner_type === 'dual_partner' ? 'ECP + PDP' : partnerDetails.partner.partner_type?.toUpperCase()}
                   </Badge>
                 )}
               </div>
@@ -556,7 +566,7 @@ export default function AuthorisedProviders() {
                 )}
 
                 {/* PDP Programmes */}
-                {partnerDetails.partner.partner_type === 'pdp' && (
+                {(partnerDetails.partner.partner_type === 'pdp' || partnerDetails.partner.partner_type === 'dual_partner') && (
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
                       <BookOpen className="h-4 w-4" />
@@ -583,7 +593,7 @@ export default function AuthorisedProviders() {
                 )}
 
                 {/* ECP Trainers */}
-                {partnerDetails.partner.partner_type === 'ecp' && (
+                {(partnerDetails.partner.partner_type === 'ecp' || partnerDetails.partner.partner_type === 'dual_partner') && (
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
                       <Award className="h-4 w-4" />
