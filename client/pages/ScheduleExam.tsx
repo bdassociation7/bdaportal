@@ -140,11 +140,15 @@ export default function ScheduleExam() {
   // Reschedule state
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined);
-  const [rescheduleTime, setRescheduleTime] = useState('09:00');
+  const [rescheduleHour, setRescheduleHour] = useState('09');
+  const [rescheduleMinute, setRescheduleMinute] = useState('00');
   const [rescheduleTimezone, setRescheduleTimezone] = useState('UTC');
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleComplete, setRescheduleComplete] = useState(false);
   const [rescheduledDetails, setRescheduledDetails] = useState<any>(null);
+
+  // Derived reschedule time string (HH:MM)
+  const rescheduleTime = `${rescheduleHour}:${rescheduleMinute}`;
 
   // Calculate date constraints based on all schedulable windows (current + future)
   const dateConstraints = useMemo(() => {
@@ -424,7 +428,7 @@ export default function ScheduleExam() {
   }, [existingBooking]);
 
   const handleReschedule = async () => {
-    if (!rescheduleDate || !rescheduleTime || !existingBooking) {
+    if (!rescheduleDate || !existingBooking) {
       toast({ title: 'Incomplete Selection', description: 'Please select a new date and time.', variant: 'destructive' });
       return;
     }
@@ -480,9 +484,13 @@ export default function ScheduleExam() {
         status: 'rescheduled',
       });
 
+      const h = parseInt(rescheduleHour, 10);
+      const ampm = h < 12 ? 'AM' : 'PM';
+      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const timeLabel = `${h12}:${rescheduleMinute} ${ampm}`;
       toast({
         title: 'Exam Rescheduled!',
-        description: `Your exam has been moved to ${format(rescheduleDate, 'MMMM d, yyyy')} at ${TIME_SLOTS.find(s => s.value === rescheduleTime)?.label}.`,
+        description: `Your exam has been moved to ${format(rescheduleDate, 'MMMM d, yyyy')} at ${timeLabel}.`,
       });
     } catch (err: any) {
       toast({
@@ -918,42 +926,70 @@ export default function ScheduleExam() {
                 </div>
               </div>
 
-              {/* Time picker */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">New Time</Label>
-                  <Select value={rescheduleTime} onValueChange={setRescheduleTime}>
-                    <SelectTrigger>
+              {/* Time picker - full 24h with hour + minute */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">New Time</Label>
+                <div className="flex items-center gap-2">
+                  {/* Hour selector */}
+                  <Select value={rescheduleHour} onValueChange={setRescheduleHour}>
+                    <SelectTrigger className="w-28">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="max-h-48">
-                      {TIME_SLOTS.map(slot => (
-                        <SelectItem key={slot.value} value={slot.value}>{slot.label}</SelectItem>
+                    <SelectContent className="max-h-56">
+                      {Array.from({ length: 24 }, (_, i) => {
+                        const h = String(i).padStart(2, '0');
+                        const ampm = i < 12 ? 'AM' : 'PM';
+                        const h12 = i === 0 ? 12 : i > 12 ? i - 12 : i;
+                        return (
+                          <SelectItem key={h} value={h}>
+                            {String(h12).padStart(2, '0')} {ampm}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-lg font-bold text-gray-500">:</span>
+                  {/* Minute selector */}
+                  <Select value={rescheduleMinute} onValueChange={setRescheduleMinute}>
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {['00', '15', '30', '45'].map(m => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Timezone</Label>
-                  <TimezoneCombobox
-                    value={rescheduleTimezone}
-                    onValueChange={setRescheduleTimezone}
-                  />
-                </div>
+              </div>
+
+              {/* Timezone */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Timezone</Label>
+                <TimezoneCombobox
+                  value={rescheduleTimezone}
+                  onValueChange={setRescheduleTimezone}
+                />
               </div>
 
               {/* Summary */}
-              {rescheduleDate && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-xs text-yellow-700 font-medium mb-1">New scheduled time:</p>
-                  <p className="font-semibold text-yellow-900">
-                    {format(rescheduleDate, 'EEEE, MMMM d, yyyy')}
-                  </p>
-                  <p className="text-sm text-yellow-800">
-                    {TIME_SLOTS.find(s => s.value === rescheduleTime)?.label} · {getTimezoneLabel(rescheduleTimezone)}
-                  </p>
-                </div>
-              )}
+              {rescheduleDate && (() => {
+                const h = parseInt(rescheduleHour, 10);
+                const ampm = h < 12 ? 'AM' : 'PM';
+                const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                const timeLabel = `${String(h12).padStart(2, '0')}:${rescheduleMinute} ${ampm}`;
+                return (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-xs text-yellow-700 font-medium mb-1">New scheduled time:</p>
+                    <p className="font-semibold text-yellow-900">
+                      {format(rescheduleDate, 'EEEE, MMMM d, yyyy')}
+                    </p>
+                    <p className="text-sm text-yellow-800">
+                      {timeLabel} · {getTimezoneLabel(rescheduleTimezone)}
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
 
             <DialogFooter>
