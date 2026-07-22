@@ -1,7 +1,8 @@
 /**
  * Schedule Exam Page
  *
- * Improved UX with visual calendar, exam window status, and quick date selection
+ * Improved UX with visual calendar, exam window status, and quick date selection.
+ * Candidates can reschedule their exam up to 2 hours before the scheduled start time.
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -12,6 +13,22 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { TimezoneCombobox } from '@/components/ui/timezone-combobox';
 import { TIMEZONE_LIST, detectAndResolveTimezone, getTimezoneLabel } from '@/shared/constants/timezones';
@@ -29,10 +46,11 @@ import {
   CalendarX,
   CalendarDays,
   Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
 import { getUserFriendlyError } from '@/lib/error-handler';
-import { format, addDays, isWithinInterval, startOfDay, isBefore, isAfter } from 'date-fns';
+import { format, addDays, isWithinInterval, startOfDay, isBefore, isAfter, differenceInHours } from 'date-fns';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 
 // Time slots (24h availability - online exam, any timezone)
@@ -119,6 +137,15 @@ export default function ScheduleExam() {
   const [bookingComplete, setBookingComplete] = useState(false);
   const [bookingDetails, setBookingDetails] = useState<any>(null);
 
+  // Reschedule state
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined);
+  const [rescheduleTime, setRescheduleTime] = useState('09:00');
+  const [rescheduleTimezone, setRescheduleTimezone] = useState('UTC');
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [rescheduleComplete, setRescheduleComplete] = useState(false);
+  const [rescheduledDetails, setRescheduledDetails] = useState<any>(null);
+
   // Calculate date constraints based on all schedulable windows (current + future)
   const dateConstraints = useMemo(() => {
     const today = startOfDay(new Date());
@@ -195,6 +222,7 @@ export default function ScheduleExam() {
   useEffect(() => {
     const detected = detectAndResolveTimezone();
     setSelectedTimezone(detected.value);
+    setRescheduleTimezone(detected.value);
   }, []);
 
   // Load exam and voucher info
@@ -375,6 +403,95 @@ export default function ScheduleExam() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // ============================================================
+  // Reschedule handler (candidate self-service)
+  // Rule: allowed any time up to 2 hours before scheduled start
+  // ============================================================
+  const canReschedule = useMemo(() => {
+    if (!existingBooking) return false;
+    const examStart = new Date(existingBooking.scheduled_start_time);
+    const now = new Date();
+    const hoursUntilExam = differenceInHours(examStart, now);
+    return hoursUntilExam >= 2;
+  }, [existingBooking]);
+
+  const hoursUntilExam = useMemo(() => {
+    if (!existingBooking) return null;
+    return differenceInHours(new Date(existingBooking.scheduled_start_time), new Date());
+  }, [existingBooking]);
+
+  const handleReschedule = async () => {
+    if (!rescheduleDate || !rescheduleTime || !existingBooking) {
+      toast({ title: 'Incomplete Selection', description: 'Please select a new date and time.', variant: 'destructive' });
+      return;
+    }
+    // Re-check 2-hour rule at submit time
+    const hoursLeft = differenceInHours(new Date(existingBooking.scheduled_start_time), new Date());
+    if (hoursLeft < 2) {
+      toast({
+        title: 'Reschedule Window Closed',
+        description: 'You can no longer reschedule — the exam starts in less than 2 hours.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsRescheduling(true);
+    try {
+      const dateTimeStr = `${format(rescheduleDate, 'yyyy-MM-dd')}T${rescheduleTime}:00`;
+      const newStart = fromZonedTime(dateTimeStr, rescheduleTimezone);
+      const duration = examInfo?.time_limit_minutes || 120;
+      const newEnd = new Date(newStart.getTime() + duration * 60 * 1000);
+
+      const { error } = await supabase
+        .from('exam_bookings')
+        .update({
+          scheduled_start_time: newStart.toISOString(),
+          scheduled_end_time: newEnd.toISOString(),
+          timezone: rescheduleTimezone,
+          status: 'rescheduled',
+          reschedule_count: (existingBooking as any).reschedule_count
+            ? (existingBooking as any).reschedule_count + 1
+            : 1,
+          rescheduled_from_time: existingBooking.scheduled_start_time,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingBooking.id);
+
+      if (error) throw error;
+
+      // Update local state to reflect new booking time
+      setRescheduledDetails({
+        newStart: newStart.toISOString(),
+        timezone: rescheduleTimezone,
+        confirmationCode: existingBooking.confirmation_code,
+      });
+      setRescheduleComplete(true);
+      setShowRescheduleModal(false);
+
+      // Update existingBooking in state
+      setExistingBooking({
+        ...existingBooking,
+        scheduled_start_time: newStart.toISOString(),
+        scheduled_end_time: newEnd.toISOString(),
+        timezone: rescheduleTimezone,
+        status: 'rescheduled',
+      });
+
+      toast({
+        title: 'Exam Rescheduled!',
+        description: `Your exam has been moved to ${format(rescheduleDate, 'MMMM d, yyyy')} at ${TIME_SLOTS.find(s => s.value === rescheduleTime)?.label}.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Reschedule Failed',
+        description: err.message || 'Unable to reschedule. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRescheduling(false);
     }
   };
 
@@ -610,9 +727,29 @@ export default function ScheduleExam() {
     const scheduledDate = new Date(existingBooking.scheduled_start_time);
     const bookingTimezone = existingBooking.timezone || 'UTC';
 
+    // Reschedule date constraints: today to 6 months out
+    const rescheduleMinDate = startOfDay(new Date());
+    const rescheduleMaxDate = addDays(rescheduleMinDate, 180);
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
         <div className="max-w-2xl mx-auto">
+
+          {/* Reschedule success banner */}
+          {rescheduleComplete && rescheduledDetails && (
+            <Alert className="mb-4 border-green-300 bg-green-50">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-800">Exam Rescheduled Successfully</AlertTitle>
+              <AlertDescription className="text-green-700">
+                Your exam has been moved to{' '}
+                <strong>
+                  {formatInTimeZone(new Date(rescheduledDetails.newStart), rescheduledDetails.timezone, 'EEEE, MMMM d, yyyy')} at{' '}
+                  {formatInTimeZone(new Date(rescheduledDetails.newStart), rescheduledDetails.timezone, 'h:mm a')}
+                </strong>{' '}({getTimezoneLabel(rescheduledDetails.timezone)}).
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Card className="border-blue-200 shadow-lg">
             <CardHeader className="text-center bg-blue-50 rounded-t-lg">
               <div className="flex justify-center mb-4">
@@ -620,9 +757,9 @@ export default function ScheduleExam() {
                   <CalendarCheck className="h-12 w-12 text-blue-600" />
                 </div>
               </div>
-              <CardTitle className="text-2xl text-blue-800">Exam Already Scheduled</CardTitle>
+              <CardTitle className="text-2xl text-blue-800">Exam Scheduled</CardTitle>
               <CardDescription className="text-blue-600">
-                You already have an upcoming exam scheduled
+                You have an upcoming exam scheduled
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
@@ -671,6 +808,35 @@ export default function ScheduleExam() {
                 </div>
               </div>
 
+              {/* Reschedule availability notice */}
+              {canReschedule ? (
+                <Alert className="border-blue-200 bg-blue-50">
+                  <RefreshCw className="h-4 w-4 text-blue-600" />
+                  <AlertTitle className="text-blue-800">Need to Reschedule?</AlertTitle>
+                  <AlertDescription className="text-blue-700 text-sm">
+                    You can reschedule your exam at any time up to <strong>2 hours before</strong> the scheduled start.
+                    {hoursUntilExam !== null && (
+                      <span className="block mt-1">
+                        Time remaining to reschedule:{' '}
+                        <strong>
+                          {hoursUntilExam >= 48
+                            ? `${Math.floor(hoursUntilExam / 24)} days`
+                            : `${hoursUntilExam} hours`}
+                        </strong>
+                      </span>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert className="border-orange-200 bg-orange-50">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                  <AlertTitle className="text-orange-800">Reschedule Window Closed</AlertTitle>
+                  <AlertDescription className="text-orange-700 text-sm">
+                    Rescheduling is no longer available — your exam starts in less than 2 hours. Please be ready at the scheduled time.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertTitle>Reminder</AlertTitle>
@@ -692,6 +858,16 @@ export default function ScheduleExam() {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Exams
                 </Button>
+                {canReschedule && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-yellow-400 text-yellow-700 hover:bg-yellow-50"
+                    onClick={() => setShowRescheduleModal(true)}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Reschedule Exam
+                  </Button>
+                )}
                 <Button
                   className="flex-1"
                   onClick={() => navigate('/individual/dashboard')}
@@ -702,6 +878,101 @@ export default function ScheduleExam() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Reschedule Modal */}
+        <Dialog open={showRescheduleModal} onOpenChange={setShowRescheduleModal}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <RefreshCw className="h-5 w-5 text-yellow-600" />
+                Reschedule Your Exam
+              </DialogTitle>
+              <DialogDescription>
+                Select a new date and time. You can reschedule up to 2 hours before your current exam start.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {/* Current booking reminder */}
+              <div className="p-3 bg-gray-50 rounded-lg border text-sm">
+                <p className="text-gray-500 mb-1">Current scheduled time:</p>
+                <p className="font-semibold">
+                  {formatInTimeZone(scheduledDate, bookingTimezone, 'EEEE, MMMM d, yyyy')} at{' '}
+                  {formatInTimeZone(scheduledDate, bookingTimezone, 'h:mm a')} ({getTimezoneLabel(bookingTimezone)})
+                </p>
+              </div>
+
+              {/* Date picker */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">New Date</Label>
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={rescheduleDate}
+                    onSelect={setRescheduleDate}
+                    disabled={(date) => isBefore(startOfDay(date), rescheduleMinDate) || isAfter(startOfDay(date), rescheduleMaxDate)}
+                    fromDate={rescheduleMinDate}
+                    toDate={rescheduleMaxDate}
+                    className="rounded-md border"
+                  />
+                </div>
+              </div>
+
+              {/* Time picker */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">New Time</Label>
+                  <Select value={rescheduleTime} onValueChange={setRescheduleTime}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-48">
+                      {TIME_SLOTS.map(slot => (
+                        <SelectItem key={slot.value} value={slot.value}>{slot.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Timezone</Label>
+                  <TimezoneCombobox
+                    value={rescheduleTimezone}
+                    onValueChange={setRescheduleTimezone}
+                  />
+                </div>
+              </div>
+
+              {/* Summary */}
+              {rescheduleDate && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-xs text-yellow-700 font-medium mb-1">New scheduled time:</p>
+                  <p className="font-semibold text-yellow-900">
+                    {format(rescheduleDate, 'EEEE, MMMM d, yyyy')}
+                  </p>
+                  <p className="text-sm text-yellow-800">
+                    {TIME_SLOTS.find(s => s.value === rescheduleTime)?.label} · {getTimezoneLabel(rescheduleTimezone)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRescheduleModal(false)} disabled={isRescheduling}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleReschedule}
+                disabled={isRescheduling || !rescheduleDate}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white"
+              >
+                {isRescheduling
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Rescheduling...</>
+                  : <><RefreshCw className="h-4 w-4 mr-2" /> Confirm Reschedule</>
+                }
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
