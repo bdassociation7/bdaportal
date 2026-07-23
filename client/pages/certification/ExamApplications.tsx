@@ -182,7 +182,7 @@ export default function ExamApplications() {
               <Button
                 variant="outline"
                 className="border-orange-300 text-orange-900 hover:bg-orange-100"
-                onClick={() => window.open('https://bda-association.com/shop', '_blank')}
+                onClick={() => window.open('https://bda-global.org/en/store/certifications/', '_blank')}
               >
                 <ShoppingBag className="h-4 w-4 mr-2" />
                 Visit Store
