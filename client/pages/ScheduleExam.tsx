@@ -266,17 +266,18 @@ export default function ScheduleExam() {
         setExamWindowStatus(result as ExamWindowStatus);
       }
 
-      // Fetch only the NEXT upcoming exam window (not all future windows)
-      // Candidates can only schedule for the next window to avoid content changes between windows
+      // Fetch all upcoming exam windows within the current year
+      // Candidates can reschedule to any available window during the year
       const today = new Date().toISOString().split('T')[0];
+      const yearEnd = new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0];
 
       let windowsQuery = supabase
         .from('certification_exam_windows')
         .select('id, name, start_date, end_date')
         .eq('is_active', true)
         .gte('end_date', today) // Window must not have ended
-        .order('start_date', { ascending: true })
-        .limit(1); // Only the next upcoming window
+        .lte('start_date', yearEnd) // Within the current year
+        .order('start_date', { ascending: true });
 
       if (exam?.certification_type) {
         // Include windows with no specific type OR matching type

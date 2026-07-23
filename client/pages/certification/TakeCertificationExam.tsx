@@ -108,8 +108,8 @@ function RescheduleModal({ open, onClose, booking, examTitle, certType, onSucces
       .select('id, name, start_date, end_date')
       .eq('is_active', true)
       .gte('end_date', today)
-      .order('start_date', { ascending: true })
-      .limit(1); // Only next upcoming window
+      .lte('start_date', new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0]) // All windows within the year
+      .order('start_date', { ascending: true });
     if (certType) {
       query = query.or(`certification_type.is.null,certification_type.ilike.${certType}`);
     }
@@ -262,14 +262,20 @@ function RescheduleModal({ open, onClose, booking, examTitle, certType, onSucces
           {/* Available windows info */}
           {schedulableWindows.length > 0 && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-              <p className="text-blue-700 font-semibold mb-1">Available Exam Window:</p>
-              {schedulableWindows.map(w => (
-                <p key={w.window_id} className="text-blue-800">
-                  {w.window_name}: {new Date(w.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  {' '}—{' '}
-                  {new Date(w.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </p>
-              ))}
+              <p className="text-blue-700 font-semibold mb-2">Available Exam Windows:</p>
+              <div className="space-y-1">
+                {schedulableWindows.map(w => (
+                  <div key={w.window_id} className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+                    <span className="text-blue-800">
+                      <span className="font-medium">{w.window_name}:</span>{' '}
+                      {new Date(w.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {' '}—{' '}
+                      {new Date(w.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {/* Current time */}
