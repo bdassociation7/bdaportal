@@ -7,8 +7,8 @@
  * 2. No voucher context: Shows prompt to select a voucher first
  */
 
-import { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthContext } from '@/app/providers/AuthProvider';
 import { CertificationExamService, type CertificationExam } from '@/entities/certification-exam';
@@ -18,6 +18,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import {
   Award,
   Clock,
@@ -35,8 +52,207 @@ import {
   Play,
   Timer,
   Sparkles,
+  RefreshCw,
+  AlertTriangle,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { format, addDays, startOfDay, isBefore, isAfter, differenceInHours } from 'date-fns';
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { useToast } from '@/components/ui/use-toast';
+
+// Time slots for reschedule modal
+const RESCHEDULE_TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
+  const h = String(i).padStart(2, '0');
+  const ampm = i < 12 ? 'AM' : 'PM';
+  const h12 = i === 0 ? 12 : i > 12 ? i - 12 : i;
+  return { value: h, label: `${String(h12).padStart(2, '0')} ${ampm}` };
+});
+const RESCHEDULE_MINUTES = ['00', '15', '30', '45'];
+
+// ============================================================================
+// Reschedule Modal Component
+// ============================================================================
+interface RescheduleModalProps {
+  open: boolean;
+  onClose: () => void;
+  booking: any;
+  examTitle: string;
+  onSuccess: () => void;
+}
+function RescheduleModal({ open, onClose, booking, examTitle, onSuccess }: RescheduleModalProps) {
+  const { toast } = useToast();
+  const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined);
+  const [rescheduleHour, setRescheduleHour] = useState('09');
+  const [rescheduleMinute, setRescheduleMinute] = useState('00');
+  const [rescheduleTimezone, setRescheduleTimezone] = useState(
+    booking?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const minDate = startOfDay(new Date());
+  const maxDate = addDays(minDate, 180);
+
+  // Check 2-hour rule
+  const canStillReschedule = booking
+    ? differenceInHours(new Date(booking.scheduled_start_time), new Date()) >= 2
+    : false;
+
+  const bookingTz = booking?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const currentDateLabel = booking
+    ? new Date(booking.scheduled_start_time).toLocaleString('en-US', {
+        timeZone: bookingTz,
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
+
+  const handleSubmit = async () => {
+    if (!rescheduleDate || !booking) return;
+    if (!canStillReschedule) {
+      toast({ title: 'Reschedule Window Closed', description: 'Your exam starts in less than 2 hours.', variant: 'destructive' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const dateTimeStr = `${format(rescheduleDate, 'yyyy-MM-dd')}T${rescheduleHour}:${rescheduleMinute}:00`;
+      const newStart = fromZonedTime(dateTimeStr, rescheduleTimezone);
+      // Fetch exam duration
+      const { data: quiz } = await supabase.from('quizzes').select('time_limit_minutes').eq('id', booking.quiz_id).single();
+      const duration = quiz?.time_limit_minutes || 120;
+      const newEnd = new Date(newStart.getTime() + duration * 60 * 1000);
+      const { error } = await supabase
+        .from('exam_bookings')
+        .update({
+          scheduled_start_time: newStart.toISOString(),
+          scheduled_end_time: newEnd.toISOString(),
+          timezone: rescheduleTimezone,
+          status: 'rescheduled',
+          reschedule_count: (booking.reschedule_count || 0) + 1,
+          rescheduled_from_time: booking.scheduled_start_time,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', booking.id);
+      if (error) throw error;
+      const h = parseInt(rescheduleHour, 10);
+      const ampm = h < 12 ? 'AM' : 'PM';
+      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      toast({
+        title: 'Exam Rescheduled!',
+        description: `Your exam has been moved to ${format(rescheduleDate, 'MMMM d, yyyy')} at ${String(h12).padStart(2,'0')}:${rescheduleMinute} ${ampm}.`,
+      });
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      toast({ title: 'Reschedule Failed', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const h = parseInt(rescheduleHour, 10);
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const timeLabel = `${String(h12).padStart(2, '0')}:${rescheduleMinute} ${ampm}`;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5 text-yellow-600" />
+            Reschedule Exam
+          </DialogTitle>
+          <DialogDescription>
+            {examTitle} — You can reschedule up to 2 hours before your exam.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          {!canStillReschedule && (
+            <Alert className="border-orange-200 bg-orange-50">
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <AlertTitle className="text-orange-800">Reschedule Window Closed</AlertTitle>
+              <AlertDescription className="text-orange-700 text-sm">
+                Your exam starts in less than 2 hours. Rescheduling is no longer available.
+              </AlertDescription>
+            </Alert>
+          )}
+          {/* Current time */}
+          <div className="p-3 bg-gray-50 rounded-lg border text-sm">
+            <p className="text-gray-500 mb-1">Current scheduled time:</p>
+            <p className="font-semibold text-gray-800">{currentDateLabel}</p>
+          </div>
+          {/* Date picker */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">New Date</Label>
+            <div className="flex justify-center">
+              <CalendarPicker
+                mode="single"
+                selected={rescheduleDate}
+                onSelect={setRescheduleDate}
+                disabled={(date) => isBefore(startOfDay(date), minDate) || isAfter(startOfDay(date), maxDate)}
+                fromDate={minDate}
+                toDate={maxDate}
+                className="rounded-md border"
+              />
+            </div>
+          </div>
+          {/* Time picker */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">New Time</Label>
+            <div className="flex items-center gap-2">
+              <Select value={rescheduleHour} onValueChange={setRescheduleHour}>
+                <SelectTrigger className="w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-56">
+                  {RESCHEDULE_TIME_SLOTS.map(slot => (
+                    <SelectItem key={slot.value} value={slot.value}>{slot.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-lg font-bold text-gray-500">:</span>
+              <Select value={rescheduleMinute} onValueChange={setRescheduleMinute}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {RESCHEDULE_MINUTES.map(m => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {/* Summary */}
+          {rescheduleDate && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-xs text-yellow-700 font-medium mb-1">New scheduled time:</p>
+              <p className="font-semibold text-yellow-900">{format(rescheduleDate, 'EEEE, MMMM d, yyyy')}</p>
+              <p className="text-sm text-yellow-800">{timeLabel}</p>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting || !rescheduleDate || !canStillReschedule}
+            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+          >
+            {isSubmitting
+              ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Rescheduling...</>
+              : <><RefreshCw className="h-4 w-4 mr-2" /> Confirm Reschedule</>
+            }
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // ============================================================================
 // Countdown Hook & Component
@@ -90,10 +306,12 @@ interface ScheduledExamBannerProps {
   booking: any;
   examTitle: string;
   onLaunch: () => void;
+  onReschedule?: () => void;
   language: 'en' | 'ar';
 }
 
-function ScheduledExamBanner({ booking, examTitle, onLaunch, language }: ScheduledExamBannerProps) {
+function ScheduledExamBanner({ booking, examTitle, onLaunch, onReschedule, language }: ScheduledExamBannerProps) {
+  const canReschedule = differenceInHours(new Date(booking.scheduled_start_time), new Date()) >= 2;
   const countdown = useCountdown(booking.scheduled_start_time);
 
   const tz = booking.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -199,37 +417,51 @@ function ScheduledExamBanner({ booking, examTitle, onLaunch, language }: Schedul
             </div>
           </div>
 
-          {/* Right: Countdown */}
-          <div className="flex flex-col items-center">
-            <p className="text-sm text-blue-700 mb-2 font-medium">{texts.startsIn}</p>
-            <div className="flex gap-3">
-              {countdown.days > 0 && (
+          {/* Right: Countdown + Reschedule */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center">
+              <p className="text-sm text-blue-700 mb-2 font-medium">{texts.startsIn}</p>
+              <div className="flex gap-3">
+                {countdown.days > 0 && (
+                  <div className="flex flex-col items-center">
+                    <div className="bg-blue-600 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
+                      <span className="text-2xl font-bold">{countdown.days}</span>
+                    </div>
+                    <span className="text-xs text-blue-600 mt-1">{texts.days}</span>
+                  </div>
+                )}
                 <div className="flex flex-col items-center">
                   <div className="bg-blue-600 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
-                    <span className="text-2xl font-bold">{countdown.days}</span>
+                    <span className="text-2xl font-bold">{String(countdown.hours).padStart(2, '0')}</span>
                   </div>
-                  <span className="text-xs text-blue-600 mt-1">{texts.days}</span>
+                  <span className="text-xs text-blue-600 mt-1">{texts.hours}</span>
                 </div>
-              )}
-              <div className="flex flex-col items-center">
-                <div className="bg-blue-600 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
-                  <span className="text-2xl font-bold">{String(countdown.hours).padStart(2, '0')}</span>
+                <div className="flex flex-col items-center">
+                  <div className="bg-blue-600 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
+                    <span className="text-2xl font-bold">{String(countdown.minutes).padStart(2, '0')}</span>
+                  </div>
+                  <span className="text-xs text-blue-600 mt-1">{texts.minutes}</span>
                 </div>
-                <span className="text-xs text-blue-600 mt-1">{texts.hours}</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="bg-blue-600 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
-                  <span className="text-2xl font-bold">{String(countdown.minutes).padStart(2, '0')}</span>
+                <div className="flex flex-col items-center">
+                  <div className="bg-blue-500 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
+                    <span className="text-2xl font-bold">{String(countdown.seconds).padStart(2, '0')}</span>
+                  </div>
+                  <span className="text-xs text-blue-600 mt-1">{texts.seconds}</span>
                 </div>
-                <span className="text-xs text-blue-600 mt-1">{texts.minutes}</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="bg-blue-500 text-white rounded-lg px-3 py-2 min-w-[60px] text-center shadow-md">
-                  <span className="text-2xl font-bold">{String(countdown.seconds).padStart(2, '0')}</span>
-                </div>
-                <span className="text-xs text-blue-600 mt-1">{texts.seconds}</span>
               </div>
             </div>
+            {/* Reschedule button */}
+            {onReschedule && canReschedule && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onReschedule}
+                className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 w-full"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reschedule
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>
@@ -253,6 +485,21 @@ export default function TakeCertificationExam() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { language } = useLanguage();
+  const queryClient = useQueryClient();
+
+  // Reschedule modal state
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [rescheduleTarget, setRescheduleTarget] = useState<{ booking: any; examTitle: string } | null>(null);
+
+  const openRescheduleModal = useCallback((booking: any, examTitle: string) => {
+    setRescheduleTarget({ booking, examTitle });
+    setRescheduleModalOpen(true);
+  }, []);
+
+  const handleRescheduleSuccess = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['user-exam-bookings'] });
+    queryClient.invalidateQueries({ queryKey: ['scheduled-exam-info'] });
+  }, [queryClient]);
 
   // Get voucher_id from URL params
   const voucherIdFromUrl = searchParams.get('voucher_id');
@@ -611,6 +858,12 @@ export default function TakeCertificationExam() {
                 navigate(`/exam-launch?booking_id=${scheduledExamInfo.booking.id}`);
               }
             }}
+            onReschedule={() => openRescheduleModal(
+              scheduledExamInfo.booking,
+              language === 'ar' && scheduledExamInfo.quiz?.title_ar
+                ? scheduledExamInfo.quiz.title_ar
+                : scheduledExamInfo.quiz?.title || 'Certification Exam'
+            )}
             language={language as 'en' | 'ar'}
           />
         )}
@@ -778,6 +1031,10 @@ export default function TakeCertificationExam() {
               booking={exam.booking}
               examTitle={language === 'ar' && exam.title_ar ? exam.title_ar : exam.title}
               onLaunch={() => handleLaunchExam(exam)}
+              onReschedule={() => openRescheduleModal(
+                exam.booking,
+                language === 'ar' && exam.title_ar ? exam.title_ar : exam.title
+              )}
               language={language as 'en' | 'ar'}
             />
           );
@@ -1075,6 +1332,20 @@ export default function TakeCertificationExam() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Reschedule Modal */}
+      {rescheduleTarget && (
+        <RescheduleModal
+          open={rescheduleModalOpen}
+          onClose={() => {
+            setRescheduleModalOpen(false);
+            setRescheduleTarget(null);
+          }}
+          booking={rescheduleTarget.booking}
+          examTitle={rescheduleTarget.examTitle}
+          onSuccess={handleRescheduleSuccess}
+        />
       )}
     </div>
   );
