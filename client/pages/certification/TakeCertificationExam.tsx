@@ -997,6 +997,21 @@ export default function TakeCertificationExam() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Reschedule Modal (available even without voucher context) */}
+        {rescheduleTarget && (
+          <RescheduleModal
+            open={rescheduleModalOpen}
+            onClose={() => {
+              setRescheduleModalOpen(false);
+              setRescheduleTarget(null);
+            }}
+            booking={rescheduleTarget.booking}
+            examTitle={rescheduleTarget.examTitle}
+            certType={rescheduleTarget.certType}
+            onSuccess={handleRescheduleSuccess}
+          />
+        )}
       </div>
     );
   }
