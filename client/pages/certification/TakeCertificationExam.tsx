@@ -72,14 +72,21 @@ const RESCHEDULE_MINUTES = ['00', '15', '30', '45'];
 // ============================================================================
 // Reschedule Modal Component
 // ============================================================================
+interface SchedulableWindow {
+  window_id: string;
+  window_name: string;
+  start_date: string;
+  end_date: string;
+}
 interface RescheduleModalProps {
   open: boolean;
   onClose: () => void;
   booking: any;
   examTitle: string;
+  certType?: string | null;
   onSuccess: () => void;
 }
-function RescheduleModal({ open, onClose, booking, examTitle, onSuccess }: RescheduleModalProps) {
+function RescheduleModal({ open, onClose, booking, examTitle, certType, onSuccess }: RescheduleModalProps) {
   const { toast } = useToast();
   const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined);
   const [rescheduleHour, setRescheduleHour] = useState('09');
@@ -88,9 +95,68 @@ function RescheduleModal({ open, onClose, booking, examTitle, onSuccess }: Resch
     booking?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [schedulableWindows, setSchedulableWindows] = useState<SchedulableWindow[]>([]);
+  const [windowsLoading, setWindowsLoading] = useState(false);
 
-  const minDate = startOfDay(new Date());
-  const maxDate = addDays(minDate, 180);
+  // Fetch exam windows when modal opens
+  useEffect(() => {
+    if (!open) return;
+    setWindowsLoading(true);
+    const today = new Date().toISOString().split('T')[0];
+    let query = supabase
+      .from('certification_exam_windows')
+      .select('id, name, start_date, end_date')
+      .eq('is_active', true)
+      .gte('end_date', today)
+      .order('start_date', { ascending: true })
+      .limit(1); // Only next upcoming window
+    if (certType) {
+      query = query.or(`certification_type.is.null,certification_type.ilike.${certType}`);
+    }
+    query.then(({ data }) => {
+      if (data) {
+        setSchedulableWindows(data.map((w: any) => ({
+          window_id: w.id,
+          window_name: w.name,
+          start_date: w.start_date,
+          end_date: w.end_date,
+        })));
+      }
+      setWindowsLoading(false);
+    });
+  }, [open, certType]);
+
+  // Compute date constraints from windows
+  const dateConstraints = useMemo(() => {
+    const today = startOfDay(new Date());
+    if (schedulableWindows.length === 0) {
+      return { minDate: today, maxDate: addDays(today, 180) };
+    }
+    const earliest = startOfDay(new Date(schedulableWindows[0].start_date));
+    const latest = startOfDay(new Date(schedulableWindows[schedulableWindows.length - 1].end_date));
+    return {
+      minDate: isBefore(earliest, today) ? today : earliest,
+      maxDate: latest,
+    };
+  }, [schedulableWindows]);
+
+  // Disable dates outside any exam window
+  const isDateDisabled = (date: Date) => {
+    const day = startOfDay(date);
+    if (isBefore(day, dateConstraints.minDate)) return true;
+    if (isAfter(day, dateConstraints.maxDate)) return true;
+    if (schedulableWindows.length > 0) {
+      const inWindow = schedulableWindows.some((w) => {
+        const wStart = startOfDay(new Date(w.start_date));
+        const wEnd = startOfDay(new Date(w.end_date));
+        return !isBefore(day, wStart) && !isAfter(day, wEnd);
+      });
+      return !inWindow;
+    }
+    return false;
+  };
+
+  const noWindowsAvailable = !windowsLoading && schedulableWindows.length === 0;
 
   // Check 2-hour rule
   const canStillReschedule = booking
@@ -116,11 +182,14 @@ function RescheduleModal({ open, onClose, booking, examTitle, onSuccess }: Resch
       toast({ title: 'Reschedule Window Closed', description: 'Your exam starts in less than 2 hours.', variant: 'destructive' });
       return;
     }
+    if (isDateDisabled(rescheduleDate)) {
+      toast({ title: 'Invalid Date', description: 'Please select a date within an open exam window.', variant: 'destructive' });
+      return;
+    }
     setIsSubmitting(true);
     try {
       const dateTimeStr = `${format(rescheduleDate, 'yyyy-MM-dd')}T${rescheduleHour}:${rescheduleMinute}:00`;
       const newStart = fromZonedTime(dateTimeStr, rescheduleTimezone);
-      // Fetch exam duration
       const { data: quiz } = await supabase.from('quizzes').select('time_limit_minutes').eq('id', booking.quiz_id).single();
       const duration = quiz?.time_limit_minutes || 120;
       const newEnd = new Date(newStart.getTime() + duration * 60 * 1000);
@@ -180,55 +249,88 @@ function RescheduleModal({ open, onClose, booking, examTitle, onSuccess }: Resch
               </AlertDescription>
             </Alert>
           )}
+          {/* No windows available */}
+          {noWindowsAvailable && (
+            <Alert className="border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertTitle className="text-red-800">No Exam Windows Available</AlertTitle>
+              <AlertDescription className="text-red-700 text-sm">
+                There are no upcoming exam windows available for rescheduling. Please check back later.
+              </AlertDescription>
+            </Alert>
+          )}
+          {/* Available windows info */}
+          {schedulableWindows.length > 0 && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+              <p className="text-blue-700 font-semibold mb-1">Available Exam Window:</p>
+              {schedulableWindows.map(w => (
+                <p key={w.window_id} className="text-blue-800">
+                  {w.window_name}: {new Date(w.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' '}—{' '}
+                  {new Date(w.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              ))}
+            </div>
+          )}
           {/* Current time */}
           <div className="p-3 bg-gray-50 rounded-lg border text-sm">
             <p className="text-gray-500 mb-1">Current scheduled time:</p>
             <p className="font-semibold text-gray-800">{currentDateLabel}</p>
           </div>
-          {/* Date picker */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">New Date</Label>
-            <div className="flex justify-center">
-              <CalendarPicker
-                mode="single"
-                selected={rescheduleDate}
-                onSelect={setRescheduleDate}
-                disabled={(date) => isBefore(startOfDay(date), minDate) || isAfter(startOfDay(date), maxDate)}
-                fromDate={minDate}
-                toDate={maxDate}
-                className="rounded-md border"
-              />
+          {/* Date picker - only show if windows available */}
+          {!noWindowsAvailable && (
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">New Date</Label>
+              {windowsLoading ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <CalendarPicker
+                    mode="single"
+                    selected={rescheduleDate}
+                    onSelect={setRescheduleDate}
+                    disabled={isDateDisabled}
+                    fromDate={dateConstraints.minDate}
+                    toDate={dateConstraints.maxDate}
+                    className="rounded-md border"
+                  />
+                </div>
+              )}
             </div>
-          </div>
+          )}
           {/* Time picker */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold">New Time</Label>
-            <div className="flex items-center gap-2">
-              <Select value={rescheduleHour} onValueChange={setRescheduleHour}>
-                <SelectTrigger className="w-28">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-56">
-                  {RESCHEDULE_TIME_SLOTS.map(slot => (
-                    <SelectItem key={slot.value} value={slot.value}>{slot.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-lg font-bold text-gray-500">:</span>
-              <Select value={rescheduleMinute} onValueChange={setRescheduleMinute}>
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RESCHEDULE_MINUTES.map(m => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {!noWindowsAvailable && (
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">New Time</Label>
+              <div className="flex items-center gap-2">
+                <Select value={rescheduleHour} onValueChange={setRescheduleHour}>
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-56">
+                    {RESCHEDULE_TIME_SLOTS.map(slot => (
+                      <SelectItem key={slot.value} value={slot.value}>{slot.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-lg font-bold text-gray-500">:</span>
+                <Select value={rescheduleMinute} onValueChange={setRescheduleMinute}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RESCHEDULE_MINUTES.map(m => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
+          )}
           {/* Summary */}
-          {rescheduleDate && (
+          {rescheduleDate && !isDateDisabled(rescheduleDate) && (
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-xs text-yellow-700 font-medium mb-1">New scheduled time:</p>
               <p className="font-semibold text-yellow-900">{format(rescheduleDate, 'EEEE, MMMM d, yyyy')}</p>
@@ -240,7 +342,7 @@ function RescheduleModal({ open, onClose, booking, examTitle, onSuccess }: Resch
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || !rescheduleDate || !canStillReschedule}
+            disabled={isSubmitting || !rescheduleDate || !canStillReschedule || noWindowsAvailable || (rescheduleDate ? isDateDisabled(rescheduleDate) : true)}
             className="bg-yellow-600 hover:bg-yellow-700 text-white"
           >
             {isSubmitting
@@ -489,10 +591,10 @@ export default function TakeCertificationExam() {
 
   // Reschedule modal state
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
-  const [rescheduleTarget, setRescheduleTarget] = useState<{ booking: any; examTitle: string } | null>(null);
+  const [rescheduleTarget, setRescheduleTarget] = useState<{ booking: any; examTitle: string; certType?: string | null } | null>(null);
 
-  const openRescheduleModal = useCallback((booking: any, examTitle: string) => {
-    setRescheduleTarget({ booking, examTitle });
+  const openRescheduleModal = useCallback((booking: any, examTitle: string, certType?: string | null) => {
+    setRescheduleTarget({ booking, examTitle, certType });
     setRescheduleModalOpen(true);
   }, []);
 
@@ -862,7 +964,8 @@ export default function TakeCertificationExam() {
               scheduledExamInfo.booking,
               language === 'ar' && scheduledExamInfo.quiz?.title_ar
                 ? scheduledExamInfo.quiz.title_ar
-                : scheduledExamInfo.quiz?.title || 'Certification Exam'
+                : scheduledExamInfo.quiz?.title || 'Certification Exam',
+              scheduledExamInfo.quiz?.certification_type
             )}
             language={language as 'en' | 'ar'}
           />
@@ -1033,7 +1136,8 @@ export default function TakeCertificationExam() {
               onLaunch={() => handleLaunchExam(exam)}
               onReschedule={() => openRescheduleModal(
                 exam.booking,
-                language === 'ar' && exam.title_ar ? exam.title_ar : exam.title
+                language === 'ar' && exam.title_ar ? exam.title_ar : exam.title,
+                exam.certification_type
               )}
               language={language as 'en' | 'ar'}
             />
@@ -1344,6 +1448,7 @@ export default function TakeCertificationExam() {
           }}
           booking={rescheduleTarget.booking}
           examTitle={rescheduleTarget.examTitle}
+          certType={rescheduleTarget.certType}
           onSuccess={handleRescheduleSuccess}
         />
       )}

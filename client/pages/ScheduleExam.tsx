@@ -732,12 +732,11 @@ export default function ScheduleExam() {
 
   // Show existing booking if already scheduled
   if (existingBooking) {
-    const scheduledDate = new Date(existingBooking.scheduled_start_time);
+        const scheduledDate = new Date(existingBooking.scheduled_start_time);
     const bookingTimezone = existingBooking.timezone || 'UTC';
-
-    // Reschedule date constraints: today to 6 months out
-    const rescheduleMinDate = startOfDay(new Date());
-    const rescheduleMaxDate = addDays(rescheduleMinDate, 180);
+    // Reschedule date constraints: use same exam windows as new bookings
+    const rescheduleMinDate = dateConstraints.minDate;
+    const rescheduleMaxDate = dateConstraints.maxDate;
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
@@ -918,7 +917,7 @@ export default function ScheduleExam() {
                     mode="single"
                     selected={rescheduleDate}
                     onSelect={setRescheduleDate}
-                    disabled={(date) => isBefore(startOfDay(date), rescheduleMinDate) || isAfter(startOfDay(date), rescheduleMaxDate)}
+                    disabled={isDateDisabled}
                     fromDate={rescheduleMinDate}
                     toDate={rescheduleMaxDate}
                     className="rounded-md border"
