@@ -544,9 +544,21 @@ export class BooksService {
         };
       }
 
-      // If orderId is 0, this is an admin-granted book (no real order)
-      // Fetch the product's downloadable file URL directly from WooCommerce
+      // If orderId is 0, this is an admin-granted or membership-redeemed book (no real order)
+      // Step 1: Try to get direct download_url from book_products table in Supabase
+      // This is the most reliable source and avoids WooCommerce download permission issues
       if (orderId === 0) {
+        const { data: bookProduct } = await supabase
+          .from('book_products')
+          .select('download_url')
+          .eq('woocommerce_product_id', productId)
+          .single();
+
+        if (bookProduct?.download_url) {
+          return { data: bookProduct.download_url, error: null };
+        }
+
+        // Step 2: Fallback to WooCommerce product-download endpoint
         if (!userEmail) {
           return {
             data: null,
