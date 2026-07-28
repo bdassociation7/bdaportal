@@ -396,7 +396,7 @@ export function LessonViewer() {
                   onClick={() => setShowOptionalQuiz(true)}
                 >
                   <Award className="mr-2 h-4 w-4" />
-                  Practice Quiz (Optional)
+                  Practice Quiz
                 </Button>
               )}
             </div>

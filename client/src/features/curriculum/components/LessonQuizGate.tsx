@@ -33,9 +33,8 @@ export function LessonQuizGate({
   const [isPlayingQuiz, setIsPlayingQuiz] = useState(false);
   const completeQuiz = useCompleteQuiz();
 
-  const passingScore = lesson.quiz_passing_score || 70;
-  const hasPassedQuiz =
-    progress.best_quiz_score !== null && progress.best_quiz_score >= passingScore;
+  // For a practice quiz we only track whether the trainee has attempted it
+  const hasAttempted = progress.quiz_attempts_count > 0;
 
   // Fetch sibling lessons to find next lesson
   const { data: moduleLessons } = useLessonsByModule(lesson.module_id);
@@ -55,10 +54,6 @@ export function LessonQuizGate({
     }
   };
 
-  const goToModule = () => {
-    navigate(`${basePath}/module/${lesson.module_id}`);
-  };
-
   // Handle quiz completion from QuizPlayer
   const handleQuizComplete = (results: QuizResults) => {
     const score = results.score_percentage;
@@ -73,24 +68,20 @@ export function LessonQuizGate({
     setIsPlayingQuiz(false);
   };
 
-  // If quiz is already completed successfully
-  if (hasPassedQuiz && !isPlayingQuiz) {
+  // After completing the quiz, show a summary screen
+  if (hasAttempted && !isPlayingQuiz) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="max-w-md w-full p-8 text-center">
           <div className="mb-6">
             <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Quiz Completed!</h2>
-            <p className="text-muted-foreground">
-              You achieved a score of {progress.best_quiz_score}%
-            </p>
+            {progress.best_quiz_score !== null && (
+              <p className="text-muted-foreground">
+                Your score: <span className="font-semibold text-gray-800">{progress.best_quiz_score}%</span>
+              </p>
+            )}
           </div>
-
-          {progress.quiz_attempts_count > 1 && (
-            <div className="mb-6 text-sm text-muted-foreground">
-              Number of attempts: {progress.quiz_attempts_count}
-            </div>
-          )}
 
           <div className="space-y-3">
             {/* Primary: go to next lesson or module */}
@@ -135,7 +126,7 @@ export function LessonQuizGate({
     );
   }
 
-  // Quiz not started yet or failed - Show intro screen
+  // Quiz not started yet — Show intro screen
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="max-w-2xl w-full p-8">
@@ -143,16 +134,11 @@ export function LessonQuizGate({
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
             <Award className="h-8 w-8 text-blue-600" />
-            <h2 className="text-2xl font-bold">Practice Quiz (Optional)</h2>
+            <h2 className="text-2xl font-bold">Practice Quiz</h2>
           </div>
           <p className="text-muted-foreground">
             Test your knowledge and understanding of this lesson
           </p>
-          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> This quiz is optional and does not affect your progression to the next lesson
-            </p>
-          </div>
         </div>
 
         {/* Lesson Info */}
@@ -162,29 +148,6 @@ export function LessonQuizGate({
             <p className="text-sm text-muted-foreground" dir="rtl">
               {lesson.title_ar}
             </p>
-          )}
-        </div>
-
-        {/* Quiz Requirements */}
-        <div className="space-y-4 mb-6">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm font-medium">Passing score</span>
-            <span className="text-lg font-bold text-blue-600">{passingScore}%</span>
-          </div>
-
-          {progress.best_quiz_score !== null && (
-            <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <span className="text-sm font-medium">Your best score</span>
-              <span className="text-lg font-bold text-yellow-700">
-                {progress.best_quiz_score}%
-              </span>
-            </div>
-          )}
-
-          {progress.quiz_attempts_count > 0 && (
-            <div className="text-sm text-muted-foreground text-center">
-              Attempt {progress.quiz_attempts_count + 1}
-            </div>
           )}
         </div>
 
@@ -204,26 +167,6 @@ export function LessonQuizGate({
               <p className="text-sm text-yellow-800">
                 No quiz is configured for this lesson.
               </p>
-              <Button
-                variant="outline"
-                className="mt-3"
-                onClick={() => {
-                  // Auto-complete with perfect score if no quiz configured
-                  handleQuizComplete({
-                    quiz_id: '',
-                    quiz_title: 'No quiz',
-                    total_questions: 0,
-                    correct_answers: 0,
-                    incorrect_answers: 0,
-                    score_percentage: 100,
-                    passed: true,
-                    time_spent_minutes: 0,
-                    answers_detail: [],
-                  });
-                }}
-              >
-                Mark as Completed
-              </Button>
             </div>
           )}
 
@@ -255,7 +198,7 @@ export function LessonQuizGate({
         {/* Help Text */}
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <p className="text-sm text-muted-foreground">
-            You can retake this quiz as many times as you like. Only your best score will be saved. Completing this quiz is optional and won't block your progress.
+            You can retake this quiz as many times as you like. Only your best score will be saved.
           </p>
         </div>
       </Card>
