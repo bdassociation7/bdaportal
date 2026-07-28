@@ -10,10 +10,11 @@
  *  3. When the admin clicks "Build Quiz"       → show the question builder inline.
  *  4. On "Save Quiz"                           → create quiz + questions in Supabase,
  *     then call onQuizSaved(quizId) so the parent can store the quiz id in the lesson.
+ *  5. Existing questions can be edited or deleted individually.
  */
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2, Circle, Loader2, BookOpen, Edit3, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2, Circle, Loader2, BookOpen, Edit3, AlertCircle, X, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -68,6 +69,20 @@ function emptyQuestion(): DraftQuestion {
   };
 }
 
+/** Convert a QuestionWithAnswers (from DB) to a DraftQuestion for editing */
+function existingToDraft(q: QuestionWithAnswers): DraftQuestion {
+  return {
+    id: q.id,
+    text: q.question_text,
+    expanded: true,
+    answers: (q.answers || []).map((a) => ({
+      id: a.id,
+      text: a.answer_text,
+      isCorrect: a.is_correct,
+    })),
+  };
+}
+
 // ─── component ────────────────────────────────────────────────────────────────
 
 export const InlineQuizBuilder: React.FC<InlineQuizBuilderProps> = ({
@@ -86,6 +101,12 @@ export const InlineQuizBuilder: React.FC<InlineQuizBuilderProps> = ({
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [editingExisting, setEditingExisting] = useState(false);
 
+  // Edit-existing-question state
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<DraftQuestion | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   // ── load existing questions when quizId changes ──────────────────────────
   useEffect(() => {
     if (!quizId) {
@@ -99,7 +120,7 @@ export const InlineQuizBuilder: React.FC<InlineQuizBuilderProps> = ({
     });
   }, [quizId]);
 
-  // ── question CRUD helpers ────────────────────────────────────────────────
+  // ── question CRUD helpers (for new questions builder) ────────────────────
 
   const addQuestion = () =>
     setQuestions((qs) => [...qs, emptyQuestion()]);
@@ -162,6 +183,37 @@ export const InlineQuizBuilder: React.FC<InlineQuizBuilderProps> = ({
       )
     );
 
+  // ── edit-draft helpers ───────────────────────────────────────────────────
+
+  const updateEditDraftText = (text: string) =>
+    setEditDraft((d) => d ? { ...d, text } : d);
+
+  const updateEditDraftAnswer = (aid: string, patch: Partial<DraftAnswer>) =>
+    setEditDraft((d) =>
+      d ? {
+        ...d,
+        answers: d.answers.map((a) => a.id === aid ? { ...a, ...patch } : a),
+      } : d
+    );
+
+  const setEditDraftCorrect = (aid: string) =>
+    setEditDraft((d) =>
+      d ? {
+        ...d,
+        answers: d.answers.map((a) => ({ ...a, isCorrect: a.id === aid })),
+      } : d
+    );
+
+  const addEditDraftAnswer = () =>
+    setEditDraft((d) =>
+      d ? { ...d, answers: [...d.answers, emptyAnswer()] } : d
+    );
+
+  const removeEditDraftAnswer = (aid: string) =>
+    setEditDraft((d) =>
+      d ? { ...d, answers: d.answers.filter((a) => a.id !== aid) } : d
+    );
+
   // ── validation ───────────────────────────────────────────────────────────
 
   const validate = (): string | null => {
@@ -175,7 +227,16 @@ export const InlineQuizBuilder: React.FC<InlineQuizBuilderProps> = ({
     return null;
   };
 
-  // ── save ─────────────────────────────────────────────────────────────────
+  const validateDraft = (d: DraftQuestion): string | null => {
+    if (!d.text.trim()) return 'Question text is required.';
+    const nonEmpty = d.answers.filter((a) => a.text.trim());
+    if (nonEmpty.length < 2) return 'At least 2 answer options are required.';
+    const hasCorrect = d.answers.some((a) => a.isCorrect && a.text.trim());
+    if (!hasCorrect) return 'One correct answer must be selected.';
+    return null;
+  };
+
+  // ── save new questions ───────────────────────────────────────────────────
 
   const handleSave = async () => {
     const err = validate();
@@ -253,6 +314,84 @@ export const InlineQuizBuilder: React.FC<InlineQuizBuilderProps> = ({
     }
   };
 
+  // ── save edited existing question ────────────────────────────────────────
+
+  const handleSaveEdit = async () => {
+    if (!editDraft || !editingQuestionId) return;
+    const err = validateDraft(editDraft);
+    if (err) {
+      toast({ title: 'Validation Error', description: err, variant: 'destructive' });
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const validAnswers = editDraft.answers.filter((a) => a.text.trim());
+      const { error } = await QuizService.updateQuestion(editingQuestionId, {
+        quiz_id: quizId!,
+        question_text: editDraft.text.trim(),
+        question_type: 'multiple_choice',
+        difficulty: 'medium',
+        points: 1,
+        order_index: existingQuestions.findIndex((q) => q.id === editingQuestionId) + 1,
+        answers: validAnswers.map((a, idx) => ({
+          answer_text: a.text.trim(),
+          is_correct: a.isCorrect,
+          order_index: idx + 1,
+        })),
+      });
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to update question.', variant: 'destructive' });
+        return;
+      }
+      // Reload
+      const { data: fresh } = await QuizService.getQuizQuestions(quizId!);
+      setExistingQuestions(fresh || []);
+      setEditingQuestionId(null);
+      setEditDraft(null);
+      toast({ title: 'Question updated!', description: 'The question has been updated successfully.' });
+    } catch {
+      toast({ title: 'Error', description: 'Unexpected error updating question.', variant: 'destructive' });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  // ── delete existing question ─────────────────────────────────────────────
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!window.confirm('Delete this question? This cannot be undone.')) return;
+    setDeletingId(questionId);
+    try {
+      const { error } = await QuizService.deleteQuestion(questionId);
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to delete question.', variant: 'destructive' });
+        return;
+      }
+      setExistingQuestions((qs) => qs.filter((q) => q.id !== questionId));
+      if (editingQuestionId === questionId) {
+        setEditingQuestionId(null);
+        setEditDraft(null);
+      }
+      toast({ title: 'Question deleted', description: 'The question has been removed.' });
+    } catch {
+      toast({ title: 'Error', description: 'Unexpected error deleting question.', variant: 'destructive' });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // ── start editing an existing question ───────────────────────────────────
+
+  const startEditQuestion = (q: QuestionWithAnswers) => {
+    setEditingQuestionId(q.id);
+    setEditDraft(existingToDraft(q));
+  };
+
+  const cancelEdit = () => {
+    setEditingQuestionId(null);
+    setEditDraft(null);
+  };
+
   // ─── render: existing quiz summary ─────────────────────────────────────
 
   if (quizId && !editingExisting) {
@@ -275,7 +414,7 @@ export const InlineQuizBuilder: React.FC<InlineQuizBuilderProps> = ({
                 setMode('building');
               }}
             >
-              <Edit3 className="h-3 w-3 mr-1" />
+              <Plus className="h-3 w-3 mr-1" />
               Add Questions
             </Button>
             {onQuizRemoved && (
@@ -312,13 +451,130 @@ export const InlineQuizBuilder: React.FC<InlineQuizBuilderProps> = ({
             </Button>
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <p className="text-xs text-gray-500">{existingQuestions.length} question(s)</p>
             {existingQuestions.map((q, i) => (
-              <div key={q.id} className="rounded border bg-gray-50 px-3 py-2">
-                <p className="text-xs font-medium text-gray-700 line-clamp-2">
-                  {i + 1}. {q.question_text}
-                </p>
+              <div key={q.id} className="rounded border bg-gray-50">
+                {/* Question row (view mode) */}
+                {editingQuestionId !== q.id ? (
+                  <div className="flex items-start gap-2 px-3 py-2">
+                    <span className="text-xs font-bold text-gray-400 mt-0.5 shrink-0">{i + 1}.</span>
+                    <p className="text-xs font-medium text-gray-700 flex-1 line-clamp-2">
+                      {q.question_text}
+                    </p>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => startEditQuestion(q)}
+                        className="text-blue-400 hover:text-blue-600 p-0.5"
+                        title="Edit question"
+                      >
+                        <Edit3 className="h-3 w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteQuestion(q.id)}
+                        disabled={deletingId === q.id}
+                        className="text-red-400 hover:text-red-600 p-0.5 disabled:opacity-50"
+                        title="Delete question"
+                      >
+                        {deletingId === q.id
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : <Trash2 className="h-3 w-3" />
+                        }
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Question row (edit mode) */
+                  <div className="px-3 py-3 space-y-2 border-t-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-blue-700">Editing Q{i + 1}</span>
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <Textarea
+                      placeholder="Question text…"
+                      value={editDraft?.text || ''}
+                      onChange={(e) => updateEditDraftText(e.target.value)}
+                      className="text-xs min-h-[60px] resize-none"
+                    />
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                        Answer Options — click circle to mark correct
+                      </p>
+                      {editDraft?.answers.map((a, ai) => (
+                        <div key={a.id} className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setEditDraftCorrect(a.id)}
+                            className={`flex-shrink-0 ${a.isCorrect ? 'text-green-500' : 'text-gray-300'}`}
+                          >
+                            {a.isCorrect
+                              ? <CheckCircle2 className="h-4 w-4" />
+                              : <Circle className="h-4 w-4" />
+                            }
+                          </button>
+                          <Input
+                            placeholder={`Option ${String.fromCharCode(65 + ai)}`}
+                            value={a.text}
+                            onChange={(e) => updateEditDraftAnswer(a.id, { text: e.target.value })}
+                            className="text-xs h-7 flex-1"
+                          />
+                          {(editDraft?.answers.length || 0) > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => removeEditDraftAnswer(a.id)}
+                              className="text-gray-300 hover:text-red-400 flex-shrink-0"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {(editDraft?.answers.length || 0) < 6 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-[10px] h-6 px-2 text-gray-400"
+                          onClick={addEditDraftAnswer}
+                        >
+                          <Plus className="h-3 w-3 mr-0.5" /> Add Option
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="flex-1 text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={handleSaveEdit}
+                        disabled={savingEdit}
+                      >
+                        {savingEdit
+                          ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Saving…</>
+                          : <><Save className="h-3 w-3 mr-1" /> Save Changes</>
+                        }
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={cancelEdit}
+                        disabled={savingEdit}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

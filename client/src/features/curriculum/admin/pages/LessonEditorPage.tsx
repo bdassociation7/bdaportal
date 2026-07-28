@@ -543,9 +543,18 @@ export function LessonEditorPage() {
                     quizId={linkedQuizId}
                     language="en"
                     lessonTitle={form.watch('title')}
-                    onQuizSaved={(qid) => {
+                    onQuizSaved={async (qid) => {
                       setLinkedQuizId(qid);
                       form.setValue('lesson_quiz_id', qid);
+                      // Auto-save lesson_quiz_id immediately to the database
+                      if (isEditing && id) {
+                        try {
+                          await updateLesson.mutateAsync({ id, updates: { lesson_quiz_id: qid } });
+                          toast({ title: 'Quiz linked!', description: 'Quiz has been linked to this lesson.' });
+                        } catch {
+                          toast({ title: 'Warning', description: 'Quiz saved but could not auto-link to lesson. Please click Update Lesson.', variant: 'destructive' });
+                        }
+                      }
                     }}
                     onQuizRemoved={() => {
                       setLinkedQuizId(undefined);

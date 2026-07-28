@@ -6,10 +6,11 @@
  */
 
 import { useState } from 'react';
-import { ArrowLeft, CheckCircle, Award, PlayCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, CheckCircle, Award, PlayCircle, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useCompleteQuiz } from '@/entities/curriculum';
+import { useCompleteQuiz, useLessonsByModule } from '@/entities/curriculum';
 import { QuizPlayer } from '@/features/quiz/components/QuizPlayer';
 import type { Lesson, LessonProgress } from '@/entities/curriculum';
 import type { QuizResults } from '@/entities/quiz';
@@ -18,15 +19,45 @@ interface LessonQuizGateProps {
   lesson: Lesson;
   progress: LessonProgress;
   onBack: () => void;
+  /** Base path for navigation (e.g. /learning-system/training-kits) */
+  basePath?: string;
 }
 
-export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps) {
+export function LessonQuizGate({
+  lesson,
+  progress,
+  onBack,
+  basePath = '/learning-system/training-kits',
+}: LessonQuizGateProps) {
+  const navigate = useNavigate();
   const [isPlayingQuiz, setIsPlayingQuiz] = useState(false);
   const completeQuiz = useCompleteQuiz();
 
   const passingScore = lesson.quiz_passing_score || 70;
   const hasPassedQuiz =
     progress.best_quiz_score !== null && progress.best_quiz_score >= passingScore;
+
+  // Fetch sibling lessons to find next lesson
+  const { data: moduleLessons } = useLessonsByModule(lesson.module_id);
+  const sortedLessons = moduleLessons
+    ? [...moduleLessons].sort((a, b) => a.order_index - b.order_index)
+    : [];
+  const currentIndex = sortedLessons.findIndex((l) => l.id === lesson.id);
+  const nextLesson = currentIndex >= 0 && currentIndex < sortedLessons.length - 1
+    ? sortedLessons[currentIndex + 1]
+    : null;
+
+  const goToNextLesson = () => {
+    if (nextLesson) {
+      navigate(`${basePath}/modules/${lesson.module_id}/lessons/${nextLesson.id}`);
+    } else {
+      navigate(`${basePath}/module/${lesson.module_id}`);
+    }
+  };
+
+  const goToModule = () => {
+    navigate(`${basePath}/module/${lesson.module_id}`);
+  };
 
   // Handle quiz completion from QuizPlayer
   const handleQuizComplete = (results: QuizResults) => {
@@ -62,11 +93,25 @@ export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps
           )}
 
           <div className="space-y-3">
-            <Button onClick={onBack} className="w-full">
+            {/* Primary: go to next lesson or module */}
+            <Button className="w-full" onClick={goToNextLesson}>
+              {nextLesson ? (
+                <>
+                  Next Lesson
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  Back to Module
+                  <Home className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+            <Button onClick={onBack} variant="outline" className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Lesson
             </Button>
-            <Button variant="outline" onClick={() => setIsPlayingQuiz(true)} className="w-full">
+            <Button variant="ghost" onClick={() => setIsPlayingQuiz(true)} className="w-full">
               <PlayCircle className="mr-2 h-4 w-4" />
               Retake Quiz
             </Button>
@@ -182,9 +227,28 @@ export function LessonQuizGate({ lesson, progress, onBack }: LessonQuizGateProps
             </div>
           )}
 
+          {/* Navigation buttons */}
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={goToNextLesson}
+          >
+            {nextLesson ? (
+              <>
+                Skip & Go to Next Lesson
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            ) : (
+              <>
+                Skip & Back to Module
+                <Home className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+
           <Button variant="ghost" onClick={onBack} className="w-full">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Skip Quiz & Go Back
+            Back to Lesson
           </Button>
         </div>
 

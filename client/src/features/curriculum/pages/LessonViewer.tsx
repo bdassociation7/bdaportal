@@ -255,7 +255,7 @@ export function LessonViewer() {
   if (showOptionalQuiz && lesson.lesson_quiz_id && progress) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <LessonQuizGate lesson={lesson} progress={progress} onBack={() => setShowOptionalQuiz(false)} />
+        <LessonQuizGate lesson={lesson} progress={progress} onBack={() => setShowOptionalQuiz(false)} basePath={basePath} />
       </div>
     );
   }
