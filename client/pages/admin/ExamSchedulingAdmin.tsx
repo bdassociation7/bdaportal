@@ -52,6 +52,7 @@ interface ExamAttempt {
     id: string;
     title: string;
     certification_type: 'CP' | 'SCP';
+    quiz_type: string | null;
   } | null;
 }
 
@@ -98,7 +99,8 @@ export default function ExamSchedulingAdmin() {
           quizzes!quiz_attempts_quiz_id_fkey(
             id,
             title,
-            certification_type
+            certification_type,
+            quiz_type
           )
         `)
         .order('started_at', { ascending: false });
@@ -118,6 +120,9 @@ export default function ExamSchedulingAdmin() {
       if (error) throw error;
 
       let result = (data || []) as ExamAttempt[];
+
+      // Show only certification exams — exclude lesson practice quizzes
+      result = result.filter(a => a.quizzes?.quiz_type !== 'lesson');
 
       // Apply cert filter at application level
       if (certFilter !== 'all') {
