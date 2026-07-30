@@ -363,6 +363,19 @@ export class UnifiedAuthService {
           organization: userData.organization,
           signup_type: signupType
         });
+
+        // Subscribe to Mailchimp audience (non-blocking, fire-and-forget)
+        supabase.functions.invoke('mailchimp-subscribe', {
+          body: {
+            email: userData.email,
+            first_name: userData.first_name || '',
+            last_name: userData.last_name || '',
+            role: userData.bda_role || 'individual',
+            is_active: true,
+          },
+        }).catch((err) => {
+          console.warn('[UnifiedAuthService] Mailchimp subscribe failed (non-blocking):', err);
+        });
       }
 
       const user = await this.buildUnifiedUser(supabaseUser, {
