@@ -258,7 +258,8 @@ export const InlineQuizBuilder: React.FC<InlineQuizBuilderProps> = ({
         const { data: newQuiz, error: quizErr } = await QuizService.createQuiz({
           title: autoTitle,
           title_ar: undefined,
-          certification_type: 'CP',  // lesson quizzes are not certification exams
+          quiz_type: 'lesson',  // CRITICAL: must be 'lesson' to prevent appearing in certification exams
+          certification_type: 'CP',
           difficulty_level: 'medium',
           time_limit_minutes: 10,
           passing_score_percentage: 70,

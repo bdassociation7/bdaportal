@@ -300,7 +300,10 @@ export interface CreateQuizDTO {
   title_ar?: string;
   description?: string;
   description_ar?: string;
+  /** 'lesson' for learning system quizzes, 'certification' for official exams */
+  quiz_type?: 'lesson' | 'certification';
   certification_type: CertificationType;
+  exam_language?: ExamLanguage;
   difficulty_level: DifficultyLevel;
   time_limit_minutes: number;
   passing_score_percentage: number;
