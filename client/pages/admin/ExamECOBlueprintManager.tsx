@@ -92,7 +92,8 @@ function useECOData(certType: CertType) {
         .from('quizzes')
         .select('id, exam_language')
         .eq('certification_type', certType)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('quiz_type', 'certification'); // Exclude lesson practice quizzes
 
       if (quizzesError) throw quizzesError;
       if (!quizzes || quizzes.length === 0) return { pool: [], config: [], enQuizId: null, arQuizId: null };

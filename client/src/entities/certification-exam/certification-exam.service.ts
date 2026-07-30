@@ -70,11 +70,11 @@ export class CertificationExamService {
     error: any;
   }> {
     try {
-      const { data, error } = await supabase
+            const { data, error } = await supabase
         .from('quizzes')
         .select('*')
+        .eq('quiz_type', 'certification') // Exclude lesson practice quizzes
         .order('created_at', { ascending: false });
-
       if (error) {
         console.error('Error fetching certification exams:', error);
         return { data: null, error };
