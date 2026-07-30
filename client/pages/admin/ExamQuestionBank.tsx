@@ -162,12 +162,14 @@ export default function ExamQuestionBank() {
       const lang = currentTab.lang;
 
       // Step 1: Get quiz metadata to establish auth context (same as CertificationExamQuestionManager)
+      // Must filter by quiz_type='certification' to avoid matching lesson practice quizzes
       const { data: quizData, error: quizError } = await supabase
         .from('quizzes')
         .select('id, certification_type, exam_language')
         .eq('certification_type', certType)
         .eq('exam_language', lang)
         .eq('is_active', true)
+        .eq('quiz_type', 'certification')
         .maybeSingle();
 
       if (quizError) {

@@ -331,6 +331,7 @@ export class CertificationExamService {
         .from('quizzes')
         .select('*')
         .eq('is_active', true)
+        .eq('quiz_type', 'certification') // Exclude lesson practice quizzes
         .order('created_at', { ascending: false });
 
       if (certificationType) {
