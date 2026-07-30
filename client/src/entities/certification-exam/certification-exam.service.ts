@@ -126,11 +126,12 @@ export class CertificationExamService {
         .from('quizzes')
         .insert({
           ...dto,
+          quiz_type: 'certification', // CRITICAL: must always be 'certification' for official exams
           exam_language: dto.exam_language || 'en',
           difficulty_level: dto.difficulty_level || 'medium',
           time_limit_minutes: dto.time_limit_minutes || 120,
           passing_score_percentage: dto.passing_score_percentage || 70,
-          is_active: false, // Désactivé par défaut jusqu'à ajout de questions
+          is_active: false, // Disabled by default until questions are added
           created_by: user.user?.id,
         })
         .select()
