@@ -493,41 +493,16 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
     }
 
     // Process Direct Book Purchase
+    // IMPORTANT: Direct book purchases do NOT create book credits.
+    // Access is granted automatically via WooCommerce download permissions.
+    // The book appears in My Books via the WordPress API (user-books endpoint).
+    //
+    // Book credits (user_book_credits) are ONLY created for:
+    //   - Professional Membership purchases (source_type='membership') via activate_membership RPC
+    //   - Admin grants
+    // This separation ensures no confusion between direct purchases and membership benefits.
     if (bookProduct) {
-      console.log(`Processing direct book purchase: ${bookProduct.product_name} (${bookProduct.language}) for ${email}`)
-      try {
-        const bookProductGroup = categoryToGroupMap[bookProduct.category] || bookProduct.category
-        const { data: existingCredit } = await supabase
-          .from('user_book_credits')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('source_type', 'woocommerce_order')
-          .eq('source_id', order.id.toString())
-          .eq('book_product_group', bookProductGroup)
-          .maybeSingle()
-
-        if (existingCredit) {
-          console.log(`Book credit already exists for order #${order.id} - skipping`)
-        } else {
-          const { error: creditError } = await supabase.from('user_book_credits').insert({
-            user_id: userId,
-            source_type: 'woocommerce_order',
-            source_id: order.id.toString(),
-            book_product_group: bookProductGroup,
-            book_product_group_name: bookProduct.product_name,
-            available_languages: [bookProduct.language],
-            is_redeemed: false,
-            notes: `WooCommerce Order #${order.id} - Direct purchase`,
-          })
-          if (creditError) {
-            console.error('Error creating book credit:', creditError)
-          } else {
-            console.log(`Successfully created book credit for ${bookProduct.product_name} for ${email}`)
-          }
-        }
-      } catch (error: any) {
-        console.error('Book credit creation error:', error)
-      }
+      console.log(`Direct book purchase: ${bookProduct.product_name} (${bookProduct.language}) for ${email} — access via WooCommerce download, no credit needed`)
     }
   }
 
