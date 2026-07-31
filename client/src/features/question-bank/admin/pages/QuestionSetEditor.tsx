@@ -92,16 +92,13 @@ interface ImportPreview {
 // ─── Word Parser ─────────────────────────────────────────────────────────────
 /**
  * Parses BDA Word question files.
- * Supports two formats:
  *
- * FORMAT A (options in separate lines/paragraphs):
- *   Question 1\ntext\nA. opt\nB. opt\nC. opt\nD. opt\nCorrect Answer: X\nRationale: ...
+ * mammoth.extractRawText() returns paragraphs separated by \n.
+ * Options (A/B/C/D) may appear:
+ *   - Each on its own line (old format)
+ *   - All concatenated in one line without separator: "A) opt1B) opt2C) opt3D) opt4"
  *
- * FORMAT B (options in one paragraph separated by \n, used in newer files):
- *   Question 1: text
- *   A) opt\nB) opt\nC) opt\nD) opt
- *   Correct Answer: X
- *   Rationale: ...
+ * The parser handles all variants robustly.
  */
 function parseWordContent(rawText: string, fileName: string): ImportPreview {
   const errors: string[] = [];
@@ -109,7 +106,7 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
   // Detect cert type from filename or first few lines
   let certType = 'Unknown';
   let certTarget: 'CP' | 'SCP' | null = null;
-  const headerText = [fileName, ...rawText.slice(0, 300)].join(' ');
+  const headerText = fileName + ' ' + rawText.slice(0, 300);
   if (/BDA-SCP/i.test(headerText)) {
     certType = 'BDA-SCP';
     certTarget = 'SCP';
@@ -124,15 +121,28 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
   if (/Direct Knowledge/i.test(headerFull)) defaultDifficulty = 'easy';
   else if (/Advanced|Very High/i.test(headerFull)) defaultDifficulty = 'hard';
 
-  // ── Step 1: split raw text into paragraphs (double-newline or single-newline blocks)
-  // mammoth returns \n between paragraphs; we split on lines and group by question blocks
-  const lines = rawText.split('\n').map((l) => l.trim());
+  // Split into non-empty lines
+  const paras = rawText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
 
-  // ── Step 2: group lines into logical paragraphs
-  // A "paragraph" here is a non-empty line (mammoth already separates paragraphs with \n)
-  // But options may be embedded in one paragraph as "A) ...\nB) ...\nC) ...\nD) ..."
-  // We keep each line as-is and handle both cases in the parser.
-  const paras = lines.filter((l) => l.length > 0);
+  /**
+   * Parse options from a text block.
+   * Handles both:
+   *   - "A) text\nB) text" (with newlines, already split by paras)
+   *   - "A) textB) textC) textD) text" (concatenated, mammoth format)
+   */
+  const parseOptions = (text: string): Record<string, string> => {
+    const opts: Record<string, string> = {};
+    // Split on boundaries before B), C), D) — handles concatenated format
+    // e.g. "A) foo B) bar" or "A) fooB) bar"
+    const parts = text.split(/(?=[B-D]\))/);
+    for (const part of parts) {
+      const m = part.match(/^([A-D])\)\s*(.+)/s);
+      if (m) {
+        opts[m[1].toUpperCase()] = m[2].trim();
+      }
+    }
+    return opts;
+  };
 
   const questions: ParsedQuestion[] = [];
   let i = 0;
@@ -144,17 +154,18 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
 
   while (i < paras.length) {
     const para = paras[i];
-    const qMatch = para.match(/^Question\s+(\d+)[:.\s]\s*(.*)/is);
+    const qMatch = para.match(/^Question\s+(\d+)[:\s]\s*(.*)/is);
     if (!qMatch) { i++; continue; }
 
     const q_num = parseInt(qMatch[1]);
     let qText = qMatch[2].trim();
 
-    // If question text is empty or very short, next para might be continuation
     i++;
+
+    // Collect continuation lines of question text (until options, next question, or answer)
     while (
       i < paras.length &&
-      !/^[A-D][.)]/i.test(paras[i]) &&
+      !/^[A-D]\)/i.test(paras[i]) &&
       !/^Question\s+\d+/i.test(paras[i]) &&
       !/^Correct Answer:/i.test(paras[i])
     ) {
@@ -163,41 +174,29 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
     }
 
     // ── Parse options ──
-    // Case 1: options are in a single paragraph with embedded \n (FORMAT B)
-    //   The para looks like: "A) opt\nB) opt\nC) opt\nD) opt"
-    //   After mammoth, these appear as separate lines but mammoth may keep them together.
-    //   We handle both by checking if current para contains multiple A/B/C/D markers.
-    const opts: Record<string, string> = {};
+    let opts: Record<string, string> = {};
 
-    // Helper: parse options from a block of text (handles embedded \n)
-    const parseOptsFromText = (text: string) => {
-      // Split by option markers
-      const parts = text.split(/(?=\b[A-D][.)])/i);
-      for (const part of parts) {
-        const m = part.match(/^([A-D])[.)\s]\s*(.*)/is);
-        if (m) opts[m[1].toUpperCase()] = m[2].replace(/\n.*/s, '').trim();
-      }
-    };
-
-    // Collect option lines
-    while (i < paras.length && !/^Correct Answer:/i.test(paras[i]) && !/^Question\s+\d+/i.test(paras[i])) {
-      const optPara = paras[i];
-
-      // Check if this paragraph contains option markers
-      const hasOpts = /^[A-D][.)]/i.test(optPara) || /\n[A-D][.)]/i.test(optPara);
-      if (hasOpts) {
-        parseOptsFromText(optPara);
+    // Collect lines that contain options
+    while (
+      i < paras.length &&
+      !/^Correct Answer:/i.test(paras[i]) &&
+      !/^Question\s+\d+/i.test(paras[i])
+    ) {
+      const line = paras[i];
+      if (/^[A-D]\)/i.test(line)) {
+        // This line starts with an option marker — parse it
+        const parsed = parseOptions(line);
+        Object.assign(opts, parsed);
         i++;
       } else if (Object.keys(opts).length > 0) {
-        // Continuation of last option
-        const lastKey = Object.keys(opts).pop()!;
-        opts[lastKey] += ' ' + optPara;
+        // Continuation text for the last option
+        const lastKey = Object.keys(opts).slice(-1)[0];
+        opts[lastKey] += ' ' + line;
         i++;
       } else {
         break;
       }
-
-      if (Object.keys(opts).length === 4) break;
+      if (Object.keys(opts).length >= 4) break;
     }
 
     // ── Parse Correct Answer ──
@@ -208,7 +207,7 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
       const caMatch = paras[i].match(/^Correct Answer:\s*([A-D])\s*(?:Rationale:\s*(.*))?$/is);
       if (caMatch) {
         correctAnswer = caMatch[1].toUpperCase();
-        rationale = caMatch[2]?.trim() || '';
+        rationale = (caMatch[2] || '').trim();
       }
       i++;
     }
@@ -217,7 +216,6 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
     if (!rationale && i < paras.length && /^Rationale:/i.test(paras[i])) {
       rationale = paras[i].replace(/^Rationale:\s*/i, '').trim();
       i++;
-      // Collect multi-line rationale
       while (i < paras.length && !/^Question\s+\d+/i.test(paras[i]) && !/^Correct Answer:/i.test(paras[i])) {
         rationale += ' ' + paras[i].trim();
         i++;
