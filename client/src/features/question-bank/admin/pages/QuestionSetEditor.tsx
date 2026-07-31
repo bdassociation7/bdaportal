@@ -90,14 +90,26 @@ interface ImportPreview {
 }
 
 // ─── Word Parser ─────────────────────────────────────────────────────────────
+/**
+ * Parses BDA Word question files.
+ * Supports two formats:
+ *
+ * FORMAT A (options in separate lines/paragraphs):
+ *   Question 1\ntext\nA. opt\nB. opt\nC. opt\nD. opt\nCorrect Answer: X\nRationale: ...
+ *
+ * FORMAT B (options in one paragraph separated by \n, used in newer files):
+ *   Question 1: text
+ *   A) opt\nB) opt\nC) opt\nD) opt
+ *   Correct Answer: X
+ *   Rationale: ...
+ */
 function parseWordContent(rawText: string, fileName: string): ImportPreview {
-  const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
   const errors: string[] = [];
 
   // Detect cert type from filename or first few lines
   let certType = 'Unknown';
   let certTarget: 'CP' | 'SCP' | null = null;
-  const headerText = [fileName, ...lines.slice(0, 5)].join(' ');
+  const headerText = [fileName, ...rawText.slice(0, 300)].join(' ');
   if (/BDA-SCP/i.test(headerText)) {
     certType = 'BDA-SCP';
     certTarget = 'SCP';
@@ -108,102 +120,130 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
 
   // Detect difficulty from header
   let defaultDifficulty: 'easy' | 'medium' | 'hard' = 'medium';
-  const headerFull = lines.slice(0, 5).join(' ');
+  const headerFull = rawText.slice(0, 400);
   if (/Direct Knowledge/i.test(headerFull)) defaultDifficulty = 'easy';
   else if (/Advanced|Very High/i.test(headerFull)) defaultDifficulty = 'hard';
+
+  // ── Step 1: split raw text into paragraphs (double-newline or single-newline blocks)
+  // mammoth returns \n between paragraphs; we split on lines and group by question blocks
+  const lines = rawText.split('\n').map((l) => l.trim());
+
+  // ── Step 2: group lines into logical paragraphs
+  // A "paragraph" here is a non-empty line (mammoth already separates paragraphs with \n)
+  // But options may be embedded in one paragraph as "A) ...\nB) ...\nC) ...\nD) ..."
+  // We keep each line as-is and handle both cases in the parser.
+  const paras = lines.filter((l) => l.length > 0);
 
   const questions: ParsedQuestion[] = [];
   let i = 0;
 
-  while (i < lines.length) {
-    const line = lines[i];
+  // Skip header lines before first question
+  while (i < paras.length && !/^Question\s+\d+/i.test(paras[i])) {
+    i++;
+  }
 
-    // Match "Question N" or "Question N text"
-    const qMatch = line.match(/^Question\s+(\d+)\s*(.*)/i);
+  while (i < paras.length) {
+    const para = paras[i];
+    const qMatch = para.match(/^Question\s+(\d+)[:.\s]\s*(.*)/is);
     if (!qMatch) { i++; continue; }
 
+    const q_num = parseInt(qMatch[1]);
     let qText = qMatch[2].trim();
 
-    // If question text is on next line
-    if (!qText && i + 1 < lines.length && !/^[A-D][.)]/i.test(lines[i + 1]) && !/^Question\s+\d+/i.test(lines[i + 1])) {
+    // If question text is empty or very short, next para might be continuation
+    i++;
+    while (
+      i < paras.length &&
+      !/^[A-D][.)]/i.test(paras[i]) &&
+      !/^Question\s+\d+/i.test(paras[i]) &&
+      !/^Correct Answer:/i.test(paras[i])
+    ) {
+      qText += ' ' + paras[i].trim();
       i++;
-      qText = lines[i].trim();
     }
 
-    // Collect multi-line question text (until we hit an option line A.)
-    while (i + 1 < lines.length && !/^[A-D][.)]/i.test(lines[i + 1]) && !/^Question\s+\d+/i.test(lines[i + 1]) && !/^Correct Answer:/i.test(lines[i + 1])) {
-      i++;
-      qText += ' ' + lines[i].trim();
-    }
-
-    // Parse options A B C D
+    // ── Parse options ──
+    // Case 1: options are in a single paragraph with embedded \n (FORMAT B)
+    //   The para looks like: "A) opt\nB) opt\nC) opt\nD) opt"
+    //   After mammoth, these appear as separate lines but mammoth may keep them together.
+    //   We handle both by checking if current para contains multiple A/B/C/D markers.
     const opts: Record<string, string> = {};
-    let currentOptKey = '';
-    let currentOptVal: string[] = [];
 
-    const flushOpt = () => {
-      if (currentOptKey) opts[currentOptKey] = currentOptVal.join(' ').trim();
+    // Helper: parse options from a block of text (handles embedded \n)
+    const parseOptsFromText = (text: string) => {
+      // Split by option markers
+      const parts = text.split(/(?=\b[A-D][.)])/i);
+      for (const part of parts) {
+        const m = part.match(/^([A-D])[.)\s]\s*(.*)/is);
+        if (m) opts[m[1].toUpperCase()] = m[2].replace(/\n.*/s, '').trim();
+      }
     };
 
-    while (i + 1 < lines.length) {
+    // Collect option lines
+    while (i < paras.length && !/^Correct Answer:/i.test(paras[i]) && !/^Question\s+\d+/i.test(paras[i])) {
+      const optPara = paras[i];
+
+      // Check if this paragraph contains option markers
+      const hasOpts = /^[A-D][.)]/i.test(optPara) || /\n[A-D][.)]/i.test(optPara);
+      if (hasOpts) {
+        parseOptsFromText(optPara);
+        i++;
+      } else if (Object.keys(opts).length > 0) {
+        // Continuation of last option
+        const lastKey = Object.keys(opts).pop()!;
+        opts[lastKey] += ' ' + optPara;
+        i++;
+      } else {
+        break;
+      }
+
+      if (Object.keys(opts).length === 4) break;
+    }
+
+    // ── Parse Correct Answer ──
+    let correctAnswer = '';
+    let rationale = '';
+
+    if (i < paras.length && /^Correct Answer:/i.test(paras[i])) {
+      const caMatch = paras[i].match(/^Correct Answer:\s*([A-D])\s*(?:Rationale:\s*(.*))?$/is);
+      if (caMatch) {
+        correctAnswer = caMatch[1].toUpperCase();
+        rationale = caMatch[2]?.trim() || '';
+      }
       i++;
-      const optLine = lines[i];
+    }
 
-      // Check for option start
-      const optMatch = optLine.match(/^([A-D])[.)]\s*(.*)/i);
-      if (optMatch) {
-        flushOpt();
-        currentOptKey = optMatch[1].toUpperCase();
-        currentOptVal = [optMatch[2].trim()];
-      } else if (/^Correct Answer:/i.test(optLine)) {
-        flushOpt();
-        // Parse correct answer + optional inline rationale
-        let correctAnswer = '';
-        let rationale = '';
-        const caMatch = optLine.match(/^Correct Answer:\s*([A-D])\s*(?:Rationale:\s*(.*))?$/i);
-        if (caMatch) {
-          correctAnswer = caMatch[1].toUpperCase();
-          rationale = caMatch[2]?.trim() || '';
-        }
-
-        // Check next line for rationale if not inline
-        if (!rationale && i + 1 < lines.length && /^Rationale:/i.test(lines[i + 1])) {
-          i++;
-          rationale = lines[i].replace(/^Rationale:\s*/i, '').trim();
-          // Collect multi-line rationale
-          while (i + 1 < lines.length && !/^Question\s+\d+/i.test(lines[i + 1])) {
-            i++;
-            rationale += ' ' + lines[i].trim();
-          }
-        }
-
-        if (qText && Object.keys(opts).length === 4 && correctAnswer) {
-          questions.push({
-            question_text: qText.trim(),
-            options: {
-              A: opts['A'] || '',
-              B: opts['B'] || '',
-              C: opts['C'] || '',
-              D: opts['D'] || '',
-            },
-            correct_answer: correctAnswer as 'A' | 'B' | 'C' | 'D',
-            rationale: rationale.trim(),
-            difficulty: defaultDifficulty,
-            certification_target: certTarget,
-          });
-        } else {
-          if (!qText) errors.push(`Question ${questions.length + 1}: missing question text`);
-          else if (Object.keys(opts).length !== 4) errors.push(`Question ${questions.length + 1}: found ${Object.keys(opts).length} options (expected 4)`);
-          else if (!correctAnswer) errors.push(`Question ${questions.length + 1}: missing correct answer`);
-        }
-        break; // move to next question
-      } else if (currentOptKey) {
-        // continuation of current option
-        currentOptVal.push(optLine);
+    // ── Parse Rationale ──
+    if (!rationale && i < paras.length && /^Rationale:/i.test(paras[i])) {
+      rationale = paras[i].replace(/^Rationale:\s*/i, '').trim();
+      i++;
+      // Collect multi-line rationale
+      while (i < paras.length && !/^Question\s+\d+/i.test(paras[i]) && !/^Correct Answer:/i.test(paras[i])) {
+        rationale += ' ' + paras[i].trim();
+        i++;
       }
     }
 
-    i++;
+    // ── Validate & store ──
+    if (qText && Object.keys(opts).length === 4 && correctAnswer) {
+      questions.push({
+        question_text: qText.trim(),
+        options: {
+          A: opts['A'] || '',
+          B: opts['B'] || '',
+          C: opts['C'] || '',
+          D: opts['D'] || '',
+        },
+        correct_answer: correctAnswer as 'A' | 'B' | 'C' | 'D',
+        rationale: rationale.trim(),
+        difficulty: defaultDifficulty,
+        certification_target: certTarget,
+      });
+    } else {
+      if (!qText) errors.push(`Question ${q_num}: missing question text`);
+      else if (Object.keys(opts).length !== 4) errors.push(`Question ${q_num}: found ${Object.keys(opts).length} options (expected 4) — opts: ${Object.keys(opts).join(',')}`);
+      else if (!correctAnswer) errors.push(`Question ${q_num}: missing correct answer`);
+    }
   }
 
   return {
