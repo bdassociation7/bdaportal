@@ -11,7 +11,8 @@ interface RoleGuardProps {
  * Guard component qui vérifie que l'utilisateur a le bon rôle
  * pour accéder à une route.
  *
- * dual_partner has access to both ECP and PDP routes.
+ * ecp has access to both ECP and PDP routes (ECP includes PDP Standard).
+ * dual_partner is treated as ecp (legacy backward compatibility).
  */
 export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
   const { user, isLoading } = useAuthContext();
@@ -34,16 +35,13 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
 
   const userRole = user.profile.role;
 
-  // dual_partner can access any ECP or PDP route
-  const effectiveRoles =
-    userRole === 'dual_partner'
-      ? [...allowedRoles, 'dual_partner', 'ecp', 'pdp']
-      : allowedRoles;
+  // ecp and dual_partner (legacy) can access any ECP or PDP route
+  // because ECP now includes PDP Standard access
+  const isECPLike = userRole === 'ecp' || userRole === 'dual_partner';
 
   const hasRequiredRole =
-    effectiveRoles.includes(userRole) ||
-    (userRole === 'dual_partner' &&
-      (allowedRoles.includes('ecp') || allowedRoles.includes('pdp')));
+    allowedRoles.includes(userRole) ||
+    (isECPLike && (allowedRoles.includes('ecp') || allowedRoles.includes('pdp') || allowedRoles.includes('dual_partner')));
 
   if (!hasRequiredRole) {
     return <Navigate to="/dashboard" replace />;

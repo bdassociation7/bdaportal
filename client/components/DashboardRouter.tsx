@@ -27,12 +27,14 @@ export function DashboardRouter() {
         dashboardPath = '/individual/dashboard';
         break;
       case 'ecp':
-        dashboardPath = '/ecp/dashboard';
+        // ECP now includes PDP Standard access → route to workspace switcher
+        dashboardPath = '/workspace';
         break;
       case 'pdp':
         dashboardPath = '/pdp/dashboard';
         break;
       case 'dual_partner':
+        // legacy — treated as ecp
         dashboardPath = '/workspace';
         break;
       case 'admin':

@@ -2,9 +2,11 @@
  * Types et constantes pour les rôles Supabase
  *
  * IMPORTANT: Ces types doivent correspondre exactement à l'ENUM user_role dans Supabase
+ * NOTE: dual_partner is now merged into ecp. ECP includes PDP Standard access.
  */
 
 // Type pour les rôles utilisateur (correspond à l'ENUM Supabase)
+// dual_partner kept for backward compatibility with DB enum, but treated as ecp
 export type UserRole = 'individual' | 'ecp' | 'pdp' | 'dual_partner' | 'admin' | 'super_admin';
 
 // Informations d'affichage pour chaque rôle
@@ -23,14 +25,15 @@ export interface RoleInfo {
  * Définitions complètes des rôles avec permissions
  */
 export const ROLE_DEFINITIONS: Record<UserRole, RoleInfo> = {
+  // dual_partner is kept for DB enum compatibility but treated as ecp in UI
   dual_partner: {
     id: 'dual_partner',
-    label: 'Dual Partner (ECP + PDP)',
-    labelAr: 'شريك مزدوج (ECP + PDP)',
-    description: 'Endorsed Certification Partner & Professional Development Partner',
-    descriptionAr: 'شريك معتمد للشهادات وشريك التطوير المهني',
-    color: 'text-indigo-600',
-    bgColor: 'bg-indigo-50',
+    label: 'ECP Partner',
+    labelAr: 'شريك ECP',
+    description: 'Endorsed Certification Partner (includes PDP Standard access)',
+    descriptionAr: 'شريك معتمد للشهادات (يشمل وصول PDP الأساسي)',
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
     permissions: [
       'view_profile',
       'edit_profile',
@@ -70,8 +73,8 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleInfo> = {
     id: 'ecp',
     label: 'ECP Partner',
     labelAr: 'شريك ECP',
-    description: 'Endorsed Certification Partner - Authorized training and exam provider',
-    descriptionAr: 'شريك معتمد للشهادات - مزود تدريب وامتحانات معتمد',
+    description: 'Endorsed Certification Partner — includes PDP Standard access (up to 5 programmes)',
+    descriptionAr: 'شريك معتمد للشهادات — يشمل وصول PDP الأساسي (حتى 5 برامج)',
     color: 'text-green-600',
     bgColor: 'bg-green-50',
     permissions: [
@@ -84,6 +87,10 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleInfo> = {
       'manage_trainers',
       'view_license',
       'access_toolkit',
+      'manage_programs',
+      'submit_program',
+      'view_guidelines',
+      'manage_annual_report',
     ] as const,
   },
   pdp: {
@@ -201,12 +208,13 @@ export type Permission = typeof ALL_PERMISSIONS[number] | '*';
 
 /**
  * Carte des routes par rôle
+ * ECP now routes to /workspace (ECP + PDP switcher) since it includes PDP Standard
  */
 export const ROLE_HOME_ROUTES: Record<UserRole, string> = {
   individual: '/individual/dashboard',
-  ecp: '/ecp/dashboard',
+  ecp: '/workspace',
   pdp: '/pdp/dashboard',
-  dual_partner: '/workspace',
+  dual_partner: '/workspace', // legacy — treated as ecp
   admin: '/admin/dashboard',
   super_admin: '/admin/dashboard',
 } as const;
@@ -262,7 +270,7 @@ export function isPartnerRole(role: UserRole): boolean {
 }
 
 /**
- * Check if role is an ECP partner
+ * Check if role is an ECP partner (ecp includes dual_partner for backward compat)
  */
 export function isECPRole(role: UserRole): boolean {
   return role === 'ecp' || role === 'dual_partner';
@@ -270,14 +278,16 @@ export function isECPRole(role: UserRole): boolean {
 
 /**
  * Check if role is a PDP partner
+ * NOTE: ECP also has PDP Standard access, but pdp role is for dedicated PDP partners
  */
 export function isPDPRole(role: UserRole): boolean {
   return role === 'pdp' || role === 'dual_partner';
 }
 
 /**
- * Check if role is a dual partner (both ECP and PDP)
+ * Check if role has both ECP and PDP access
+ * Now ecp role includes PDP Standard, so ecp = true
  */
 export function isDualPartnerRole(role: UserRole): boolean {
-  return role === 'dual_partner';
+  return role === 'ecp' || role === 'dual_partner';
 }

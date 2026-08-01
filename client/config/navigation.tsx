@@ -96,19 +96,28 @@ export const navigationConfig: NavigationConfig = {
   ],
 
   // ECP Partner Navigation
+  // ECP now includes PDP Standard access — same navigation as dual_partner
   ecp: [
-    { id: 'dashboard', label: 'nav.ecp.dashboard', path: '/ecp/dashboard', icon: LayoutDashboard },
+    { id: 'workspace', label: 'Workspace', path: '/workspace', icon: ArrowLeftRight },
+    // ECP Section
+    { id: 'ecp-dashboard', label: 'ECP Dashboard', path: '/ecp/dashboard', icon: LayoutDashboard, section: 'ECP — Endorsed Certification Partner' },
     { id: 'candidates', label: 'nav.ecp.candidates', path: '/ecp/candidates', icon: Users },
     { id: 'vouchers', label: 'nav.ecp.vouchers', path: '/ecp/vouchers', icon: Ticket },
     { id: 'trainings', label: 'nav.ecp.trainings', path: '/ecp/trainings', icon: Calendar },
     { id: 'trainers', label: 'nav.ecp.trainers', path: '/ecp/trainers', icon: UserCheck },
-    { id: 'reports', label: 'nav.ecp.reports', path: '/ecp/reports', icon: BarChart3 },
+    { id: 'ecp-reports', label: 'nav.ecp.reports', path: '/ecp/reports', icon: BarChart3 },
     { id: 'learning-system', label: 'nav.ecp.learningSystem', path: '/ecp/learning-system', icon: BookMarked },
     { id: 'mock-exams', label: 'nav.ecp.mockExams', path: '/ecp/mock-exams', icon: ClipboardCheck },
-    { id: 'license', label: 'nav.ecp.license', path: '/ecp/license', icon: FileText },
-    { id: 'toolkit', label: 'nav.ecp.toolkit', path: '/ecp/toolkit', icon: Palette },
-    { id: 'help', label: 'nav.ecp.help', path: '/ecp/help', icon: HelpCircle },
-    { id: 'upgrade', label: 'Upgrade Partnership', path: '/ecp/upgrade', icon: ArrowUpCircle },
+    { id: 'ecp-license', label: 'nav.ecp.license', path: '/ecp/license', icon: FileText },
+    { id: 'ecp-toolkit', label: 'nav.ecp.toolkit', path: '/ecp/toolkit', icon: Palette },
+    // PDP Section
+    { id: 'pdp-dashboard', label: 'PDP Dashboard', path: '/pdp/dashboard', icon: LayoutDashboard, section: 'PDP — Professional Development Partner' },
+    { id: 'programs', label: 'nav.pdp.programs', path: '/pdp/programs', icon: BookOpen },
+    { id: 'submit-program', label: 'Submit Program', path: '/pdp/submit-program', icon: PlusCircle },
+    { id: 'pdp-guidelines', label: 'nav.pdp.guidelines', path: '/pdp/guidelines', icon: FileText },
+    { id: 'pdp-toolkit', label: 'nav.pdp.toolkit', path: '/pdp/toolkit', icon: Package },
+    { id: 'annual-report', label: 'nav.pdp.annualReport', path: '/pdp/annual-report', icon: Upload },
+    { id: 'pdp-support', label: 'nav.pdp.support', path: '/pdp/support', icon: MessageCircle },
     { id: 'sign-out', label: 'nav.ecp.signOut', icon: LogOut, action: 'logout' }
   ],
 

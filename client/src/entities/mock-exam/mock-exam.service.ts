@@ -34,7 +34,7 @@ export class MockExamService {
   /**
    * Check if user has premium access to a specific exam (with remaining attempts)
    */
-  static async checkPremiumAccess(
+    static async checkPremiumAccess(
     examId: string,
     userId?: string
   ): Promise<boolean> {
@@ -43,9 +43,29 @@ export class MockExamService {
         data: { user },
       } = await supabase.auth.getUser();
       const targetUserId = userId || user?.id;
-
       if (!targetUserId) {
         return false;
+      }
+
+      // ECP partners with active licence have access to all premium exams
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', targetUserId)
+        .single();
+
+      const isECP =
+        userProfile?.role === 'ecp' || userProfile?.role === 'dual_partner';
+
+      if (isECP) {
+        const { data: ecpLicense } = await supabase
+          .from('ecp_licenses')
+          .select('id')
+          .eq('partner_id', targetUserId)
+          .eq('status', 'active')
+          .gt('expiry_date', new Date().toISOString().split('T')[0])
+          .maybeSingle();
+        if (ecpLicense) return true;
       }
 
       const { data, error } = await supabase
@@ -54,11 +74,9 @@ export class MockExamService {
         .eq('mock_exam_id', examId)
         .eq('user_id', targetUserId)
         .maybeSingle();
-
       if (error || !data) {
         return false;
       }
-
       // Check if access is expired
       if (data.expires_at) {
         const expiryDate = new Date(data.expires_at);
@@ -66,12 +84,10 @@ export class MockExamService {
           return false;
         }
       }
-
       // Check if user has remaining attempts
       if (data.attempts_used >= data.attempts_allowed) {
         return false;
       }
-
       return true;
     } catch (error) {
       console.error('Error checking premium access:', error);
@@ -129,7 +145,8 @@ export class MockExamService {
   }
 
   /**
-   * Get all premium access records for a user
+   * Get all premium access records for a user.
+   * ECP partners with an active licence receive synthetic access to ALL premium exams.
    */
   static async getUserPremiumAccess(
     userId?: string
@@ -144,6 +161,54 @@ export class MockExamService {
         return { data: [], error: null };
       }
 
+      // Check if user is an ECP partner (ecp or legacy dual_partner)
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', targetUserId)
+        .single();
+
+      const isECP =
+        userProfile?.role === 'ecp' || userProfile?.role === 'dual_partner';
+
+      if (isECP) {
+        // Verify the ECP has an active, non-expired licence
+        const { data: ecpLicense } = await supabase
+          .from('ecp_licenses')
+          .select('id, expiry_date')
+          .eq('partner_id', targetUserId)
+          .eq('status', 'active')
+          .gt('expiry_date', new Date().toISOString().split('T')[0])
+          .maybeSingle();
+
+        if (ecpLicense) {
+          // Fetch all active premium exams and return synthetic access records
+          const { data: allPremiumExams } = await supabase
+            .from('mock_exams')
+            .select('id')
+            .eq('is_premium', true)
+            .eq('is_active', true);
+
+          const syntheticAccess = (allPremiumExams || []).map(
+            (exam) =>
+              ({
+                id: `ecp-${exam.id}`,
+                user_id: targetUserId,
+                mock_exam_id: exam.id,
+                attempts_allowed: 999,
+                attempts_used: 0,
+                expires_at: null,
+                granted_by: 'ecp_license',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              } as unknown as MockExamPremiumAccess)
+          );
+
+          return { data: syntheticAccess, error: null };
+        }
+      }
+
+      // Regular user — fetch actual purchased access records
       const { data, error } = await supabase
         .from('mock_exam_premium_access')
         .select('*')
