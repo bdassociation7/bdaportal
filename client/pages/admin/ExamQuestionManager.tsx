@@ -75,32 +75,65 @@ interface ImportPreview {
 function parseWordContent(rawText: string, fileName: string): ImportPreview {
   const errors: string[] = [];
 
-  // Normalize: fix "Question N\ntext" → "Question N text"
-  // and "Correct Answer: X\nRationale:" → "Correct Answer: X Rationale:"
+  // Normalize: fix soft line breaks inside question/answer blocks
   const normalizedText = rawText
     .replace(/\r\n/g, '\n')
+    // English: "Question N\ntext" → "Question N text"
     .replace(/(Question\s+\d+)\n(?!\n)(?![A-D][.)]\s)/gi, '$1 ')
-    .replace(/(Correct Answer:\s*[A-D])\n(Rationale:)/gi, '$1 $2');
+    // Arabic: "السؤال N\ntext" → "السؤال N text"
+    .replace(/(السؤال\s+\d+)\n(?!\n)/gi, '$1 ')
+    // English: "Correct Answer: X\nRationale:" → inline
+    .replace(/(Correct Answer:\s*[A-D])\n(Rationale:)/gi, '$1 $2')
+    // Arabic: "الإجابة الصحيحة: X\nالتبرير:" → inline
+    .replace(/(الإجابة الصحيحة:\s*[A-Dأ-د])\n(التبرير:)/gi, '$1 $2');
 
   // Split into non-empty lines
   const paras = normalizedText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
 
+  // ── Detect language (Arabic vs English) ──
+  const isArabicFile = paras.some((l) => /^السؤال\s+\d+/i.test(l));
+
+  // Language-aware regex patterns
+  const QUESTION_RE    = isArabicFile ? /^السؤال\s+(\d+)[:.\s]\s*(.*)/is : /^Question\s+(\d+)[:.\s]\s*(.*)/is;
+  const QUESTION_START = isArabicFile ? /^السؤال\s+\d+/i : /^Question\s+\d+/i;
+  const CORRECT_ANS_RE = isArabicFile ? /^الإجابة الصحيحة:/i : /^Correct Answer:/i;
+  const RATIONALE_RE   = isArabicFile ? /^التبرير:/i : /^Rationale:/i;
+  const METADATA_RE    = isArabicFile
+    ? /^(نوع السؤال:|الكفاءة:|الصعوبة:|الموضوع:)/i
+    : /^(Question Type:|Competency:|Difficulty:|Topic:|Type:)/i;
+  const OPTION_RE      = isArabicFile ? /^[A-Dأ-د][.)]/i : /^[A-D][.)]/i;
+
+  // Arabic letter → Latin key map
+  const arabicToLatin: Record<string, string> = { 'أ': 'A', 'ب': 'B', 'ج': 'C', 'د': 'D' };
+
   /**
    * Parse options from a text block.
    * Handles:
-   *   - "A) text\nB) text" (separate lines)
-   *   - "A) textB) textC) textD) text" (mammoth concatenated with parenthesis)
-   *   - "A. textB. textC. textD. text" (mammoth concatenated with dot)
+   *   - "A) text\nB) text" or "أ. text\nب. text" (separate lines)
+   *   - "A) textB) textC) textD) text" (mammoth concatenated, parenthesis)
+   *   - "A. textB. textC. textD. text" (mammoth concatenated, dot)
+   *   - "أ. textب. textج. textد. text" (Arabic concatenated)
    */
   const parseOptions = (text: string): Record<string, string> => {
+    // Try Arabic split first if Arabic file
+    const splitByArabicDot = isArabicFile ? text.split(/(?=[بجد]\.)/) : [];
     const splitByParen = text.split(/(?=[B-D]\))/);
     const splitByDot   = text.split(/(?=[B-D]\.(?!\d))/);
-    const best = splitByParen.length >= splitByDot.length ? splitByParen : splitByDot;
+
+    let best: string[];
+    if (isArabicFile && splitByArabicDot.length >= 3) {
+      best = splitByArabicDot;
+    } else {
+      best = splitByParen.length >= splitByDot.length ? splitByParen : splitByDot;
+    }
+
     const opts: Record<string, string> = {};
     for (const part of best) {
-      const m = part.match(/^([A-D])[.)\s]\s*(.+)/s);
-      if (m && /^[A-D]$/.test(m[1].toUpperCase())) {
-        opts[m[1].toUpperCase()] = m[2].trim();
+      const m = part.match(/^([A-Dأ-د])[.)\s]\s*(.+)/s);
+      if (m) {
+        let key = m[1].toUpperCase();
+        if (arabicToLatin[key]) key = arabicToLatin[key];
+        if (/^[A-D]$/.test(key)) opts[key] = m[2].trim();
       }
     }
     return opts;
@@ -110,14 +143,13 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
   let i = 0;
 
   // Skip header lines before first question
-  while (i < paras.length && !/^Question\s+\d+/i.test(paras[i])) {
+  while (i < paras.length && !QUESTION_START.test(paras[i])) {
     i++;
   }
 
   while (i < paras.length) {
     const para = paras[i];
-    // Support: "Question 1: text" | "Question 50 text" | "Question 3. text"
-    const qMatch = para.match(/^Question\s+(\d+)[:.\s]\s*(.*)/is);
+    const qMatch = para.match(QUESTION_RE);
     if (!qMatch) { i++; continue; }
 
     const q_num = parseInt(qMatch[1]);
@@ -127,9 +159,9 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
     // Collect continuation lines of question text
     while (
       i < paras.length &&
-      !/^[A-D][.)]/i.test(paras[i]) &&
-      !/^Question\s+\d+/i.test(paras[i]) &&
-      !/^Correct Answer:/i.test(paras[i])
+      !OPTION_RE.test(paras[i]) &&
+      !QUESTION_START.test(paras[i]) &&
+      !CORRECT_ANS_RE.test(paras[i])
     ) {
       qText += ' ' + paras[i].trim();
       i++;
@@ -140,11 +172,11 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
 
     while (
       i < paras.length &&
-      !/^Correct Answer:/i.test(paras[i]) &&
-      !/^Question\s+\d+/i.test(paras[i])
+      !CORRECT_ANS_RE.test(paras[i]) &&
+      !QUESTION_START.test(paras[i])
     ) {
       const line = paras[i];
-      if (/^[A-D][.)]/i.test(line)) {
+      if (OPTION_RE.test(line)) {
         const parsed = parseOptions(line);
         Object.assign(opts, parsed);
         i++;
@@ -162,43 +194,46 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
     let correctAnswer = '';
     let rationale = '';
 
-    if (i < paras.length && /^Correct Answer:/i.test(paras[i])) {
-      const caMatch = paras[i].match(/^Correct Answer:\s*([A-D])\s*(?:Rationale:\s*(.*))?$/is);
-      if (caMatch) {
-        correctAnswer = caMatch[1].toUpperCase();
-        rationale = (caMatch[2] || '').trim();
+    if (i < paras.length && CORRECT_ANS_RE.test(paras[i])) {
+      if (isArabicFile) {
+        const caMatch = paras[i].match(/^الإجابة الصحيحة:\s*([A-Dأ-د])\s*(?:التبرير:\s*(.*))?$/is);
+        if (caMatch) {
+          let ans = caMatch[1].toUpperCase();
+          if (arabicToLatin[ans]) ans = arabicToLatin[ans];
+          correctAnswer = ans;
+          rationale = (caMatch[2] || '').trim();
+        }
+      } else {
+        const caMatch = paras[i].match(/^Correct Answer:\s*([A-D])\s*(?:Rationale:\s*(.*))?$/is);
+        if (caMatch) {
+          correctAnswer = caMatch[1].toUpperCase();
+          rationale = (caMatch[2] || '').trim();
+        }
       }
       i++;
     }
 
-    // ── Parse standalone Rationale (skip metadata lines like Question Type, Competency) ──
+    // ── Parse standalone Rationale (skip metadata lines) ──
     if (!rationale) {
       let lookahead = i;
       while (
         lookahead < paras.length &&
-        !/^Rationale:/i.test(paras[lookahead]) &&
-        !/^Question\s+\d+/i.test(paras[lookahead]) &&
-        !/^Correct Answer:/i.test(paras[lookahead]) &&
-        (
-          /^Question Type:/i.test(paras[lookahead]) ||
-          /^Competency:/i.test(paras[lookahead]) ||
-          /^Difficulty:/i.test(paras[lookahead]) ||
-          /^Topic:/i.test(paras[lookahead]) ||
-          /^Type:/i.test(paras[lookahead])
-        )
+        !RATIONALE_RE.test(paras[lookahead]) &&
+        !QUESTION_START.test(paras[lookahead]) &&
+        !CORRECT_ANS_RE.test(paras[lookahead]) &&
+        METADATA_RE.test(paras[lookahead])
       ) {
         lookahead++;
       }
-      if (lookahead < paras.length && /^Rationale:/i.test(paras[lookahead])) {
+      if (lookahead < paras.length && RATIONALE_RE.test(paras[lookahead])) {
         i = lookahead;
-        rationale = paras[i].replace(/^Rationale:\s*/i, '').trim();
+        rationale = paras[i].replace(RATIONALE_RE, '').trim();
         i++;
         while (
           i < paras.length &&
-          !/^Question\s+\d+/i.test(paras[i]) &&
-          !/^Correct Answer:/i.test(paras[i]) &&
-          !/^Question Type:/i.test(paras[i]) &&
-          !/^Competency:/i.test(paras[i])
+          !QUESTION_START.test(paras[i]) &&
+          !CORRECT_ANS_RE.test(paras[i]) &&
+          !METADATA_RE.test(paras[i])
         ) {
           if (paras[i].trim()) rationale += ' ' + paras[i].trim();
           i++;
