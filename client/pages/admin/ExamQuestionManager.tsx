@@ -75,8 +75,15 @@ interface ImportPreview {
 function parseWordContent(rawText: string, fileName: string): ImportPreview {
   const errors: string[] = [];
 
+  // Normalize: fix "Question N\ntext" → "Question N text"
+  // and "Correct Answer: X\nRationale:" → "Correct Answer: X Rationale:"
+  const normalizedText = rawText
+    .replace(/\r\n/g, '\n')
+    .replace(/(Question\s+\d+)\n(?!\n)(?![A-D][.)]\s)/gi, '$1 ')
+    .replace(/(Correct Answer:\s*[A-D])\n(Rationale:)/gi, '$1 $2');
+
   // Split into non-empty lines
-  const paras = rawText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  const paras = normalizedText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
 
   /**
    * Parse options from a text block.
