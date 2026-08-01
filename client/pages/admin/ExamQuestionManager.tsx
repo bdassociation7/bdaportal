@@ -171,17 +171,38 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
       i++;
     }
 
-    // ── Parse standalone Rationale ──
-    if (!rationale && i < paras.length && /^Rationale:/i.test(paras[i])) {
-      rationale = paras[i].replace(/^Rationale:\s*/i, '').trim();
-      i++;
+    // ── Parse standalone Rationale (skip metadata lines like Question Type, Competency) ──
+    if (!rationale) {
+      let lookahead = i;
       while (
-        i < paras.length &&
-        !/^Question\s+\d+/i.test(paras[i]) &&
-        !/^Correct Answer:/i.test(paras[i])
+        lookahead < paras.length &&
+        !/^Rationale:/i.test(paras[lookahead]) &&
+        !/^Question\s+\d+/i.test(paras[lookahead]) &&
+        !/^Correct Answer:/i.test(paras[lookahead]) &&
+        (
+          /^Question Type:/i.test(paras[lookahead]) ||
+          /^Competency:/i.test(paras[lookahead]) ||
+          /^Difficulty:/i.test(paras[lookahead]) ||
+          /^Topic:/i.test(paras[lookahead]) ||
+          /^Type:/i.test(paras[lookahead])
+        )
       ) {
-        rationale += ' ' + paras[i].trim();
+        lookahead++;
+      }
+      if (lookahead < paras.length && /^Rationale:/i.test(paras[lookahead])) {
+        i = lookahead;
+        rationale = paras[i].replace(/^Rationale:\s*/i, '').trim();
         i++;
+        while (
+          i < paras.length &&
+          !/^Question\s+\d+/i.test(paras[i]) &&
+          !/^Correct Answer:/i.test(paras[i]) &&
+          !/^Question Type:/i.test(paras[i]) &&
+          !/^Competency:/i.test(paras[i])
+        ) {
+          if (paras[i].trim()) rationale += ' ' + paras[i].trim();
+          i++;
+        }
       }
     }
 
