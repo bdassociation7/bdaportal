@@ -95,8 +95,18 @@ interface ImportPreview {
  *
  * mammoth.extractRawText() returns paragraphs separated by \n.
  * Options (A/B/C/D) may appear:
- *   - Each on its own line (old format)
- *   - All concatenated in one line without separator: "A) opt1B) opt2C) opt3D) opt4"
+ *   - Each on its own line:  "A) opt"  or  "A. opt"
+ *   - Concatenated (mammoth): "A) opt1B) opt2C) opt3D) opt4"
+ *   - Concatenated with dots: "A. opt1B. opt2C. opt3D. opt4"
+ *
+ * Question line formats supported:
+ *   - "Question 1: text"   (colon separator)
+ *   - "Question 50 text"   (space separator, no colon)
+ *   - "Question 3. text"   (dot separator)
+ *
+ * Correct Answer line formats supported:
+ *   - "Correct Answer: C"                        (answer only)
+ *   - "Correct Answer: C Rationale: text..."     (inline rationale)
  *
  * The parser handles all variants robustly.
  */
@@ -132,12 +142,19 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
    */
   const parseOptions = (text: string): Record<string, string> => {
     const opts: Record<string, string> = {};
-    // Split on boundaries before B), C), D) — handles concatenated format
-    // e.g. "A) foo B) bar" or "A) fooB) bar"
-    const parts = text.split(/(?=[B-D]\))/);
-    for (const part of parts) {
-      const m = part.match(/^([A-D])\)\s*(.+)/s);
-      if (m) {
+    // Split on B/C/D boundaries — handles both ) and . separators in concatenated format
+    // e.g. "A) fooB) bar"  or  "A. fooB. bar"  or  "A) foo\nB) bar"
+    const parts = text.split(/(?=[B-D][.)][\s])/).concat(
+      // Also handle zero-space concatenation: "A. fooB. bar" (no space before B)
+      text.split(/(?=[B-D][.)])/).length > 1 ? text.split(/(?=[B-D][.)])/) : []
+    );
+    // Use the split that gives us exactly 4 parts
+    const splitByParen = text.split(/(?=[B-D]\))/);
+    const splitByDot   = text.split(/(?=[B-D]\.(?!\d))/);
+    const best = splitByParen.length >= splitByDot.length ? splitByParen : splitByDot;
+    for (const part of best) {
+      const m = part.match(/^([A-D])[.)\s]\s*(.+)/s);
+      if (m && /^[A-D]$/.test(m[1].toUpperCase())) {
         opts[m[1].toUpperCase()] = m[2].trim();
       }
     }
@@ -154,7 +171,8 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
 
   while (i < paras.length) {
     const para = paras[i];
-    const qMatch = para.match(/^Question\s+(\d+)[:\s]\s*(.*)/is);
+    // Support: "Question 1: text"  |  "Question 50 text"  |  "Question 3. text"
+    const qMatch = para.match(/^Question\s+(\d+)[:.\s]\s*(.*)/is);
     if (!qMatch) { i++; continue; }
 
     const q_num = parseInt(qMatch[1]);
@@ -163,9 +181,10 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
     i++;
 
     // Collect continuation lines of question text (until options, next question, or answer)
+    // Options can start with A) or A.
     while (
       i < paras.length &&
-      !/^[A-D]\)/i.test(paras[i]) &&
+      !/^[A-D][.)]/i.test(paras[i]) &&
       !/^Question\s+\d+/i.test(paras[i]) &&
       !/^Correct Answer:/i.test(paras[i])
     ) {
@@ -183,8 +202,8 @@ function parseWordContent(rawText: string, fileName: string): ImportPreview {
       !/^Question\s+\d+/i.test(paras[i])
     ) {
       const line = paras[i];
-      if (/^[A-D]\)/i.test(line)) {
-        // This line starts with an option marker — parse it
+      if (/^[A-D][.)]/i.test(line)) {
+        // This line starts with an option marker (A) or A.) — parse it
         const parsed = parseOptions(line);
         Object.assign(opts, parsed);
         i++;
