@@ -203,33 +203,31 @@ export class QuestionBankService {
         .select(
           `
           *,
-          competency:curriculum_modules!competency_id(
+                    competency:curriculum_modules!competency_id(
             id,
             competency_name,
             competency_name_ar,
-            section_type
+            section_type,
+            order_index
           ),
           sub_unit:curriculum_lessons!sub_unit_id(
             id,
             title,
-            title_ar
+            title_ar,
+            order_index
           )
         `
         )
         .order('order_index', { ascending: true });
-
       if (filters?.certification_type) {
         query = query.eq('certification_type', filters.certification_type);
       }
-
       if (filters?.section_type) {
         query = query.eq('section_type', filters.section_type);
       }
-
       if (filters?.is_published !== undefined) {
         query = query.eq('is_published', filters.is_published);
       }
-
       if (filters?.exam_language) {
         query = query.eq('exam_language', filters.exam_language);
       }
@@ -935,24 +933,37 @@ export class QuestionBankService {
       const { data: sets, error: setsError } = await setsQuery;
       if (setsError) throw setsError;
 
-      // Get questions by difficulty
-      let questionsQuery = supabase
+      // Get total questions count using COUNT (avoids 1000-row Supabase default limit)
+      const { count: totalCount, error: totalCountError } = await supabase
         .from('curriculum_practice_questions')
-        .select('difficulty_level');
+        .select('*', { count: 'exact', head: true });
+      if (totalCountError) throw totalCountError;
 
-      const { data: questions, error: questionsError } = await questionsQuery;
-      if (questionsError) throw questionsError;
+      // Get questions by difficulty using separate COUNT queries
+      const { count: easyCount, error: easyErr } = await supabase
+        .from('curriculum_practice_questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('difficulty_level', 'easy');
+      const { count: mediumCount, error: mediumErr } = await supabase
+        .from('curriculum_practice_questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('difficulty_level', 'medium');
+      const { count: hardCount, error: hardErr } = await supabase
+        .from('curriculum_practice_questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('difficulty_level', 'hard');
+      if (easyErr || mediumErr || hardErr) throw easyErr || mediumErr || hardErr;
 
       const difficultyCount = {
-        easy: questions?.filter((q) => q.difficulty_level === 'easy').length || 0,
-        medium: questions?.filter((q) => q.difficulty_level === 'medium').length || 0,
-        hard: questions?.filter((q) => q.difficulty_level === 'hard').length || 0,
+        easy: easyCount || 0,
+        medium: mediumCount || 0,
+        hard: hardCount || 0,
       };
 
       return {
         data: {
           totalSets: sets?.length || 0,
-          totalQuestions: questions?.length || 0,
+          totalQuestions: totalCount || 0,
           publishedSets: sets?.filter((s) => s.is_published).length || 0,
           unpublishedSets: sets?.filter((s) => !s.is_published).length || 0,
           questionsByDifficulty: difficultyCount,

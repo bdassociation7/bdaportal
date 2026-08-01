@@ -567,7 +567,11 @@ export function QuestionBankManager() {
                     {/* Question Sets under this Competency */}
                     {isExpanded && (
                       <div className="pl-12 pb-2 bg-gray-50">
-                        {group.sets.map((set) => (
+                        {[...group.sets].sort((a, b) => {
+                          const aOrder = (a.sub_unit as any)?.order_index ?? a.order_index ?? 0;
+                          const bOrder = (b.sub_unit as any)?.order_index ?? b.order_index ?? 0;
+                          return aOrder - bOrder;
+                        }).map((set) => (
                           <div
                             key={set.id}
                             className="flex items-center justify-between px-4 py-2 hover:bg-gray-100 rounded mx-2 transition-colors"
