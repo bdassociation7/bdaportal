@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -11,6 +11,10 @@ import {
   Circle,
   GraduationCap,
   Globe,
+  Upload,
+  FileText,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,9 +46,167 @@ import type {
   ExamQuestionType,
   QuestionWithAnswers,
 } from '@/entities/mock-exam/mock-exam.types';
+import { MockExamService } from '@/entities/mock-exam/mock-exam.service';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '@/contexts/ConfirmDialogContext';
 import { cn } from '@/shared/utils/cn';
+import mammoth from 'mammoth/mammoth.browser';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Word Parser Types
+// ─────────────────────────────────────────────────────────────────────────────
+interface ParsedQuestion {
+  question_text: string;
+  options: { A: string; B: string; C: string; D: string };
+  correct_answer: 'A' | 'B' | 'C' | 'D';
+  rationale: string;
+}
+
+interface ImportPreview {
+  questions: ParsedQuestion[];
+  fileName: string;
+  totalParsed: number;
+  errors: string[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Word Parser — supports all BDA file formats
+// ─────────────────────────────────────────────────────────────────────────────
+function parseWordContent(rawText: string, fileName: string): ImportPreview {
+  const errors: string[] = [];
+
+  // Split into non-empty lines
+  const paras = rawText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+
+  /**
+   * Parse options from a text block.
+   * Handles:
+   *   - "A) text\nB) text" (separate lines)
+   *   - "A) textB) textC) textD) text" (mammoth concatenated with parenthesis)
+   *   - "A. textB. textC. textD. text" (mammoth concatenated with dot)
+   */
+  const parseOptions = (text: string): Record<string, string> => {
+    const splitByParen = text.split(/(?=[B-D]\))/);
+    const splitByDot   = text.split(/(?=[B-D]\.(?!\d))/);
+    const best = splitByParen.length >= splitByDot.length ? splitByParen : splitByDot;
+    const opts: Record<string, string> = {};
+    for (const part of best) {
+      const m = part.match(/^([A-D])[.)\s]\s*(.+)/s);
+      if (m && /^[A-D]$/.test(m[1].toUpperCase())) {
+        opts[m[1].toUpperCase()] = m[2].trim();
+      }
+    }
+    return opts;
+  };
+
+  const questions: ParsedQuestion[] = [];
+  let i = 0;
+
+  // Skip header lines before first question
+  while (i < paras.length && !/^Question\s+\d+/i.test(paras[i])) {
+    i++;
+  }
+
+  while (i < paras.length) {
+    const para = paras[i];
+    // Support: "Question 1: text" | "Question 50 text" | "Question 3. text"
+    const qMatch = para.match(/^Question\s+(\d+)[:.\s]\s*(.*)/is);
+    if (!qMatch) { i++; continue; }
+
+    const q_num = parseInt(qMatch[1]);
+    let qText = qMatch[2].trim();
+    i++;
+
+    // Collect continuation lines of question text
+    while (
+      i < paras.length &&
+      !/^[A-D][.)]/i.test(paras[i]) &&
+      !/^Question\s+\d+/i.test(paras[i]) &&
+      !/^Correct Answer:/i.test(paras[i])
+    ) {
+      qText += ' ' + paras[i].trim();
+      i++;
+    }
+
+    // ── Parse options ──
+    let opts: Record<string, string> = {};
+
+    while (
+      i < paras.length &&
+      !/^Correct Answer:/i.test(paras[i]) &&
+      !/^Question\s+\d+/i.test(paras[i])
+    ) {
+      const line = paras[i];
+      if (/^[A-D][.)]/i.test(line)) {
+        const parsed = parseOptions(line);
+        Object.assign(opts, parsed);
+        i++;
+      } else if (Object.keys(opts).length > 0) {
+        const lastKey = Object.keys(opts).slice(-1)[0];
+        opts[lastKey] += ' ' + line;
+        i++;
+      } else {
+        break;
+      }
+      if (Object.keys(opts).length >= 4) break;
+    }
+
+    // ── Parse Correct Answer ──
+    let correctAnswer = '';
+    let rationale = '';
+
+    if (i < paras.length && /^Correct Answer:/i.test(paras[i])) {
+      const caMatch = paras[i].match(/^Correct Answer:\s*([A-D])\s*(?:Rationale:\s*(.*))?$/is);
+      if (caMatch) {
+        correctAnswer = caMatch[1].toUpperCase();
+        rationale = (caMatch[2] || '').trim();
+      }
+      i++;
+    }
+
+    // ── Parse standalone Rationale ──
+    if (!rationale && i < paras.length && /^Rationale:/i.test(paras[i])) {
+      rationale = paras[i].replace(/^Rationale:\s*/i, '').trim();
+      i++;
+      while (
+        i < paras.length &&
+        !/^Question\s+\d+/i.test(paras[i]) &&
+        !/^Correct Answer:/i.test(paras[i])
+      ) {
+        rationale += ' ' + paras[i].trim();
+        i++;
+      }
+    }
+
+    // ── Validate & store ──
+    if (qText && Object.keys(opts).length === 4 && correctAnswer) {
+      questions.push({
+        question_text: qText.trim(),
+        options: {
+          A: opts['A'] || '',
+          B: opts['B'] || '',
+          C: opts['C'] || '',
+          D: opts['D'] || '',
+        },
+        correct_answer: correctAnswer as 'A' | 'B' | 'C' | 'D',
+        rationale: rationale.trim(),
+      });
+    } else {
+      if (!qText) errors.push(`Question ${q_num}: missing question text`);
+      else if (Object.keys(opts).length !== 4)
+        errors.push(`Question ${q_num}: found ${Object.keys(opts).length} options (expected 4) — opts: ${Object.keys(opts).join(',')}`);
+      else if (!correctAnswer)
+        errors.push(`Question ${q_num}: missing correct answer`);
+    }
+  }
+
+  return {
+    questions,
+    fileName,
+    totalParsed: questions.length,
+    errors,
+  };
+}
 
 /**
  * ExamQuestionManager Page
@@ -89,10 +251,17 @@ export default function ExamQuestionManager() {
     answers: [],
   });
 
-  const questions = exam?.questions || [];
-  const examLanguage = exam?.language || 'en'; // Exam's language determines question/answer language
+  // ── Import state ──────────────────────────────────────────────────────────
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handlers
+  const questions = exam?.questions || [];
+  const examLanguage = exam?.language || 'en';
+
+  // ── Question Handlers ─────────────────────────────────────────────────────
   const handleAddQuestion = () => {
     setIsAddingQuestion(true);
     setEditingQuestionId(null);
@@ -138,7 +307,6 @@ export default function ExamQuestionManager() {
   };
 
   const handleSaveQuestion = async () => {
-    // Validation - check based on exam language
     const questionText = examLanguage === 'ar' ? questionForm.question_text_ar : questionForm.question_text;
     if (!questionText.trim()) {
       toast({
@@ -158,7 +326,6 @@ export default function ExamQuestionManager() {
       return;
     }
 
-    // Validate answer text based on exam language
     const hasEmptyAnswers = questionForm.answers.some((a) => {
       const answerText = examLanguage === 'ar' ? a.answer_text_ar : a.answer_text;
       return !answerText?.trim();
@@ -207,7 +374,7 @@ export default function ExamQuestionManager() {
       if (correctCount === questionForm.answers.length) {
         toast({
           title: 'Validation Error',
-          description: 'Multiple choice questions cannot have all answers as correct (at least one must be incorrect)',
+          description: 'Multiple choice questions cannot have all answers as correct',
           variant: 'destructive',
         });
         return;
@@ -216,7 +383,6 @@ export default function ExamQuestionManager() {
 
     try {
       if (isAddingQuestion) {
-        // Create new question
         const dto: CreateQuestionDTO = {
           exam_id: examId!,
           question_text: questionForm.question_text,
@@ -235,15 +401,10 @@ export default function ExamQuestionManager() {
         };
 
         const { error } = await createQuestionMutation.mutateAsync(dto);
-
         if (error) throw error;
 
-        toast({
-          title: 'Success',
-          description: 'Question created successfully',
-        });
+        toast({ title: 'Success', description: 'Question created successfully' });
       } else {
-        // Update existing question
         const { error: questionError } = await updateQuestionMutation.mutateAsync({
           id: editingQuestionId!,
           question_text: questionForm.question_text,
@@ -256,14 +417,10 @@ export default function ExamQuestionManager() {
 
         if (questionError) throw questionError;
 
-        // Update answers
-        // tempId is the real answer ID when editing (UUID format)
-        // tempId is a timestamp when it's a new answer
         for (const answer of questionForm.answers) {
-          const isExistingAnswer = answer.tempId.includes('-'); // UUID has dashes
+          const isExistingAnswer = answer.tempId.includes('-');
 
           if (isExistingAnswer) {
-            // Update existing answer
             const { error: answerError } = await updateAnswerMutation.mutateAsync({
               dto: {
                 id: answer.tempId,
@@ -274,13 +431,8 @@ export default function ExamQuestionManager() {
               },
               examId: examId!,
             });
-
-            if (answerError) {
-              console.error('Error updating answer:', answerError);
-              throw answerError;
-            }
+            if (answerError) throw answerError;
           } else {
-            // Create new answer
             const { error: answerError } = await createAnswerMutation.mutateAsync({
               questionId: editingQuestionId!,
               dto: {
@@ -291,18 +443,11 @@ export default function ExamQuestionManager() {
               },
               examId: examId!,
             });
-
-            if (answerError) {
-              console.error('Error creating answer:', answerError);
-              throw answerError;
-            }
+            if (answerError) throw answerError;
           }
         }
 
-        toast({
-          title: 'Success',
-          description: 'Question updated successfully',
-        });
+        toast({ title: 'Success', description: 'Question updated successfully' });
       }
 
       handleCancelEdit();
@@ -334,10 +479,7 @@ export default function ExamQuestionManager() {
 
       if (error) throw error;
 
-      toast({
-        title: 'Success',
-        description: 'Question deleted successfully',
-      });
+      toast({ title: 'Success', description: 'Question deleted successfully' });
     } catch (error) {
       console.error('Error deleting question:', error);
       toast({
@@ -389,7 +531,6 @@ export default function ExamQuestionManager() {
           if (a.tempId === tempId) {
             return { ...a, is_correct: !a.is_correct };
           } else if (isSingleChoice) {
-            // For single choice, uncheck other answers
             return { ...a, is_correct: false };
           }
           return a;
@@ -398,6 +539,136 @@ export default function ExamQuestionManager() {
     });
   };
 
+  // ── Import Handlers ───────────────────────────────────────────────────────
+  const handleImportButtonClick = () => {
+    setImportPreview(null);
+    setIsImportDialogOpen(true);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.docx')) {
+      toast({ title: 'Error', description: 'Only .docx files are supported', variant: 'destructive' });
+      return;
+    }
+
+    setIsParsingFile(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const rawText = result.value;
+      const preview = parseWordContent(rawText, file.name);
+      setImportPreview(preview);
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to read file. Make sure it is a valid .docx file.',
+        variant: 'destructive',
+      });
+      console.error(err);
+    } finally {
+      setIsParsingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!importPreview || !examId) return;
+    setIsImporting(true);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      const isArabicExam = examLanguage === 'ar';
+      const currentCount = questions.length;
+
+      for (let idx = 0; idx < importPreview.questions.length; idx++) {
+        const q = importPreview.questions[idx];
+
+        const dto: CreateQuestionDTO = {
+          exam_id: examId,
+          // For Arabic exams, store in question_text_ar; for English, in question_text
+          question_text: isArabicExam ? q.question_text : q.question_text,
+          question_text_ar: isArabicExam ? q.question_text : undefined,
+          explanation: !isArabicExam && q.rationale ? q.rationale : undefined,
+          explanation_ar: isArabicExam && q.rationale ? q.rationale : undefined,
+          question_type: 'single_choice',
+          points: 1,
+          order_index: currentCount + idx,
+          answers: [
+            {
+              answer_text: isArabicExam ? q.options.A : q.options.A,
+              answer_text_ar: isArabicExam ? q.options.A : undefined,
+              is_correct: q.correct_answer === 'A',
+              order_index: 0,
+            },
+            {
+              answer_text: isArabicExam ? q.options.B : q.options.B,
+              answer_text_ar: isArabicExam ? q.options.B : undefined,
+              is_correct: q.correct_answer === 'B',
+              order_index: 1,
+            },
+            {
+              answer_text: isArabicExam ? q.options.C : q.options.C,
+              answer_text_ar: isArabicExam ? q.options.C : undefined,
+              is_correct: q.correct_answer === 'C',
+              order_index: 2,
+            },
+            {
+              answer_text: isArabicExam ? q.options.D : q.options.D,
+              answer_text_ar: isArabicExam ? q.options.D : undefined,
+              is_correct: q.correct_answer === 'D',
+              order_index: 3,
+            },
+          ],
+        };
+
+        const { error } = await MockExamService.createQuestion(dto);
+        if (error) {
+          failCount++;
+          console.error(`Failed to import question ${idx + 1}:`, error);
+        } else {
+          successCount++;
+        }
+      }
+
+      // Update total_questions count on the exam
+      await MockExamService.updateExamQuestionCount(examId);
+
+      if (failCount === 0) {
+        toast({
+          title: 'Import Successful',
+          description: `Successfully imported ${successCount} questions!`,
+        });
+      } else {
+        toast({
+          title: 'Partial Import',
+          description: `Imported ${successCount} questions. ${failCount} failed.`,
+          variant: 'destructive',
+        });
+      }
+
+      setIsImportDialogOpen(false);
+      setImportPreview(null);
+
+      // Refresh page data
+      window.location.reload();
+    } catch (err) {
+      toast({
+        title: 'Import Failed',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+      console.error(err);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -463,13 +734,235 @@ export default function ExamQuestionManager() {
             </div>
           </div>
           {!isAddingQuestion && !editingQuestionId && (
-            <Button variant="secondary" size="sm" onClick={handleAddQuestion}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Question
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleImportButtonClick}
+                className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import from Word
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleAddQuestion}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Question
+              </Button>
+            </div>
           )}
         </div>
       </div>
+
+      {/* ── Import Dialog ── */}
+      {isImportDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl overflow-hidden">
+            {/* Dialog Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
+                  <Upload className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Import Questions from Word</h2>
+                  <p className="text-sm text-gray-500">Upload a .docx file with BDA format questions</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setIsImportDialogOpen(false); setImportPreview(null); }}
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Format Guide */}
+              {!importPreview && (
+                <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    <span className="font-semibold text-blue-800">Expected File Format</span>
+                  </div>
+                  <pre className="text-xs text-blue-700 font-mono whitespace-pre-wrap leading-relaxed">
+{`Question 1: What is the primary goal of business development?
+
+A. Increase operational costs
+B. Build long-term value through partnerships
+C. Reduce workforce
+D. Avoid market expansion
+
+Correct Answer: B
+Rationale: Business development focuses on...
+
+Question 2
+...`}
+                  </pre>
+                  <div className="mt-3 space-y-1 text-xs text-blue-700">
+                    <p>• Supports <strong>A.</strong> or <strong>A)</strong> option format</p>
+                    <p>• <strong>Correct Answer:</strong> line is required for each question</p>
+                    <p>• Each question needs exactly 4 options (A, B, C, D)</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Parse Results */}
+              {importPreview && (
+                <>
+                  {/* Summary */}
+                  <div className={cn(
+                    'rounded-lg p-4 border-2',
+                    importPreview.totalParsed > 0
+                      ? 'bg-green-50 border-green-300'
+                      : 'bg-red-50 border-red-300'
+                  )}>
+                    <div className="flex items-center gap-3 mb-2">
+                      {importPreview.totalParsed > 0 ? (
+                        <CheckCircle2 className="h-6 w-6 text-green-600 flex-shrink-0" />
+                      ) : (
+                        <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
+                      )}
+                      <div>
+                        <p className="font-bold text-gray-900">
+                          {importPreview.totalParsed} questions parsed from "{importPreview.fileName}"
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Ready to import into: <strong>{examLanguage === 'ar' && exam.title_ar ? exam.title_ar : exam.title}</strong>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Warnings */}
+                  {importPreview.errors.length > 0 && (
+                    <div className="rounded-lg bg-amber-50 border border-amber-300 p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="h-5 w-5 text-amber-600" />
+                        <span className="font-semibold text-amber-800">
+                          {importPreview.errors.length} parsing warnings
+                        </span>
+                      </div>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {importPreview.errors.map((err, i) => (
+                          <p key={i} className="text-xs text-amber-700">• {err}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Preview first 3 questions */}
+                  {importPreview.questions.length > 0 && (
+                    <details className="rounded-lg border border-gray-200">
+                      <summary className="px-4 py-3 cursor-pointer font-medium text-gray-700 hover:bg-gray-50 rounded-lg">
+                        Preview (first 3 questions)
+                      </summary>
+                      <div className="px-4 pb-4 space-y-3 mt-2">
+                        {importPreview.questions.slice(0, 3).map((q, i) => (
+                          <div key={i} className="p-3 bg-gray-50 rounded-lg border text-sm">
+                            <p className="font-medium text-gray-900 mb-2">Q{i + 1}: {q.question_text.slice(0, 100)}{q.question_text.length > 100 ? '...' : ''}</p>
+                            <div className="grid grid-cols-2 gap-1">
+                              {(['A', 'B', 'C', 'D'] as const).map((letter) => (
+                                <p key={letter} className={cn(
+                                  'text-xs px-2 py-1 rounded',
+                                  q.correct_answer === letter
+                                    ? 'bg-green-100 text-green-800 font-semibold'
+                                    : 'text-gray-600'
+                                )}>
+                                  {letter}. {q.options[letter].slice(0, 40)}{q.options[letter].length > 40 ? '...' : ''}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </>
+              )}
+
+              {/* Loading state */}
+              {isParsingFile && (
+                <div className="flex items-center justify-center py-8 gap-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                  <span className="text-gray-600">Reading file...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Dialog Footer */}
+            <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
+              <div>
+                {importPreview ? (
+                  <button
+                    onClick={() => {
+                      setImportPreview(null);
+                      fileInputRef.current?.click();
+                    }}
+                    className="text-sm text-gray-600 hover:text-gray-900 underline"
+                  >
+                    Choose Different File
+                  </button>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => { setIsImportDialogOpen(false); setImportPreview(null); }}
+                  disabled={isImporting}
+                >
+                  Cancel
+                </Button>
+                {!importPreview ? (
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isParsingFile}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isParsingFile ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Reading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Choose .docx File
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleConfirmImport}
+                    disabled={isImporting || importPreview.totalParsed === 0}
+                    className="bg-green-600 hover:bg-green-700 text-white min-w-40"
+                  >
+                    {isImporting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Import {importPreview.totalParsed} Questions
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".docx"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
 
       {/* Question Form (Add/Edit) */}
       {(isAddingQuestion || editingQuestionId) && (
@@ -525,7 +1018,7 @@ export default function ExamQuestionManager() {
               </div>
             </div>
 
-            {/* Question Text - Based on exam language */}
+            {/* Question Text */}
             {examLanguage === 'en' ? (
               <div className="space-y-2 p-4 bg-blue-50/50 rounded-lg border border-blue-100">
                 <Label className="text-blue-800 font-semibold">
@@ -564,28 +1057,23 @@ export default function ExamQuestionManager() {
               <div className="space-y-3">
                 <Label className="text-base font-semibold">Answer Selection Type</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* Single Answer Option */}
                   <button
                     type="button"
                     onClick={() => {
                       setQuestionForm((prev) => {
-                        // When switching to single answer mode, keep only first correct answer
                         const correctAnswers = prev.answers.filter(a => a.is_correct);
-
                         if (correctAnswers.length > 1) {
                           toast({
                             title: 'Answers Auto-Corrected',
-                            description: 'Only the first correct answer was kept. Single answer questions can only have one correct answer.',
+                            description: 'Only the first correct answer was kept.',
                           });
                         }
-
                         const updatedAnswers = prev.answers.map((answer) => ({
                           ...answer,
                           is_correct: correctAnswers.length > 1
-                            ? answer.tempId === correctAnswers[0].tempId // Keep only first correct
-                            : answer.is_correct, // Keep as is if 0 or 1 correct
+                            ? answer.tempId === correctAnswers[0].tempId
+                            : answer.is_correct,
                         }));
-
                         return {
                           ...prev,
                           question_type: 'single_choice',
@@ -616,7 +1104,6 @@ export default function ExamQuestionManager() {
                     </div>
                   </button>
 
-                  {/* Multiple Answers Option */}
                   <button
                     type="button"
                     onClick={() => {
@@ -691,7 +1178,7 @@ export default function ExamQuestionManager() {
                   : 'Select MULTIPLE correct answers using the checkboxes'}
               </p>
 
-              {/* Single Choice Questions - Use Radio Buttons */}
+              {/* Single Choice */}
               {questionForm.question_type === 'single_choice' && (
                 <RadioGroup
                   value={questionForm.answers.find(a => a.is_correct)?.tempId || ''}
@@ -753,7 +1240,7 @@ export default function ExamQuestionManager() {
                 </RadioGroup>
               )}
 
-              {/* Multiple Choice Questions - Use Checkboxes */}
+              {/* Multiple Choice */}
               {questionForm.question_type === 'multiple_choice' && (
                 <div className="space-y-3">
                   {questionForm.answers.map((answer, index) => (
@@ -814,7 +1301,7 @@ export default function ExamQuestionManager() {
               )}
             </div>
 
-            {/* Explanation - Based on exam language */}
+            {/* Explanation */}
             {examLanguage === 'en' ? (
               <div className="space-y-2 p-4 bg-amber-50/50 rounded-lg border border-amber-100">
                 <Label className="text-amber-800 font-medium">Explanation (Optional)</Label>
@@ -859,7 +1346,7 @@ export default function ExamQuestionManager() {
         </Card>
       )}
 
-      {/* Questions List - Hidden when editing/creating */}
+      {/* Questions List */}
       {!isAddingQuestion && !editingQuestionId && (
         <Card>
           <CardHeader>
@@ -875,11 +1362,18 @@ export default function ExamQuestionManager() {
           {questions.length === 0 ? (
             <div className="text-center py-12">
               <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 mb-4">No questions yet</p>
-              <Button onClick={handleAddQuestion} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Question
-              </Button>
+              <p className="text-gray-600 mb-2">No questions yet</p>
+              <p className="text-sm text-gray-500 mb-6">Add questions manually or import from a Word file</p>
+              <div className="flex items-center justify-center gap-3">
+                <Button variant="outline" size="sm" onClick={handleImportButtonClick}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import from Word
+                </Button>
+                <Button size="sm" onClick={handleAddQuestion}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add First Question
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -949,7 +1443,6 @@ export default function ExamQuestionManager() {
                           </div>
                         ))}
                       </div>
-                      {/* Explanation */}
                       {(() => {
                         const explanation = examLanguage === 'ar'
                           ? (question.explanation_ar || question.explanation)
