@@ -68,7 +68,7 @@ function FlashcardDisplay({
       >
         {/* Front of card */}
         <div
-          className="absolute w-full bg-white rounded-2xl shadow-lg border-2 border-purple-200 p-8 backface-hidden"
+          className="absolute w-full bg-white rounded-2xl shadow-lg border-2 border-[#dbeafe] p-8 backface-hidden"
           style={{
             minHeight: '300px',
             backfaceVisibility: 'hidden',
@@ -126,7 +126,7 @@ function FlashcardDisplay({
 
         {/* Back of card */}
         <div
-          className="absolute w-full bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl shadow-lg border-2 border-purple-200 p-8 backface-hidden"
+          className="absolute w-full bg-gradient-to-br from-[#f0f6ff] to-[#e8f2ff] rounded-2xl shadow-lg border-2 border-[#dbeafe] p-8 backface-hidden"
           style={{
             minHeight: '300px',
             backfaceVisibility: 'hidden',
@@ -134,7 +134,7 @@ function FlashcardDisplay({
           }}
         >
           <div className="absolute top-4 left-4">
-            <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+            <span className="text-xs font-medium text-[#0f91e0] bg-[#e8f4fd] px-2 py-1 rounded-full">
               Answer
             </span>
           </div>
@@ -344,7 +344,7 @@ export function FlashcardStudySession() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0f91e0] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading flashcards...</p>
         </div>
       </div>
@@ -377,8 +377,8 @@ export function FlashcardStudySession() {
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4 max-w-2xl">
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-10 h-10 text-purple-600" />
+            <div className="w-20 h-20 rounded-full bg-[#e8f4fd] flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-10 h-10 text-[#0f91e0]" />
             </div>
 
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -389,11 +389,11 @@ export function FlashcardStudySession() {
             </p>
 
             <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-purple-50 rounded-lg p-4">
-                <p className="text-3xl font-bold text-purple-600">
+              <div className="bg-[#f0f6ff] rounded-lg p-4">
+                <p className="text-3xl font-bold text-[#0f91e0]">
                   {studiedCards.size}
                 </p>
-                <p className="text-sm text-purple-700">Cards Studied</p>
+                <p className="text-sm text-[#1C4A8B]">Cards Studied</p>
               </div>
               <div className="bg-green-50 rounded-lg p-4">
                 <p className="text-3xl font-bold text-green-600">
@@ -440,7 +440,7 @@ export function FlashcardStudySession() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
+    <div className="min-h-screen bg-[#f5f9ff]">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -464,7 +464,7 @@ export function FlashcardStudySession() {
 
             <div className="flex items-center gap-4">
               <div className="text-sm text-gray-600">
-                <span className="font-medium text-purple-600">
+                <span className="font-medium text-[#0f91e0]">
                   {studiedCards.size}
                 </span>
                 <span className="text-gray-400"> studied</span>
@@ -478,7 +478,7 @@ export function FlashcardStudySession() {
           {/* Progress bar */}
           <div className="mt-4 h-2 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-purple-500 transition-all"
+              className="h-full bg-[#0f91e0] transition-all"
               style={{
                 width: `${((currentIndex + 1) / totalCards) * 100}%`,
               }}
