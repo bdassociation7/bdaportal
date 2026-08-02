@@ -126,10 +126,8 @@ export class QuestionBankService {
         query = query.eq('exam_language', examLanguage.toLowerCase());
       }
 
-      // Filter by certification_type to only show relevant sets
-      if (certificationType) {
-        query = query.eq('certification_type', certificationType);
-      }
+      // NOTE: All sets have certification_type='CP' in DB but contain both CP and SCP questions.
+      // Do NOT filter sets by certification_type — instead rely on RPC to count per-cert questions.
 
       const { data: sets, error: setsError } = await query.order('order_index', { ascending: true });
 
