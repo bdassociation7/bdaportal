@@ -76,7 +76,7 @@ function ToolCard({ icon, title, description, stats, cta, onClick, badge, primar
     <div
       className={`relative rounded-2xl border p-5 flex flex-col gap-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer ${
         primary
-          ? 'bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] text-white border-transparent shadow-md'
+          ? 'bg-[#0f91e0] text-white border-transparent shadow-md'
           : 'bg-white border-[#dbeafe] hover:border-[#bfdbfe]'
       }`}
       onClick={onClick}
@@ -114,8 +114,8 @@ function ToolCard({ icon, title, description, stats, cta, onClick, badge, primar
         onClick={(e) => { e.stopPropagation(); onClick(); }}
         className={`w-full flex items-center justify-center gap-2 font-semibold py-2.5 px-4 rounded-xl transition-colors text-sm ${
           primary
-            ? 'bg-white text-[#1C4A8B] hover:bg-[#f0f6ff]'
-            : 'bg-[#1C4A8B] text-white hover:bg-[#0d1f4e]'
+            ? 'bg-white text-[#0f91e0] hover:bg-[#f0f6ff]'
+            : 'bg-[#0f91e0] text-white hover:bg-[#1C4A8B]'
         }`}
       >
         {cta}
@@ -171,7 +171,7 @@ export function LearningSystemDashboard() {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-56px)] bg-[#f8f9fb] px-4">
         <div className="max-w-md w-full text-center bg-white p-10 rounded-3xl shadow-xl border border-[#dbeafe]">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
+          <div className="w-16 h-16 bg-[#0f91e0] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
             <BookOpen className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-xl font-bold text-[#0d1f4e] mb-2">Access Required</h2>
@@ -180,7 +180,7 @@ export function LearningSystemDashboard() {
           </p>
           <button
             onClick={() => window.open('https://bda-global.org/en/store/bda-learning-system/', '_blank')}
-            className="w-full bg-gradient-to-r from-[#1C4A8B] to-[#0d1f4e] text-white font-semibold py-3 px-6 rounded-xl hover:opacity-90 transition-opacity shadow-md text-sm"
+            className="w-full bg-[#0f91e0] text-white font-semibold py-3 px-6 rounded-xl hover:bg-[#1C4A8B] transition-colors shadow-md text-sm"
           >
             Purchase Now
           </button>
@@ -206,7 +206,7 @@ export function LearningSystemDashboard() {
           </div>
           <button
             onClick={() => navigate(`${basePath}/training-kits`)}
-            className="flex items-center gap-2 bg-[#1C4A8B] text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-[#0d1f4e] transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-[#0f91e0] text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-[#1C4A8B] transition-colors shadow-sm"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             {pct > 0 ? 'Continue Learning' : 'Start Learning'}
@@ -224,7 +224,7 @@ export function LearningSystemDashboard() {
               className="h-full rounded-full transition-all duration-700"
               style={{
                 width: `${pct}%`,
-                background: 'linear-gradient(90deg, #1C4A8B, #0f91e0)',
+                background: '#0f91e0',
               }}
             />
           </div>
@@ -314,7 +314,7 @@ export function LearningSystemDashboard() {
           </div>
           <button
             onClick={() => navigate(`${basePath}/training-kits`)}
-            className="flex items-center gap-1.5 bg-[#1C4A8B] text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-[#0d1f4e] transition-colors whitespace-nowrap shadow-sm flex-shrink-0"
+            className="flex items-center gap-1.5 bg-[#0f91e0] text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-[#1C4A8B] transition-colors whitespace-nowrap shadow-sm flex-shrink-0"
           >
             <Zap className="w-3.5 h-3.5" />
             Go
@@ -382,7 +382,7 @@ export function LearningSystemDashboard() {
                   onClick={item.action}
                   className="flex-1 w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#f0f6ff] transition-colors group text-left"
                 >
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-sm">
+                  <div                   className="w-9 h-9 rounded-full bg-[#0f91e0] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-sm">
                     {item.step}
                   </div>
                   <div>
