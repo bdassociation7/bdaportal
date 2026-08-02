@@ -199,9 +199,11 @@ function ExamCard({
             <StatusBadge variant={getDifficultyVariant(exam.difficulty)} size="sm">
               {EXAM_DIFFICULTY_LABELS[exam.difficulty]}
             </StatusBadge>
-            <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium">
+            {/* Category badge - BDA blue */}
+            <span className="text-xs px-2 py-1 rounded bg-[#0f91e0]/10 text-[#0f91e0] font-medium">
               {EXAM_CATEGORY_LABELS[exam.category]}
             </span>
+            {/* Language badge - neutral gray */}
             <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 font-medium flex items-center gap-1">
               <Globe className="h-3 w-3" />
               {EXAM_LANGUAGE_LABELS[exam.language]}
@@ -211,8 +213,8 @@ function ExamCard({
                 className={cn(
                   'text-xs px-2 py-1 rounded font-medium flex items-center gap-1',
                   exam.has_premium_access
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-amber-100 text-amber-700'
+                    ? 'bg-[#0f91e0]/10 text-[#0f91e0]'
+                    : 'bg-[#0d1f4e]/10 text-[#0d1f4e]'
                 )}
               >
                 <Crown className="h-3 w-3" />
@@ -243,11 +245,11 @@ function ExamCard({
             </div>
           </div>
 
-          {/* Premium purchase CTA */}
+          {/* Premium purchase CTA - BDA blue instead of amber */}
           {exam.is_premium && !exam.has_premium_access && (
-            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="mt-4 p-3 bg-[#0f91e0]/5 border border-[#0f91e0]/20 rounded-lg">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-amber-800">
+                <div className="flex items-center gap-2 text-[#0d1f4e]">
                   <Lock className="h-4 w-4" />
                   <span className="text-sm font-medium">
                     {texts.purchaseRequired}
@@ -257,7 +259,7 @@ function ExamCard({
                   href={WOOCOMMERCE_STORE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-medium text-amber-700 hover:text-amber-900 flex items-center gap-1"
+                  className="text-sm font-medium text-[#0f91e0] hover:text-[#0d1f4e] flex items-center gap-1"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {texts.buyNow}
@@ -268,11 +270,11 @@ function ExamCard({
           )}
         </div>
 
-        {/* Stats */}
+        {/* Stats - has attempts */}
         {canTakeExam && exam.attempt_count !== undefined && exam.attempt_count > 0 && (
           <div className="lg:w-64 rounded-lg border border-gray-200 bg-gray-50 p-4">
             <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="h-4 w-4 text-gray-600" />
+              <TrendingUp className="h-4 w-4 text-[#0f91e0]" />
               <span className="text-sm font-semibold text-gray-700">{texts.yourProgress}</span>
             </div>
             <div className="space-y-2">
@@ -307,7 +309,7 @@ function ExamCard({
                     <CheckCircle2 className="h-4 w-4" />
                     <span className="font-medium">{texts.passed}</span>
                   </div>
-                  <div className="flex items-center gap-1 text-sm text-blue-600 pt-2 border-t">
+                  <div className="flex items-center gap-1 text-sm text-[#0f91e0] pt-2 border-t">
                     <RotateCcw className="h-4 w-4" />
                     <span className="font-medium">{texts.retakeAvailable}</span>
                   </div>
@@ -316,7 +318,7 @@ function ExamCard({
               {!exam.user_has_passed &&
                 exam.attempt_count > 0 &&
                 exam.best_score !== null && (
-                  <div className="flex items-center gap-1 text-sm text-orange-600 pt-2 border-t">
+                  <div className="flex items-center gap-1 text-sm text-red-600 pt-2 border-t">
                     <XCircle className="h-4 w-4" />
                     <span className="font-medium">{texts.notPassedYet}</span>
                   </div>
@@ -328,12 +330,12 @@ function ExamCard({
         {/* No attempts yet - show only for accessible exams */}
         {canTakeExam &&
           (exam.attempt_count === undefined || exam.attempt_count === 0) && (
-            <div className="lg:w-64 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="lg:w-64 rounded-lg border border-[#0f91e0]/30 bg-[#0f91e0]/5 p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Award className="h-5 w-5 text-blue-600" />
-                <span className="text-sm font-semibold text-blue-900">{texts.readyToStart}</span>
+                <Award className="h-5 w-5 text-[#0f91e0]" />
+                <span className="text-sm font-semibold text-[#0d1f4e]">{texts.readyToStart}</span>
               </div>
-              <p className="text-xs text-blue-700">
+              <p className="text-xs text-[#0f91e0]">
                 {texts.takeFirstAttempt}
               </p>
             </div>
@@ -423,13 +425,13 @@ export default function MockExamList() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-sky-500 via-royal-600 to-navy-800 rounded-lg p-6 text-white mb-6">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <BookOpen className="h-8 w-8" />
+        {/* Page Header - BDA blue instead of gradient */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <BookOpen className="h-7 w-7 text-[#0f91e0]" />
             {texts.title}
           </h1>
-          <p className="mt-2 opacity-90">
+          <p className="mt-1 text-gray-500 text-sm">
             {texts.subtitle}
           </p>
         </div>
@@ -443,7 +445,7 @@ export default function MockExamList() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value as ExamCategory | 'all')}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0f91e0] appearance-none"
               >
                 <option value="all">{texts.allCategories}</option>
                 <option value="cp">{texts.cpExam}</option>
@@ -460,7 +462,7 @@ export default function MockExamList() {
                 onChange={(e) =>
                   setDifficultyFilter(e.target.value as ExamDifficulty | 'all')
                 }
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0f91e0] appearance-none"
               >
                 <option value="all">{texts.allDifficulties}</option>
                 <option value="easy">{texts.easy}</option>
@@ -477,7 +479,7 @@ export default function MockExamList() {
                 onChange={(e) =>
                   setLanguageFilter(e.target.value as MockExamLanguage | 'all')
                 }
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0f91e0] appearance-none"
               >
                 <option value="all">{texts.allLanguages}</option>
                 <option value="en">{texts.english}</option>
@@ -490,7 +492,7 @@ export default function MockExamList() {
         {/* Loading State */}
         {isLoading && (
           <div className="rounded-lg border bg-white p-12 shadow-sm text-center">
-            <div className="inline-block h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+            <div className="inline-block h-8 w-8 border-4 border-[#0f91e0] border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-gray-600">{texts.loadingExams}</p>
           </div>
         )}
@@ -520,7 +522,7 @@ export default function MockExamList() {
                   title={texts.freeMockExams}
                   subtitle={texts.freeSubtitle}
                   icon={BookOpen}
-                  iconColor="bg-green-600"
+                  iconColor="bg-[#0f91e0]"
                   count={freeExams.length}
                 />
                 <div className="space-y-4">
@@ -543,7 +545,7 @@ export default function MockExamList() {
                   title={texts.premiumMockExams}
                   subtitle={texts.premiumSubtitle}
                   icon={Crown}
-                  iconColor="bg-amber-500"
+                  iconColor="bg-[#0d1f4e]"
                   count={premiumExams.length}
                 />
                 <div className="space-y-4">
@@ -557,14 +559,14 @@ export default function MockExamList() {
                   ))}
                 </div>
 
-                {/* Store Link for Premium Exams */}
-                <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
+                {/* Store Link for Premium Exams - BDA blue instead of amber */}
+                <div className="mt-4 p-4 bg-[#0f91e0]/5 border border-[#0f91e0]/20 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-amber-900">
+                      <h3 className="font-semibold text-[#0d1f4e]">
                         {texts.getAccessTitle}
                       </h3>
-                      <p className="text-sm text-amber-700">
+                      <p className="text-sm text-gray-600">
                         {texts.getAccessDesc}
                       </p>
                     </div>
@@ -572,7 +574,7 @@ export default function MockExamList() {
                       href={WOOCOMMERCE_STORE_URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors"
+                      className="px-4 py-2 bg-[#0f91e0] hover:bg-[#0d7bc4] text-white font-medium rounded-lg flex items-center gap-2 transition-colors"
                     >
                       {texts.visitStore}
                       <ExternalLink className="h-4 w-4" />
@@ -592,11 +594,11 @@ export default function MockExamList() {
           </div>
         )}
 
-        {/* Premium Purchase CTA */}
-        <div className="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 text-center">
+        {/* Premium Purchase CTA - BDA blue instead of amber/orange */}
+        <div className="mt-8 bg-[#0f91e0]/5 border border-[#0f91e0]/20 rounded-xl p-6 text-center">
           <div className="flex flex-col items-center gap-3">
-            <div className="p-3 bg-amber-100 rounded-full">
-              <ShoppingBag className="h-6 w-6 text-amber-600" />
+            <div className="p-3 bg-[#0f91e0]/10 rounded-full">
+              <ShoppingBag className="h-6 w-6 text-[#0f91e0]" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900">{texts.getPremiumExams}</h3>
             <p className="text-sm text-gray-600 max-w-md">{texts.getPremiumExamsDesc}</p>
@@ -604,7 +606,7 @@ export default function MockExamList() {
               href="https://bda-global.org/en/store/bda-mock-exams/"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors"
+              className="mt-2 inline-flex items-center gap-2 px-6 py-3 bg-[#0f91e0] hover:bg-[#0d7bc4] text-white font-medium rounded-lg transition-colors"
             >
               <ShoppingBag className="h-5 w-5" />
               {texts.visitStore}
