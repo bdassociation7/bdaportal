@@ -918,10 +918,7 @@ export default function PDCs() {
                         <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-[#1C4A8B]" />
                       </div>
                       <p className="text-xs text-slate-500 mt-1">{texts.pathProfDevDesc}</p>
-                      <Badge className="mt-2 bg-[#e8f4fd] text-[#0f91e0] text-xs border-0">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Auto-approved
-                      </Badge>
+
                     </div>
                   </div>
                 </button>
@@ -940,12 +937,7 @@ export default function PDCs() {
                 <span className="text-sm font-medium text-[#0d1f4e]">
                   {selectedPath === 'pdp_partner' ? texts.pathPdpPartner : texts.pathProfDev}
                 </span>
-                {selectedPath === 'professional_development' && (
-                  <Badge className="ml-auto bg-[#e8f4fd] text-[#0f91e0] text-xs border-0">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Auto-approved
-                  </Badge>
-                )}
+
               </div>
 
               {/* Cert type */}
