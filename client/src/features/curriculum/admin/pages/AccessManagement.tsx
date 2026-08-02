@@ -463,7 +463,7 @@ export function AccessManagement() {
       setSelectedUsers([]);
       setUserSearchQuery('');
       setGrantFormData({
-        certificationType: 'CP',
+        certificationType: 'CP', // Always CP — all content is under CP
         examLanguage: 'en',
         durationMonths: 12,
       });
@@ -597,21 +597,7 @@ export function AccessManagement() {
             </select>
           </div>
 
-          {/* Certification Type Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {texts.certificationType}
-            </label>
-            <select
-              value={filterCertType}
-              onChange={(e) => setFilterCertType(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">{texts.allTypes}</option>
-              <option value="cp">CP</option>
-              <option value="scp">SCP</option>
-            </select>
-          </div>
+
         </div>
       </div>
 
@@ -630,7 +616,7 @@ export function AccessManagement() {
                   {texts.user}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {texts.certType}
+                  Package
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {texts.language}
@@ -669,8 +655,8 @@ export function AccessManagement() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-gray-700">
-                        {record.certification_type.toUpperCase()}
+                      <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700">
+                        BDA Learning System
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -919,28 +905,7 @@ export function AccessManagement() {
             </div>
 
             {/* Access Settings */}
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>{texts.certificationType} *</Label>
-                <Select
-                  value={grantFormData.certificationType}
-                  onValueChange={(value) =>
-                    setGrantFormData({
-                      ...grantFormData,
-                      certificationType: value as CertificationType,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CP">{texts.cpFull}</SelectItem>
-                    <SelectItem value="SCP">{texts.scpFull}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>{texts.examLanguage} *</Label>
 <Select
