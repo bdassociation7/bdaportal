@@ -178,7 +178,7 @@ function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, on
         <div className="px-6 pb-6">
           <button
             onClick={onSubmitAnswer}
-            className="w-full bg-gradient-to-r from-[#1C4A8B] to-[#0d1f4e] text-white font-semibold py-3.5 px-6 rounded-xl hover:opacity-90 transition-opacity shadow-md"
+            className="w-full bg-[#0f91e0] text-white font-semibold py-3.5 px-6 rounded-xl hover:bg-[#1C4A8B] transition-colors shadow-sm"
           >
             {t('submitAnswer', false)}
           </button>
@@ -313,7 +313,7 @@ export function PracticeSession() {
           <p className="text-slate-400 mb-6 text-sm">{t('noQuestionsSub', false)}</p>
           <button
             onClick={() => navigate(`${basePath}/question-bank`)}
-            className="bg-[#1C4A8B] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#0d1f4e] transition-colors"
+            className="bg-[#0f91e0] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#1C4A8B] transition-colors"
           >
             {t('backToBank', false)}
           </button>
@@ -330,20 +330,17 @@ export function PracticeSession() {
         <div className="max-w-lg w-full">
           <div className="bg-white rounded-3xl shadow-xl border border-[#dbeafe] overflow-hidden">
             {/* Result Header */}
-            <div
-              className="p-8 text-center text-white"
-              style={{ background: passed ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : 'linear-gradient(135deg, #0d1f4e 0%, #1C4A8B 100%)' }}
-            >
-              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${passed ? 'bg-white/20' : 'bg-white/10'}`}>
+            <div className="p-8 text-center border-b border-[#dbeafe]">
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${passed ? 'bg-[#e8f4fd]' : 'bg-[#f0f6ff]'}`}>
                 {passed
-                  ? <Trophy className="w-10 h-10 text-white" />
-                  : <RotateCcw className="w-10 h-10 text-white" />
+                  ? <Trophy className="w-10 h-10 text-[#0f91e0]" />
+                  : <RotateCcw className="w-10 h-10 text-[#1C4A8B]" />
                 }
               </div>
-              <h1 className="text-3xl font-bold mb-2">
+              <h1 className="text-3xl font-bold mb-2 text-[#0d1f4e]">
                 {passed ? t('congratulations', false) : t('keepPracticing', false)}
               </h1>
-              <p className="text-white/80 text-sm">
+              <p className="text-slate-400 text-sm">
                 {passed ? t('passedMsg', false) : t('failedMsg', false)}
               </p>
             </div>
@@ -380,7 +377,7 @@ export function PracticeSession() {
                     setAnswers({});
                     setAnsweredQuestions(new Set());
                   }}
-                  className="flex-1 bg-gradient-to-r from-[#1C4A8B] to-[#0d1f4e] text-white font-semibold py-3 px-4 rounded-xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2"
+                  className="flex-1 bg-[#0f91e0] text-white font-semibold py-3 px-4 rounded-xl hover:bg-[#1C4A8B] transition-colors text-sm flex items-center justify-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
                   {t('tryAgain', false)}
@@ -399,37 +396,34 @@ export function PracticeSession() {
   return (
     <div className="min-h-screen bg-[#f0f6ff]">
       {/* Sticky Header */}
-      <div
-        className="sticky top-0 z-20 border-b"
-        style={{ background: 'linear-gradient(135deg, #0d1f4e 0%, #1C4A8B 100%)' }}
-      >
-        <div className="container mx-auto px-6 py-4 max-w-4xl">
+      <div className="sticky top-0 z-20 border-b bg-white border-[#dbeafe] shadow-sm">
+        <div className="container mx-auto px-6 py-3 max-w-4xl">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate(`${basePath}/question-bank`)}
-                className="flex items-center gap-1.5 text-white/70 hover:text-white transition-colors text-sm font-medium"
+                className="flex items-center gap-1.5 text-slate-400 hover:text-[#0f91e0] transition-colors text-sm font-medium"
               >
                 <ArrowRight className="w-4 h-4 rotate-180" />
                 {t('exit', false)}
               </button>
-              <div className="border-white/20 border-l pl-4">
-                <p className="font-semibold text-white text-sm line-clamp-1">{setTitle}</p>
-                <p className="text-white/60 text-xs">
+              <div className="border-[#dbeafe] border-l pl-4">
+                <p className="font-semibold text-[#0d1f4e] text-sm line-clamp-1">{setTitle}</p>
+                <p className="text-slate-400 text-xs">
                   {t('question', false)} {currentIndex + 1} {t('of', false)} {totalQuestions}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="text-sm text-white/70">
-                <span className="font-bold text-white">{answeredCount}</span>
+              <div className="text-sm text-slate-400">
+                <span className="font-bold text-[#0f91e0]">{answeredCount}</span>
                 <span> / {totalQuestions} {t('answered', false)}</span>
               </div>
               <button
                 onClick={handleCompleteSession}
                 disabled={answeredCount === 0}
-                className="bg-white text-[#1C4A8B] font-bold text-sm px-5 py-2 rounded-xl hover:bg-[#f0f6ff] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                className="bg-[#0f91e0] text-white font-bold text-sm px-5 py-2 rounded-xl hover:bg-[#1C4A8B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
               >
                 {t('finishSession', false)}
               </button>
@@ -437,9 +431,9 @@ export function PracticeSession() {
           </div>
 
           {/* Progress Bar */}
-          <div className="mt-3 h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className="mt-3 h-1.5 bg-[#f0f6ff] rounded-full overflow-hidden">
             <div
-              className="h-full bg-white/70 rounded-full transition-all"
+              className="h-full bg-[#0f91e0] rounded-full transition-all"
               style={{ width: `${(answeredCount / totalQuestions) * 100}%` }}
             />
           </div>
@@ -471,7 +465,7 @@ export function PracticeSession() {
           <button
             onClick={handleNext}
             disabled={currentIndex === totalQuestions - 1}
-            className="flex items-center gap-2 bg-[#1C4A8B] text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-[#0d1f4e] transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm"
+            className="flex items-center gap-2 bg-[#0f91e0] text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-[#1C4A8B] transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-sm"
           >
             {t('next', false)}
             <ChevronLeft className="w-4 h-4 rotate-180" />
