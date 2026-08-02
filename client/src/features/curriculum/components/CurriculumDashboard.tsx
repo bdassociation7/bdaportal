@@ -74,23 +74,13 @@ export function CurriculumDashboard({
 
   return (
     <div
-      className="min-h-screen"
+      className=""
       style={{ background: BDA.bluePale, fontFamily: "'Inter', 'Segoe UI', sans-serif" }}
     >
       <div className="container mx-auto px-4 py-8 max-w-7xl">
 
         {/* ── Header ── */}
         <div className="mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(backPath)}
-            className="mb-4 gap-2 font-medium"
-            style={{ color: BDA.navy }}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Learning System
-          </Button>
 
           <div className="flex items-center gap-4">
             <div

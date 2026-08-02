@@ -15,6 +15,7 @@ import { HealthCheckService } from "@/services/health-check.service";
 import { useToast } from "@/hooks/use-toast";
 import { PortalLayout } from "@/components/PortalLayout";
 import { LearningSystemLayout } from "@/components/LearningSystemLayout";
+import { LearningShell } from "@/components/LearningShell";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { ProfileCompletionGuard } from "@/components/guards/ProfileCompletionGuard";
 import { RoleGuard } from "@/components/guards/RoleGuard";
@@ -260,14 +261,12 @@ const DualPartnerWrapper = () => (
   </ProtectedRoute>
 );
 
-// Learning System routes wrapper - no sidebar, minimal top bar
+// Learning System routes wrapper - App Shell with Collapsible Sidebar
 const LearningSystemWrapper = () => (
   <ProtectedRoute>
     <ProfileCompletionGuard>
       <RoleGuard allowedRoles={['individual', 'ecp']}>
-        <LearningSystemLayout>
-          <Outlet />
-        </LearningSystemLayout>
+        <LearningShell />
       </RoleGuard>
     </ProfileCompletionGuard>
   </ProtectedRoute>

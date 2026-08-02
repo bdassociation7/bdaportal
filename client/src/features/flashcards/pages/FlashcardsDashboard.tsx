@@ -390,7 +390,7 @@ export function FlashcardsDashboard() {
 
   // ── Main Dashboard ────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f0f6ff]">
+    <div className="bg-[#f8f9fb]">
 
       {/* ── Hero Header ──────────────────────────────────────────────────── */}
       <div
