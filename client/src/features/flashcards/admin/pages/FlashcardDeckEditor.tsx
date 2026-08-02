@@ -64,6 +64,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import mammoth from 'mammoth/mammoth.browser';
 
 export function FlashcardDeckEditor() {
   const { deckId } = useParams<{ deckId: string }>();
@@ -140,8 +141,129 @@ export function FlashcardDeckEditor() {
     }
   };
 
-  const handleBulkImport = async () => {
-    toast.info('Bulk import feature coming soon');
+  // ─── Word Import ─────────────────────────────────────────────────────────────
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<FlashcardInsert[]>([]);
+  const [importFileName, setImportFileName] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+
+  /**
+   * Parse BDA flashcard Word file.
+   * Expected format:
+   *   Heading 2: Card N
+   *   Paragraph: Front: ...
+   *   Paragraph: Back: ...
+   *   Paragraph: Hint: ...
+   */
+  const parseFlashcardWord = (rawText: string): FlashcardInsert[] => {
+    const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+    const cards: FlashcardInsert[] = [];
+    let i = 0;
+    let orderIndex = 1;
+
+    // Skip header lines before first Card
+    while (i < lines.length && !/^Card\s+\d+$/i.test(lines[i])) {
+      i++;
+    }
+
+    while (i < lines.length) {
+      const line = lines[i];
+      if (!/^Card\s+\d+$/i.test(line)) { i++; continue; }
+      i++;
+
+      let frontText = '';
+      let backText = '';
+      let hintText = '';
+
+      // Collect Front, Back, Hint
+      while (i < lines.length && !/^Card\s+\d+$/i.test(lines[i])) {
+        const l = lines[i];
+        if (/^Front:/i.test(l)) {
+          frontText = l.replace(/^Front:\s*/i, '').trim();
+          i++;
+          // Collect continuation
+          while (i < lines.length && !/^(Back:|Hint:|Card\s+\d+)/i.test(lines[i])) {
+            frontText += ' ' + lines[i].trim();
+            i++;
+          }
+        } else if (/^Back:/i.test(l)) {
+          backText = l.replace(/^Back:\s*/i, '').trim();
+          i++;
+          while (i < lines.length && !/^(Front:|Hint:|Card\s+\d+)/i.test(lines[i])) {
+            backText += ' ' + lines[i].trim();
+            i++;
+          }
+        } else if (/^Hint:/i.test(l)) {
+          hintText = l.replace(/^Hint:\s*/i, '').trim();
+          i++;
+          while (i < lines.length && !/^(Front:|Back:|Card\s+\d+)/i.test(lines[i])) {
+            hintText += ' ' + lines[i].trim();
+            i++;
+          }
+        } else {
+          i++;
+        }
+      }
+
+      if (frontText && backText) {
+        cards.push({
+          deck_id: deckId!,
+          front_text: frontText,
+          front_text_ar: null,
+          back_text: backText,
+          back_text_ar: null,
+          hint: hintText || null,
+          hint_ar: null,
+          order_index: orderIndex++,
+          difficulty_level: 'medium',
+          is_published: true,
+        });
+      }
+    }
+    return cards;
+  };
+
+  const handleBulkImport = () => {
+    setImportPreview([]);
+    setImportFileName('');
+    setIsImportDialogOpen(true);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.docx')) {
+      toast.error('Please upload a .docx file');
+      return;
+    }
+    setImportFileName(file.name);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      const parsed = parseFlashcardWord(result.value);
+      if (parsed.length === 0) {
+        toast.error('No flashcards found. Check file format (Front: / Back: / Hint:)');
+        return;
+      }
+      setImportPreview(parsed);
+    } catch (err) {
+      toast.error('Failed to read file');
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (importPreview.length === 0) return;
+    setIsImporting(true);
+    try {
+      await bulkCreateFlashcards.mutateAsync(importPreview);
+      toast.success(`Successfully imported ${importPreview.length} flashcards`);
+      setIsImportDialogOpen(false);
+      setImportPreview([]);
+    } catch (err) {
+      toast.error('Import failed');
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   if (isLoadingDeck || isLoadingCards) {
@@ -337,6 +459,59 @@ export function FlashcardDeckEditor() {
               Flip Card
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Word Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Flashcards from Word</DialogTitle>
+            <DialogDescription>
+              Upload a .docx file in BDA flashcard format (Card N / Front: / Back: / Hint:).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Select .docx File</Label>
+              <input
+                type="file"
+                accept=".docx"
+                onChange={handleFileSelect}
+                className="mt-1 block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
+              {importFileName && (
+                <p className="text-xs text-gray-500 mt-1">File: {importFileName}</p>
+              )}
+            </div>
+            {importPreview.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold text-green-700 mb-2">
+                  ✅ {importPreview.length} flashcards ready to import
+                </p>
+                <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3 bg-gray-50">
+                  {importPreview.slice(0, 5).map((card, idx) => (
+                    <div key={idx} className="text-xs border-b pb-2 last:border-0">
+                      <p className="font-medium text-gray-800">#{idx + 1} {card.front_text.slice(0, 80)}{card.front_text.length > 80 ? '...' : ''}</p>
+                      <p className="text-gray-500">{card.back_text.slice(0, 80)}{card.back_text.length > 80 ? '...' : ''}</p>
+                    </div>
+                  ))}
+                  {importPreview.length > 5 && (
+                    <p className="text-xs text-gray-400 text-center">... and {importPreview.length - 5} more cards</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleConfirmImport}
+              disabled={importPreview.length === 0 || isImporting}
+            >
+              {isImporting ? 'Importing...' : `Import ${importPreview.length} Cards`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

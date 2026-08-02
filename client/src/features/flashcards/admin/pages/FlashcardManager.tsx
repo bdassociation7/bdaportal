@@ -653,14 +653,16 @@ function DeckDialog({
     exam_language: (defaultValues as any)?.exam_language || defaultLanguage,
   });
 
-  // Fetch English modules only
-  const { data: modules } = useQuery({
+  // Fetch English modules only (competencies 1-14, exclude intro/wrap-up)
+  const { data: modulesRaw } = useQuery({
     queryKey: curriculumKeys.modulesList({ exam_language: 'en' }),
     queryFn: async () => {
       const result = await CurriculumService.getModules({ exam_language: 'en' });
       return result.data || [];
     },
   });
+  // Filter to show only competencies 1-14 (exclude Module 0 and Module 15)
+  const modules = modulesRaw?.filter(m => m.order_index >= 1 && m.order_index <= 14);
 
   // Fetch lessons for sub-unit selector (filtered by selected competency)
   const { data: lessons } = useLessonsByModule(
@@ -684,26 +686,8 @@ function DeckDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Section Type & Order */}
+          {/* Order Index only - section_type is auto-set to 'knowledge' */}
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>{texts.sectionType}</Label>
-              <Select
-                value={formData.section_type}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, section_type: value as any })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="introduction">{texts.introduction}</SelectItem>
-                  <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
-                  <SelectItem value="behavioral">{texts.behavioural}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div>
               <Label>{texts.orderIndex}</Label>
               <Input
