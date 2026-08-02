@@ -426,29 +426,86 @@ export function FlashcardManager() {
         </Select>
       </AdminFilterCard>
 
-      {/* Decks Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredDecks?.map((deck) => (
-          <DeckCard
-            key={deck.id}
-            deck={deck}
-            onEdit={() => setEditingDeck(deck)}
-            onDelete={() => setDeleteConfirmDeck(deck)}
-            onTogglePublish={() => handleTogglePublish(deck)}
-            onManageCards={() =>
-              navigate(`/admin/flashcards/decks/${deck.id}`)
-            }
-            texts={texts}
-          />
-        ))}
-      </div>
+      {/* Decks Grid — Behavioral first, then Knowledge */}
+      {(() => {
+        const behavioralDecks = filteredDecks?.filter(d => d.section_type === 'behavioral') ?? [];
+        const knowledgeDecks  = filteredDecks?.filter(d => d.section_type === 'knowledge')  ?? [];
+        const otherDecks      = filteredDecks?.filter(d => d.section_type !== 'behavioral' && d.section_type !== 'knowledge') ?? [];
 
-      {filteredDecks?.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-lg border">
-          <Layers className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-600">{texts.noDecksFound}</p>
-        </div>
-      )}
+        const renderGrid = (deckList: typeof behavioralDecks) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {deckList.map((deck) => (
+              <DeckCard
+                key={deck.id}
+                deck={deck}
+                onEdit={() => setEditingDeck(deck)}
+                onDelete={() => setDeleteConfirmDeck(deck)}
+                onTogglePublish={() => handleTogglePublish(deck)}
+                onManageCards={() => navigate(`/admin/flashcards/decks/${deck.id}`)}
+                texts={texts}
+              />
+            ))}
+          </div>
+        );
+
+        if (filteredDecks?.length === 0) {
+          return (
+            <div className="text-center py-12 bg-white rounded-lg border">
+              <Layers className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600">{texts.noDecksFound}</p>
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-10">
+            {/* ── Behavioral Competencies ─────────────────────────────── */}
+            {behavioralDecks.length > 0 && (
+              <section>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-8 w-1 rounded-full bg-purple-500" />
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Behavioral Competencies</h2>
+                    <p className="text-sm text-gray-500">Competencies 1–7 · Soft skills & professional behaviours</p>
+                  </div>
+                  <span className="ml-auto text-sm font-medium text-purple-700 bg-purple-50 px-3 py-1 rounded-full">
+                    {behavioralDecks.length} decks
+                  </span>
+                </div>
+                {renderGrid(behavioralDecks)}
+              </section>
+            )}
+
+            {/* ── Knowledge-Based Competencies ────────────────────────── */}
+            {knowledgeDecks.length > 0 && (
+              <section>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-8 w-1 rounded-full bg-blue-500" />
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Knowledge-Based Competencies</h2>
+                    <p className="text-sm text-gray-500">Competencies 8–14 · Technical & domain knowledge</p>
+                  </div>
+                  <span className="ml-auto text-sm font-medium text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
+                    {knowledgeDecks.length} decks
+                  </span>
+                </div>
+                {renderGrid(knowledgeDecks)}
+              </section>
+            )}
+
+            {/* ── Other (Introduction / Standalone) ───────────────────── */}
+            {otherDecks.length > 0 && (
+              <section>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="h-8 w-1 rounded-full bg-gray-400" />
+                  <h2 className="text-lg font-bold text-gray-900">Other Decks</h2>
+                </div>
+                {renderGrid(otherDecks)}
+              </section>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Create Dialog */}
       <DeckDialog
