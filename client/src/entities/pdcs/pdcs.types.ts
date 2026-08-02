@@ -99,7 +99,7 @@ export interface PdpProgram {
 
 export interface CreatePdcEntryDTO {
   certification_type: CertificationType;
-  program_id?: string; // Optional: link to approved program
+  program_id?: string; // Optional: link to approved program (PDP Partner path)
   activity_type: PdcActivityType;
   activity_title: string;
   activity_title_ar?: string;
@@ -108,6 +108,7 @@ export interface CreatePdcEntryDTO {
   activity_date: string; // ISO date
   certificate_file?: File; // Will upload to Storage
   notes?: string;
+  submission_path?: 'pdp_partner' | 'professional_development'; // Recertification path
 }
 
 export interface UpdatePdcEntryDTO {

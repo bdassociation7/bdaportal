@@ -471,7 +471,6 @@ export class PdcsService {
       const { data, error } = await supabase.rpc('submit_pdc_with_auto_approve', {
         p_user_id: userId,
         p_certification_type: dto.certification_type,
-        p_program_id: dto.program_id || '',
         p_activity_type: dto.activity_type,
         p_activity_title: dto.activity_title,
         p_activity_title_ar: dto.activity_title_ar || null,
@@ -479,7 +478,9 @@ export class PdcsService {
         p_credits_claimed: dto.credits_claimed,
         p_activity_date: dto.activity_date,
         p_certificate_url: certificateUrl,
+        p_program_id: dto.program_id || null,
         p_notes: dto.notes || null,
+        p_submission_path: dto.submission_path || 'pdp_partner',
       });
 
       if (error) throw error;
