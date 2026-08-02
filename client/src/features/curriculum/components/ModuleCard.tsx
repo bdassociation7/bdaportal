@@ -1,13 +1,14 @@
 import { CheckCircle2, Clock, BookOpen, ChevronRight, PlayCircle } from 'lucide-react';
 import type { CurriculumModuleWithStatus } from '@/entities/curriculum';
 
-// BDA Brand Colors
+// BDA Brand Colors — strict blue palette only
 const BDA = {
   navy: '#1C4A8B',
   navyDark: '#0d1f4e',
   blue: '#0f91e0',
-  bluePale: '#f0f6ff',
+  bluePale: '#f5f9ff',
   blueMid: '#e8f0fb',
+  blueSoft: '#dbeafe',
   border: '#d0e4f7',
 };
 
@@ -17,12 +18,12 @@ interface ModuleCardProps {
   showArabicName?: boolean;
 }
 
-// Section-type styles using BDA palette
+// Section-type badge styles — all within BDA blue palette
 const SECTION_STYLES: Record<string, { badge: React.CSSProperties; accent: string }> = {
-  intro:           { badge: { background: '#ede9fe', color: '#6d28d9' }, accent: '#7c3aed' },
-  behavioral:      { badge: { background: BDA.blueMid, color: BDA.navy }, accent: BDA.navy },
+  intro:           { badge: { background: BDA.blueMid, color: BDA.navy }, accent: BDA.navy },
+  behavioral:      { badge: { background: BDA.blueSoft, color: BDA.navy }, accent: BDA.navy },
   knowledge_based: { badge: { background: '#e0f2fe', color: '#0369a1' }, accent: BDA.blue },
-  outro:           { badge: { background: '#fef3c7', color: '#92400e' }, accent: '#d97706' },
+  outro:           { badge: { background: BDA.blueMid, color: BDA.navy }, accent: BDA.navy },
 };
 
 const SECTION_LABELS: Record<string, string> = {
@@ -32,10 +33,6 @@ const SECTION_LABELS: Record<string, string> = {
   outro: 'Wrap-Up',
 };
 
-/**
- * BDA-branded Module Card — SHRM-style
- * All modules unlocked, self-paced with Mark as Complete.
- */
 export function ModuleCard({ module, onClick, showArabicName = false }: ModuleCardProps) {
   const progress = module.user_progress;
   const isCompleted = progress?.status === 'completed';
@@ -50,114 +47,116 @@ export function ModuleCard({ module, onClick, showArabicName = false }: ModuleCa
     ? (module.competency_name_ar || module.competency_name || 'وحدة بدون عنوان')
     : (module.competency_name || module.competency_name_ar || 'Untitled Module');
 
-  // Strip "Module N: " prefix if accidentally stored
   const cleanName = moduleName.replace(/^Module\s+\d+:\s*/i, '');
-
   const estimatedHours = Math.ceil((module.estimated_minutes || 60) / 60);
-
-  const cardBorder = isCompleted
-    ? '1px solid #bbf7d0'
-    : isInProgress
-    ? `1px solid ${BDA.border}`
-    : '1px solid #e2e8f0';
-
-  const cardBg = isCompleted
-    ? '#f0fdf4'
-    : '#ffffff';
 
   return (
     <div
       onClick={onClick}
-      className="group relative rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+      className="group relative rounded-2xl cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 flex flex-col"
       style={{
-        border: cardBorder,
-        background: cardBg,
-        boxShadow: '0 1px 3px rgba(28,74,139,0.06)',
+        border: isCompleted
+          ? `1px solid ${BDA.blue}40`
+          : isInProgress
+          ? `1px solid ${BDA.border}`
+          : '1px solid #e8f0fb',
+        background: isCompleted ? BDA.bluePale : '#ffffff',
+        boxShadow: '0 1px 3px rgba(15,145,224,0.07)',
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
       }}
     >
-      {/* Completed check */}
+      {/* Top accent line for completed */}
       {isCompleted && (
-        <div className="absolute top-3 right-3">
-          <CheckCircle2 className="w-5 h-5" style={{ color: '#16a34a' }} />
-        </div>
-      )}
-
-      {/* Section badge + Module number */}
-      <div className="flex items-center gap-2 mb-3">
-        <span
-          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
-          style={style.badge}
-        >
-          {sectionLabel}
-        </span>
-        <span className="text-xs text-gray-400 font-medium">
-          Module {module.order_index}
-        </span>
-        {isInProgress && !isCompleted && (
-          <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-            style={{ background: BDA.bluePale, color: BDA.blue }}
-          >
-            <PlayCircle className="h-3 w-3" />
-            In Progress
-          </span>
-        )}
-      </div>
-
-      {/* Title */}
-      <h3
-        className="font-bold mb-2 text-sm leading-snug line-clamp-2 transition-colors"
-        style={{ color: BDA.navyDark, fontFamily: "'Inter', sans-serif" }}
-        dir={showArabicName ? 'rtl' : 'ltr'}
-      >
-        {cleanName}
-      </h3>
-
-      {/* Description */}
-      {module.description && !showArabicName && (
-        <p className="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed">
-          {module.description}
-        </p>
-      )}
-      {module.description_ar && showArabicName && (
-        <p className="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed" dir="rtl">
-          {module.description_ar}
-        </p>
-      )}
-
-      {/* Progress bar */}
-      {progressPct > 0 && (
-        <div className="mb-3">
-          <div className="w-full rounded-full h-1.5" style={{ background: '#e2e8f0' }}>
-            <div
-              className="h-1.5 rounded-full transition-all duration-500"
-              style={{
-                width: `${progressPct}%`,
-                background: isCompleted ? '#22c55e' : BDA.navy,
-              }}
-            />
-          </div>
-          <p className="text-xs mt-1" style={{ color: BDA.navy }}>{progressPct}% complete</p>
-        </div>
-      )}
-
-      {/* Footer */}
-      <div
-        className="flex items-center justify-between mt-auto pt-2 border-t"
-        style={{ borderColor: '#f1f5f9' }}
-      >
-        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          <Clock className="w-3.5 h-3.5" />
-          <span>{estimatedHours}h</span>
-        </div>
         <div
-          className="flex items-center gap-1 text-xs font-medium transition-colors"
-          style={{ color: BDA.navy }}
+          className="h-1 rounded-t-2xl w-full"
+          style={{ background: BDA.blue }}
+        />
+      )}
+
+      <div className="p-5 flex flex-col flex-1">
+        {/* Completed check */}
+        {isCompleted && (
+          <div className="absolute top-4 right-4">
+            <CheckCircle2 className="w-5 h-5" style={{ color: BDA.blue }} />
+          </div>
+        )}
+
+        {/* Section badge + Module number */}
+        <div className="flex items-center gap-2 mb-3">
+          <span
+            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
+            style={style.badge}
+          >
+            {sectionLabel}
+          </span>
+          <span className="text-xs font-medium" style={{ color: '#94a3b8' }}>
+            Module {module.order_index}
+          </span>
+          {isInProgress && !isCompleted && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+              style={{ background: BDA.blueMid, color: BDA.blue }}
+            >
+              <PlayCircle className="h-3 w-3" />
+              In Progress
+            </span>
+          )}
+        </div>
+
+        {/* Title */}
+        <h3
+          className="font-bold mb-2 text-sm leading-snug line-clamp-2"
+          style={{ color: BDA.navyDark }}
+          dir={showArabicName ? 'rtl' : 'ltr'}
         >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Open</span>
-          <ChevronRight className="w-3 h-3" />
+          {cleanName}
+        </h3>
+
+        {/* Description */}
+        {module.description && !showArabicName && (
+          <p className="text-xs mb-3 line-clamp-2 leading-relaxed flex-1" style={{ color: '#64748b' }}>
+            {module.description}
+          </p>
+        )}
+        {module.description_ar && showArabicName && (
+          <p className="text-xs mb-3 line-clamp-2 leading-relaxed flex-1" style={{ color: '#64748b' }} dir="rtl">
+            {module.description_ar}
+          </p>
+        )}
+
+        {/* Progress bar */}
+        {progressPct > 0 && (
+          <div className="mb-3">
+            <div className="w-full rounded-full h-1.5" style={{ background: BDA.blueMid }}>
+              <div
+                className="h-1.5 rounded-full transition-all duration-500"
+                style={{
+                  width: `${progressPct}%`,
+                  background: BDA.blue,
+                }}
+              />
+            </div>
+            <p className="text-xs mt-1 font-medium" style={{ color: BDA.blue }}>{progressPct}% complete</p>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div
+          className="flex items-center justify-between mt-auto pt-3 border-t"
+          style={{ borderColor: '#f1f5f9' }}
+        >
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: '#94a3b8' }}>
+            <Clock className="w-3.5 h-3.5" />
+            <span>{estimatedHours}h</span>
+          </div>
+          <div
+            className="flex items-center gap-1 text-xs font-semibold transition-colors group-hover:opacity-80"
+            style={{ color: BDA.blue }}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Open</span>
+            <ChevronRight className="w-3 h-3" />
+          </div>
         </div>
       </div>
     </div>
