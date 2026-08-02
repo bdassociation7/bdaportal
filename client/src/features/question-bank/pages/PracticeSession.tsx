@@ -113,11 +113,9 @@ interface QuestionViewProps {
   isAnswered: boolean;
   onSelectAnswer: (optionId: string) => void;
   onSubmitAnswer: () => void;
-  onNext: () => void;
-  isLastQuestion: boolean;
 }
 
-function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, onSubmitAnswer, onNext, isLastQuestion }: QuestionViewProps) {
+function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, onSubmitAnswer }: QuestionViewProps) {
   const options: QuestionOption[] = question.options || [];
   const isCorrect = selectedAnswer === question.correct_option_id;
 
@@ -175,28 +173,14 @@ function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, on
         })}
       </div>
 
-      {/* Submit & Next combined */}
+      {/* Submit */}
       {!isAnswered && selectedAnswer && (
         <div className="px-6 pb-6">
           <button
             onClick={onSubmitAnswer}
-            className="w-full bg-[#0f91e0] text-white font-semibold py-3.5 px-6 rounded-xl hover:bg-[#1C4A8B] transition-colors shadow-sm flex items-center justify-center gap-2"
+            className="w-full bg-[#0f91e0] text-white font-semibold py-3.5 px-6 rounded-xl hover:bg-[#1C4A8B] transition-colors shadow-sm"
           >
-            {isLastQuestion ? t('submitAnswer', false) : `${t('submitAnswer', false)} & ${t('next', false)}`}
-            {!isLastQuestion && <ChevronLeft className="w-4 h-4 rotate-180" />}
-          </button>
-        </div>
-      )}
-
-      {/* Auto-advance after answering (if not last question) */}
-      {isAnswered && !isLastQuestion && (
-        <div className="px-6 pb-6">
-          <button
-            onClick={onNext}
-            className="w-full bg-[#0f91e0] text-white font-semibold py-3.5 px-6 rounded-xl hover:bg-[#1C4A8B] transition-colors shadow-sm flex items-center justify-center gap-2"
-          >
-            {t('next', false)}
-            <ChevronLeft className="w-4 h-4 rotate-180" />
+            {t('submitAnswer', false)}
           </button>
         </div>
       )}
@@ -268,10 +252,6 @@ export function PracticeSession() {
     const isCorrect = selectedOptionId === currentQuestion.correct_option_id;
     await recordAttempt.mutateAsync({ userId: user.id, questionId: currentQuestion.id, questionSetId: setId!, selectedOptionId, isCorrect });
     setAnsweredQuestions((prev) => new Set(prev).add(currentQuestion.id));
-    // Auto-advance to next question after a brief moment to show feedback
-    if (currentIndex < totalQuestions - 1) {
-      setTimeout(() => setCurrentIndex((p) => p + 1), 800);
-    }
   };
 
   const handleNext = () => { if (currentIndex < totalQuestions - 1) setCurrentIndex((p) => p + 1); };
@@ -469,8 +449,6 @@ export function PracticeSession() {
             isAnswered={answeredQuestions.has(currentQuestion.id)}
             onSelectAnswer={handleSelectAnswer}
             onSubmitAnswer={handleSubmitAnswer}
-            onNext={handleNext}
-            isLastQuestion={currentIndex === totalQuestions - 1}
           />
         )}
 
