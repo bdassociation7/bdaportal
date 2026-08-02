@@ -174,14 +174,14 @@ function QuestionSetCard({ questionSet, onClick }: QuestionSetCardProps) {
             {title}
           </h3>
           {isCompleted && (
-            <span className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0">
+            <span className="flex items-center gap-1 bg-[#e8f4fd] text-[#0f91e0] px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0">
               <CheckCircle className="w-3 h-3" />
               {t('passed', false)}
             </span>
           )}
         </div>
         {questionSet.is_final_test && (
-          <div className="flex items-center gap-1 mt-2 text-orange-600 text-xs font-medium">
+          <div className="flex items-center gap-1 mt-2 text-[#1C4A8B] text-xs font-medium">
             <Target className="w-3 h-3" />
             {t('finalTest', false)}
           </div>
@@ -200,7 +200,7 @@ function QuestionSetCard({ questionSet, onClick }: QuestionSetCardProps) {
             <p className="text-xs text-slate-400">{t('attempts', false)}</p>
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-purple-600">{bestScore}%</p>
+            <p className="text-lg font-bold text-[#0d1f4e]">{bestScore}%</p>
             <p className="text-xs text-slate-400">{t('bestScore', false)}</p>
           </div>
         </div>
@@ -209,13 +209,13 @@ function QuestionSetCard({ questionSet, onClick }: QuestionSetCardProps) {
           <div>
             <div className="flex justify-between text-xs text-slate-400 mb-1">
               <span>{t('lastScore', false)}</span>
-              <span className={lastScore >= passingScore ? 'text-green-600 font-semibold' : 'text-amber-600 font-semibold'}>
+              <span className={lastScore >= passingScore ? 'text-[#0f91e0] font-semibold' : 'text-amber-600 font-semibold'}>
                 {lastScore}%
               </span>
             </div>
             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${lastScore >= passingScore ? 'bg-green-500' : 'bg-amber-400'}`}
+                className={`h-full rounded-full transition-all ${lastScore >= passingScore ? 'bg-[#0f91e0]' : 'bg-amber-400'}`}
                 style={{ width: `${lastScore}%` }}
               />
             </div>
@@ -236,7 +236,7 @@ function QuestionSetCard({ questionSet, onClick }: QuestionSetCardProps) {
         className="px-4 py-3 border-t flex items-center justify-between group-hover:bg-[#f0f6ff] transition-colors"
         style={{ borderColor: '#dbeafe' }}
       >
-        <span className="text-sm font-semibold text-[#1C4A8B] flex items-center gap-1.5">
+        <span className="text-sm font-semibold text-[#0f91e0] flex items-center gap-1.5">
           {hasAttempted ? (
             <><RefreshCw className="w-3.5 h-3.5" />{t('practiceAgain', false)}</>
           ) : (
@@ -284,7 +284,7 @@ function AccordionSection({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-[#1C4A8B] bg-[#f0f6ff] border border-[#dbeafe] px-3 py-1 rounded-full">
+          <span className="text-xs font-semibold text-[#0f91e0] bg-[#f0f6ff] border border-[#dbeafe] px-3 py-1 rounded-full">
             {count}
           </span>
           {open ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
@@ -318,7 +318,7 @@ function CompetencyAccordion({
         className="w-full flex items-center justify-between px-4 py-3 bg-[#f8faff] hover:bg-[#f0f6ff] transition-colors"
       >
         <div className="flex items-center gap-3">
-          <BookOpen className="w-4 h-4 text-[#1C4A8B]" />
+          <BookOpen className="w-4 h-4 text-[#0f91e0]" />
           <span className="font-semibold text-[#0d1f4e] text-sm">{competencyName}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -359,7 +359,7 @@ function CompetencyAccordion({
               return (
                 <div key={subUnitId}>
                   <p className="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-[#1C4A8B] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-[#0f91e0] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                       {subUnit.order_index}
                     </span>
                     {subTitle}
@@ -440,7 +440,7 @@ export function QuestionBankDashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff]">
         <div className="text-center">
-          <div className="w-14 h-14 rounded-full border-4 border-[#dbeafe] border-t-[#1C4A8B] animate-spin mx-auto mb-5" />
+          <div className="w-14 h-14 rounded-full border-4 border-[#dbeafe] border-t-[#0f91e0] animate-spin mx-auto mb-5" />
           <p className="text-slate-500 font-medium">{t('loading', false)}</p>
         </div>
       </div>
@@ -452,7 +452,7 @@ export function QuestionBankDashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff] px-4">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-[#dbeafe] p-10 text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
+          <div className="w-16 h-16 bg-[#0f91e0] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
             <Lock className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">{t('accessRequired', false)}</h2>
@@ -460,13 +460,13 @@ export function QuestionBankDashboard() {
           <div className="space-y-3">
             <button
               onClick={() => navigate(basePath)}
-              className="w-full bg-gradient-to-r from-[#1C4A8B] to-[#0d1f4e] text-white font-semibold py-3 px-6 rounded-xl hover:opacity-90 transition-opacity"
+              className="w-full bg-[#0f91e0] text-white font-semibold py-3 px-6 rounded-xl hover:bg-[#1C4A8B] transition-colors"
             >
               {t('backToLearning', false)}
             </button>
             <button
               onClick={() => window.location.href = 'https://bda-global.org/shop'}
-              className="w-full border border-[#dbeafe] text-[#1C4A8B] font-semibold py-3 px-6 rounded-xl hover:bg-[#f0f6ff] transition-colors"
+              className="w-full border border-[#dbeafe] text-[#0f91e0] font-semibold py-3 px-6 rounded-xl hover:bg-[#f0f6ff] transition-colors"
             >
               {t('visitShop', false)}
             </button>
@@ -480,61 +480,44 @@ export function QuestionBankDashboard() {
   return (
     <div className="bg-[#f8f9fb]">
 
-      {/* ── Hero Header ──────────────────────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden text-white"
-        style={{ background: 'linear-gradient(135deg, #0d1f4e 0%, #1C4A8B 55%, #0f91e0 100%)' }}
-      >
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute bottom-0 left-0 w-56 h-56 bg-white/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4" />
-
-        <div className="relative container mx-auto px-6 py-10 max-w-6xl">
-          {/* Back */}
-          <button
-            onClick={() => navigate(basePath)}
-            className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm mb-6 group"
-          >
-            <ArrowRight className="w-4 h-4 transition-transform rotate-180 group-hover:-translate-x-1" />
-            {t('backToLearning', false)}
-          </button>
-
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
-                  <HelpCircle className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-white/70 text-sm font-medium">BDA Learning System</span>
-              </div>
-              <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-2">
-                {t('questionBank', false)}
-              </h1>
-              <p className="text-white/70 text-base">{t('questionBankSub', false)}</p>
+      {/* ── Page Header ────────────────────────────────────────────────────── */}
+      <div className="container mx-auto px-6 pt-8 pb-2 max-w-6xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#0f91e0] flex items-center justify-center shadow-sm">
+              <HelpCircle className="w-5 h-5 text-white" />
             </div>
-
-            {/* Stats Row */}
-            {stats && (
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { icon: <HelpCircle className="w-4 h-4" />, value: stats.questionsAttempted, label: t('questionsAttempted', false) },
-                  { icon: <CheckCircle className="w-4 h-4" />, value: `${stats.questionsAttempted > 0 ? Math.round((stats.questionsCorrect / stats.questionsAttempted) * 100) : 0}%`, label: t('accuracy', false) },
-                  { icon: <TrendingUp className="w-4 h-4" />, value: `${Math.round(stats.averageScore)}%`, label: t('avgScore', false) },
-                  { icon: <Star className="w-4 h-4" />, value: `${stats.setsCompleted}/${stats.totalQuestionSets}`, label: t('setsCompleted', false) },
-                ].map((s, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 border border-white/20 min-w-[90px]">
-                    <div className="text-white/60">{s.icon}</div>
-                    <p className="text-xl font-bold text-white">{s.value}</p>
-                    <p className="text-xs text-white/55 text-center leading-tight">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div>
+              <h1 className="text-xl font-bold text-[#0d1f4e]">{t('questionBank', false)}</h1>
+              <p className="text-sm text-slate-400">{t('questionBankSub', false)}</p>
+            </div>
           </div>
+          {/* Stats Pills */}
+          {stats && (
+            <div className="flex flex-wrap gap-2">
+              <span className="flex items-center gap-1.5 bg-white border border-[#dbeafe] rounded-full px-3 py-1.5 text-xs font-semibold text-[#0d1f4e] shadow-sm">
+                <HelpCircle className="w-3.5 h-3.5 text-[#0f91e0]" />
+                {stats.questionsAttempted} {t('questionsAttempted', false)}
+              </span>
+              <span className="flex items-center gap-1.5 bg-white border border-[#dbeafe] rounded-full px-3 py-1.5 text-xs font-semibold text-[#0d1f4e] shadow-sm">
+                <CheckCircle className="w-3.5 h-3.5 text-[#0f91e0]" />
+                {stats.questionsAttempted > 0 ? Math.round((stats.questionsCorrect / stats.questionsAttempted) * 100) : 0}% {t('accuracy', false)}
+              </span>
+              <span className="flex items-center gap-1.5 bg-white border border-[#dbeafe] rounded-full px-3 py-1.5 text-xs font-semibold text-[#0d1f4e] shadow-sm">
+                <TrendingUp className="w-3.5 h-3.5 text-[#0f91e0]" />
+                {Math.round(stats.averageScore)}% {t('avgScore', false)}
+              </span>
+              <span className="flex items-center gap-1.5 bg-white border border-[#dbeafe] rounded-full px-3 py-1.5 text-xs font-semibold text-[#0d1f4e] shadow-sm">
+                <Star className="w-3.5 h-3.5 text-[#0f91e0]" />
+                {stats.setsCompleted}/{stats.totalQuestionSets} {t('setsCompleted', false)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Body ─────────────────────────────────────────────────────────── */}
-      <div className="container mx-auto px-6 py-8 max-w-6xl space-y-6">
+      <div className="container mx-auto px-6 py-6 max-w-6xl space-y-6">
 
         {/* ── CP / SCP Selector ─────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-[#dbeafe] p-6 shadow-sm">
@@ -549,8 +532,8 @@ export function QuestionBankDashboard() {
                   onClick={() => setCertType(type)}
                   className={`relative flex items-center gap-5 p-5 rounded-2xl border-2 transition-all text-left ${
                     isSelected
-                      ? 'border-[#1C4A8B] bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] text-white shadow-xl scale-[1.01]'
-                      : 'border-[#dbeafe] bg-[#f8faff] hover:border-[#1C4A8B]/50 hover:shadow-md text-[#0d1f4e]'
+                      ? 'border-[#0f91e0] bg-[#0f91e0] text-white shadow-xl scale-[1.01]'
+                      : 'border-[#dbeafe] bg-[#f8faff] hover:border-[#0f91e0]/50 hover:shadow-md text-[#0d1f4e]'
                   }`}
                 >
                   {/* Badge Image */}
@@ -564,7 +547,7 @@ export function QuestionBankDashboard() {
                   {/* Text */}
                   <div className="flex-1 min-w-0">
                     <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mb-1.5 ${
-                      isSelected ? 'bg-white/20 text-white' : 'bg-[#1C4A8B]/10 text-[#1C4A8B]'
+                      isSelected ? 'bg-white/20 text-white' : 'bg-[#0f91e0]/10 text-[#0f91e0]'
                     }`}>
                       {isCP ? t('certCPShort', false) : t('certSCPShort', false)}
                     </span>
@@ -596,8 +579,8 @@ export function QuestionBankDashboard() {
           <AccordionSection
             title={t('behavioral', false)}
             subtitle={`${Object.keys(groupedSets.behavioural).length} ${t('competencies', false)}`}
-            icon={<Layers className="w-5 h-5 text-purple-600" />}
-            color="bg-purple-50"
+            icon={<Layers className="w-5 h-5 text-[#0f91e0]" />}
+            color="bg-[#e8f4fd]"
             count={Object.values(groupedSets.behavioural).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
             defaultOpen
           >
@@ -626,8 +609,8 @@ export function QuestionBankDashboard() {
           <AccordionSection
             title={t('knowledge', false)}
             subtitle={`${Object.keys(groupedSets.knowledge).length} ${t('competencies', false)}`}
-            icon={<Brain className="w-5 h-5 text-blue-600" />}
-            color="bg-blue-50"
+            icon={<Brain className="w-5 h-5 text-[#1C4A8B]" />}
+            color="bg-[#f0f6ff]"
             count={Object.values(groupedSets.knowledge).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
             defaultOpen
           >
@@ -656,8 +639,8 @@ export function QuestionBankDashboard() {
           <AccordionSection
             title={t('practiceSets', false)}
             subtitle={t('practiceSetsSub', false)}
-            icon={<Target className="w-5 h-5 text-amber-600" />}
-            color="bg-amber-50"
+            icon={<Target className="w-5 h-5 text-[#0f91e0]" />}
+            color="bg-[#e8f4fd]"
             count={groupedSets.standalone.length}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
@@ -680,7 +663,7 @@ export function QuestionBankDashboard() {
             <p className="text-slate-400 mb-6 text-sm">{t('noSetsSub', false)}</p>
             <button
               onClick={() => navigate(basePath)}
-              className="bg-[#1C4A8B] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#0d1f4e] transition-colors"
+              className="bg-[#0f91e0] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#1C4A8B] transition-colors"
             >
               {t('backToLearning', false)}
             </button>
