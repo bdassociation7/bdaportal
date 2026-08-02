@@ -37,8 +37,8 @@ export function MyCurriculum() {
     isLoading: languageAccessLoading,
   } = useLanguageAccess(user?.id, 'EN');
 
-  // Determine certification type from language access (or default to CP)
-  const certificationType = languageAccess?.certification_type || 'CP';
+  // Always use 'CP' as certification type — all content (CP & SCP) is stored under CP
+  const certificationType = 'CP';
 
   // Main hook: loads modules and progress for EN only
   const {

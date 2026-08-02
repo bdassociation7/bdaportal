@@ -374,8 +374,9 @@ export function QuestionBankDashboard() {
   const { data: hasQuestionBankAccess, isLoading: accessLoading } = useQuestionBankAccess(user?.id, 'EN');
   const { data: languageAccess, isLoading: languageAccessLoading } = useLanguageAccess(user?.id, 'EN');
 
-  const { data: questionSets, isLoading: isLoadingSets } = useQuestionSetsWithProgress(user?.id, certType, 'EN');
-  const { data: stats } = useQuestionBankStats(user?.id, certType, 'en');
+  // All content is stored under 'CP' — use CP for fetching regardless of selected cert type
+  const { data: questionSets, isLoading: isLoadingSets } = useQuestionSetsWithProgress(user?.id, 'CP', 'EN');
+  const { data: stats } = useQuestionBankStats(user?.id, 'CP', 'en');
 
   // Group hierarchically
   const groupedSets = useMemo(() => {

@@ -261,7 +261,7 @@ export function LearningSystemDashboard() {
         {/* ── Exam Goal Widget ─────────────────────────────────────────── */}
         {hasAccess && (
           <ExamGoalWidget
-            certType={displayAccess?.certification_type ?? 'CP'}
+            certType={'CP'}
             totalModules={totalModules}
             completedModules={completedModules}
             accessExpiresAt={displayAccess?.expires_at ?? null}

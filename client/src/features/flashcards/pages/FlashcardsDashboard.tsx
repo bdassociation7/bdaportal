@@ -254,7 +254,8 @@ export function FlashcardsDashboard() {
   const { data: hasFlashcardsAccess, isLoading: accessLoading } = useFlashcardsAccess(user?.id, 'EN');
   const { data: languageAccess, isLoading: languageAccessLoading } = useLanguageAccess(user?.id, 'EN');
 
-  const certificationType = languageAccess?.certification_type || 'CP';
+  // Always use 'CP' as certification type — all content (CP & SCP) is stored under CP
+  const certificationType = 'CP';
 
   const { data: decks, isLoading: isLoadingDecks } = useDecksWithProgress(user?.id, certificationType, 'en');
   const { data: stats } = useFlashcardStats(user?.id, certificationType, 'en');
