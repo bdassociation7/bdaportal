@@ -165,9 +165,11 @@ export class QuestionBankService {
         progress?.map((p) => [p.question_set_id, p]) || []
       );
 
-      // Combine sets with progress and accurate question_count for this cert type
-      const setsWithProgress: QuestionSetWithProgress[] = (sets || []).map(
-        (set) => {
+      // Combine sets with progress and accurate question_count for this cert type.
+      // IMPORTANT: Only include sets that have at least 1 question for the selected cert type.
+      // This ensures BDA-CP sets (0 SCP questions) are hidden when SCP is selected, and vice versa.
+      const setsWithProgress: QuestionSetWithProgress[] = (sets || [])
+        .map((set) => {
           // Use RPC count (accurate); fall back to stored count only if RPC had no data
           const certQuestionCount = certCountMap.has(set.id)
             ? certCountMap.get(set.id)!
@@ -177,8 +179,9 @@ export class QuestionBankService {
             question_count: certQuestionCount,
             progress: progressMap.get(set.id) || null,
           };
-        }
-      );
+        })
+        // Hide sets with 0 questions for the selected certification type
+        .filter((set) => set.question_count > 0);
 
       return { data: setsWithProgress };
     } catch (error: any) {
