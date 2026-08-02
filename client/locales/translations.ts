@@ -895,7 +895,7 @@ export const translations = {
     'nav.individual.myCertifications': 'My Certifications',
     'nav.individual.verifyCertification': 'Verify Certification',
     'nav.individual.myMembership': 'My Membership',
-    'nav.individual.pdcs': 'PDCs',
+    'nav.individual.pdcs': 'Recertification',
     'nav.individual.authorisedProviders': 'Authorised Providers',
     'nav.individual.accreditedPrograms': 'Accredited Programs',
     'nav.individual.resources': 'Resources',
