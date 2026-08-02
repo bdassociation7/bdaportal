@@ -341,10 +341,10 @@ export function LearningShell() {
   // Progress
   const { data: accessSummary } = useUserAccesses(user?.id);
   const displayAccess = accessSummary?.accesses?.find((a: any) => a.language === (isArabic ? 'AR' : 'EN')) || accessSummary?.accesses?.[0];
-  const certType = (displayAccess?.certification_type as 'CP' | 'SCP') || 'CP';
+  // Always use 'CP' — all content is stored under CP
   const examLang = isArabic ? 'ar' : 'en';
 
-  const { data: progressData } = useOverallProgress(user?.id, certType, examLang);
+  const { data: progressData } = useOverallProgress(user?.id, 'CP', examLang);
   const overallProgress = progressData?.percentage ?? 0;
 
   const navItems = getNavItems(basePath);

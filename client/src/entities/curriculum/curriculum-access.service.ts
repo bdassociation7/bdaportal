@@ -29,13 +29,13 @@ export class CurriculumAccessService {
   ): Promise<ServiceResponse<AccessCheckResult>> {
     try {
       // 1. Check if user already has access record in Supabase
-      // Note: User may have multiple records (EN + AR), so we use .limit(1) instead of .maybeSingle()
-      // to avoid errors when both language accesses exist
+      // Note: All content is stored under 'CP', but users may have SCP or CP access records.
+      // We accept any active access (CP or SCP) since they share the same content.
       const { data: existingAccessList } = await supabase
         .from('user_curriculum_access')
         .select('*')
         .eq('user_id', userId)
-        .eq('certification_type', certificationType)
+        .in('certification_type', ['CP', 'SCP'])
         .eq('is_active', true)
         .gt('expires_at', new Date().toISOString())
         .order('expires_at', { ascending: false })
