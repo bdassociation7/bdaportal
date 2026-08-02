@@ -1,5 +1,8 @@
 /**
- * Flashcards Dashboard — English Only
+ * Flashcards Dashboard — Redesigned 2026
+ * - No hero section (Shell provides navigation)
+ * - Page header: compact title + stats bar
+ * - Competencies open by default with 3-column deck grid
  * - BDA Brand Colors: #0d1f4e, #1C4A8B, #0f91e0
  */
 
@@ -17,14 +20,10 @@ import {
 } from '@/entities/curriculum';
 import type { FlashcardDeckWithProgress } from '@/entities/flashcards';
 import {
-  ArrowRight,
   Layers,
   CheckCircle,
   Clock,
   Flame,
-  Star,
-  ChevronLeft,
-  Brain,
   Calendar,
   TrendingUp,
   Lock,
@@ -33,96 +32,9 @@ import {
   ChevronUp,
   Play,
   RotateCcw,
+  Brain,
+  Star,
 } from 'lucide-react';
-
-// ─── Translations ─────────────────────────────────────────────────────────────
-function t(key: string, isAR: boolean): string {
-  const ar: Record<string, string> = {
-    backToLearning: 'العودة لنظام التعلم',
-    flashcards: 'بطاقات الفلاش',
-    flashcardsSub: 'التكرار المتباعد لحفظ فعّال ودائم',
-    dueToday: 'مستحقة اليوم',
-    cardsToReview: 'بطاقة للمراجعة',
-    mastered: 'محفوظة',
-    ofTotal: 'من',
-    cards: 'بطاقة',
-    learning: 'قيد التعلم',
-    inProgress: 'جارٍ التعلم',
-    studyStreak: 'سلسلة الدراسة',
-    best: 'الأفضل',
-    days: 'أيام',
-    studyTime: 'وقت الدراسة',
-    totalTime: 'إجمالي الوقت',
-    dueAlert: 'بطاقات مستحقة للمراجعة',
-    dueAlertSub: 'لديك {n} بطاقة تحتاج مراجعة اليوم. انقر على أي مجموعة للبدء والحفاظ على سلسلتك!',
-    introduction: 'مقدمة',
-    introSub: 'بطاقات تأسيسية للبدء',
-    behavioral: 'الكفاءات السلوكية',
-    behavioralSub: 'المهارات الناعمة والسلوكيات المهنية',
-    knowledge: 'الكفاءات المعرفية',
-    knowledgeSub: 'المعرفة التقنية والخبرة',
-    additional: 'بطاقات إضافية',
-    decksAvailable: 'مجموعة متاحة',
-    startStudy: 'ابدأ الدراسة',
-    continueStudy: 'تابع الدراسة',
-    mastery: 'إتقان',
-    min: 'دقيقة',
-    noDecks: 'لا توجد مجموعات بطاقات',
-    noDecksSub: 'ستظهر مجموعات البطاقات هنا بعد نشرها من قِبل الإدارة.',
-    accessRequired: 'الوصول مطلوب',
-    accessRequiredSub: 'تحتاج إلى شراء حزمة نظام التعلم التي تتضمن بطاقات الفلاش للوصول إلى هذا المحتوى.',
-    visitShop: 'زيارة المتجر',
-    loading: 'جاري تحميل البطاقات...',
-    subLessons: 'دروس فرعية',
-    decks: 'مجموعات',
-    new: 'جديدة',
-    reviewing: 'مراجعة',
-    h: 'س',
-  };
-  const en: Record<string, string> = {
-    backToLearning: 'Back to Learning System',
-    flashcards: 'Flashcards',
-    flashcardsSub: 'Spaced repetition for effective memorization',
-    dueToday: 'Due Today',
-    cardsToReview: 'cards to review',
-    mastered: 'Mastered',
-    ofTotal: 'of',
-    cards: 'cards',
-    learning: 'Learning',
-    inProgress: 'in progress',
-    studyStreak: 'Study Streak',
-    best: 'best',
-    days: 'days',
-    studyTime: 'Study Time',
-    totalTime: 'total time',
-    dueAlert: 'Cards Due for Review',
-    dueAlertSub: 'You have {n} cards that need review today. Click on any deck to start studying!',
-    introduction: 'Introduction',
-    introSub: 'Foundation cards to get started',
-    behavioral: 'Behavioural Competencies',
-    behavioralSub: 'Soft skills and professional behaviours',
-    knowledge: 'Knowledge-Based Competencies',
-    knowledgeSub: 'Technical knowledge and expertise',
-    additional: 'Additional Flashcards',
-    decksAvailable: 'decks available',
-    startStudy: 'Start Learning',
-    continueStudy: 'Continue Studying',
-    mastery: 'mastered',
-    min: 'min',
-    noDecks: 'No Flashcard Decks Available',
-    noDecksSub: 'Flashcard decks will appear here once they are published by the admin.',
-    accessRequired: 'Flashcards Access Required',
-    accessRequiredSub: 'You need to purchase the Learning System package that includes Flashcards access.',
-    visitShop: 'Visit Shop',
-    loading: 'Loading flashcards...',
-    subLessons: 'Sub-lessons',
-    decks: 'Decks',
-    new: 'New',
-    reviewing: 'Reviewing',
-    h: 'h',
-  };
-  return isAR ? (ar[key] ?? key) : (en[key] ?? key);
-}
 
 // ─── Deck Card ────────────────────────────────────────────────────────────────
 interface DeckCardProps {
@@ -132,157 +44,129 @@ interface DeckCardProps {
 
 function DeckCard({ deck, onClick }: DeckCardProps) {
   const progress = deck.progress;
-  const totalProgress = progress
-    ? progress.cards_new + progress.cards_learning + progress.cards_reviewing + progress.cards_mastered
-    : 0;
-  const masteryPct = totalProgress > 0 && deck.card_count > 0
-    ? Math.round((progress!.cards_mastered / deck.card_count) * 100)
-    : 0;
-  const hasProgress = totalProgress > 0;
-  const title = deck.title;
+  const masteryPct =
+    deck.card_count > 0 && progress
+      ? Math.round((progress.cards_mastered / deck.card_count) * 100)
+      : 0;
+  const hasProgress = progress
+    ? progress.cards_new + progress.cards_learning + progress.cards_reviewing + progress.cards_mastered > 0
+    : false;
 
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-xl border border-[#dbeafe] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden group"
+      className="bg-white rounded-xl border border-[#dbeafe] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden group flex flex-col"
     >
-      {/* Cover */}
+      {/* Cover strip */}
       <div
-        className="h-20 relative"
+        className="h-16 relative flex-shrink-0"
         style={
           deck.cover_image_url
             ? { backgroundImage: `url(${deck.cover_image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
             : { background: 'linear-gradient(135deg, #1C4A8B 0%, #0d1f4e 100%)' }
         }
       >
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="absolute bottom-3 inset-x-4 flex items-end justify-between">
-          <div className="text-white">
-            <p className="text-2xl font-bold">{deck.card_count}</p>
-            <p className="text-xs opacity-80">{t('cards', false)}</p>
-          </div>
-          {progress && progress.study_streak_days > 0 && (
-            <div className="flex items-center gap-1 bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs font-semibold">
-              <Flame className="w-3 h-3" />
-              {progress.study_streak_days}
-            </div>
-          )}
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="absolute bottom-2 left-3 flex items-end gap-2">
+          <span className="text-white font-bold text-xl leading-none">{deck.card_count}</span>
+          <span className="text-white/70 text-xs mb-0.5">cards</span>
         </div>
+        {progress && progress.study_streak_days > 0 && (
+          <div className="absolute top-2 right-2 flex items-center gap-1 bg-orange-500 text-white px-1.5 py-0.5 rounded-full text-[10px] font-semibold">
+            <Flame className="w-2.5 h-2.5" />
+            {progress.study_streak_days}
+          </div>
+        )}
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        <h3 className="font-semibold text-[#0d1f4e] text-sm line-clamp-2 mb-3 leading-snug">{title}</h3>
+      <div className="p-3 flex-1 flex flex-col">
+        <h3 className="font-semibold text-[#0d1f4e] text-sm line-clamp-2 leading-snug flex-1">
+          {deck.title}
+        </h3>
 
         {hasProgress && (
-          <div>
-            <div className="flex justify-between text-xs text-slate-400 mb-1">
-              <span>{masteryPct}% {t('mastery', false)}</span>
+          <div className="mt-2">
+            <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+              <span>{masteryPct}% mastered</span>
               <span>{progress!.cards_mastered}/{deck.card_count}</span>
             </div>
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden flex">
-              <div className="bg-green-500 h-full" style={{ width: `${(progress!.cards_mastered / deck.card_count) * 100}%` }} />
+            <div className="h-1 bg-gray-100 rounded-full overflow-hidden flex">
+              <div className="bg-[#1C4A8B] h-full" style={{ width: `${(progress!.cards_mastered / deck.card_count) * 100}%` }} />
               <div className="bg-[#0f91e0] h-full" style={{ width: `${(progress!.cards_reviewing / deck.card_count) * 100}%` }} />
-              <div className="bg-amber-400 h-full" style={{ width: `${(progress!.cards_learning / deck.card_count) * 100}%` }} />
+              <div className="bg-[#7cb9e8] h-full" style={{ width: `${(progress!.cards_learning / deck.card_count) * 100}%` }} />
             </div>
           </div>
         )}
 
         {deck.estimated_study_time_minutes && (
-          <div className="flex items-center gap-1 text-slate-400 text-xs mt-2">
+          <div className="flex items-center gap-1 text-slate-400 text-[10px] mt-1.5">
             <Clock className="w-3 h-3" />
-            {deck.estimated_study_time_minutes} {t('min', false)}
+            {deck.estimated_study_time_minutes} min
           </div>
         )}
       </div>
 
       {/* CTA */}
-      <div className="px-4 py-3 border-t border-[#f0f6ff] flex items-center justify-between group-hover:bg-[#f0f6ff] transition-colors">
-        <span className="text-sm font-semibold text-[#1C4A8B] flex items-center gap-1.5">
-          {hasProgress
-            ? <><RotateCcw className="w-3.5 h-3.5" />{t('continueStudy', false)}</>
-            : <><Play className="w-3.5 h-3.5 fill-current" />{t('startStudy', false)}</>
-          }
-        </span>
-        <ChevronLeft className="w-4 h-4 text-slate-300 rotate-180" />
+      <div className="px-3 py-2 border-t border-[#f0f6ff] flex items-center gap-1.5 group-hover:bg-[#f0f6ff] transition-colors">
+        {hasProgress
+          ? <><RotateCcw className="w-3 h-3 text-[#1C4A8B]" /><span className="text-xs font-semibold text-[#1C4A8B]">Continue</span></>
+          : <><Play className="w-3 h-3 fill-[#1C4A8B] text-[#1C4A8B]" /><span className="text-xs font-semibold text-[#1C4A8B]">Start Learning</span></>
+        }
       </div>
     </div>
   );
 }
 
-// ─── Accordion Section ────────────────────────────────────────────────────────
-function AccordionSection({
-  title, subtitle, icon, color, count, children, defaultOpen = false,
-}: {
-  title: string; subtitle: string; icon: React.ReactNode; color: string;
-  count: number; children: React.ReactNode; defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="bg-white rounded-2xl border border-[#dbeafe] shadow-sm overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-5 hover:bg-[#f8faff] transition-colors"
-      >
-        <div className="flex items-center gap-4">
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color}`}>{icon}</div>
-          <div className="text-right">
-            <h2 className="font-bold text-[#0d1f4e] text-base">{title}</h2>
-            <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-[#1C4A8B] bg-[#f0f6ff] border border-[#dbeafe] px-3 py-1 rounded-full">{count}</span>
-          {open ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-        </div>
-      </button>
-      {open && <div className="px-5 pb-5">{children}</div>}
-    </div>
-  );
-}
-
-// ─── Competency Sub-Accordion ─────────────────────────────────────────────────
-function CompetencyAccordion({
-  competencyName, subUnits, basePath,
+// ─── Competency Row ────────────────────────────────────────────────────────────
+function CompetencyRow({
+  competencyName,
+  subUnits,
+  basePath,
+  defaultOpen = false,
 }: {
   competencyName: string;
   subUnits: Record<string, FlashcardDeckWithProgress[]>;
   basePath: string;
+  defaultOpen?: boolean;
 }) {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const totalDecks = Object.values(subUnits).reduce((s, arr) => s + arr.length, 0);
 
   return (
-    <div className="border border-[#dbeafe] rounded-xl overflow-hidden mb-2">
+    <div className="border border-[#dbeafe] rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-[#f8faff] hover:bg-[#f0f6ff] transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3.5 bg-[#f8faff] hover:bg-[#f0f6ff] transition-colors"
       >
         <div className="flex items-center gap-3">
-          <BookOpen className="w-4 h-4 text-[#1C4A8B]" />
-          <span className="font-semibold text-[#0d1f4e] text-sm">{competencyName}</span>
+          <BookOpen className="w-4 h-4 text-[#1C4A8B] flex-shrink-0" />
+          <span className="font-semibold text-[#0d1f4e] text-sm text-left">{competencyName}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">{Object.keys(subUnits).length} {t('subLessons', false)} · {totalDecks} {t('decks', false)}</span>
-          {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs text-slate-400 hidden sm:block">{totalDecks} decks</span>
+          {open
+            ? <ChevronUp className="w-4 h-4 text-slate-400" />
+            : <ChevronDown className="w-4 h-4 text-slate-400" />
+          }
         </div>
       </button>
+
       {open && (
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-5 bg-white">
           {Object.entries(subUnits).map(([subUnitId, decks]) => {
             const subUnit = decks[0]?.sub_unit;
             if (!subUnit) return null;
-            const subTitle = subUnit.title;
             return (
               <div key={subUnitId}>
-                <p className="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                <div className="flex items-center gap-2 mb-3">
                   <span className="w-5 h-5 rounded-full bg-[#1C4A8B] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
                     {subUnit.order_index}
                   </span>
-                  {subTitle}
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <p className="text-xs font-semibold text-slate-500">{subUnit.title}</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {decks.map((deck) => (
                     <DeckCard
                       key={deck.id}
@@ -300,17 +184,73 @@ function CompetencyAccordion({
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Category Section ──────────────────────────────────────────────────────────
+function CategorySection({
+  title,
+  subtitle,
+  icon,
+  accentColor,
+  count,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  accentColor: string;
+  count: number;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="bg-white rounded-2xl border border-[#dbeafe] shadow-sm overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#f8faff] transition-colors"
+      >
+        <div className="flex items-center gap-4">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: accentColor + '18' }}
+          >
+            {icon}
+          </div>
+          <div className="text-left">
+            <h2 className="font-bold text-[#0d1f4e] text-base">{title}</h2>
+            <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span
+            className="text-xs font-bold px-3 py-1 rounded-full border"
+            style={{ color: accentColor, borderColor: accentColor + '40', background: accentColor + '10' }}
+          >
+            {count}
+          </span>
+          {open
+            ? <ChevronUp className="w-5 h-5 text-slate-400" />
+            : <ChevronDown className="w-5 h-5 text-slate-400" />
+          }
+        </div>
+      </button>
+      {open && <div className="px-6 pb-6 space-y-3">{children}</div>}
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 export function FlashcardsDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
 
-  const basePath = useMemo(() => {
-    return location.pathname.startsWith('/ecp/') ? '/ecp/learning-system' : '/learning-system';
-  }, [location.pathname]);
+  const basePath = useMemo(
+    () => (location.pathname.startsWith('/ecp/') ? '/ecp/learning-system' : '/learning-system'),
+    [location.pathname]
+  );
 
-  const { data: accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(user?.id);
+  const { data: _accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(user?.id);
   const { data: hasFlashcardsAccess, isLoading: accessLoading } = useFlashcardsAccess(user?.id, 'EN');
   const { data: languageAccess, isLoading: languageAccessLoading } = useLanguageAccess(user?.id, 'EN');
 
@@ -347,40 +287,42 @@ export function FlashcardsDashboard() {
     return { introduction: introDecks, knowledge, behavioural, standalone };
   }, [decks]);
 
-  // ── Loading ──────────────────────────────────────────────────────────────
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (accessSummaryLoading || accessLoading || languageAccessLoading || isLoadingDecks) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff]">
+      <div className="flex items-center justify-center py-32">
         <div className="text-center">
-          <div className="w-14 h-14 rounded-full border-4 border-[#dbeafe] border-t-[#1C4A8B] animate-spin mx-auto mb-5" />
-          <p className="text-slate-500 font-medium">{t('loading', false)}</p>
+          <div className="w-12 h-12 rounded-full border-4 border-[#dbeafe] border-t-[#1C4A8B] animate-spin mx-auto mb-4" />
+          <p className="text-slate-500 font-medium text-sm">Loading flashcards...</p>
         </div>
       </div>
     );
   }
 
-  // ── Access Denied ─────────────────────────────────────────────────────────
+  // ── Access Denied ──────────────────────────────────────────────────────────
   if (!hasFlashcardsAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f0f6ff] px-4">
+      <div className="flex items-center justify-center py-20 px-4">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-[#dbeafe] p-10 text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">{t('accessRequired', false)}</h2>
-          <p className="text-slate-500 mb-8 text-sm leading-relaxed">{t('accessRequiredSub', false)}</p>
+          <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">Flashcards Access Required</h2>
+          <p className="text-slate-500 mb-8 text-sm leading-relaxed">
+            You need to purchase the Learning System package that includes Flashcards access.
+          </p>
           <div className="space-y-3">
             <button
               onClick={() => navigate(basePath)}
               className="w-full bg-gradient-to-r from-[#1C4A8B] to-[#0d1f4e] text-white font-semibold py-3 px-6 rounded-xl hover:opacity-90 transition-opacity"
             >
-              {t('backToLearning', false)}
+              Back to Learning System
             </button>
             <button
-              onClick={() => window.location.href = 'https://bda-global.org/shop'}
+              onClick={() => (window.location.href = 'https://bda-global.org/shop')}
               className="w-full border border-[#dbeafe] text-[#1C4A8B] font-semibold py-3 px-6 rounded-xl hover:bg-[#f0f6ff] transition-colors"
             >
-              {t('visitShop', false)}
+              Visit Shop
             </button>
           </div>
         </div>
@@ -388,175 +330,183 @@ export function FlashcardsDashboard() {
     );
   }
 
-  // ── Main Dashboard ────────────────────────────────────────────────────────
+  // ── Main ───────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-[#f8f9fb]">
+    <div className="bg-[#f8f9fb] min-h-full">
+      <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
 
-      {/* ── Hero Header ──────────────────────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden text-white"
-        style={{ background: 'linear-gradient(135deg, #0d1f4e 0%, #1C4A8B 55%, #0f91e0 100%)' }}
-      >
-        <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute bottom-0 left-0 w-56 h-56 bg-white/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4" />
-
-        <div className="relative container mx-auto px-6 py-10 max-w-6xl">
-          {/* Back */}
-          <button
-            onClick={() => navigate(basePath)}
-            className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm mb-6 group"
-          >
-            <ArrowRight className="w-4 h-4 transition-transform rotate-180 group-hover:-translate-x-1" />
-            {t('backToLearning', false)}
-          </button>
-
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
-                  <Layers className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-white/70 text-sm font-medium">BDA Learning System</span>
+        {/* ── Page Header ──────────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-8 h-8 rounded-lg bg-[#1C4A8B] flex items-center justify-center">
+                <Layers className="w-4 h-4 text-white" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold leading-tight mb-2">{t('flashcards', false)}</h1>
-              <p className="text-white/70 text-base">{t('flashcardsSub', false)}</p>
+              <h1 className="text-xl font-bold text-[#0d1f4e]">Flashcards</h1>
             </div>
-
-            {/* Stats */}
-            {stats && (
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { icon: <Calendar className="w-4 h-4" />, value: stats.cardsDueToday, label: t('dueToday', false) },
-                  { icon: <CheckCircle className="w-4 h-4" />, value: stats.cardsMastered, label: t('mastered', false) },
-                  { icon: <TrendingUp className="w-4 h-4" />, value: stats.cardsLearning + stats.cardsReviewing, label: t('learning', false) },
-                  { icon: <Flame className="w-4 h-4" />, value: stats.studyStreak, label: t('studyStreak', false) },
-                  { icon: <Clock className="w-4 h-4" />, value: `${Math.floor(stats.totalStudyTimeMinutes / 60)}${t('h', false)}`, label: t('studyTime', false) },
-                ].map((s, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 border border-white/20 min-w-[80px]">
-                    <div className="text-white/60">{s.icon}</div>
-                    <p className="text-xl font-bold text-white">{s.value}</p>
-                    <p className="text-xs text-white/55 text-center leading-tight">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            <p className="text-sm text-slate-400 ml-10">Spaced repetition for effective memorization</p>
           </div>
+
+          {/* Stats pills */}
+          {stats && (
+            <div className="flex flex-wrap gap-2">
+              {[
+                { icon: <Calendar className="w-3.5 h-3.5" />, value: stats.cardsDueToday, label: 'Due Today', highlight: stats.cardsDueToday > 0 },
+                { icon: <CheckCircle className="w-3.5 h-3.5" />, value: stats.cardsMastered, label: 'Mastered', highlight: false },
+                { icon: <TrendingUp className="w-3.5 h-3.5" />, value: stats.cardsLearning + stats.cardsReviewing, label: 'In Progress', highlight: false },
+                { icon: <Flame className="w-3.5 h-3.5" />, value: stats.studyStreak, label: 'Streak', highlight: false },
+                { icon: <Clock className="w-3.5 h-3.5" />, value: `${Math.floor(stats.totalStudyTimeMinutes / 60)}h`, label: 'Study Time', highlight: false },
+              ].map((s, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium ${
+                    s.highlight
+                      ? 'bg-[#0f91e0] text-white border-[#0f91e0]'
+                      : 'bg-white text-[#0d1f4e] border-[#dbeafe]'
+                  }`}
+                >
+                  <span className={s.highlight ? 'text-white' : 'text-[#0f91e0]'}>{s.icon}</span>
+                  <span className="font-bold">{s.value}</span>
+                  <span className={s.highlight ? 'text-white/80' : 'text-slate-400'}>{s.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* ── Body ─────────────────────────────────────────────────────────── */}
-      <div className="container mx-auto px-6 py-8 max-w-6xl space-y-6">
-
-        {/* Due Today Alert */}
+        {/* ── Due Today Alert ───────────────────────────────────────────── */}
         {stats && stats.cardsDueToday > 0 && (
-          <div className="rounded-2xl p-5 text-white flex items-center gap-4" style={{ background: 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)' }}>
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Flame className="w-6 h-6 text-white" />
+          <div className="rounded-xl p-4 flex items-center gap-3 border border-[#0f91e0]/30 bg-[#0f91e0]/5">
+            <div className="w-9 h-9 rounded-lg bg-[#0f91e0] flex items-center justify-center flex-shrink-0">
+              <Flame className="w-4 h-4 text-white" />
             </div>
             <div>
-            <h2 className="font-bold text-lg">{t('dueAlert', false)}</h2>
-            <p className="text-white/80 text-sm mt-0.5">
-              {t('dueAlertSub', false).replace('{n}', String(stats.cardsDueToday))}
+              <p className="font-semibold text-[#0d1f4e] text-sm">Cards Due for Review</p>
+              <p className="text-slate-500 text-xs mt-0.5">
+                You have {stats.cardsDueToday} cards that need review today. Click on any deck to start studying!
               </p>
             </div>
           </div>
         )}
 
-        {/* Introduction */}
+        {/* ── Introduction ──────────────────────────────────────────────── */}
         {groupedDecks.introduction.length > 0 && (
-          <AccordionSection
-            title={t('introduction', false)}
-            subtitle={t('introSub', false)}
-            icon={<BookOpen className="w-5 h-5 text-slate-600" />}
-            color="bg-slate-100"
+          <CategorySection
+            title="Introduction"
+            subtitle="Foundation cards to get started"
+            icon={<BookOpen className="w-5 h-5 text-slate-500" />}
+            accentColor="#64748b"
             count={groupedDecks.introduction.length}
             defaultOpen
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
               {groupedDecks.introduction.map((deck) => (
-                <DeckCard key={deck.id} deck={deck}
-                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}`)} />
+                <DeckCard
+                  key={deck.id}
+                  deck={deck}
+                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}`)}
+                />
               ))}
             </div>
-          </AccordionSection>
+          </CategorySection>
         )}
 
-        {/* Behavioural */}
+        {/* ── Behavioural Competencies ───────────────────────────────────── */}
         {Object.keys(groupedDecks.behavioural).length > 0 && (
-          <AccordionSection
-            title={t('behavioral', false)}
-            subtitle={`${Object.keys(groupedDecks.behavioural).length} Competencies`}
-            icon={<Layers className="w-5 h-5 text-purple-600" />}
-            color="bg-purple-50"
-            count={Object.values(groupedDecks.behavioural).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
+          <CategorySection
+            title="Behavioural Competencies"
+            subtitle={`${Object.keys(groupedDecks.behavioural).length} Competencies · Soft skills and professional behaviours`}
+            icon={<Layers className="w-5 h-5 text-[#1C4A8B]" />}
+            accentColor="#1C4A8B"
+            count={Object.values(groupedDecks.behavioural).reduce(
+              (s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0
+            )}
             defaultOpen
           >
-            <div className="mt-2 space-y-2">
-              {Object.entries(groupedDecks.behavioural).map(([cId, subUnits]) => {
-                const firstDeck = Object.values(subUnits)[0]?.[0];
-                const competency = firstDeck?.competency;
-                if (!competency) return null;
-                const name = competency.competency_name;
-                return <CompetencyAccordion key={cId} competencyName={name} subUnits={subUnits} basePath={basePath} />;
-              })}
-            </div>
-          </AccordionSection>
+            {Object.entries(groupedDecks.behavioural).map(([cId, subUnits], idx) => {
+              const firstDeck = Object.values(subUnits)[0]?.[0];
+              const competency = firstDeck?.competency;
+              if (!competency) return null;
+              return (
+                <CompetencyRow
+                  key={cId}
+                  competencyName={competency.competency_name}
+                  subUnits={subUnits}
+                  basePath={basePath}
+                  defaultOpen={idx === 0}
+                />
+              );
+            })}
+          </CategorySection>
         )}
 
-        {/* Knowledge */}
+        {/* ── Knowledge-Based Competencies ──────────────────────────────── */}
         {Object.keys(groupedDecks.knowledge).length > 0 && (
-          <AccordionSection
-            title={t('knowledge', false)}
-            subtitle={`${Object.keys(groupedDecks.knowledge).length} Competencies`}
-            icon={<Brain className="w-5 h-5 text-blue-600" />}
-            color="bg-blue-50"
-            count={Object.values(groupedDecks.knowledge).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
+          <CategorySection
+            title="Knowledge-Based Competencies"
+            subtitle={`${Object.keys(groupedDecks.knowledge).length} Competencies · Technical knowledge and expertise`}
+            icon={<Brain className="w-5 h-5 text-[#0f91e0]" />}
+            accentColor="#0f91e0"
+            count={Object.values(groupedDecks.knowledge).reduce(
+              (s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0
+            )}
             defaultOpen
           >
-            <div className="mt-2 space-y-2">
-              {Object.entries(groupedDecks.knowledge).map(([cId, subUnits]) => {
-                const firstDeck = Object.values(subUnits)[0]?.[0];
-                const competency = firstDeck?.competency;
-                if (!competency) return null;
-                const name = competency.competency_name;
-                return <CompetencyAccordion key={cId} competencyName={name} subUnits={subUnits} basePath={basePath} />;
-              })}
-            </div>
-          </AccordionSection>
+            {Object.entries(groupedDecks.knowledge).map(([cId, subUnits], idx) => {
+              const firstDeck = Object.values(subUnits)[0]?.[0];
+              const competency = firstDeck?.competency;
+              if (!competency) return null;
+              return (
+                <CompetencyRow
+                  key={cId}
+                  competencyName={competency.competency_name}
+                  subUnits={subUnits}
+                  basePath={basePath}
+                  defaultOpen={idx === 0}
+                />
+              );
+            })}
+          </CategorySection>
         )}
 
-        {/* Standalone */}
+        {/* ── Standalone ────────────────────────────────────────────────── */}
         {groupedDecks.standalone.length > 0 && (
-          <AccordionSection
-            title={t('additional', false)}
-            subtitle={`${groupedDecks.standalone.length} ${t('decksAvailable', false)}`}
-            icon={<Star className="w-5 h-5 text-amber-600" />}
-            color="bg-amber-50"
+          <CategorySection
+            title="Additional Flashcards"
+            subtitle={`${groupedDecks.standalone.length} decks available`}
+            icon={<Star className="w-5 h-5 text-[#0f91e0]" />}
+            accentColor="#0f91e0"
             count={groupedDecks.standalone.length}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
               {groupedDecks.standalone.map((deck) => (
-                <DeckCard key={deck.id} deck={deck}
-                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}`)} />
+                <DeckCard
+                  key={deck.id}
+                  deck={deck}
+                  onClick={() => navigate(`${basePath}/flashcards/${deck.id}`)}
+                />
               ))}
             </div>
-          </AccordionSection>
+          </CategorySection>
         )}
 
-        {/* Empty State */}
+        {/* ── Empty State ────────────────────────────────────────────────── */}
         {decks?.length === 0 && (
           <div className="text-center py-16 bg-white rounded-2xl border border-[#dbeafe]">
             <Layers className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-[#0d1f4e] mb-2">{t('noDecks', false)}</h2>
-            <p className="text-slate-400 mb-6 text-sm">{t('noDecksSub', false)}</p>
+            <h2 className="text-xl font-bold text-[#0d1f4e] mb-2">No Flashcard Decks Available</h2>
+            <p className="text-slate-400 mb-6 text-sm">
+              Flashcard decks will appear here once they are published by the admin.
+            </p>
             <button
               onClick={() => navigate(basePath)}
               className="bg-[#1C4A8B] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#0d1f4e] transition-colors"
             >
-              {t('backToLearning', false)}
+              Back to Learning System
             </button>
           </div>
         )}
+
       </div>
     </div>
   );
