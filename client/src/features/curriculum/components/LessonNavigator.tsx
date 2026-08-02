@@ -1,10 +1,13 @@
 /**
  * Lesson Navigator — SHRM-style
  * No lock, free navigation between all lessons
+ *
+ * Fix: Always render a fixed-height placeholder while data loads
+ * to prevent layout shift / page jump (CLS).
  */
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Circle, PlayCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, PlayCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLessonsByModule, useLessonProgress } from '@/entities/curriculum';
 
@@ -16,6 +19,30 @@ interface LessonNavigatorProps {
   moduleLang?: string;
 }
 
+// ── Skeleton placeholder — same height as the real navigator ──────────────
+function NavigatorSkeleton() {
+  return (
+    <div className="mt-8 space-y-4" aria-hidden="true">
+      {/* Dots row skeleton */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex items-center justify-center gap-2 flex-wrap min-h-[72px]">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex flex-col items-center gap-1 p-2">
+              <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
+              <div className="w-14 h-2.5 rounded bg-gray-100 animate-pulse mt-0.5" />
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Buttons row skeleton */}
+      <div className="flex items-center justify-between">
+        <div className="w-36 h-9 rounded-md bg-gray-100 animate-pulse" />
+        <div className="w-36 h-9 rounded-md bg-gray-100 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 export function LessonNavigator({
   currentLesson,
   moduleId,
@@ -25,11 +52,16 @@ export function LessonNavigator({
 }: LessonNavigatorProps) {
   const navigate = useNavigate();
 
-  const { data: moduleLessons } = useLessonsByModule(moduleId);
+  const { data: moduleLessons, isLoading: loadingLessons } = useLessonsByModule(moduleId);
   const progressFilters = useMemo(() => ({ module_id: moduleId }), [moduleId]);
-  const { data: allProgress } = useLessonProgress(userId, progressFilters);
+  const { data: allProgress, isLoading: loadingProgress } = useLessonProgress(userId, progressFilters);
 
-  if (!moduleLessons || moduleLessons.length === 0) return null;
+  // While loading, render a fixed-height skeleton to prevent CLS
+  if (loadingLessons || loadingProgress || !moduleLessons) {
+    return <NavigatorSkeleton />;
+  }
+
+  if (moduleLessons.length === 0) return <NavigatorSkeleton />;
 
   const sortedLessons = [...moduleLessons].sort((a, b) => a.order_index - b.order_index);
   const currentIndex = sortedLessons.findIndex((l) => l.id === currentLesson.id);
@@ -50,7 +82,7 @@ export function LessonNavigator({
     <div className="mt-8 space-y-4">
       {/* Lesson Progress Dots */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex items-center justify-center gap-2 flex-wrap">
+        <div className="flex items-center justify-center gap-2 flex-wrap min-h-[72px]">
           {sortedLessons.map((lesson) => {
             const status = getLessonStatus(lesson.id);
             const isCurrent = lesson.id === currentLesson.id;
@@ -73,9 +105,9 @@ export function LessonNavigator({
                     isCurrent
                       ? 'bg-blue-600 text-white'
                       : isCompleted
-                      ? 'bg-green-100 text-green-700'
+                      ? 'bg-blue-100 text-blue-700'
                       : isInProgress
-                      ? 'bg-yellow-100 text-yellow-700'
+                      ? 'bg-blue-50 text-blue-500'
                       : 'bg-gray-100 text-gray-500'
                   }`}
                 >

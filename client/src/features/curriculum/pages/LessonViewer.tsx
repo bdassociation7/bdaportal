@@ -402,10 +402,13 @@ export function LessonViewer() {
             </div>
           )}
 
+          {/* Reserve space whether completed or not to prevent layout shift */}
           {!isCompleted && (
-            <p className="text-center text-sm text-gray-400 mb-6">
-              Scroll to the bottom to mark this lesson as complete.
-            </p>
+            <div className="mb-6" style={{ minHeight: '24px' }}>
+              <p className="text-center text-sm text-gray-400">
+                Scroll to the bottom to mark this lesson as complete.
+              </p>
+            </div>
           )}
 
           {/* ── Lesson navigator ─────────────────────────────────────────── */}

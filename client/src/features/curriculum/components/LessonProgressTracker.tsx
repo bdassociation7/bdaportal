@@ -23,7 +23,15 @@ export function LessonProgressTracker({
   readingProgress,
 }: LessonProgressTrackerProps) {
   if (!progress) {
-    return null;
+    // Return a fixed-width placeholder to prevent header layout shift
+    return (
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <div className="w-32 h-2 rounded-full bg-gray-100" />
+          <span className="text-sm text-muted-foreground font-medium">0%</span>
+        </div>
+      </div>
+    );
   }
 
   const getStatusBadge = () => {
