@@ -63,7 +63,7 @@ function DeckCard({ deck, onClick }: DeckCardProps) {
         style={
           deck.cover_image_url
             ? { backgroundImage: `url(${deck.cover_image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-            : { background: 'linear-gradient(135deg, #1C4A8B 0%, #0d1f4e 100%)' }
+            : { background: '#0f91e0' }
         }
       >
         <div className="absolute inset-0 bg-black/10" />
@@ -92,7 +92,7 @@ function DeckCard({ deck, onClick }: DeckCardProps) {
               <span>{progress!.cards_mastered}/{deck.card_count}</span>
             </div>
             <div className="h-1 bg-gray-100 rounded-full overflow-hidden flex">
-              <div className="bg-[#1C4A8B] h-full" style={{ width: `${(progress!.cards_mastered / deck.card_count) * 100}%` }} />
+              <div className="bg-[#0f91e0] h-full" style={{ width: `${(progress!.cards_mastered / deck.card_count) * 100}%` }} />
               <div className="bg-[#0f91e0] h-full" style={{ width: `${(progress!.cards_reviewing / deck.card_count) * 100}%` }} />
               <div className="bg-[#7cb9e8] h-full" style={{ width: `${(progress!.cards_learning / deck.card_count) * 100}%` }} />
             </div>
@@ -110,8 +110,8 @@ function DeckCard({ deck, onClick }: DeckCardProps) {
       {/* CTA */}
       <div className="px-3 py-2 border-t border-[#f0f6ff] flex items-center gap-1.5 group-hover:bg-[#f0f6ff] transition-colors">
         {hasProgress
-          ? <><RotateCcw className="w-3 h-3 text-[#1C4A8B]" /><span className="text-xs font-semibold text-[#1C4A8B]">Continue</span></>
-          : <><Play className="w-3 h-3 fill-[#1C4A8B] text-[#1C4A8B]" /><span className="text-xs font-semibold text-[#1C4A8B]">Start Learning</span></>
+          ? <><RotateCcw className="w-3 h-3 text-[#0f91e0]" /><span className="text-xs font-semibold text-[#0f91e0]">Continue</span></>
+          : <><Play className="w-3 h-3 fill-[#0f91e0] text-[#0f91e0]" /><span className="text-xs font-semibold text-[#0f91e0]">Start Learning</span></>
         }
       </div>
     </div>
@@ -164,7 +164,7 @@ function CompetencyRow({
                   <div key={deck.id} className="flex flex-col gap-1">
                     {/* Lesson label above each deck card */}
                     <div className="flex items-center gap-1.5 px-1">
-                      <span className="w-4 h-4 rounded-full bg-[#1C4A8B] text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                      <span className="w-4 h-4 rounded-full bg-[#0f91e0] text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">
                         {subUnit?.order_index ?? ''}
                       </span>
                       <p className="text-[10px] font-semibold text-slate-400 truncate">{subUnit?.title ?? ''}</p>
@@ -304,7 +304,7 @@ export function FlashcardsDashboard() {
     return (
       <div className="flex items-center justify-center py-20 px-4">
         <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-[#dbeafe] p-10 text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#1C4A8B] to-[#0d1f4e] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
+          <div className="w-16 h-16 bg-[#0f91e0] rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
             <Lock className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-[#0d1f4e] mb-3">Flashcards Access Required</h2>
@@ -314,13 +314,13 @@ export function FlashcardsDashboard() {
           <div className="space-y-3">
             <button
               onClick={() => navigate(basePath)}
-              className="w-full bg-gradient-to-r from-[#1C4A8B] to-[#0d1f4e] text-white font-semibold py-3 px-6 rounded-xl hover:opacity-90 transition-opacity"
+              className="w-full bg-[#0f91e0] text-white font-semibold py-3 px-6 rounded-xl hover:bg-[#1C4A8B] transition-colors"
             >
               Back to Learning System
             </button>
             <button
               onClick={() => (window.location.href = 'https://bda-global.org/shop')}
-              className="w-full border border-[#dbeafe] text-[#1C4A8B] font-semibold py-3 px-6 rounded-xl hover:bg-[#f0f6ff] transition-colors"
+              className="w-full border border-[#0f91e0] text-[#0f91e0] font-semibold py-3 px-6 rounded-xl hover:bg-[#f0f6ff] transition-colors"
             >
               Visit Shop
             </button>
@@ -339,7 +339,7 @@ export function FlashcardsDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-lg bg-[#1C4A8B] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-[#0f91e0] flex items-center justify-center">
                 <Layers className="w-4 h-4 text-white" />
               </div>
               <h1 className="text-xl font-bold text-[#0d1f4e]">Flashcards</h1>
@@ -500,7 +500,7 @@ export function FlashcardsDashboard() {
             </p>
             <button
               onClick={() => navigate(basePath)}
-              className="bg-[#1C4A8B] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#0d1f4e] transition-colors"
+              className="bg-[#0f91e0] text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#1C4A8B] transition-colors"
             >
               Back to Learning System
             </button>
