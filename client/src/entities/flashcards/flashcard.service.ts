@@ -1063,10 +1063,10 @@ export class FlashcardService {
     cardsByDifficulty: { easy: number; medium: number; hard: number };
   }>> {
     try {
-      // Get decks count
+      // Get decks with their card counts in one query
       let decksQuery = supabase
         .from('curriculum_flashcard_decks')
-        .select('id, is_published', { count: 'exact' });
+        .select('id, is_published, curriculum_flashcards(id, difficulty_level)');
 
       if (certificationType) {
         decksQuery = decksQuery.eq('certification_type', certificationType);
@@ -1075,25 +1075,21 @@ export class FlashcardService {
       const { data: decks, error: decksError } = await decksQuery;
       if (decksError) throw decksError;
 
-      // Get cards by difficulty
-      const { data: cards, error: cardsError } = await supabase
-        .from('curriculum_flashcards')
-        .select('difficulty_level');
-
-      if (cardsError) throw cardsError;
+      // Flatten all cards from all decks
+      const allCards = decks?.flatMap((d: any) => d.curriculum_flashcards || []) || [];
 
       const difficultyCount = {
-        easy: cards?.filter((c) => c.difficulty_level === 'easy').length || 0,
-        medium: cards?.filter((c) => c.difficulty_level === 'medium').length || 0,
-        hard: cards?.filter((c) => c.difficulty_level === 'hard').length || 0,
+        easy: allCards.filter((c: any) => c.difficulty_level === 'easy').length,
+        medium: allCards.filter((c: any) => c.difficulty_level === 'medium').length,
+        hard: allCards.filter((c: any) => c.difficulty_level === 'hard').length,
       };
 
       return {
         data: {
           totalDecks: decks?.length || 0,
-          totalCards: cards?.length || 0,
-          publishedDecks: decks?.filter((d) => d.is_published).length || 0,
-          unpublishedDecks: decks?.filter((d) => !d.is_published).length || 0,
+          totalCards: allCards.length,
+          publishedDecks: decks?.filter((d: any) => d.is_published).length || 0,
+          unpublishedDecks: decks?.filter((d: any) => !d.is_published).length || 0,
           cardsByDifficulty: difficultyCount,
         },
       };

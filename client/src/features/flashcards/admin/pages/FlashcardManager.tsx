@@ -696,6 +696,7 @@ function DeckDialog({
   const [formData, setFormData] = useState<Partial<FlashcardDeckInsert>>({
     certification_type: defaultValues?.certification_type || 'CP',
     section_type: defaultValues?.section_type || 'knowledge',
+    // Default published to true for new decks
     competency_id: defaultValues?.competency_id || null,
     sub_unit_id: defaultValues?.sub_unit_id || null,
     title: defaultValues?.title || '',
@@ -706,7 +707,7 @@ function DeckDialog({
     estimated_study_time_minutes:
       defaultValues?.estimated_study_time_minutes || undefined,
     order_index: defaultValues?.order_index || 1,
-    is_published: defaultValues?.is_published || false,
+    is_published: defaultValues?.is_published ?? true,
     exam_language: (defaultValues as any)?.exam_language || defaultLanguage,
   });
 
@@ -743,8 +744,26 @@ function DeckDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Order Index only - section_type is auto-set to 'knowledge' */}
+          {/* Section Type + Order Index */}
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>{texts.section}</Label>
+              <Select
+                value={formData.section_type || 'knowledge'}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, section_type: value as any })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="behavioral">{texts.behavioral}</SelectItem>
+                  <SelectItem value="knowledge">{texts.knowledge}</SelectItem>
+                  <SelectItem value="introduction">{texts.introduction}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label>{texts.orderIndex}</Label>
               <Input
