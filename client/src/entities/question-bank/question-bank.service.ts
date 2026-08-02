@@ -135,20 +135,23 @@ export class QuestionBankService {
 
       if (setsError) throw setsError;
 
-      // Fetch question counts per set filtered by certification_target
-      // Each question has certification_target = 'CP' or 'SCP' (no null/both)
-      const { data: questionTargets, error: qtError } = await supabase
-        .from('curriculum_practice_questions')
-        .select('question_set_id, certification_target')
-        .eq('is_published', true)
-        .eq('certification_target', certificationType);
+      // Use RPC to get accurate question counts filtered by certification_target
+      const lang = examLanguage ? examLanguage.toLowerCase() : 'en';
+      const { data: certCounts, error: certCountsError } = await supabase
+        .rpc('get_question_sets_with_cert_count', {
+          p_certification_type: certificationType,
+          p_exam_language: lang,
+        });
 
-      if (qtError) throw qtError;
+      if (certCountsError) {
+        // Non-fatal: fall back to stored counts if RPC fails
+        console.warn('RPC get_question_sets_with_cert_count failed:', certCountsError);
+      }
 
-      // Build a map: setId -> count of questions for this cert type
+      // Build a map: setId -> cert-specific question count
       const certCountMap = new Map<string, number>();
-      (questionTargets || []).forEach((q) => {
-        certCountMap.set(q.question_set_id, (certCountMap.get(q.question_set_id) || 0) + 1);
+      (certCounts || []).forEach((row: { set_id: string; cert_question_count: number }) => {
+        certCountMap.set(row.set_id, row.cert_question_count);
       });
 
       // Get user progress for all sets
@@ -167,7 +170,7 @@ export class QuestionBankService {
       // Combine sets with progress and accurate question_count for this cert type
       const setsWithProgress: QuestionSetWithProgress[] = (sets || []).map(
         (set) => {
-          // Use actual count from questions table; fall back to stored count if no questions found
+          // Use RPC count (accurate); fall back to stored count only if RPC had no data
           const certQuestionCount = certCountMap.has(set.id)
             ? certCountMap.get(set.id)!
             : set.question_count;
