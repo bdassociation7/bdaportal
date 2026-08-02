@@ -109,7 +109,8 @@ export class QuestionBankService {
             id,
             competency_name,
             competency_name_ar,
-            section_type
+            section_type,
+            order_index
           ),
           sub_unit:curriculum_lessons!sub_unit_id(
             id,
@@ -125,27 +126,29 @@ export class QuestionBankService {
         query = query.eq('exam_language', examLanguage.toLowerCase());
       }
 
+      // Filter by certification_type to only show relevant sets
+      if (certificationType) {
+        query = query.eq('certification_type', certificationType);
+      }
+
       const { data: sets, error: setsError } = await query.order('order_index', { ascending: true });
 
       if (setsError) throw setsError;
 
-      // Fetch question certification_target counts for all sets in one query
-      // to compute the correct question_count per certification type
+      // Fetch question counts per set filtered by certification_target
+      // Each question has certification_target = 'CP' or 'SCP' (no null/both)
       const { data: questionTargets, error: qtError } = await supabase
         .from('curriculum_practice_questions')
         .select('question_set_id, certification_target')
-        .eq('is_published', true);
+        .eq('is_published', true)
+        .eq('certification_target', certificationType);
 
       if (qtError) throw qtError;
 
-      // Build a map: setId -> { CP: count, SCP: count, both: count }
-      const certCountMap = new Map<string, { CP: number; SCP: number; both: number }>();
+      // Build a map: setId -> count of questions for this cert type
+      const certCountMap = new Map<string, number>();
       (questionTargets || []).forEach((q) => {
-        const entry = certCountMap.get(q.question_set_id) || { CP: 0, SCP: 0, both: 0 };
-        if (q.certification_target === 'CP') entry.CP += 1;
-        else if (q.certification_target === 'SCP') entry.SCP += 1;
-        else entry.both += 1; // NULL = both
-        certCountMap.set(q.question_set_id, entry);
+        certCountMap.set(q.question_set_id, (certCountMap.get(q.question_set_id) || 0) + 1);
       });
 
       // Get user progress for all sets
@@ -161,15 +164,12 @@ export class QuestionBankService {
         progress?.map((p) => [p.question_set_id, p]) || []
       );
 
-      // Combine sets with progress and computed question_count per cert type
-      const certType = certificationType as 'CP' | 'SCP';
+      // Combine sets with progress and accurate question_count for this cert type
       const setsWithProgress: QuestionSetWithProgress[] = (sets || []).map(
         (set) => {
-          const counts = certCountMap.get(set.id);
-          // Compute the number of questions visible for this cert type:
-          // questions targeting this cert + questions targeting both (null)
-          const certQuestionCount = counts
-            ? (certType === 'CP' ? counts.CP + counts.both : counts.SCP + counts.both)
+          // Use actual count from questions table; fall back to stored count if no questions found
+          const certQuestionCount = certCountMap.has(set.id)
+            ? certCountMap.get(set.id)!
             : set.question_count;
           return {
             ...set,

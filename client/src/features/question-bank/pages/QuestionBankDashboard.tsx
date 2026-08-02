@@ -309,7 +309,18 @@ function CompetencyAccordion({
 }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const totalSets = Object.values(subUnits).reduce((s, arr) => s + arr.length, 0);
+
+  // Flatten all sets sorted by sub_unit order_index, then set order within sub_unit
+  const allSets = Object.entries(subUnits)
+    .sort(([keyA, a], [keyB, b]) => {
+      if (keyA === '__no_sub__') return -1;
+      if (keyB === '__no_sub__') return 1;
+      return (a[0]?.sub_unit?.order_index || 0) - (b[0]?.sub_unit?.order_index || 0);
+    })
+    .flatMap(([, sets]) => sets);
+
+  const totalSets = allSets.length;
+  const subLessonCount = Object.keys(subUnits).filter(k => k !== '__no_sub__').length;
 
   return (
     <div className="border border-[#dbeafe] rounded-xl overflow-hidden mb-2">
@@ -323,59 +334,23 @@ function CompetencyAccordion({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400">
-            {Object.keys(subUnits).filter(k => k !== '__no_sub__').length > 0
-              ? `${Object.keys(subUnits).filter(k => k !== '__no_sub__').length} ${t('subLessons', false)} · `
-              : ''}{totalSets} {t('sets', false)}
+            {subLessonCount > 0 ? `${subLessonCount} ${t('subLessons', false)} · ` : ''}{totalSets} {t('sets', false)}
           </span>
           {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </button>
       {open && (
-        <div className="p-4 space-y-4">
-          {Object.entries(subUnits)
-            .sort(([keyA, a], [keyB, b]) => {
-              if (keyA === '__no_sub__') return -1;
-              if (keyB === '__no_sub__') return 1;
-              return (a[0]?.sub_unit?.order_index || 0) - (b[0]?.sub_unit?.order_index || 0);
-            })
-            .map(([subUnitId, sets]) => {
-              // Sets without sub_unit — render directly without sub-lesson header
-              if (subUnitId === '__no_sub__') {
-                return (
-                  <div key="__no_sub__" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {sets.map((set) => (
-                      <QuestionSetCard
-                        key={set.id}
-                        questionSet={set}
-                        onClick={() => navigate(`${basePath}/question-bank/${set.id}`, { state: { certType } })}
-                      />
-                    ))}
-                  </div>
-                );
-              }
-              const subUnit = sets[0]?.sub_unit;
-              if (!subUnit) return null;
-              const subTitle = subUnit.title;
-              return (
-                <div key={subUnitId}>
-                  <p className="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-[#0f91e0] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                      {subUnit.order_index}
-                    </span>
-                    {subTitle}
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {sets.map((set) => (
-                      <QuestionSetCard
-                        key={set.id}
-                        questionSet={set}
-                        onClick={() => navigate(`${basePath}/question-bank/${set.id}`, { state: { certType } })}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+        <div className="p-4">
+          {/* All sets in a single responsive grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {allSets.map((set) => (
+              <QuestionSetCard
+                key={set.id}
+                questionSet={set}
+                onClick={() => navigate(`${basePath}/question-bank/${set.id}`, { state: { certType } })}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -585,7 +560,13 @@ export function QuestionBankDashboard() {
             defaultOpen
           >
             <div className="mt-2 space-y-2">
-              {Object.entries(groupedSets.behavioural).map(([cId, subUnits]) => {
+              {Object.entries(groupedSets.behavioural)
+                .sort(([, aUnits], [, bUnits]) => {
+                  const aOrder = (Object.values(aUnits)[0]?.[0] as any)?.competency?.order_index ?? 999;
+                  const bOrder = (Object.values(bUnits)[0]?.[0] as any)?.competency?.order_index ?? 999;
+                  return aOrder - bOrder;
+                })
+                .map(([cId, subUnits]) => {
                 const firstSet = Object.values(subUnits)[0]?.[0];
                 const competency = firstSet?.competency;
                 if (!competency) return null;
@@ -615,7 +596,13 @@ export function QuestionBankDashboard() {
             defaultOpen
           >
             <div className="mt-2 space-y-2">
-              {Object.entries(groupedSets.knowledge).map(([cId, subUnits]) => {
+              {Object.entries(groupedSets.knowledge)
+                .sort(([, aUnits], [, bUnits]) => {
+                  const aOrder = (Object.values(aUnits)[0]?.[0] as any)?.competency?.order_index ?? 999;
+                  const bOrder = (Object.values(bUnits)[0]?.[0] as any)?.competency?.order_index ?? 999;
+                  return aOrder - bOrder;
+                })
+                .map(([cId, subUnits]) => {
                 const firstSet = Object.values(subUnits)[0]?.[0];
                 const competency = firstSet?.competency;
                 if (!competency) return null;
