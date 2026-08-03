@@ -63,30 +63,32 @@ export class UnifiedAuthService {
         const profile = await AuthService.loadUserProfile(portalResult.user.id);
         const unifiedUser = await this.buildUnifiedUser(portalResult.user, profile.profile);
 
-        // Sync Store session if account is linked (wp_user_id present)
-        if (unifiedUser.wp_user_id) {
-          console.log('🔄 [UnifiedAuthService] Syncing Store session for wp_user_id:', unifiedUser.wp_user_id);
-          await this.syncStoreSession(unifiedUser.wp_user_id);
-        }
-
-        // Sync book credits (auto-heal missing credits)
-        try {
-          console.log('📚 [UnifiedAuthService] Syncing book credits...');
-          const { supabase } = await import('@/shared/config/supabase.config');
-          const { data: creditSync } = await supabase.rpc('sync_user_book_credits');
-          if (creditSync?.granted > 0) {
-            console.log(`✅ [UnifiedAuthService] Granted ${creditSync.granted} book credits`);
-          }
-        } catch (error) {
-          // Don't fail login if credit sync fails
-          console.warn('⚠️ [UnifiedAuthService] Book credit sync failed (non-critical):', error);
-        }
-
-        return {
+        // Return success immediately - WordPress sync is non-blocking background task
+        const result: AuthResult = {
           success: true,
           user: unifiedUser,
           action_taken: 'login'
         };
+
+        // Background tasks (non-blocking, fire-and-forget)
+        setTimeout(() => {
+          // Sync Store session if account is linked
+          if (unifiedUser.wp_user_id) {
+            this.syncStoreSession(unifiedUser.wp_user_id).catch(err => {
+              console.warn('⚠️ [UnifiedAuthService] Store session sync failed (non-critical):', err);
+            });
+          }
+          // Sync book credits
+          supabase.rpc('sync_user_book_credits').then(({ data: creditSync }) => {
+            if (creditSync?.granted > 0) {
+              console.log(`✅ [UnifiedAuthService] Granted ${creditSync.granted} book credits`);
+            }
+          }).catch(err => {
+            console.warn('⚠️ [UnifiedAuthService] Book credit sync failed (non-critical):', err);
+          });
+        }, 0);
+
+        return result;
       }
 
       // 2. Login Portal failed - Check if it's a credentials error or something else
