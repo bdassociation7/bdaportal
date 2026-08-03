@@ -14,7 +14,7 @@ export interface RetryOptions {
 }
 
 const DEFAULT_OPTIONS: Required<RetryOptions> = {
-  maxRetries: 3,
+  maxRetries: 0, // No retries - fail fast for WordPress API calls
   initialDelay: 1000, // 1 seconde
   maxDelay: 10000, // 10 secondes max
   backoffMultiplier: 2,
@@ -98,7 +98,7 @@ export async function fetchWithRetry(
   return withRetry(
     async () => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout (WordPress API fast-fail)
 
       try {
         const response = await fetch(url, {
