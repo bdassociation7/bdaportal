@@ -168,6 +168,13 @@ import UpgradePartnership from './pages/partner/UpgradePartnership';
 // Partnership Pending page (for ecp_pending / pdp_pending roles)
 import PartnershipPending from './pages/PartnershipPending';
 
+// Partnership Application pages
+import PartnershipApplication from './pages/partnerships/PartnershipApplication';
+import ECPApplication from './pages/partnerships/ECPApplication';
+import PDPApplication from './pages/partnerships/PDPApplication';
+import AKPApplication from './pages/partnerships/AKPApplication';
+import SAPApplication from './pages/partnerships/SAPApplication';
+
 // ECP Partner pages
 import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPLicense, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
 
@@ -384,6 +391,13 @@ const App = () => (
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/auth/set-password" element={<SetPassword />} />
+
+                {/* Partnership Application pages - public */}
+                <Route path="/partnerships/apply" element={<PartnershipApplication />} />
+                <Route path="/partnerships/apply/ecp" element={<ECPApplication />} />
+                <Route path="/partnerships/apply/pdp" element={<PDPApplication />} />
+                <Route path="/partnerships/apply/akp" element={<AKPApplication />} />
+                <Route path="/partnerships/apply/sap" element={<SAPApplication />} />
 
                 {/* Partnership Pending - for ecp_pending / pdp_pending roles */}
                 <Route path="/partnership-pending" element={
