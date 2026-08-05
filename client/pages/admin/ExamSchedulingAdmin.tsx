@@ -340,6 +340,9 @@ export default function ExamSchedulingAdmin() {
                 <tbody>
                   {filteredAttempts.map((attempt: ExamAttempt) => {
                     const startedDate = new Date(attempt.started_at);
+                    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    const formattedDate = `${String(startedDate.getDate()).padStart(2,'0')} ${months[startedDate.getMonth()]} ${startedDate.getFullYear()}`;
+                    const formattedTime = `${String(startedDate.getHours()).padStart(2,'0')}:${String(startedDate.getMinutes()).padStart(2,'0')}`;
                     const isCompleted = !!attempt.completed_at;
                     const hasResult = attempt.score !== null;
                     const isTestAttempt = ['admin', 'super_admin'].includes(attempt.users?.role || '');
@@ -373,10 +376,10 @@ export default function ExamSchedulingAdmin() {
                         </td>
                         <td className="py-3 px-4">
                           <div className="text-sm">
-                            {startedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {formattedDate}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {startedDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                            {formattedTime}
                           </div>
                         </td>
                         <td className="py-3 px-4">
