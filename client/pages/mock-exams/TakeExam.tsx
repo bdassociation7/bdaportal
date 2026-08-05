@@ -4,9 +4,11 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
-  AlertCircle,
   Send,
+  AlertCircle,
+  CheckCircle2,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { useStartExam, useSubmitAnswer, useCompleteExam } from '@/entities/mock-exam';
 import type { ExamSession, QuestionWithAnswers } from '@/entities/mock-exam';
@@ -18,67 +20,61 @@ import { useConfirm } from '@/contexts/ConfirmDialogContext';
 
 /**
  * TakeExam Page
- * Active exam-taking interface with timer and navigation
+ * Active exam-taking interface with timer and bottom sticky navigator
  */
 
 const translations = {
   en: {
-    // Loading/Error
     loadingExam: 'Loading exam...',
     error: 'Error',
     failedToStart: 'Failed to start exam. Please try again.',
     failedToSubmit: 'Failed to submit exam. Please try again.',
-    // Header
     questionOf: 'Question',
     of: 'of',
     answered: 'answered',
-    // Question
     multipleAnswersPossible: 'Multiple answers possible',
-    // Navigation
     previous: 'Previous',
     next: 'Next',
     submitting: 'Submitting...',
     submitExam: 'Submit Exam',
-    // Navigator
     questionNavigator: 'Question Navigator',
     answeredLabel: 'Answered',
     notAnswered: 'Not answered',
-    // Confirmation dialog
+    current: 'Current',
     confirmSubmitTitle: 'Submit Exam?',
     confirmSubmitComplete: 'Are you sure you want to submit your exam? This action cannot be undone.',
     confirmSubmitIncomplete: "You haven't answered all questions. Submitting now will end your exam.",
     unansweredQuestions: 'Unanswered questions',
     submitAnyway: 'Submit Anyway',
     cancel: 'Cancel',
+    showNavigator: 'Show Navigator',
+    hideNavigator: 'Hide Navigator',
   },
   ar: {
-    // Loading/Error
     loadingExam: 'جارٍ تحميل الامتحان...',
     error: 'خطأ',
     failedToStart: 'فشل في بدء الامتحان. يرجى المحاولة مرة أخرى.',
     failedToSubmit: 'فشل في تقديم الامتحان. يرجى المحاولة مرة أخرى.',
-    // Header
     questionOf: 'السؤال',
     of: 'من',
     answered: 'مجاب',
-    // Question
     multipleAnswersPossible: 'إجابات متعددة ممكنة',
-    // Navigation
     previous: 'السابق',
     next: 'التالي',
     submitting: 'جارٍ التقديم...',
     submitExam: 'تقديم الامتحان',
-    // Navigator
     questionNavigator: 'مستعرض الأسئلة',
     answeredLabel: 'مجاب',
     notAnswered: 'غير مجاب',
-    // Confirmation dialog
+    current: 'الحالي',
     confirmSubmitTitle: 'تقديم الامتحان؟',
     confirmSubmitComplete: 'هل أنت متأكد من أنك تريد تقديم الامتحان؟ لا يمكن التراجع عن هذا الإجراء.',
     confirmSubmitIncomplete: 'لم تجب على جميع الأسئلة. سيؤدي التقديم الآن إلى إنهاء الامتحان.',
     unansweredQuestions: 'أسئلة غير مجابة',
     submitAnyway: 'تقديم على أي حال',
     cancel: 'إلغاء',
+    showNavigator: 'عرض المستعرض',
+    hideNavigator: 'إخفاء المستعرض',
   }
 };
 
@@ -91,14 +87,14 @@ export default function TakeExam() {
   const { language } = useLanguage();
   const texts = translations[language];
 
-  // Determine base path for navigation (ECP vs non-ECP routes)
   const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : '/mock-exams';
 
   const [session, setSession] = useState<ExamSession | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
-  const [timeRemaining, setTimeRemaining] = useState(0); // in seconds
+  const [timeRemaining, setTimeRemaining] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [navigatorExpanded, setNavigatorExpanded] = useState(false);
 
   const startExamMutation = useStartExam();
   const submitAnswerMutation = useSubmitAnswer();
@@ -106,10 +102,7 @@ export default function TakeExam() {
 
   // Hide sidebar for full-screen exam mode
   useEffect(() => {
-    // Add class to body to hide sidebar
     document.body.classList.add('exam-fullscreen-mode');
-
-    // Cleanup: remove class when component unmounts
     return () => {
       document.body.classList.remove('exam-fullscreen-mode');
     };
@@ -132,7 +125,6 @@ export default function TakeExam() {
           return;
         }
 
-        // Check if exam has questions
         if (!result.data.questions || result.data.questions.length === 0) {
           toast({
             title: texts.error,
@@ -167,7 +159,6 @@ export default function TakeExam() {
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
-          // Time's up - auto submit
           handleCompleteExam();
           return 0;
         }
@@ -178,25 +169,21 @@ export default function TakeExam() {
     return () => clearInterval(timer);
   }, [session, timeRemaining]);
 
-  // Warn before leaving/refreshing page during exam
+  // Warn before leaving
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Only warn if exam is in progress (has session and not submitting)
       if (session && !isSubmitting) {
         e.preventDefault();
-        e.returnValue = ''; // Required for Chrome
+        e.returnValue = '';
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [session, isSubmitting]);
 
   const currentQuestion = session?.questions[currentQuestionIndex];
 
-  // Get localized text based on exam language
   const getQuestionText = (question: QuestionWithAnswers) => {
-    // Use exam language, not UI language, for question content
     const examLanguage = session?.exam?.language || 'en';
     if (examLanguage === 'ar' && question.question_text_ar) {
       return question.question_text_ar;
@@ -212,7 +199,6 @@ export default function TakeExam() {
     return answer.answer_text;
   };
 
-  // Handle answer selection
   const handleAnswerSelect = (answerId: string) => {
     if (!currentQuestion) return;
 
@@ -222,10 +208,8 @@ export default function TakeExam() {
     let newAnswers: string[];
 
     if (currentQuestion.question_type === 'single_choice') {
-      // Single choice: replace
       newAnswers = [answerId];
     } else {
-      // Multiple choice: toggle
       if (currentAnswers.includes(answerId)) {
         newAnswers = currentAnswers.filter((id) => id !== answerId);
       } else {
@@ -233,12 +217,8 @@ export default function TakeExam() {
       }
     }
 
-    setAnswers({
-      ...answers,
-      [questionId]: newAnswers,
-    });
+    setAnswers({ ...answers, [questionId]: newAnswers });
 
-    // Submit answer to backend
     if (session) {
       submitAnswerMutation.mutate({
         attempt_id: session.attempt_id,
@@ -248,30 +228,31 @@ export default function TakeExam() {
     }
   };
 
-  // Navigation
   const goToQuestion = (index: number) => {
     if (index >= 0 && index < (session?.questions.length || 0)) {
       setCurrentQuestionIndex(index);
+      setNavigatorExpanded(false);
     }
   };
 
   const goNext = () => goToQuestion(currentQuestionIndex + 1);
   const goPrevious = () => goToQuestion(currentQuestionIndex - 1);
 
-  // Calculate progress - must be defined BEFORE callbacks that use them
   const answeredCount = Object.keys(answers).filter(
     (qId) => answers[qId] && answers[qId].length > 0
   ).length;
   const totalQuestions = session?.questions.length || 0;
 
-  // Format time
   const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
+    if (hours > 0) {
+      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Complete exam (internal - called after confirmation)
   const handleCompleteExam = useCallback(async () => {
     if (!session || isSubmitting) return;
 
@@ -290,7 +271,6 @@ export default function TakeExam() {
         return;
       }
 
-      // Navigate to results
       navigate(`${basePath}/results/${session.attempt_id}`);
     } catch (error) {
       console.error('Error completing exam:', error);
@@ -303,7 +283,6 @@ export default function TakeExam() {
     }
   }, [session, isSubmitting, completeExamMutation, navigate, toast, basePath, texts]);
 
-  // Submit with confirmation dialog
   const handleSubmitWithConfirmation = useCallback(async () => {
     if (!session || isSubmitting) return;
 
@@ -336,200 +315,296 @@ export default function TakeExam() {
     );
   }
 
-  const isTimeRunningOut = timeRemaining < 300; // less than 5 minutes
+  const isTimeRunningOut = timeRemaining < 300;
   const isRTL = session.exam.language === 'ar';
+  const progressPercent = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Header with timer */}
+    <div
+      className="min-h-screen bg-gray-50 flex flex-col"
+      dir={isRTL ? 'rtl' : 'ltr'}
+      style={{ paddingBottom: navigatorExpanded ? '280px' : '80px' }}
+    >
+      {/* ── Top Header ── */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div>
+            {/* Left: title + progress */}
+            <div className="min-w-0 flex-1">
               <h1
-                className="text-xl font-bold text-gray-900"
-                dir={session.exam.language === 'ar' ? 'rtl' : 'ltr'}
+                className="text-base font-bold text-gray-900 truncate"
+                dir={isRTL ? 'rtl' : 'ltr'}
               >
                 {session.exam.language === 'ar' && session.exam.title_ar
                   ? session.exam.title_ar
                   : session.exam.title}
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs text-gray-500 mt-0.5">
                 {texts.questionOf} {currentQuestionIndex + 1} {texts.of} {totalQuestions}
+                &nbsp;·&nbsp;
+                <span className="font-medium text-gray-700">{answeredCount}</span> / {totalQuestions} {texts.answered}
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
-              {/* Progress */}
-              <div className="text-sm text-gray-600">
-                <span className="font-medium text-gray-900">{answeredCount}</span> /{' '}
-                {totalQuestions} {texts.answered}
-              </div>
-
+            {/* Right: timer + submit */}
+            <div className={cn('flex items-center gap-3', isRTL ? 'mr-4' : 'ml-4')}>
               {/* Timer */}
               <div
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-lg font-bold',
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-sm font-bold',
                   isTimeRunningOut
                     ? 'bg-red-100 text-red-700'
-                    : 'bg-blue-100 text-blue-700'
+                    : 'bg-blue-50 text-blue-700'
                 )}
               >
-                <Clock
-                  className={cn('h-5 w-5', isTimeRunningOut && 'animate-pulse')}
-                />
+                <Clock className={cn('h-4 w-4', isTimeRunningOut && 'animate-pulse')} />
                 {formatTime(timeRemaining)}
               </div>
 
-              {/* Submit Button - Always visible */}
+              {/* Submit */}
               <Button
                 onClick={handleSubmitWithConfirmation}
                 disabled={isSubmitting}
-                className={cn("bg-green-600 hover:bg-green-700", isRTL && "flex-row-reverse")}
+                size="sm"
+                className={cn('bg-green-600 hover:bg-green-700 text-white', isRTL && 'flex-row-reverse')}
               >
                 {isSubmitting ? (
-                  <>
-                    <div className={cn("h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin", isRTL ? "ml-2" : "mr-2")} />
-                    {texts.submitting}
-                  </>
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Send className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                    <Send className={cn('h-4 w-4', isRTL ? 'ml-1.5' : 'mr-1.5')} />
                     {texts.submitExam}
                   </>
                 )}
               </Button>
             </div>
           </div>
+
+          {/* Progress bar */}
+          <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-500 rounded-full transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Main Question Area */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Question */}
-            <div className="rounded-lg border bg-white p-6 shadow-sm">
-              <div className="flex items-start gap-3 mb-4">
-                <span className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center">
-                  {currentQuestionIndex + 1}
-                </span>
-                <div className="flex-1">
-                  <p className={cn(
-                    "text-lg font-medium text-gray-900 leading-relaxed",
-                    isRTL && "text-right"
-                  )}>
-                    {getQuestionText(currentQuestion)}
-                  </p>
-                  {currentQuestion.question_type === 'multiple_choice' && (
-                    <p className="mt-2 text-sm text-blue-600 flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      {texts.multipleAnswersPossible}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Answers */}
-              <div className="space-y-3">
-                {currentQuestion.answers.map((answer) => {
-                  const isSelected = (answers[currentQuestion.id] || []).includes(
-                    answer.id
-                  );
-
-                  return (
-                    <button
-                      key={answer.id}
-                      onClick={() => handleAnswerSelect(answer.id)}
-                      className={cn(
-                        'w-full p-4 rounded-lg border-2 transition-all',
-                        isRTL ? 'text-right' : 'text-left',
-                        isSelected
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-                      )}
-                    >
-                      <div className={cn(
-                        "flex items-start gap-3",
-                        isRTL && "flex-row-reverse"
-                      )}>
-                        <div
-                          className={cn(
-                            'flex-shrink-0 w-5 h-5 rounded-full border-2 mt-0.5 transition-all',
-                            isSelected
-                              ? 'border-blue-500 bg-blue-500'
-                              : 'border-gray-300 bg-white'
-                          )}
-                        >
-                          {isSelected && (
-                            <CheckCircle2 className="h-full w-full text-white" />
-                          )}
-                        </div>
-                        <span className="text-gray-900">{getAnswerText(answer)}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Navigation */}
-            <div className="flex items-center justify-between">
-              <Button
-                variant="outline"
-                onClick={goPrevious}
-                disabled={currentQuestionIndex === 0}
-                className={isRTL ? "flex-row-reverse" : ""}
-              >
-                {isRTL ? (
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                ) : (
-                  <ChevronLeft className="h-4 w-4 mr-2" />
+      {/* ── Main Content ── */}
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-8">
+        {/* Question Card */}
+        <div className="rounded-xl border bg-white p-6 shadow-sm mb-6">
+          {/* Question number badge + text */}
+          <div className="flex items-start gap-4 mb-6">
+            <span className="flex-shrink-0 w-9 h-9 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center shadow-sm">
+              {currentQuestionIndex + 1}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p
+                className={cn(
+                  'text-base font-medium text-gray-900 leading-relaxed',
+                  isRTL && 'text-right'
                 )}
-                {texts.previous}
-              </Button>
-
-              {currentQuestionIndex === totalQuestions - 1 ? (
-                <Button
-                  onClick={handleSubmitWithConfirmation}
-                  disabled={isSubmitting}
-                  className={cn("bg-green-600 hover:bg-green-700", isRTL && "flex-row-reverse")}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className={cn("h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin", isRTL ? "ml-2" : "mr-2")} />
-                      {texts.submitting}
-                    </>
-                  ) : (
-                    <>
-                      <Send className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
-                      {texts.submitExam}
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Button onClick={goNext} className={isRTL ? "flex-row-reverse" : ""}>
-                  {texts.next}
-                  {isRTL ? (
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  )}
-                </Button>
+              >
+                {getQuestionText(currentQuestion)}
+              </p>
+              {currentQuestion.question_type === 'multiple_choice' && (
+                <p className="mt-2 text-xs text-blue-600 flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {texts.multipleAnswersPossible}
+                </p>
               )}
             </div>
           </div>
 
-          {/* Sidebar - Question Navigator */}
-          <div className="lg:col-span-1">
-            <div className="rounded-lg border bg-white p-4 shadow-sm sticky top-24">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                {texts.questionNavigator}
-              </h3>
-              <div className="grid grid-cols-5 gap-2">
+          {/* Answer Options */}
+          <div className="space-y-3">
+            {currentQuestion.answers.map((answer, idx) => {
+              const isSelected = (answers[currentQuestion.id] || []).includes(answer.id);
+              const optionLetter = String.fromCharCode(65 + idx); // A, B, C, D
+
+              return (
+                <button
+                  key={answer.id}
+                  onClick={() => handleAnswerSelect(answer.id)}
+                  className={cn(
+                    'w-full p-4 rounded-lg border-2 transition-all text-left group',
+                    isRTL ? 'text-right' : 'text-left',
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 shadow-sm'
+                      : 'border-gray-200 bg-white hover:border-blue-200 hover:bg-gray-50'
+                  )}
+                >
+                  <div className={cn('flex items-start gap-3', isRTL && 'flex-row-reverse')}>
+                    {/* Option letter circle */}
+                    <div
+                      className={cn(
+                        'flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all',
+                        isSelected
+                          ? 'border-blue-500 bg-blue-500 text-white'
+                          : 'border-gray-300 text-gray-500 group-hover:border-blue-300'
+                      )}
+                    >
+                      {isSelected ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        optionLetter
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        'text-sm text-gray-800 leading-relaxed pt-0.5',
+                        isSelected && 'text-gray-900 font-medium'
+                      )}
+                    >
+                      {getAnswerText(answer)}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Prev / Next navigation */}
+        <div className={cn('flex items-center justify-between', isRTL && 'flex-row-reverse')}>
+          <Button
+            variant="outline"
+            onClick={goPrevious}
+            disabled={currentQuestionIndex === 0}
+            className={cn('gap-1', isRTL && 'flex-row-reverse')}
+          >
+            {isRTL ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+            {texts.previous}
+          </Button>
+
+          {/* Center: question counter */}
+          <span className="text-sm text-gray-500 font-medium">
+            {currentQuestionIndex + 1} / {totalQuestions}
+          </span>
+
+          {currentQuestionIndex === totalQuestions - 1 ? (
+            <Button
+              onClick={handleSubmitWithConfirmation}
+              disabled={isSubmitting}
+              className={cn('bg-green-600 hover:bg-green-700 gap-1', isRTL && 'flex-row-reverse')}
+            >
+              {isSubmitting ? (
+                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  {texts.submitExam}
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              onClick={goNext}
+              className={cn('gap-1', isRTL && 'flex-row-reverse')}
+            >
+              {texts.next}
+              {isRTL ? (
+                <ChevronLeft className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Bottom Sticky Navigator ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t shadow-lg">
+        {/* Collapsed bar — always visible */}
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="flex items-center justify-between py-2 gap-3">
+            {/* Mini dots strip — shows ~15 questions around current */}
+            <div className="flex items-center gap-1 overflow-hidden flex-1">
+              {session.questions.map((question, index) => {
+                const isAnswered = answers[question.id] && answers[question.id].length > 0;
+                const isCurrent = index === currentQuestionIndex;
+
+                // Show only a window of questions around current
+                const windowStart = Math.max(0, currentQuestionIndex - 7);
+                const windowEnd = Math.min(totalQuestions - 1, windowStart + 14);
+                if (index < windowStart || index > windowEnd) return null;
+
+                return (
+                  <button
+                    key={question.id}
+                    onClick={() => goToQuestion(index)}
+                    title={`Q${index + 1}`}
+                    className={cn(
+                      'flex-shrink-0 rounded transition-all',
+                      isCurrent
+                        ? 'w-7 h-7 bg-blue-600 text-white text-xs font-bold ring-2 ring-blue-300 ring-offset-1'
+                        : isAnswered
+                          ? 'w-5 h-5 bg-blue-500 text-white text-xs font-medium'
+                          : 'w-5 h-5 bg-gray-200 text-gray-500 text-xs',
+                      'flex items-center justify-center'
+                    )}
+                  >
+                    {isCurrent ? index + 1 : isAnswered ? '✓' : ''}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Stats + toggle */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="text-xs text-gray-500 whitespace-nowrap">
+                <span className="font-semibold text-blue-600">{answeredCount}</span>
+                <span className="text-gray-400"> / {totalQuestions}</span>
+              </div>
+              <button
+                onClick={() => setNavigatorExpanded(!navigatorExpanded)}
+                className="flex items-center gap-1 text-xs text-gray-600 hover:text-blue-600 transition-colors px-2 py-1 rounded hover:bg-gray-100"
+              >
+                {navigatorExpanded ? (
+                  <>
+                    <ChevronDown className="h-3.5 w-3.5" />
+                    {texts.hideNavigator}
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp className="h-3.5 w-3.5" />
+                    {texts.showNavigator}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Expanded full grid */}
+          {navigatorExpanded && (
+            <div className="pb-4 border-t pt-3">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                  {texts.questionNavigator}
+                </h3>
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm bg-blue-500 inline-block" />
+                    {texts.answeredLabel}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm bg-gray-200 border border-gray-300 inline-block" />
+                    {texts.notAnswered}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm bg-blue-700 ring-2 ring-blue-300 inline-block" />
+                    {texts.current}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-10 sm:grid-cols-15 md:grid-cols-20 gap-1.5 max-h-36 overflow-y-auto">
                 {session.questions.map((question, index) => {
-                  const isAnswered =
-                    answers[question.id] && answers[question.id].length > 0;
+                  const isAnswered = answers[question.id] && answers[question.id].length > 0;
                   const isCurrent = index === currentQuestionIndex;
 
                   return (
@@ -537,13 +612,12 @@ export default function TakeExam() {
                       key={question.id}
                       onClick={() => goToQuestion(index)}
                       className={cn(
-                        'aspect-square rounded text-sm font-medium transition-all',
-                        isCurrent &&
-                          'ring-2 ring-blue-500 ring-offset-2 scale-110',
-                        isAnswered && !isCurrent && 'bg-blue-600 text-white',
-                        !isAnswered && !isCurrent && 'bg-gray-100 text-gray-600',
-                        isCurrent && isAnswered && 'bg-blue-600 text-white',
-                        isCurrent && !isAnswered && 'bg-gray-200 text-gray-900'
+                        'aspect-square rounded text-xs font-medium transition-all flex items-center justify-center',
+                        isCurrent
+                          ? 'bg-blue-700 text-white ring-2 ring-blue-300 ring-offset-1 scale-110'
+                          : isAnswered
+                            ? 'bg-blue-500 text-white hover:bg-blue-600'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
                       )}
                     >
                       {index + 1}
@@ -551,40 +625,8 @@ export default function TakeExam() {
                   );
                 })}
               </div>
-
-              <div className="mt-4 pt-4 border-t space-y-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-blue-600" />
-                  <span className="text-gray-600">{texts.answeredLabel}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-gray-100 border border-gray-300" />
-                  <span className="text-gray-600">{texts.notAnswered}</span>
-                </div>
-              </div>
-
-              {/* Submit button in sidebar */}
-              <div className="mt-4 pt-4 border-t">
-                <Button
-                  onClick={handleSubmitWithConfirmation}
-                  disabled={isSubmitting}
-                  className={cn("w-full bg-green-600 hover:bg-green-700", isRTL && "flex-row-reverse")}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className={cn("h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin", isRTL ? "ml-2" : "mr-2")} />
-                      {texts.submitting}
-                    </>
-                  ) : (
-                    <>
-                      <Send className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
-                      {texts.submitExam}
-                    </>
-                  )}
-                </Button>
-              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
