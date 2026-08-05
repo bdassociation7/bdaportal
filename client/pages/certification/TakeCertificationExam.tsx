@@ -241,10 +241,10 @@ function RescheduleModal({ open, onClose, booking, examTitle, certType, onSucces
         </DialogHeader>
         <div className="space-y-4 py-2">
           {!canStillReschedule && (
-            <Alert className="border-orange-200 bg-orange-50">
-              <AlertTriangle className="h-4 w-4 text-orange-600" />
-              <AlertTitle className="text-orange-800">Reschedule Window Closed</AlertTitle>
-              <AlertDescription className="text-orange-700 text-sm">
+            <Alert className="border-[#0f91e0]/30 bg-[#0f91e0]/5">
+              <AlertTriangle className="h-4 w-4 text-[#0f91e0]" />
+              <AlertTitle className="text-[#0d1f4e]">Reschedule Window Closed</AlertTitle>
+              <AlertDescription className="text-gray-600 text-sm">
                 Your exam starts in less than 2 hours. Rescheduling is no longer available.
               </AlertDescription>
             </Alert>
@@ -978,19 +978,19 @@ export default function TakeCertificationExam() {
         )}
 
         {/* No Voucher Selected Card */}
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-[#0f91e0]/20 bg-gradient-to-br from-[#0f91e0]/5 to-[#0d1f4e]/5">
           <CardContent className="p-12 text-center">
-            <Ticket className="h-16 w-16 text-orange-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-orange-900 mb-2">
+            <Ticket className="h-16 w-16 text-[#0f91e0] mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-[#0d1f4e] mb-2">
               {texts.selectVoucherTitle}
             </h2>
-            <p className="text-orange-800 mb-6 max-w-xl mx-auto">
+            <p className="text-gray-600 mb-6 max-w-xl mx-auto">
               {texts.selectVoucherDesc}
             </p>
             <Button
               size="lg"
               onClick={handleBackToVouchers}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-gradient-to-r from-[#0f91e0] to-[#0d1f4e] hover:from-[#0d7bc4] hover:to-[#0a1838] text-white"
             >
               <Ticket className="mr-2 h-5 w-5" />
               {texts.goToVouchers}
@@ -1245,7 +1245,7 @@ export default function TakeCertificationExam() {
                       </Badge>
                     )}
                     {exam.userStatus === 'has_voucher' && (
-                      <Badge className="bg-orange-100 text-orange-800">
+                      <Badge className="bg-[#0f91e0]/10 text-[#0d1f4e] border border-[#0f91e0]/30">
                         <Ticket className="w-3 h-3 mr-1" />
                         {texts.hasVoucher}
                       </Badge>
