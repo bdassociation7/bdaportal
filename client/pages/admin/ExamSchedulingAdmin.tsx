@@ -373,10 +373,10 @@ export default function ExamSchedulingAdmin() {
                         </td>
                         <td className="py-3 px-4">
                           <div className="text-sm">
-                            {startedDate.toLocaleDateString()}
+                            {startedDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {startedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {startedDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </td>
                         <td className="py-3 px-4">
