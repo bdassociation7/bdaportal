@@ -123,7 +123,7 @@ export default function MyCertifications() {
   };
 
   const handleShare = (certificate: UserCertificate) => {
-    const verificationUrl = `${window.location.origin}/verify/${certificate.credential_id}`;
+    const verificationUrl = `${window.location.origin}/public/verify/${certificate.credential_id}`;
 
     if (navigator.share) {
       navigator

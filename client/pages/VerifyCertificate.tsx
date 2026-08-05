@@ -144,7 +144,7 @@ function buildLinkedInUrl(v: CertificateVerification, credId: string): string {
     issueMonth:      v.issued_date ? String(new Date(v.issued_date).getMonth() + 1) : '',
     expirationYear:  v.expiry_date ? String(new Date(v.expiry_date).getFullYear()) : '',
     expirationMonth: v.expiry_date ? String(new Date(v.expiry_date).getMonth() + 1) : '',
-    certUrl: `${window.location.origin}/verify/${credId}`,
+    certUrl: `${window.location.origin}/public/verify/${credId}`,
     certId: credId,
   });
   return `https://www.linkedin.com/profile/add?${params.toString()}`;

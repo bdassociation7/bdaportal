@@ -516,7 +516,7 @@ export default function MyCertifications() {
                     })()}
                     <Button
                       variant="outline"
-                      onClick={() => window.open(`/verify/${cert.credential_id}`, '_blank')}
+                      onClick={() => window.open(`/public/verify/${cert.credential_id}`, '_blank')}
                       title={texts.verify}
                     >
                       <ExternalLink className="h-4 w-4 mr-2" />
