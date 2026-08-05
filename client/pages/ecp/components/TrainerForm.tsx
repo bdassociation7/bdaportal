@@ -11,17 +11,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UserCheck, AlertCircle, Award, Mail, Phone, Linkedin, FileText } from 'lucide-react';
+import { UserCheck, AlertCircle, Award, Mail, Phone, Linkedin, FileText, Send } from 'lucide-react';
 import type { CreateTrainerDTO, Trainer, CertificationType } from '@/entities/ecp';
 
 interface TrainerFormProps {
   initialData?: Trainer;
-  onSubmit: (data: CreateTrainerDTO) => Promise<void>;
+  onSubmit: (data: CreateTrainerDTO, sendInvite: boolean) => Promise<void>;
   onCancel: () => void;
   isSubmitting?: boolean;
+  showInviteOption?: boolean; // only shown on create, not edit
 }
 
-export function TrainerForm({ initialData, onSubmit, onCancel, isSubmitting }: TrainerFormProps) {
+export function TrainerForm({ initialData, onSubmit, onCancel, isSubmitting, showInviteOption }: TrainerFormProps) {
   const [formData, setFormData] = useState<CreateTrainerDTO>({
     first_name: initialData?.first_name || '',
     last_name: initialData?.last_name || '',
@@ -35,6 +36,7 @@ export function TrainerForm({ initialData, onSubmit, onCancel, isSubmitting }: T
   });
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [sendInvite, setSendInvite] = useState(true); // default: send invite
 
   const handleInputChange = (field: keyof CreateTrainerDTO, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -105,7 +107,7 @@ export function TrainerForm({ initialData, onSubmit, onCancel, isSubmitting }: T
       linkedin_url: formData.linkedin_url?.trim() || undefined,
     };
 
-    await onSubmit(cleanedData);
+    await onSubmit(cleanedData, sendInvite);
   };
 
   return (
@@ -325,10 +327,42 @@ export function TrainerForm({ initialData, onSubmit, onCancel, isSubmitting }: T
         </CardContent>
       </Card>
 
+      {/* Portal Invite Option — create only */}
+      {showInviteOption && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="send_invite"
+                checked={sendInvite}
+                onCheckedChange={(v) => setSendInvite(!!v)}
+                className="mt-0.5"
+              />
+              <div>
+                <label htmlFor="send_invite" className="text-sm font-semibold text-amber-900 cursor-pointer flex items-center gap-2">
+                  <Send className="h-4 w-4" />
+                  Send portal invite immediately after saving
+                </label>
+                <p className="text-xs text-amber-700 mt-1">
+                  The trainer will receive an email with a magic link to activate their account and access the Learning System with Instructor View.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Form Actions */}
       <div className="flex items-center gap-4">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving...' : initialData ? 'Update Trainer' : 'Add Trainer'}
+          {isSubmitting
+            ? 'Saving...'
+            : initialData
+              ? 'Update Trainer'
+              : sendInvite && showInviteOption
+                ? 'Add Trainer & Send Invite'
+                : 'Add Trainer'
+          }
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel

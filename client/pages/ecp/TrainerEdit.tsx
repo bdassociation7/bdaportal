@@ -19,7 +19,7 @@ export default function ECPTrainerEdit() {
   const { data: trainer, isLoading, error } = useTrainer(id!);
   const updateMutation = useUpdateTrainer();
 
-  const handleSubmit = async (data: CreateTrainerDTO) => {
+  const handleSubmit = async (data: CreateTrainerDTO, _sendInvite?: boolean) => {
     if (!id) return;
 
     const result = await updateMutation.mutateAsync({ id, dto: data });
