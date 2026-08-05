@@ -30,6 +30,10 @@ import {
   Target,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
+  KeyRound,
+  BookOpenCheck,
 } from 'lucide-react';
 
 // ─── Translations ─────────────────────────────────────────────────────────────
@@ -106,6 +110,78 @@ function difficultyLabel(level: string, isAR: boolean) {
   return <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${d.cls}`}>{t(d.key, false)}</span>;
 }
 
+// ─── Instructor Answer Key Panel ─────────────────────────────────────────────
+interface InstructorAnswerKeyProps {
+  question: PracticeQuestionWithAttempt;
+  isVisible: boolean;
+  onToggle: () => void;
+}
+
+function InstructorAnswerKey({ question, isVisible, onToggle }: InstructorAnswerKeyProps) {
+  const options: QuestionOption[] = question.options || [];
+  const correctOption = options.find((o) => o.id === question.correct_option_id);
+  const correctLabel = question.correct_option_id?.toUpperCase();
+
+  return (
+    <div className="mb-4 rounded-2xl border-2 border-amber-300 bg-amber-50 overflow-hidden shadow-sm">
+      {/* Header */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-amber-100 transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-amber-400 flex items-center justify-center">
+            <KeyRound className="w-4 h-4 text-white" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-bold text-amber-800">Instructor Answer Key</p>
+            <p className="text-xs text-amber-600">Visible to ECP partners only — not shown to trainees</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 text-amber-700 text-xs font-semibold">
+          {isVisible ? (
+            <><EyeOff className="w-4 h-4" /> Hide</>
+          ) : (
+            <><Eye className="w-4 h-4" /> Show</>
+          )}
+        </div>
+      </button>
+
+      {/* Content */}
+      {isVisible && (
+        <div className="px-4 pb-4 space-y-3">
+          {/* Correct Answer */}
+          <div className="bg-white rounded-xl border border-amber-200 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpenCheck className="w-4 h-4 text-green-600" />
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Correct Answer</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-lg bg-green-500 text-white font-bold text-base flex items-center justify-center flex-shrink-0">
+                {correctLabel}
+              </span>
+              <span className="text-sm font-semibold text-green-800 leading-snug">
+                {correctOption?.text || '—'}
+              </span>
+            </div>
+          </div>
+
+          {/* Rationale */}
+          {question.explanation && (
+            <div className="bg-white rounded-xl border border-amber-200 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <HelpCircle className="w-4 h-4 text-[#0f91e0]" />
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Rationale</span>
+              </div>
+              <p className="text-sm text-slate-700 leading-relaxed">{question.explanation}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Question View ────────────────────────────────────────────────────────────
 interface QuestionViewProps {
   question: PracticeQuestionWithAttempt;
@@ -113,9 +189,12 @@ interface QuestionViewProps {
   isAnswered: boolean;
   onSelectAnswer: (optionId: string) => void;
   onSubmitAnswer: () => void;
+  isInstructorMode?: boolean;
+  isAnswerKeyVisible?: boolean;
+  onToggleAnswerKey?: () => void;
 }
 
-function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, onSubmitAnswer }: QuestionViewProps) {
+function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, onSubmitAnswer, isInstructorMode, isAnswerKeyVisible, onToggleAnswerKey }: QuestionViewProps) {
   const options: QuestionOption[] = question.options || [];
   const isCorrect = selectedAnswer === question.correct_option_id;
 
@@ -123,6 +202,16 @@ function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, on
   const explanationText = question.explanation;
 
   return (
+    <div>
+      {/* Instructor Answer Key — ECP only, shown above the question */}
+      {isInstructorMode && onToggleAnswerKey !== undefined && (
+        <InstructorAnswerKey
+          question={question}
+          isVisible={isAnswerKeyVisible ?? false}
+          onToggle={onToggleAnswerKey}
+        />
+      )}
+
     <div className="bg-white rounded-2xl shadow-sm border border-[#dbeafe] overflow-hidden">
       {/* Question Header */}
       <div className="p-6 border-b border-[#f0f6ff]" style={{ background: 'linear-gradient(135deg, #f8faff 0%, #f0f6ff 100%)' }}>
@@ -206,6 +295,7 @@ function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, on
         </div>
       )}
     </div>
+    </div>
   );
 }
 
@@ -220,12 +310,23 @@ export function PracticeSession() {
     return location.pathname.startsWith('/ecp/') ? '/ecp/learning-system' : '/learning-system';
   }, [location.pathname]);
 
+  // Detect if the user is in ECP context (instructor mode)
+  const isInstructorMode = useMemo(() => {
+    return location.pathname.startsWith('/ecp/');
+  }, [location.pathname]);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [answeredQuestions, setAnsweredQuestions] = useState<Set<string>>(new Set());
   const [startTime] = useState(new Date());
   const [isCompleted, setIsCompleted] = useState(false);
   const [sessionResult, setSessionResult] = useState<PracticeSessionResult | null>(null);
+  // Instructor answer key visibility (per question, keyed by question ID)
+  const [answerKeyVisible, setAnswerKeyVisible] = useState<Record<string, boolean>>({});
+
+  const toggleAnswerKey = (questionId: string) => {
+    setAnswerKeyVisible((prev) => ({ ...prev, [questionId]: !prev[questionId] }));
+  };
 
   // Read certificationTarget from navigation state (passed by QuestionBankDashboard)
   const certificationTarget = (location.state as { certType?: 'CP' | 'SCP' } | null)?.certType;
@@ -395,6 +496,14 @@ export function PracticeSession() {
 
   return (
     <div className="min-h-screen bg-[#f0f6ff]">
+      {/* Instructor Mode Banner — ECP only */}
+      {isInstructorMode && (
+        <div className="bg-amber-400 text-amber-900 text-xs font-bold text-center py-1.5 px-4 flex items-center justify-center gap-2">
+          <KeyRound className="w-3.5 h-3.5" />
+          INSTRUCTOR MODE — Answer keys are visible. This view is exclusive to ECP partners and is not accessible to individual trainees.
+        </div>
+      )}
+
       {/* Sticky Header */}
       <div className="sticky top-0 z-20 border-b bg-white border-[#dbeafe] shadow-sm">
         <div className="container mx-auto px-6 py-3 max-w-4xl">
@@ -449,6 +558,9 @@ export function PracticeSession() {
             isAnswered={answeredQuestions.has(currentQuestion.id)}
             onSelectAnswer={handleSelectAnswer}
             onSubmitAnswer={handleSubmitAnswer}
+            isInstructorMode={isInstructorMode}
+            isAnswerKeyVisible={answerKeyVisible[currentQuestion.id] ?? false}
+            onToggleAnswerKey={() => toggleAnswerKey(currentQuestion.id)}
           />
         )}
 
