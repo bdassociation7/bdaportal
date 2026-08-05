@@ -46,6 +46,9 @@ export function DashboardRouter() {
       case 'pdp_pending':
         dashboardPath = '/partnership-pending';
         break;
+      case 'trainer':
+        dashboardPath = '/trainer/dashboard';
+        break;
       default:
         // Fallback pour rôles inconnus
         dashboardPath = '/individual/dashboard';

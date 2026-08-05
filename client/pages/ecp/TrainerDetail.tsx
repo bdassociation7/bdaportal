@@ -22,7 +22,11 @@ import {
   FileText,
   UserCheck,
   ExternalLink,
+  Send,
+  KeyRound,
 } from 'lucide-react';
+import { useState } from 'react';
+import { supabase } from '@/shared/config/supabase.config';
 import { useTrainer, useDeleteTrainer, useUpdateTrainer } from '@/entities/ecp';
 import type { TrainerStatus } from '@/entities/ecp';
 import { useCommonConfirms } from '@/hooks/use-confirm';
@@ -52,6 +56,36 @@ export default function ECPTrainerDetail() {
 
     if (!deleteMutation.isError) {
       navigate('/ecp/trainers');
+    }
+  };
+
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+
+  const handleSendInvite = async () => {
+    if (!id || !trainer) return;
+    setInviteLoading(true);
+    setInviteMessage(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/trainers/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ trainer_id: id }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setInviteMessage(json.already_active ? 'Trainer already has an active account.' : `Invitation sent to ${trainer.email}`);
+      } else {
+        setInviteMessage(`Error: ${json.error}`);
+      }
+    } catch (err: any) {
+      setInviteMessage('Failed to send invitation. Please try again.');
+    } finally {
+      setInviteLoading(false);
     }
   };
 
@@ -167,6 +201,18 @@ export default function ECPTrainerDetail() {
           </div>
           <div className="flex gap-2">
             <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendInvite}
+              disabled={inviteLoading || !!(trainer as any).user_id}
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              {(trainer as any).user_id
+                ? <><KeyRound className="h-4 w-4 mr-2" />Account Active</>
+                : <><Send className="h-4 w-4 mr-2" />{inviteLoading ? 'Sending...' : 'Send Invite'}</>
+              }
+            </Button>
+            <Button
               variant="secondary"
               size="sm"
               onClick={() => navigate(`/ecp/trainers/${id}/edit`)}
@@ -200,7 +246,7 @@ export default function ECPTrainerDetail() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                 <div>
                   <div className="text-sm text-gray-500 mb-1">Status</div>
                   <Badge className={`${STATUS_COLORS[trainer.status]} text-base`}>
@@ -213,7 +259,31 @@ export default function ECPTrainerDetail() {
                     {trainer.is_active ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
+                <div>
+                  <div className="text-sm text-gray-500 mb-1">Portal Account</div>
+                  <Badge
+                    className={`text-base ${
+                      (trainer as any).user_id
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : (trainer as any).invite_status === 'invited'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {(trainer as any).user_id
+                      ? 'Active Account'
+                      : (trainer as any).invite_status === 'invited'
+                        ? 'Invite Sent'
+                        : 'No Account'
+                    }
+                  </Badge>
+                </div>
               </div>
+              {inviteMessage && (
+                <p className={`mt-3 text-sm font-medium ${
+                  inviteMessage.startsWith('Error') ? 'text-red-600' : 'text-emerald-600'
+                }`}>{inviteMessage}</p>
+              )}
             </div>
           </CardContent>
         </Card>

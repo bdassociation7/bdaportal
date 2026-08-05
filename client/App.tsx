@@ -168,6 +168,10 @@ import UpgradePartnership from './pages/partner/UpgradePartnership';
 // Partnership Pending page (for ecp_pending / pdp_pending roles)
 import PartnershipPending from './pages/PartnershipPending';
 
+// Trainer pages
+import TrainerDashboard from './pages/trainer/TrainerDashboard';
+import TrainerAcceptInvite from './pages/trainer/AcceptInvite';
+
 // ECP Partner pages
 import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPLicense, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
 
@@ -269,6 +273,15 @@ const LearningSystemWrapper = () => (
         <LearningShell />
       </RoleGuard>
     </ProfileCompletionGuard>
+  </ProtectedRoute>
+);
+
+// Trainer routes wrapper - Learning shell with instructor access
+const TrainerWrapper = () => (
+  <ProtectedRoute>
+    <RoleGuard allowedRoles={['trainer']}>
+      <LearningShell />
+    </RoleGuard>
   </ProtectedRoute>
 );
 
@@ -391,6 +404,34 @@ const App = () => (
                     <PartnershipPending />
                   </ProtectedRoute>
                 } />
+
+                {/* Trainer Accept Invite - public (magic link lands here) */}
+                <Route path="/trainer/accept-invite" element={<TrainerAcceptInvite />} />
+
+                {/* Trainer Dashboard - protected, role = trainer */}
+                <Route path="/trainer/dashboard" element={
+                  <ProtectedRoute>
+                    <RoleGuard allowedRoles={['trainer']}>
+                      <TrainerDashboard />
+                    </RoleGuard>
+                  </ProtectedRoute>
+                } />
+
+                {/* Trainer Learning System routes */}
+                <Route element={<TrainerWrapper />}>
+                  <Route path="/trainer/learning-system" element={<LearningSystemDashboard />} />
+                  <Route path="/trainer/learning-system/training-kits" element={<MyCurriculum />} />
+                  <Route path="/trainer/learning-system/training-kits/module/:moduleId" element={<ModuleViewer />} />
+                  <Route path="/trainer/learning-system/training-kits/modules/:moduleId/lessons/:lessonId" element={<LessonViewer />} />
+                  <Route path="/trainer/learning-system/question-bank" element={<QuestionBankDashboard />} />
+                  <Route path="/trainer/learning-system/question-bank/:setId" element={<PracticeSession />} />
+                  <Route path="/trainer/learning-system/flashcards" element={<FlashcardsDashboard />} />
+                  <Route path="/trainer/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
+                  <Route path="/trainer/mock-exams" element={<MockExamList />} />
+                  <Route path="/trainer/mock-exams/:examId" element={<ExamDetail />} />
+                  <Route path="/trainer/mock-exams/:examId/take" element={<TakeExam />} />
+                  <Route path="/trainer/mock-exams/results/:attemptId" element={<ExamResults />} />
+                </Route>
 
                 {/* Profile Completion routes - protected but NO profile guard */}
                 <Route path="/individual/complete-profile" element={

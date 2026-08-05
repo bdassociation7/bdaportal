@@ -34,6 +34,7 @@ import {
   EyeOff,
   KeyRound,
   BookOpenCheck,
+  Monitor,
 } from 'lucide-react';
 
 // ─── Translations ─────────────────────────────────────────────────────────────
@@ -307,13 +308,21 @@ export function PracticeSession() {
   const { user } = useAuth();
 
   const basePath = useMemo(() => {
-    return location.pathname.startsWith('/ecp/') ? '/ecp/learning-system' : '/learning-system';
+    if (location.pathname.startsWith('/ecp/')) return '/ecp/learning-system';
+    if (location.pathname.startsWith('/trainer/')) return '/trainer/learning-system';
+    return '/learning-system';
   }, [location.pathname]);
 
-  // Detect if the user is in ECP context (instructor mode)
+  // Instructor mode: ECP partners and trainers both see answer keys
   const isInstructorMode = useMemo(() => {
-    return location.pathname.startsWith('/ecp/');
+    return location.pathname.startsWith('/ecp/') || location.pathname.startsWith('/trainer/');
   }, [location.pathname]);
+
+  // Presentation Mode: instructor mode but answer keys hidden (safe to share screen)
+  const searchParams = new URLSearchParams(location.search);
+  const [isPresentationMode, setIsPresentationMode] = useState(
+    searchParams.get('mode') === 'presentation'
+  );
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -496,11 +505,36 @@ export function PracticeSession() {
 
   return (
     <div className="min-h-screen bg-[#f0f6ff]">
-      {/* Instructor Mode Banner — ECP only */}
+      {/* Instructor / Presentation Mode Banner */}
       {isInstructorMode && (
-        <div className="bg-amber-400 text-amber-900 text-xs font-bold text-center py-1.5 px-4 flex items-center justify-center gap-2">
-          <KeyRound className="w-3.5 h-3.5" />
-          INSTRUCTOR MODE — Answer keys are visible. This view is exclusive to ECP partners and is not accessible to individual trainees.
+        <div className={`text-xs font-bold py-1.5 px-4 flex items-center justify-between gap-4 ${
+          isPresentationMode
+            ? 'bg-blue-600 text-white'
+            : 'bg-amber-400 text-amber-900'
+        }`}>
+          <div className="flex items-center gap-2">
+            {isPresentationMode
+              ? <Monitor className="w-3.5 h-3.5" />
+              : <KeyRound className="w-3.5 h-3.5" />
+            }
+            {isPresentationMode
+              ? 'PRESENTATION MODE — Answer keys are hidden. Safe to share your screen.'
+              : 'INSTRUCTOR MODE — Answer keys are visible. Not accessible to individual trainees.'
+            }
+          </div>
+          <button
+            onClick={() => setIsPresentationMode(p => !p)}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-lg border transition-colors ${
+              isPresentationMode
+                ? 'border-white/40 text-white hover:bg-white/10'
+                : 'border-amber-700/30 text-amber-900 hover:bg-amber-500'
+            }`}
+          >
+            {isPresentationMode
+              ? <><KeyRound className="w-3 h-3" /> Instructor View</>
+              : <><Monitor className="w-3 h-3" /> Presentation Mode</>
+            }
+          </button>
         </div>
       )}
 
@@ -558,7 +592,7 @@ export function PracticeSession() {
             isAnswered={answeredQuestions.has(currentQuestion.id)}
             onSelectAnswer={handleSelectAnswer}
             onSubmitAnswer={handleSubmitAnswer}
-            isInstructorMode={isInstructorMode}
+            isInstructorMode={isInstructorMode && !isPresentationMode}
             isAnswerKeyVisible={answerKeyVisible[currentQuestion.id] ?? false}
             onToggleAnswerKey={() => toggleAnswerKey(currentQuestion.id)}
           />
