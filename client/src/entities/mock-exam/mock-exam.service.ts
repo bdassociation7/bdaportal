@@ -517,13 +517,14 @@ export class MockExamService {
   /**
    * Get user's stats for a specific exam
    */
-  static async getExamStatsForUser(
+    static async getExamStatsForUser(
     examId: string
   ): Promise<{
     attempt_count: number;
     best_score: number | null;
     average_score: number | null;
     last_attempt_date: string | null;
+    last_attempt_id: string | null;
     user_has_passed: boolean;
   }> {
     try {
@@ -536,37 +537,36 @@ export class MockExamService {
           best_score: null,
           average_score: null,
           last_attempt_date: null,
+          last_attempt_id: null,
           user_has_passed: false,
         };
       }
-
       const { data: attempts } = await supabase
         .from('mock_exam_attempts')
-        .select('score, passed, completed_at')
+        .select('id, score, passed, completed_at')
         .eq('exam_id', examId)
         .eq('user_id', user.id)
         .order('completed_at', { ascending: false });
-
       if (!attempts || attempts.length === 0) {
         return {
           attempt_count: 0,
           best_score: null,
           average_score: null,
           last_attempt_date: null,
+          last_attempt_id: null,
           user_has_passed: false,
         };
       }
-
       const scores = attempts.map((a) => a.score);
       const bestScore = Math.max(...scores);
       const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
       const hasPassed = attempts.some((a) => a.passed);
-
       return {
         attempt_count: attempts.length,
         best_score: bestScore,
         average_score: avgScore,
         last_attempt_date: attempts[0].completed_at,
+        last_attempt_id: attempts[0].id,
         user_has_passed: hasPassed,
       };
     } catch (error) {
@@ -576,6 +576,7 @@ export class MockExamService {
         best_score: null,
         average_score: null,
         last_attempt_date: null,
+        last_attempt_id: null,
         user_has_passed: false,
       };
     }

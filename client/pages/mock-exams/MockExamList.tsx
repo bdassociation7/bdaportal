@@ -84,6 +84,8 @@ const translations = {
     readyToStart: 'Ready to Start',
     takeFirstAttempt: 'Take your first attempt and track your progress',
     retakeAvailable: 'Retake Available',
+    retakeExam: 'Retake Exam',
+    viewResults: 'View Results',
     // Premium CTA
     getAccessTitle: 'Get Access to Premium Mock Exams',
     getAccessDesc: 'Purchase from our online store to unlock full practice experience',
@@ -139,6 +141,8 @@ const translations = {
     readyToStart: 'جاهز للبدء',
     takeFirstAttempt: 'ابدأ محاولتك الأولى وتتبع تقدمك',
     retakeAvailable: 'إعادة الامتحان متاحة',
+    retakeExam: 'إعادة الامتحان',
+    viewResults: 'عرض النتائج',
     // Premium CTA
     getAccessTitle: 'احصل على وصول للامتحانات التجريبية المميزة',
     getAccessDesc: 'اشترِ من متجرنا الإلكتروني لفتح تجربة التدريب الكاملة',
@@ -158,10 +162,12 @@ const translations = {
 function ExamCard({
   exam,
   onClick,
+  onViewResults,
   texts,
 }: {
   exam: MockExamWithStats;
   onClick: () => void;
+  onViewResults: () => void;
   texts: typeof translations.en;
 }) {
   const getDifficultyVariant = (
@@ -272,8 +278,8 @@ function ExamCard({
 
         {/* Stats - has attempts */}
         {canTakeExam && exam.attempt_count !== undefined && exam.attempt_count > 0 && (
-          <div className="lg:w-64 rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="lg:w-64 rounded-lg border border-gray-200 bg-gray-50 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-[#0f91e0]" />
               <span className="text-sm font-semibold text-gray-700">{texts.yourProgress}</span>
             </div>
@@ -303,26 +309,36 @@ function ExamCard({
                   <span className="font-medium text-gray-900">{exam.average_score}%</span>
                 </div>
               )}
-              {exam.user_has_passed && (
-                <>
-                  <div className="flex items-center gap-1 text-sm text-green-600 pt-2 border-t">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="font-medium">{texts.passed}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-[#0f91e0] pt-2 border-t">
-                    <RotateCcw className="h-4 w-4" />
-                    <span className="font-medium">{texts.retakeAvailable}</span>
-                  </div>
-                </>
+              {exam.user_has_passed ? (
+                <div className="flex items-center gap-1 text-sm text-green-600 pt-2 border-t">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="font-medium">{texts.passed}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-sm text-red-600 pt-2 border-t">
+                  <XCircle className="h-4 w-4" />
+                  <span className="font-medium">{texts.notPassedYet}</span>
+                </div>
               )}
-              {!exam.user_has_passed &&
-                exam.attempt_count > 0 &&
-                exam.best_score !== null && (
-                  <div className="flex items-center gap-1 text-sm text-red-600 pt-2 border-t">
-                    <XCircle className="h-4 w-4" />
-                    <span className="font-medium">{texts.notPassedYet}</span>
-                  </div>
-                )}
+            </div>
+            {/* Action buttons */}
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); onClick(); }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#0f91e0] hover:bg-[#0d7bc4] text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                {texts.retakeExam}
+              </button>
+              {exam.last_attempt_id && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onViewResults(); }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 hover:border-[#0f91e0] hover:text-[#0f91e0] text-gray-700 text-sm font-medium rounded-lg transition-colors bg-white"
+                >
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  {texts.viewResults}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -532,6 +548,7 @@ export default function MockExamList() {
                       exam={exam}
                       texts={texts}
                       onClick={() => navigate(`${basePath}/${exam.id}`)}
+                      onViewResults={() => exam.last_attempt_id && navigate(`${basePath}/results/${exam.last_attempt_id}`)}
                     />
                   ))}
                 </div>
@@ -555,6 +572,7 @@ export default function MockExamList() {
                       exam={exam}
                       texts={texts}
                       onClick={() => navigate(`${basePath}/${exam.id}`)}
+                      onViewResults={() => exam.last_attempt_id && navigate(`${basePath}/results/${exam.last_attempt_id}`)}
                     />
                   ))}
                 </div>

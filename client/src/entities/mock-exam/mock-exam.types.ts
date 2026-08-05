@@ -201,6 +201,7 @@ export interface MockExamWithStats extends MockExam {
   best_score?: number;
   average_score?: number;
   last_attempt_date?: string;
+  last_attempt_id?: string;
   user_has_passed?: boolean;
   // Premium access info
   has_premium_access?: boolean;
