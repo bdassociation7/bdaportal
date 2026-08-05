@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,6 +12,10 @@ import {
   Circle,
   FileCheck,
   BookOpen,
+  Upload,
+  FileText,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -149,6 +153,14 @@ export default function ExamQuestionBank() {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [questionForm, setQuestionForm] = useState<QuestionForm>(defaultQuestionForm());
+
+  // Import from Word state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[] | null>(null);
+  const [importUnmapped, setImportUnmapped] = useState<string[]>([]);
+  const [importDifficulty, setImportDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [isCommitting, setIsCommitting] = useState(false);
 
   const currentTab = TABS.find((t) => t.key === activeTab)!;
 
@@ -420,6 +432,95 @@ export default function ExamQuestionBank() {
     }));
   };
 
+  // ─── Import from Word handlers ────────────────────────────────────────────
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.docx')) {
+      toast({ title: 'Invalid file', description: 'Please upload a .docx file', variant: 'destructive' });
+      return;
+    }
+    setIsImporting(true);
+    setImportPreview(null);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const res = await fetch('/api/exam-questions/import-docx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileBase64: base64,
+          certType: currentTab.certType,
+          examLanguage: currentTab.lang,
+          difficulty: importDifficulty,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+      setImportPreview(data.questions);
+      setImportUnmapped(data.unmapped_competencies || []);
+      toast({ title: `Parsed ${data.total} questions`, description: 'Review below then click Confirm Import.' });
+    } catch (err: any) {
+      toast({ title: 'Import Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCommitImport = async () => {
+    if (!importPreview || importPreview.length === 0) return;
+    setIsCommitting(true);
+    let successCount = 0;
+    let errorCount = 0;
+    try {
+      for (const q of importPreview) {
+        const { data: newQ, error: qErr } = await supabase
+          .from('certification_question_bank')
+          .insert({
+            certification_type: q.certification_type,
+            exam_language: q.exam_language,
+            question_text: q.exam_language === 'en' ? q.question_text : null,
+            question_text_ar: q.exam_language === 'ar' ? q.question_text : null,
+            question_type: 'multiple_choice',
+            bock_domain: q.bock_domain,
+            competency_section: q.competency_section,
+            competency_name: q.competency_name,
+            difficulty: q.difficulty,
+            points: 1,
+            is_active: true,
+          })
+          .select()
+          .single();
+        if (qErr || !newQ) { errorCount++; continue; }
+
+        const answers = q.answers.map((a: any, idx: number) => ({
+          question_id: newQ.id,
+          answer_text: q.exam_language === 'en' ? a.text : null,
+          answer_text_ar: q.exam_language === 'ar' ? a.text : null,
+          is_correct: a.letter === q.correct_answer,
+          order_index: idx,
+        }));
+        const { error: aErr } = await supabase
+          .from('certification_question_bank_answers')
+          .insert(answers);
+        if (aErr) { errorCount++; } else { successCount++; }
+      }
+      toast({
+        title: `Import Complete`,
+        description: `${successCount} questions imported successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}.`,
+        variant: errorCount > 0 ? 'destructive' : 'default',
+      });
+      setImportPreview(null);
+      setImportUnmapped([]);
+      queryClient.invalidateQueries({ queryKey: ['exam-question-bank', activeTab] });
+    } catch (err: any) {
+      toast({ title: 'Commit Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsCommitting(false);
+    }
+  };
+
   const tabColorClasses: Record<string, { tab: string; activeBg: string; badge: string }> = {
     blue: { tab: 'text-blue-600 border-blue-600', activeBg: 'bg-blue-50', badge: 'bg-blue-100 text-blue-700' },
     emerald: { tab: 'text-emerald-600 border-emerald-600', activeBg: 'bg-emerald-50', badge: 'bg-emerald-100 text-emerald-700' },
@@ -494,9 +595,41 @@ export default function ExamQuestionBank() {
         </nav>
       </div>
 
-      {/* Add Question Button */}
+      {/* Action Buttons */}
       {!isAddingQuestion && !editingQuestionId && (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Import from Word */}
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".docx"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <select
+              value={importDifficulty}
+              onChange={(e) => setImportDifficulty(e.target.value as any)}
+              className="text-sm border border-gray-300 rounded-md px-2 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isImporting}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              {isImporting ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Parsing...</>
+              ) : (
+                <><Upload className="h-4 w-4 mr-2" />Import from Word</>  
+              )}
+            </Button>
+          </div>
+          {/* Add Question */}
           <Button onClick={handleAddQuestion} className={cn(
             currentTab.color === 'blue' ? 'bg-blue-600 hover:bg-blue-700' :
             currentTab.color === 'emerald' ? 'bg-emerald-600 hover:bg-emerald-700' :
@@ -507,6 +640,71 @@ export default function ExamQuestionBank() {
             Add Question to {currentTab.label}
           </Button>
         </div>
+      )}
+
+      {/* Import Preview Panel */}
+      {importPreview && importPreview.length > 0 && (
+        <Card className="border-2 border-blue-400 shadow-md">
+          <CardHeader className="bg-blue-50 border-b border-blue-200 pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="h-6 w-6 text-blue-600" />
+                <div>
+                  <CardTitle className="text-lg text-blue-800">Import Preview — {importPreview.length} Questions</CardTitle>
+                  <p className="text-sm text-blue-600 mt-0.5">Review the parsed questions before importing to the database.</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setImportPreview(null); setImportUnmapped([]); }}>
+                  <X className="h-4 w-4 mr-1" />Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleCommitImport}
+                  disabled={isCommitting}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isCommitting ? (
+                    <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Importing...</>
+                  ) : (
+                    <><CheckCircle2 className="h-4 w-4 mr-1" />Confirm Import ({importPreview.length})</>
+                  )}
+                </Button>
+              </div>
+            </div>
+            {importUnmapped.length > 0 && (
+              <div className="mt-3 flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-md p-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-yellow-800">
+                  <strong>Unmapped competencies:</strong> {importUnmapped.join(', ')} — these will be imported as-is.
+                </p>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
+              {importPreview.map((q, idx) => (
+                <div key={idx} className="p-4 hover:bg-gray-50">
+                  <div className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">{idx + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 line-clamp-2">{q.question_text}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <Badge variant="outline" className="text-xs">{q.competency_name || 'Unknown'}</Badge>
+                        <Badge variant="outline" className={cn('text-xs', q.competency_section === 'behavioral' ? 'border-blue-300 text-blue-700' : 'border-green-300 text-green-700')}>
+                          {q.competency_section === 'behavioral' ? 'Behavioural' : 'Knowledge Based'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs border-gray-300 text-gray-600">{q.difficulty}</Badge>
+                        <span className="text-xs text-gray-500">✓ {q.correct_answer}</span>
+                        <span className="text-xs text-gray-400">{q.answers.length} answers</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Question Form (Add/Edit) - shown inline only for Add New */}

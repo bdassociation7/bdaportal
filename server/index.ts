@@ -11,6 +11,7 @@ import {
 } from "./routes/wordpress-sync-webhook";
 import { handleGenerateCertificate } from "./routes/certificate-generate";
 import { handleCredentialOG } from "./routes/credential-og";
+import { handleImportDocxQuestions } from "./routes/import-docx-questions";
 
 export function createServer() {
   const app = express();
@@ -46,6 +47,9 @@ export function createServer() {
   // These routes must be registered BEFORE the static SPA catch-all in node-build.ts
   app.get("/verify/:credentialId", handleCredentialOG);
   app.get("/public/verify/:credentialId", handleCredentialOG);
+
+  // DOCX question import — parses Word file and returns structured questions
+  app.post("/api/exam-questions/import-docx", handleImportDocxQuestions);
 
   return app;
 }
