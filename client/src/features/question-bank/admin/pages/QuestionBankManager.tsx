@@ -926,7 +926,7 @@ function QuestionSetDialog({
 
           {/* Competency Linkage - BDA BoCK Structure */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <h4 className="text-sm font-semibold text-blue-800 mb-3">BDA BoCK™ Structure Linkage</h4>
+            <h4 className="text-sm font-semibold text-blue-800 mb-3">BDA BoCK Structure Linkage</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>{texts.competencyModule}</Label>

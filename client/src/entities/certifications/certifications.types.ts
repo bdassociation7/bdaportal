@@ -1,6 +1,6 @@
 /**
  * Certifications Types
- * User earned certifications (BDA-CP™, BDA-SCP™)
+ * User earned certifications (BDA-CP, BDA-SCP)
  */
 
 export type CertificationStatus = 'active' | 'expired' | 'revoked' | 'suspended';

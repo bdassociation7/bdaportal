@@ -194,7 +194,7 @@ export default function CertificationExamsAdmin() {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            CP™ ({exams?.filter(e => e.certification_type === 'CP').length || 0})
+            CP ({exams?.filter(e => e.certification_type === 'CP').length || 0})
           </button>
           <button
             onClick={() => setTypeFilter('SCP')}
@@ -204,7 +204,7 @@ export default function CertificationExamsAdmin() {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            SCP™ ({exams?.filter(e => e.certification_type === 'SCP').length || 0})
+            SCP ({exams?.filter(e => e.certification_type === 'SCP').length || 0})
           </button>
         </div>
 
@@ -266,7 +266,7 @@ export default function CertificationExamsAdmin() {
                         : 'bg-purple-100 text-purple-800'
                     }`}
                   >
-                    BDA-{exam.certification_type}™
+                    BDA-{exam.certification_type}
                   </span>
                   {/* Language Badge */}
                   <span

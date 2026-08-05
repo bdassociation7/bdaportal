@@ -93,13 +93,13 @@ export default function ExamApplications() {
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-3xl font-bold text-blue-600">{counts.CP}</p>
-            <p className="text-sm text-gray-600">BDA-CP™ Vouchers</p>
+            <p className="text-sm text-gray-600">BDA-CP Vouchers</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-3xl font-bold text-purple-600">{counts.SCP}</p>
-            <p className="text-sm text-gray-600">BDA-SCP™ Vouchers</p>
+            <p className="text-sm text-gray-600">BDA-SCP Vouchers</p>
           </CardContent>
         </Card>
         <Card>
@@ -136,8 +136,8 @@ export default function ExamApplications() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Certification Types</SelectItem>
-                  <SelectItem value="CP">BDA-CP™ - BDA Certified Professional</SelectItem>
-                  <SelectItem value="SCP">BDA-SCP™ - BDA Senior Certified Professional</SelectItem>
+                  <SelectItem value="CP">BDA-CP - BDA Certified Professional</SelectItem>
+                  <SelectItem value="SCP">BDA-SCP - BDA Senior Certified Professional</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -223,7 +223,7 @@ export default function ExamApplications() {
                   Selected: <span className="font-mono">{selectedVoucher.code}</span>
                 </p>
                 <p className="text-sm text-gray-600">
-                  BDA-{selectedVoucher.certification_type}™ • {selectedVoucher.displayInfo.sourceLabel}
+                  BDA-{selectedVoucher.certification_type} • {selectedVoucher.displayInfo.sourceLabel}
                 </p>
               </div>
             </div>

@@ -492,7 +492,7 @@ export default function CertificationExamQuestionManager() {
                 Question Manager
               </h1>
               <Badge variant="outline" className="border-white/30 text-white bg-white/10">
-                BDA-{exam.certification_type}™ Certification
+                BDA-{exam.certification_type} Certification
               </Badge>
               <Badge variant="outline" className={examLanguage === 'ar' ? 'border-emerald-300 text-emerald-100 bg-emerald-500/20' : 'border-blue-300 text-blue-100 bg-blue-500/20'}>
                 {examLanguage === 'ar' ? '🇸🇦 Arabic Exam' : '🇬🇧 English Exam'}

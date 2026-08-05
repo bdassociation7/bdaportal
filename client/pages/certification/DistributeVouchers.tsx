@@ -2,7 +2,7 @@
  * DistributeVouchers Page
  *
  * Allows bulk distribution of exam vouchers.
- * Step 1: User selects Certification Type (BDA-CP™ / BDA-SCP™) + Language (Arabic / English)
+ * Step 1: User selects Certification Type (BDA-CP / BDA-SCP) + Language (Arabic / English)
  * Step 2: Available vouchers of that type/language are shown
  * Step 3: User enters recipient emails (max = available vouchers count)
  * Step 4: Distribution is done from the filtered pool only
@@ -41,12 +41,12 @@ interface DistributionResult {
 const CERT_OPTIONS: { value: CertificationType; label: string; description: string }[] = [
   {
     value: 'CP',
-    label: 'BDA-CP™',
+    label: 'BDA-CP',
     description: 'BDA Certified Professional',
   },
   {
     value: 'SCP',
-    label: 'BDA-SCP™',
+    label: 'BDA-SCP',
     description: 'BDA Senior Certified Professional',
   },
 ];

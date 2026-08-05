@@ -77,8 +77,8 @@ const translations = {
     pending: 'Pending',
     // No certification
     certificationRequired: 'Certification Required',
-    certificationRequiredDesc: 'You must hold an active BDA-CP™ or BDA-SCP™ certification to access the Recertification module.',
-    certificationRequiredCard: 'The Recertification module is available exclusively to certified BDA professionals. Earn your BDA-CP™ or BDA-SCP™ certification to access this feature.',
+    certificationRequiredDesc: 'You must hold an active BDA-CP or BDA-SCP certification to access the Recertification module.',
+    certificationRequiredCard: 'The Recertification module is available exclusively to certified BDA professionals. Earn your BDA-CP or BDA-SCP certification to access this feature.',
     learnAboutCertification: 'Learn About Certification',
     // Path selection
     choosePath: 'Choose Submission Path',
@@ -127,15 +127,15 @@ const translations = {
     renewalFeeRequired: 'Renewal fee payment required to complete recertification',
     viewCertification: 'View My Certification',
     // Summary cards
-    cpCredits: 'BDA-CP™ Credits',
-    scpCredits: 'BDA-SCP™ Credits',
+    cpCredits: 'BDA-CP Credits',
+    scpCredits: 'BDA-SCP Credits',
     last3Years: 'Last 3 years',
     approvedCredits: 'Approved Credits',
     pendingCredits: 'Pending Credits',
     totalEntries: 'Total Entries',
     activeForPdc: 'Active for PDC Tracking',
     inactiveForPdc: 'Inactive',
-    pdcNotCountedTowardThis: 'PDCs are counted toward BDA-SCP™ only',
+    pdcNotCountedTowardThis: 'PDCs are counted toward BDA-SCP only',
     // Table
     myPdcEntries: 'My PDC Entries',
     myPdcEntriesDesc: 'Track your submitted professional development activities',
@@ -180,8 +180,8 @@ const translations = {
     rejected: 'مرفوض',
     pending: 'قيد الانتظار',
     certificationRequired: 'الشهادة مطلوبة',
-    certificationRequiredDesc: 'يجب أن تكون حاملاً لشهادة BDA-CP™ أو BDA-SCP™ نشطة للوصول إلى وحدة إعادة الاعتماد.',
-    certificationRequiredCard: 'وحدة إعادة الاعتماد متاحة حصرياً لمحترفي BDA المعتمدين. احصل على شهادة BDA-CP™ أو BDA-SCP™ للوصول إلى هذه الميزة.',
+    certificationRequiredDesc: 'يجب أن تكون حاملاً لشهادة BDA-CP أو BDA-SCP نشطة للوصول إلى وحدة إعادة الاعتماد.',
+    certificationRequiredCard: 'وحدة إعادة الاعتماد متاحة حصرياً لمحترفي BDA المعتمدين. احصل على شهادة BDA-CP أو BDA-SCP للوصول إلى هذه الميزة.',
     learnAboutCertification: 'تعرف على الشهادة',
     choosePath: 'اختر مسار التقديم',
     choosePathDesc: 'حدد كيف حصلت على نقاط التطوير المهني',
@@ -224,15 +224,15 @@ const translations = {
     purchaseRenewal: 'شراء إعادة الاعتماد',
     renewalFeeRequired: 'مطلوب دفع رسوم التجديد لإكمال إعادة الاعتماد',
     viewCertification: 'عرض شهادتي',
-    cpCredits: 'نقاط BDA-CP™',
-    scpCredits: 'نقاط BDA-SCP™',
+    cpCredits: 'نقاط BDA-CP',
+    scpCredits: 'نقاط BDA-SCP',
     last3Years: 'آخر 3 سنوات',
     approvedCredits: 'النقاط المعتمدة',
     pendingCredits: 'النقاط المعلقة',
     totalEntries: 'إجمالي الإدخالات',
     activeForPdc: 'نشط لتتبع PDC',
     inactiveForPdc: 'غير نشط',
-    pdcNotCountedTowardThis: 'يتم احتساب نقاط PDC نحو BDA-SCP™ فقط',
+    pdcNotCountedTowardThis: 'يتم احتساب نقاط PDC نحو BDA-SCP فقط',
     myPdcEntries: 'إدخالات PDC الخاصة بي',
     myPdcEntriesDesc: 'تتبع أنشطة التطوير المهني المقدمة',
     activity: 'النشاط',
@@ -594,7 +594,7 @@ export default function PDCs() {
                 )}
               </div>
               <p className="text-sm text-slate-500">
-                {texts.pdcsCompleted(totalApprovedPDCs, 60)} — BDA-{activeCertificationType}™
+                {texts.pdcsCompleted(totalApprovedPDCs, 60)} — BDA-{activeCertificationType}
               </p>
             </div>
             <div className={`text-3xl font-bold ${needsRecertification ? 'text-[#0f91e0]' : 'text-[#0d1f4e]'}`}>
@@ -670,7 +670,7 @@ export default function PDCs() {
                   onClick={() => window.open(RECERTIFICATION_URLS[activeCertificationType], '_blank')}
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
-                  {texts.purchaseRenewal} — BDA-{activeCertificationType}™
+                  {texts.purchaseRenewal} — BDA-{activeCertificationType}
                 </Button>
                 <Button
                   variant="outline"
@@ -805,7 +805,7 @@ export default function PDCs() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="border-[#0f91e0]/30 text-[#0f91e0]">
-                          BDA-{entry.certification_type}™
+                          BDA-{entry.certification_type}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">{formatDate(entry.activity_date)}</TableCell>
@@ -875,7 +875,7 @@ export default function PDCs() {
             <div className="space-y-4 py-2">
               <div className="p-3 bg-[#f0f6ff] border border-[#dbeafe] rounded-lg">
                 <p className="text-sm text-[#1C4A8B]">
-                  <strong>{texts.certificationTypeLabel}:</strong> BDA-{activeCertificationType}™
+                  <strong>{texts.certificationTypeLabel}:</strong> BDA-{activeCertificationType}
                   <span className="ml-2 text-xs text-slate-500">{texts.autoDetected}</span>
                 </p>
               </div>
@@ -943,7 +943,7 @@ export default function PDCs() {
               {/* Cert type */}
               <div className="p-3 bg-[#f0f6ff] border border-[#dbeafe] rounded-lg">
                 <p className="text-sm text-[#1C4A8B]">
-                  <strong>{texts.certificationTypeLabel}:</strong> BDA-{activeCertificationType}™
+                  <strong>{texts.certificationTypeLabel}:</strong> BDA-{activeCertificationType}
                   <span className="ml-2 text-xs text-slate-500">{texts.autoDetected}</span>
                 </p>
               </div>

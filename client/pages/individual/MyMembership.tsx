@@ -106,7 +106,7 @@ const translations = {
     bdaBock: 'BDA BoCK®',
     bdaBockDesc: 'Access your exclusive books',
     certifications: 'Certifications',
-    certificationsDesc: 'View your BDA-CP™ and BDA-SCP™ credentials',
+    certificationsDesc: 'View your BDA-CP and BDA-SCP credentials',
     helpCenter: 'Help Center',
     helpCenterDesc: 'Get support and answers',
     // Toast
@@ -178,7 +178,7 @@ const translations = {
     bdaBock: 'BDA BoCK®',
     bdaBockDesc: 'الوصول إلى كتبك الحصرية',
     certifications: 'الشهادات',
-    certificationsDesc: 'عرض شهادات BDA-CP™ و BDA-SCP™',
+    certificationsDesc: 'عرض شهادات BDA-CP و BDA-SCP',
     helpCenter: 'مركز المساعدة',
     helpCenterDesc: 'احصل على الدعم والإجابات',
     // Toast

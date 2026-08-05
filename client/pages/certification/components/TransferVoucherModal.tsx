@@ -150,7 +150,7 @@ export function TransferVoucherModal({ voucher, open, onClose, onSuccess }: Tran
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Certification</span>
-            <Badge variant="outline">BDA-{voucher.certification_type}™</Badge>
+            <Badge variant="outline">BDA-{voucher.certification_type}</Badge>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Language</span>

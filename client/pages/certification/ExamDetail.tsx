@@ -26,8 +26,8 @@ import { cn } from '@/shared/utils/cn';
  */
 
 const CERTIFICATION_LABELS: Record<CertificationType, string> = {
-  CP: 'BDA Certified Professional (BDA-CP™)',
-  SCP: 'BDA Senior Certified Professional (BDA-SCP™)',
+  CP: 'BDA Certified Professional (BDA-CP)',
+  SCP: 'BDA Senior Certified Professional (BDA-SCP)',
 };
 
 const DIFFICULTY_LABELS: Record<DifficultyLevel, string> = {

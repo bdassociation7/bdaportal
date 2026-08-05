@@ -53,8 +53,8 @@ import { cn } from '@/shared/utils/cn';
  */
 
 const CERTIFICATION_LABELS: Record<CertificationType, string> = {
-  CP: 'BDA-CP™ - BDA Certified Professional',
-  SCP: 'BDA-SCP™ - BDA Senior Certified Professional',
+  CP: 'BDA-CP - BDA Certified Professional',
+  SCP: 'BDA-SCP - BDA Senior Certified Professional',
 };
 
 type FormMode = 'create' | 'edit' | null;
@@ -153,8 +153,8 @@ export default function CertificationProducts() {
       deleteConfirmTitle: 'Delete Certification Product',
       deleteConfirmDescription: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
       confirmDelete: 'Delete',
-      cpLabel: 'BDA-CP™ - BDA Certified Professional',
-      scpLabel: 'BDA-SCP™ - BDA Senior Certified Professional',
+      cpLabel: 'BDA-CP - BDA Certified Professional',
+      scpLabel: 'BDA-SCP - BDA Senior Certified Professional',
       examLanguage: 'Exam Language',
       examLanguageHelp: 'Language of the exam voucher (English or Arabic)',
       english: 'English',
@@ -223,8 +223,8 @@ export default function CertificationProducts() {
       deleteConfirmTitle: 'حذف منتج الشهادة',
       deleteConfirmDescription: 'هل أنت متأكد من حذف "{name}"؟ لا يمكن التراجع عن هذا الإجراء.',
       confirmDelete: 'حذف',
-      cpLabel: 'BDA-CP™ - محترف معتمد',
-      scpLabel: 'BDA-SCP™ - محترف معتمد أول',
+      cpLabel: 'BDA-CP - محترف معتمد',
+      scpLabel: 'BDA-SCP - محترف معتمد أول',
       examLanguage: 'لغة الامتحان',
       examLanguageHelp: 'لغة قسيمة الامتحان (الإنجليزية أو العربية)',
       english: 'الإنجليزية',
@@ -463,8 +463,8 @@ export default function CertificationProducts() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{texts.allTypes}</SelectItem>
-                  <SelectItem value="CP">BDA-CP™</SelectItem>
-                  <SelectItem value="SCP">BDA-SCP™</SelectItem>
+                  <SelectItem value="CP">BDA-CP</SelectItem>
+                  <SelectItem value="SCP">BDA-SCP</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -558,7 +558,7 @@ export default function CertificationProducts() {
                       <div className="p-3 bg-gray-50 rounded-lg">
                         <div className="text-xs text-gray-600 mb-1">{texts.certification}</div>
                         <Badge variant="outline">
-                          {product.certification_type === 'CP' ? 'BDA-CP™' : 'BDA-SCP™'}
+                          {product.certification_type === 'CP' ? 'BDA-CP' : 'BDA-SCP'}
                         </Badge>
                       </div>
 
@@ -678,7 +678,7 @@ export default function CertificationProducts() {
               </Label>
               <Input
                 id="product-name"
-                placeholder="BDA Certification BDA-CP™ Book"
+                placeholder="BDA Certification BDA-CP Book"
                 value={formData.woocommerce_product_name}
                 onChange={(e) => setFormData({ ...formData, woocommerce_product_name: e.target.value })}
                 required

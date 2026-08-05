@@ -14,16 +14,16 @@ import type { CertificationType, DifficultyLevel, QuestionType } from '@/entitie
  * Certification type labels (English)
  */
 export const CERTIFICATION_TYPE_LABELS: Record<CertificationType, string> = {
-  CP: 'BDA Certified Professional (BDA-CP™)',
-  SCP: 'BDA Senior Certified Professional (BDA-SCP™)',
+  CP: 'BDA Certified Professional (BDA-CP)',
+  SCP: 'BDA Senior Certified Professional (BDA-SCP)',
 } as const;
 
 /**
  * Certification type labels (Arabic)
  */
 export const CERTIFICATION_TYPE_LABELS_AR: Record<CertificationType, string> = {
-  CP: 'محترف معتمد (BDA-CP™)',
-  SCP: 'محترف معتمد أول (BDA-SCP™)',
+  CP: 'محترف معتمد (BDA-CP)',
+  SCP: 'محترف معتمد أول (BDA-SCP)',
 } as const;
 
 /**
@@ -160,7 +160,7 @@ export const SCORE_THRESHOLDS = {
 // =============================================================================
 
 /**
- * BoCK™ domains for CP certification
+ * BoCK domains for CP certification
  */
 export const BOCK_DOMAINS_CP = [
   'Strategic Thinking',
@@ -174,7 +174,7 @@ export const BOCK_DOMAINS_CP = [
 ] as const;
 
 /**
- * BoCK™ domains for SCP certification
+ * BoCK domains for SCP certification
  */
 export const BOCK_DOMAINS_SCP = [
   ...BOCK_DOMAINS_CP,

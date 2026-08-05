@@ -250,8 +250,8 @@ export default function PDCValidation() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('pdcValidation.allCertifications')}</SelectItem>
-                  <SelectItem value="CP">BDA-CP™</SelectItem>
-                  <SelectItem value="SCP">BDA-SCP™</SelectItem>
+                  <SelectItem value="CP">BDA-CP</SelectItem>
+                  <SelectItem value="SCP">BDA-SCP</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -309,7 +309,7 @@ export default function PDCValidation() {
                         {ACTIVITY_TYPE_LABELS[entry.activity_type]}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">BDA-{entry.certification_type}™</Badge>
+                        <Badge variant="outline">BDA-{entry.certification_type}</Badge>
                       </TableCell>
                       <TableCell className="text-sm">{formatDate(entry.activity_date)}</TableCell>
                       <TableCell>
@@ -408,7 +408,7 @@ export default function PDCValidation() {
                 </div>
                 <div>
                   <span className="text-sm font-medium">{t('pdcValidation.certification')}:</span>{' '}
-                  <Badge variant="outline">BDA-{reviewingEntry.certification_type}™</Badge>
+                  <Badge variant="outline">BDA-{reviewingEntry.certification_type}</Badge>
                 </div>
                 <div>
                   <span className="text-sm font-medium">{t('pdcValidation.activityDate')}:</span>{' '}

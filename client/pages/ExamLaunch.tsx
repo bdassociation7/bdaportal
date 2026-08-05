@@ -458,7 +458,7 @@ export default function ExamLaunch() {
           <CardHeader>
             <CardTitle>{quiz.title}</CardTitle>
             <CardDescription>
-              BDA-{quiz.certification_type}™ Certification Exam
+              BDA-{quiz.certification_type} Certification Exam
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

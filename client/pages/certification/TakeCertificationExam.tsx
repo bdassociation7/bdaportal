@@ -624,7 +624,7 @@ export default function TakeCertificationExam() {
     en: {
       // Header
       title: 'Certification Exams',
-      subtitle: 'Take official certification exams to earn your BDA-CP™ or BDA-SCP™ credential',
+      subtitle: 'Take official certification exams to earn your BDA-CP or BDA-SCP credential',
       // No Voucher Mode
       selectVoucherTitle: 'Select a Voucher to Continue',
       selectVoucherDesc: 'To take an official certification exam, you need to select an active voucher first. Your vouchers can be obtained from purchasing certification books or through ECP partners.',
@@ -698,7 +698,7 @@ export default function TakeCertificationExam() {
     ar: {
       // Header
       title: 'امتحانات الشهادات',
-      subtitle: 'أدِّ امتحانات الشهادات الرسمية للحصول على اعتماد BDA-CP™ أو BDA-SCP™',
+      subtitle: 'أدِّ امتحانات الشهادات الرسمية للحصول على اعتماد BDA-CP أو BDA-SCP',
       // No Voucher Mode
       selectVoucherTitle: 'اختر قسيمة للمتابعة',
       selectVoucherDesc: 'لأداء امتحان شهادة رسمي، تحتاج إلى اختيار قسيمة صالحة أولاً. يمكنك الحصول على قسائمك من شراء كتب الشهادات أو من خلال شركاء ECP.',
@@ -1124,7 +1124,7 @@ export default function TakeCertificationExam() {
                       : 'bg-purple-100 text-purple-800'
                   }
                 >
-                  BDA-{selectedVoucher.certification_type}™
+                  BDA-{selectedVoucher.certification_type}
                 </Badge>
               </div>
               <div>
@@ -1222,7 +1222,7 @@ export default function TakeCertificationExam() {
                           : 'bg-purple-100 text-purple-800 border-purple-300'
                       }
                     >
-                      BDA-{exam.certification_type}™ {texts.certification}
+                      BDA-{exam.certification_type} {texts.certification}
                     </Badge>
 
                     {/* User Status Badge */}
@@ -1415,7 +1415,7 @@ export default function TakeCertificationExam() {
                               : 'bg-purple-100 text-purple-800'
                           }
                         >
-                          BDA-{attempt.quiz?.certification_type}™
+                          BDA-{attempt.quiz?.certification_type}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">

@@ -524,7 +524,7 @@ export default function ECPVouchers() {
                             : "bg-purple-50 text-purple-700"
                         }
                       >
-                        BDA-{voucher.certification_type}™
+                        BDA-{voucher.certification_type}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -632,7 +632,7 @@ export default function ECPVouchers() {
                       : "bg-purple-100 text-purple-700 mt-2"
                   }
                 >
-                  BDA-{selectedVoucher.certification_type}™ {texts.certification}
+                  BDA-{selectedVoucher.certification_type} {texts.certification}
                 </Badge>
               </div>
 

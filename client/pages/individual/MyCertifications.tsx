@@ -22,7 +22,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * My Certifications Page
- * Displays user's earned certifications (BDA-CP™, BDA-SCP™)
+ * Displays user's earned certifications (BDA-CP, BDA-SCP)
  */
 
 const translations = {
@@ -334,8 +334,8 @@ export default function MyCertifications() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{texts.allTypes}</SelectItem>
-                  <SelectItem value="CP">BDA-CP™</SelectItem>
-                  <SelectItem value="SCP">BDA-SCP™</SelectItem>
+                  <SelectItem value="CP">BDA-CP</SelectItem>
+                  <SelectItem value="SCP">BDA-SCP</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -394,7 +394,7 @@ export default function MyCertifications() {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-xl">
-                        BDA-{cert.certification_type}™ {texts.certification}
+                        BDA-{cert.certification_type} {texts.certification}
                       </CardTitle>
                       <p className="text-sm text-gray-500 mt-1">
                         {texts.credentialId}: <span className="font-mono font-semibold">{cert.credential_id}</span>

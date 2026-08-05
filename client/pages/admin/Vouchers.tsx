@@ -62,8 +62,8 @@ import { UserLookupService } from '@/entities/auth/user-lookup.service';
  */
 
 const CERTIFICATION_LABELS: Record<CertificationType, string> = {
-  CP: 'BDA-CP™',
-  SCP: 'BDA-SCP™',
+  CP: 'BDA-CP',
+  SCP: 'BDA-SCP',
 };
 
 const STATUS_COLORS: Record<VoucherStatus, string> = {
@@ -145,8 +145,8 @@ export default function Vouchers() {
       userEmail: 'User Email',
       userEmailPlaceholder: 'user@example.com',
       userEmailHelp: 'The email address of the user receiving this voucher',
-      cpLabel: 'BDA-CP™ - BDA Certified Professional',
-      scpLabel: 'BDA-SCP™ - BDA Senior Certified Professional',
+      cpLabel: 'BDA-CP - BDA Certified Professional',
+      scpLabel: 'BDA-SCP - BDA Senior Certified Professional',
       linkedQuiz: 'Linked Quiz (Optional)',
       linkedQuizPlaceholder: 'Any quiz of this type',
       linkedQuizHelp: 'Leave empty to allow any quiz of the selected certification type',
@@ -246,8 +246,8 @@ export default function Vouchers() {
       userEmail: 'البريد الإلكتروني للمستخدم',
       userEmailPlaceholder: 'user@example.com',
       userEmailHelp: 'عنوان البريد الإلكتروني للمستخدم الذي سيستلم هذه القسيمة',
-      cpLabel: 'BDA-CP™ - محترف معتمد',
-      scpLabel: 'BDA-SCP™ - محترف معتمد أول',
+      cpLabel: 'BDA-CP - محترف معتمد',
+      scpLabel: 'BDA-SCP - محترف معتمد أول',
       linkedQuiz: 'الاختبار المرتبط (اختياري)',
       linkedQuizPlaceholder: 'أي اختبار من هذا النوع',
       linkedQuizHelp: 'اتركه فارغاً للسماح بأي اختبار من نوع الشهادة المحدد',
@@ -737,8 +737,8 @@ export default function Vouchers() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{texts.allTypes}</SelectItem>
-                  <SelectItem value="CP">BDA-CP™</SelectItem>
-                  <SelectItem value="SCP">BDA-SCP™</SelectItem>
+                  <SelectItem value="CP">BDA-CP</SelectItem>
+                  <SelectItem value="SCP">BDA-SCP</SelectItem>
                 </SelectContent>
               </Select>
             </div>

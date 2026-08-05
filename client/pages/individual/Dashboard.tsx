@@ -305,7 +305,7 @@ export default function IndividualDashboard() {
       icon: Award,
       color: "text-royal-600",
       bgColor: "bg-royal-100",
-      subtitle: `${certStats?.cp_certifications || 0} BDA-CP™, ${certStats?.scp_certifications || 0} BDA-SCP™`,
+      subtitle: `${certStats?.cp_certifications || 0} BDA-CP, ${certStats?.scp_certifications || 0} BDA-SCP`,
       onClick: () => navigate('/my-certifications')
     },
     {
@@ -378,8 +378,8 @@ export default function IndividualDashboard() {
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-amber-900">
                 {language === 'ar'
-                  ? `🎉 تهانينا! شهادة BDA-${cert.certification_type}™ قيد الإعداد`
-                  : `🎉 Congratulations! Your BDA-${cert.certification_type}™ certificate is being prepared`}
+                  ? `🎉 تهانينا! شهادة BDA-${cert.certification_type} قيد الإعداد`
+                  : `🎉 Congratulations! Your BDA-${cert.certification_type} certificate is being prepared`}
               </p>
               <p className="text-sm text-amber-700 mt-0.5">
                 {language === 'ar'
@@ -502,7 +502,7 @@ export default function IndividualDashboard() {
                       <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-orange-900">
-                          BDA-{cert.certification_type}™ {t('dashboard.individual.expiringSoon')}
+                          BDA-{cert.certification_type} {t('dashboard.individual.expiringSoon')}
                         </p>
                         <p className="text-xs text-orange-700 mt-1">
                           {daysUntilExpiry} {t('dashboard.individual.daysRemaining')}

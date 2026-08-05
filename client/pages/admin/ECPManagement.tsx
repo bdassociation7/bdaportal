@@ -1060,7 +1060,7 @@ export default function ECPManagement() {
                             {getPartnerName(request.partner)}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">BDA-{request.certification_type}™</Badge>
+                            <Badge variant="outline">BDA-{request.certification_type}</Badge>
                           </TableCell>
                           <TableCell>{request.quantity}</TableCell>
                           <TableCell>${request.total_amount?.toFixed(2) || '-'}</TableCell>
@@ -1242,7 +1242,7 @@ export default function ECPManagement() {
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600">Certification</p>
-                <p className="text-2xl font-bold">BDA-{selectedVoucherRequest?.certification_type}™</p>
+                <p className="text-2xl font-bold">BDA-{selectedVoucherRequest?.certification_type}</p>
               </div>
             </div>
 

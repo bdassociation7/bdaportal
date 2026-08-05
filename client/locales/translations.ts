@@ -501,8 +501,8 @@ export const translations = {
     'adminDashboard.creditsClaimed': 'Credits Claimed',
     'adminDashboard.creditsApproved': 'Credits Approved',
     'adminDashboard.byCertificationType': 'By Certification Type',
-    'adminDashboard.cpEntries': 'BDA-CP™ Entries',
-    'adminDashboard.scpEntries': 'BDA-SCP™ Entries',
+    'adminDashboard.cpEntries': 'BDA-CP Entries',
+    'adminDashboard.scpEntries': 'BDA-SCP Entries',
     'adminDashboard.quickInsights': 'Quick Insights',
     'adminDashboard.pdcReviews': 'PDC Reviews',
     'adminDashboard.newUsersThisMonth': 'New Users This Month',
@@ -627,7 +627,7 @@ export const translations = {
 
     // ============= Certification Exams =============
     'certificationExams.title': 'Certification Exams',
-    'certificationExams.subtitle': 'Manage official BDA-CP™ and BDA-SCP™ certification exams',
+    'certificationExams.subtitle': 'Manage official BDA-CP and BDA-SCP certification exams',
     'certificationExams.createNew': 'Create New Exam',
     'certificationExams.allExams': 'All Exams',
     'certificationExams.questions': 'Questions',
@@ -656,7 +656,7 @@ export const translations = {
 
     // ============= Certification Management =============
     'certMgmt.title': 'Certification Management',
-    'certMgmt.subtitle': 'Manage BDA-CP™ and BDA-SCP™ certifications',
+    'certMgmt.subtitle': 'Manage BDA-CP and BDA-SCP certifications',
     'certMgmt.searchPlaceholder': 'Search by credential ID...',
     'certMgmt.allTypes': 'All Types',
     'certMgmt.allStatus': 'All Status',
@@ -775,7 +775,7 @@ export const translations = {
 
     // ============= Curriculum Management =============
     'curriculum.title': 'Curriculum Modules',
-    'curriculum.subtitle': 'Manage all 14 BDA BoCK™ competency modules',
+    'curriculum.subtitle': 'Manage all 14 BDA BoCK competency modules',
     'curriculum.selectLanguage': 'Select Language',
     'curriculum.createModule': 'Create Module',
     'curriculum.sectionType': 'Section Type',
@@ -815,7 +815,7 @@ export const translations = {
 
     // ============= Lesson Management =============
     'lessons.title': 'Lesson Management',
-    'lessons.subtitle': 'Manage the 42 sub-competencies of the BDA BoCK™ framework',
+    'lessons.subtitle': 'Manage the 42 sub-competencies of the BDA BoCK framework',
     'lessons.newLesson': 'New Lesson',
     'lessons.totalLessons': 'Total Lessons',
     'lessons.withQuiz': 'With Quiz',
@@ -1599,8 +1599,8 @@ export const translations = {
     'adminDashboard.creditsClaimed': 'الاعتمادات المطالب بها',
     'adminDashboard.creditsApproved': 'الاعتمادات المعتمدة',
     'adminDashboard.byCertificationType': 'حسب نوع الشهادة',
-    'adminDashboard.cpEntries': 'إدخالات BDA-CP™',
-    'adminDashboard.scpEntries': 'إدخالات BDA-SCP™',
+    'adminDashboard.cpEntries': 'إدخالات BDA-CP',
+    'adminDashboard.scpEntries': 'إدخالات BDA-SCP',
     'adminDashboard.quickInsights': 'رؤى سريعة',
     'adminDashboard.pdcReviews': 'مراجعات PDC',
     'adminDashboard.newUsersThisMonth': 'المستخدمون الجدد هذا الشهر',
@@ -1725,7 +1725,7 @@ export const translations = {
 
     // ============= Certification Exams =============
     'certificationExams.title': 'امتحانات الشهادات',
-    'certificationExams.subtitle': 'إدارة امتحانات شهادات BDA-CP™ و BDA-SCP™ الرسمية',
+    'certificationExams.subtitle': 'إدارة امتحانات شهادات BDA-CP و BDA-SCP الرسمية',
     'certificationExams.createNew': 'إنشاء امتحان جديد',
     'certificationExams.allExams': 'جميع الامتحانات',
     'certificationExams.questions': 'الأسئلة',
@@ -1754,7 +1754,7 @@ export const translations = {
 
     // ============= Certification Management =============
     'certMgmt.title': 'إدارة الشهادات',
-    'certMgmt.subtitle': 'إدارة شهادات BDA-CP™ و BDA-SCP™',
+    'certMgmt.subtitle': 'إدارة شهادات BDA-CP و BDA-SCP',
     'certMgmt.searchPlaceholder': 'البحث برقم الاعتماد...',
     'certMgmt.allTypes': 'جميع الأنواع',
     'certMgmt.allStatus': 'جميع الحالات',
@@ -1873,7 +1873,7 @@ export const translations = {
 
     // ============= Curriculum Management =============
     'curriculum.title': 'وحدات المنهج',
-    'curriculum.subtitle': 'إدارة جميع وحدات الكفاءة الـ 14 في BDA BoCK™',
+    'curriculum.subtitle': 'إدارة جميع وحدات الكفاءة الـ 14 في BDA BoCK',
     'curriculum.selectLanguage': 'اختر اللغة',
     'curriculum.createModule': 'إنشاء وحدة',
     'curriculum.sectionType': 'نوع القسم',
@@ -1913,7 +1913,7 @@ export const translations = {
 
     // ============= Lesson Management =============
     'lessons.title': 'إدارة الدروس',
-    'lessons.subtitle': 'إدارة الكفاءات الفرعية الـ 42 في إطار BDA BoCK™',
+    'lessons.subtitle': 'إدارة الكفاءات الفرعية الـ 42 في إطار BDA BoCK',
     'lessons.newLesson': 'درس جديد',
     'lessons.totalLessons': 'إجمالي الدروس',
     'lessons.withQuiz': 'مع اختبار',

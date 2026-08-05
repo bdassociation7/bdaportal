@@ -125,7 +125,7 @@ function getCertLabel(certType: string | null): string {
   if (certType === 'SCP') return 'BDA-SCP® — Senior Certified Professional';
   if (certType === 'Basic Member') return 'BDA® Basic Member';
   if (certType === 'Professional Member') return 'BDA® Professional Member';
-  return `BDA-${certType}™`;
+  return `BDA-${certType}`;
 }
 
 function formatDate(dateString: string | null): string {

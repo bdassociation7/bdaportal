@@ -117,8 +117,8 @@ const FAQ_ITEMS: FAQItem[] = [
     category: 'certification',
     question: 'What is the difference between CP and SCP certifications?',
     questionAr: 'ما الفرق بين شهادتي CP و SCP؟',
-    answer: 'The Certified Professional (CP) is the foundational certification covering 8 BoCK™ domains. The Senior Certified Professional (SCP) is an advanced certification that includes all CP domains plus 4 additional advanced domains (Strategic Planning, Organisational Development, Change Management, and Advanced Leadership).',
-    answerAr: 'الاحترافي المعتمد (CP) هو الشهادة الأساسية التي تغطي 8 مجالات BoCK™. بينما الاحترافي المعتمد الأول (SCP) هو شهادة متقدمة تشمل جميع مجالات CP بالإضافة إلى 4 مجالات متقدمة إضافية (التخطيط الاستراتيجي، التطوير التنظيمي، إدارة التغيير، والقيادة المتقدمة).',
+    answer: 'The Certified Professional (CP) is the foundational certification covering 8 BoCK domains. The Senior Certified Professional (SCP) is an advanced certification that includes all CP domains plus 4 additional advanced domains (Strategic Planning, Organisational Development, Change Management, and Advanced Leadership).',
+    answerAr: 'الاحترافي المعتمد (CP) هو الشهادة الأساسية التي تغطي 8 مجالات BoCK. بينما الاحترافي المعتمد الأول (SCP) هو شهادة متقدمة تشمل جميع مجالات CP بالإضافة إلى 4 مجالات متقدمة إضافية (التخطيط الاستراتيجي، التطوير التنظيمي، إدارة التغيير، والقيادة المتقدمة).',
   },
   {
     id: '2',
@@ -197,16 +197,16 @@ const FAQ_ITEMS: FAQItem[] = [
     category: 'getting-started',
     question: 'I am new to BDA. Where should I start?',
     questionAr: 'أنا جديد في BDA. من أين أبدأ؟',
-    answer: 'Welcome to BDA! Start by: 1) Completing your profile, 2) Review the BoCK™ framework, 3) Explore certification paths (CP or SCP), 4) Take free practice quizzes, 5) Review exam preparation resources, 6) Join our community forums to connect with other professionals.',
-    answerAr: 'مرحبًا بك في BDA! ابدأ بـ: 1) إكمال ملفك الشخصي، 2) مراجعة إطار BoCK™، 3) استكشاف مسارات الشهادات (CP أو SCP)، 4) إجراء اختبارات تدريبية مجانية، 5) مراجعة موارد التحضير للامتحان، 6) انضم إلى منتديات مجتمعنا للتواصل مع المحترفين الآخرين.',
+    answer: 'Welcome to BDA! Start by: 1) Completing your profile, 2) Review the BoCK framework, 3) Explore certification paths (CP or SCP), 4) Take free practice quizzes, 5) Review exam preparation resources, 6) Join our community forums to connect with other professionals.',
+    answerAr: 'مرحبًا بك في BDA! ابدأ بـ: 1) إكمال ملفك الشخصي، 2) مراجعة إطار BoCK، 3) استكشاف مسارات الشهادات (CP أو SCP)، 4) إجراء اختبارات تدريبية مجانية، 5) مراجعة موارد التحضير للامتحان، 6) انضم إلى منتديات مجتمعنا للتواصل مع المحترفين الآخرين.',
   },
   {
     id: '12',
     category: 'getting-started',
     question: 'What study materials are available?',
     questionAr: 'ما هي المواد الدراسية المتاحة؟',
-    answer: 'BDA provides: Official BoCK™ Guide (digital and print), Practice exams, Video tutorials, Webinars, Case studies, and Study groups. All materials are available in the "Resources" section of your dashboard.',
-    answerAr: 'توفر BDA: دليل BoCK™ الرسمي (رقمي ومطبوع)، امتحانات تدريبية، دروس فيديو، ندوات عبر الإنترنت، دراسات حالة، ومجموعات دراسية. جميع المواد متاحة في قسم "الموارد" في لوحة التحكم الخاصة بك.',
+    answer: 'BDA provides: Official BoCK Guide (digital and print), Practice exams, Video tutorials, Webinars, Case studies, and Study groups. All materials are available in the "Resources" section of your dashboard.',
+    answerAr: 'توفر BDA: دليل BoCK الرسمي (رقمي ومطبوع)، امتحانات تدريبية، دروس فيديو، ندوات عبر الإنترنت، دراسات حالة، ومجموعات دراسية. جميع المواد متاحة في قسم "الموارد" في لوحة التحكم الخاصة بك.',
   },
 ];
 
@@ -449,7 +449,7 @@ export default function HelpCenter() {
             >
               <BookOpen className="h-8 w-8 text-blue-600 mb-3" />
               <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600">
-                {isArabic ? 'دليل BoCK™' : 'BoCK™ Guide'}
+                {isArabic ? 'دليل BoCK' : 'BoCK Guide'}
               </h3>
               <p className="text-sm text-gray-600 mb-3">
                 {isArabic ? 'الدليل الرسمي الكامل' : 'Complete official guide'}

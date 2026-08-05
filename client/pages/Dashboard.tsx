@@ -98,7 +98,7 @@ export default function Dashboard() {
             {/* BDA-CP Certification */}
             <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-blue-800">BDA-CP™</h3>
+                <h3 className="font-semibold text-blue-800">BDA-CP</h3>
                 <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">Certified Professional</span>
               </div>
               <p className="text-sm text-blue-700 mb-4">
@@ -112,7 +112,7 @@ export default function Dashboard() {
             {/* BDA-SCP Certification */}
             <div className="border border-green-200 rounded-lg p-4 bg-green-50">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-green-800">BDA-SCP™</h3>
+                <h3 className="font-semibold text-green-800">BDA-SCP</h3>
                 <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Senior Certified</span>
               </div>
               <p className="text-sm text-green-700 mb-4">
@@ -149,7 +149,7 @@ export default function Dashboard() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="border border-gray-200 rounded-lg p-4">
-                <h5 className="font-medium text-gray-900 mb-2">BDA BoCK™ Training</h5>
+                <h5 className="font-medium text-gray-900 mb-2">BDA BoCK Training</h5>
                 <p className="text-sm text-gray-600 mb-3">Business Development Body of Knowledge - Core Modules</p>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-green-600">15 PDCs</span>

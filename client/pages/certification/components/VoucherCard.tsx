@@ -80,7 +80,7 @@ export function VoucherCard({ voucher, isSelected, onSelect, disabled, onTransfe
               {displayInfo.statusLabel}
             </Badge>
             <Badge variant="outline" className="font-semibold">
-              BDA-{voucher.certification_type}™
+              BDA-{voucher.certification_type}
             </Badge>
           </div>
 
@@ -133,7 +133,7 @@ export function VoucherCard({ voucher, isSelected, onSelect, disabled, onTransfe
               <div className="flex items-center gap-1.5 mb-2">
                 <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                 <span className="text-xs text-green-700 font-medium">
-                  You are already BDA-{voucher.certification_type}™ certified
+                  You are already BDA-{voucher.certification_type} certified
                 </span>
               </div>
               <Button

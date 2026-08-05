@@ -809,7 +809,7 @@ export default function ECPDetails() {
                           <div className="grid grid-cols-4 gap-4">
                             <div>
                               <Label className="text-gray-500">Certification Type</Label>
-                              <Badge className="mt-1">BDA-{allocation.certification_type}™</Badge>
+                              <Badge className="mt-1">BDA-{allocation.certification_type}</Badge>
                             </div>
                             <div>
                               <Label className="text-gray-500">Total Vouchers</Label>

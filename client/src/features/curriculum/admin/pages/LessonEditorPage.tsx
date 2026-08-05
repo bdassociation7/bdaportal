@@ -439,7 +439,7 @@ export function LessonEditorPage() {
                       <FormLabel className="text-sm font-medium">Title *</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Ex: Introduction to BDA BoCK™ Framework"
+                          placeholder="Ex: Introduction to BDA BoCK Framework"
                           className="text-sm"
                           {...field}
                         />

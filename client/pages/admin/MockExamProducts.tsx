@@ -552,8 +552,8 @@ export default function MockExamProducts() {
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="CP">BDA-CP™</SelectItem>
-                      <SelectItem value="SCP">BDA-SCP™</SelectItem>
+                      <SelectItem value="CP">BDA-CP</SelectItem>
+                      <SelectItem value="SCP">BDA-SCP</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

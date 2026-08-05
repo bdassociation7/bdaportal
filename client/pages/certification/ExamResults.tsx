@@ -179,8 +179,8 @@ export default function ExamResults() {
             header_label: isPassed ? '🎉 Passed' : 'Not Passed',
             score_color: isPassed ? '#059669' : '#dc2626',
             result_message: isPassed
-              ? `Congratulations! You have successfully passed the BDA-${certType}™ certification exam with a score of ${score}%. Your certification has been issued and will be available for download within 14 days.`
-              : `Thank you for taking the BDA-${certType}™ certification exam. Your score of ${score}% did not meet the passing requirement of ${passingScore}%. We encourage you to review the competency areas and retake when ready.`,
+              ? `Congratulations! You have successfully passed the BDA-${certType} certification exam with a score of ${score}%. Your certification has been issued and will be available for download within 14 days.`
+              : `Thank you for taking the BDA-${certType} certification exam. Your score of ${score}% did not meet the passing requirement of ${passingScore}%. We encourage you to review the competency areas and retake when ready.`,
             next_steps: isPassed
               ? 'Your digital certificate will be available in your portal within 14 days. You will also receive a separate certificate issuance confirmation email.'
               : 'You can access study materials and mock exams through the BDA Learning System to prepare for your next attempt.',
@@ -288,11 +288,11 @@ export default function ExamResults() {
           <div className="flex-1">
             <h1 className="text-3xl font-bold flex items-center gap-2 mb-3">
               {passed ? <CheckCircle2 className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
-              {passed ? (isSCP ? 'Outstanding Achievement!' : 'Congratulations!') : (isSCP ? 'Thank you for completing the BDA-SCP™ Exam.' : 'Thank you for completing the BDA-CP™ Exam.')}
+              {passed ? (isSCP ? 'Outstanding Achievement!' : 'Congratulations!') : (isSCP ? 'Thank you for completing the BDA-SCP Exam.' : 'Thank you for completing the BDA-CP Exam.')}
             </h1>
             <p className="text-xl font-semibold mb-2">
               {passed
-                ? isSCP ? 'You have earned the BDA-SCP™ Senior Certified Professional Credential.' : 'You have successfully earned the BDA-CP™ Certification.'
+                ? isSCP ? 'You have earned the BDA-SCP Senior Certified Professional Credential.' : 'You have successfully earned the BDA-CP Certification.'
                 : isSCP ? 'Unfortunately, the required passing score was not achieved.' : 'Unfortunately, you did not meet the passing score this time.'}
             </p>
             <p className="text-base opacity-95">
@@ -359,7 +359,7 @@ export default function ExamResults() {
           <div>
             <div className="text-sm text-gray-600 mb-1">Certification</div>
             <Badge className={certificationType === 'CP' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'}>
-              BDA-{certificationType}™
+              BDA-{certificationType}
             </Badge>
           </div>
           <div>
@@ -540,7 +540,7 @@ export default function ExamResults() {
               <div className="flex-1">
                 <h3 className="font-semibold text-green-900 mb-1">What's Next?</h3>
                 <p className="text-sm text-green-800">
-                  Congratulations on earning your BDA-{certificationType}™ certification!
+                  Congratulations on earning your BDA-{certificationType} certification!
                   Your certification has been issued and you can view it in your dashboard.
                 </p>
               </div>

@@ -217,7 +217,7 @@ export default function CandidateExamReport() {
             <h1 className="text-2xl font-bold mb-1">{candidateName}</h1>
             <p className="text-sm opacity-80">{candidate.email}</p>
             <div className="flex items-center gap-3 mt-3">
-              <Badge className="bg-white/20 text-white border-white/30">BDA-{exam.certification_type}™</Badge>
+              <Badge className="bg-white/20 text-white border-white/30">BDA-{exam.certification_type}</Badge>
               {exam.exam_language && <Badge className="bg-white/20 text-white border-white/30">{exam.exam_language.toUpperCase()}</Badge>}
               <Badge className={cn('border', passed ? 'bg-green-500 text-white border-green-400' : 'bg-red-500 text-white border-red-400')}>
                 {passed ? '✓ PASSED' : '✗ NOT PASSED'}

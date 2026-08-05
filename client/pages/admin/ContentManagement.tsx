@@ -525,8 +525,8 @@ export default function ContentManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="general">{texts.generalAll}</SelectItem>
-                        <SelectItem value="CP">BDA-CP™</SelectItem>
-                        <SelectItem value="SCP">BDA-SCP™</SelectItem>
+                        <SelectItem value="CP">BDA-CP</SelectItem>
+                        <SelectItem value="SCP">BDA-SCP</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -754,8 +754,8 @@ export default function ContentManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="general">{texts.generalAll}</SelectItem>
-                        <SelectItem value="CP">BDA-CP™</SelectItem>
-                        <SelectItem value="SCP">BDA-SCP™</SelectItem>
+                        <SelectItem value="CP">BDA-CP</SelectItem>
+                        <SelectItem value="SCP">BDA-SCP</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -898,7 +898,7 @@ export default function ContentManagement() {
                         <TableCell>{language === 'ar' ? resource.category?.label_ar || resource.category?.label_en : resource.category?.label_en || '—'}</TableCell>
                         <TableCell>
                           {resource.certification_type ? (
-                            <Badge variant="outline">BDA-{resource.certification_type}™</Badge>
+                            <Badge variant="outline">BDA-{resource.certification_type}</Badge>
                           ) : (
                             <span className="text-sm text-muted-foreground">{texts.general}</span>
                           )}

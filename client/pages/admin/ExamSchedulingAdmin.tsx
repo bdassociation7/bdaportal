@@ -296,8 +296,8 @@ export default function ExamSchedulingAdmin() {
               className="appearance-none pl-4 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
             >
               <option value="all">{isRTL ? 'جميع الشهادات' : 'All Certifications'}</option>
-              <option value="CP">BDA-CP™</option>
-              <option value="SCP">BDA-SCP™</option>
+              <option value="CP">BDA-CP</option>
+              <option value="SCP">BDA-SCP</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           </div>
@@ -368,7 +368,7 @@ export default function ExamSchedulingAdmin() {
                         <td className="py-3 px-4">
                           <div className="font-medium">{attempt.quizzes?.title}</div>
                           <div className="text-sm text-gray-500">
-                            BDA-{attempt.quizzes?.certification_type}™
+                            BDA-{attempt.quizzes?.certification_type}
                           </div>
                         </td>
                         <td className="py-3 px-4">

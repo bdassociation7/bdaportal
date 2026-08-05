@@ -48,8 +48,8 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
       inactiveNote: 'The exam will be created in inactive state by default',
       addQuestionsNote: 'You need to add questions before activating the exam',
       activateNote: 'Once activated, candidates can take the exam',
-      cpCertNote: 'BDA-CP™ certification will be issued upon passing',
-      scpCertNote: 'SBDA-CP™ certification will be issued upon passing',
+      cpCertNote: 'BDA-CP certification will be issued upon passing',
+      scpCertNote: 'SBDA-CP certification will be issued upon passing',
       languageNote: 'Questions should be in the selected exam language only',
       // Buttons
       cancel: 'Cancel',
@@ -101,8 +101,8 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
       inactiveNote: 'سيتم إنشاء الامتحان في حالة غير نشطة افتراضياً',
       addQuestionsNote: 'تحتاج إلى إضافة أسئلة قبل تفعيل الامتحان',
       activateNote: 'بمجرد التفعيل، يمكن للمرشحين أداء الامتحان',
-      cpCertNote: 'سيتم إصدار شهادة BDA-CP™ عند النجاح',
-      scpCertNote: 'سيتم إصدار شهادة BDA-SCP™ عند النجاح',
+      cpCertNote: 'سيتم إصدار شهادة BDA-CP عند النجاح',
+      scpCertNote: 'سيتم إصدار شهادة BDA-SCP عند النجاح',
       languageNote: 'يجب أن تكون الأسئلة بلغة الامتحان المحددة فقط',
       // Buttons
       cancel: 'إلغاء',
@@ -272,7 +272,7 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
                     : 'border-gray-300 bg-white text-gray-700 hover:border-green-300'
                 }`}
               >
-                <div className="font-bold text-lg">BDA-CP™</div>
+                <div className="font-bold text-lg">BDA-CP</div>
                 <div className="text-sm mt-1">{texts.certifiedProfessional}</div>
               </button>
               <button
@@ -284,7 +284,7 @@ export default function CertificationExamForm({ exam, onClose }: CertificationEx
                     : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'
                 }`}
               >
-                <div className="font-bold text-lg">BDA-SCP™</div>
+                <div className="font-bold text-lg">BDA-SCP</div>
                 <div className="text-sm mt-1">{texts.seniorCertifiedProfessional}</div>
               </button>
             </div>

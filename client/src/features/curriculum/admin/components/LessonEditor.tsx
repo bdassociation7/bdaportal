@@ -318,7 +318,7 @@ export function LessonEditor({ lessonId, isOpen, onClose }: LessonEditorProps) {
                       <FormItem>
                         <FormLabel>Title *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex: Introduction to BDA BoCK™ Framework" {...field} />
+                          <Input placeholder="Ex: Introduction to BDA BoCK Framework" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
