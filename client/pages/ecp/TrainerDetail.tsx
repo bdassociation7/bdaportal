@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { supabase } from '@/shared/config/supabase.config';
+import { useAuthContext } from '@/app/providers/AuthProvider';
 import { useTrainer, useDeleteTrainer, useUpdateTrainer } from '@/entities/ecp';
 import type { TrainerStatus } from '@/entities/ecp';
 import { useCommonConfirms } from '@/hooks/use-confirm';
@@ -45,6 +46,7 @@ export default function ECPTrainerDetail() {
   const deleteMutation = useDeleteTrainer();
   const updateMutation = useUpdateTrainer();
   const { confirmDelete, confirm } = useCommonConfirms();
+  const { user } = useAuthContext();
 
   const handleDelete = async () => {
     if (!id) return;
@@ -103,6 +105,19 @@ export default function ECPTrainerDetail() {
 
     if (!confirmed) return;
 
+    // Use suspend_trainer_account which also updates the linked user account
+    if (user?.id) {
+      const { data: result } = await supabase.rpc('suspend_trainer_account', {
+        p_trainer_id: id,
+        p_caller_id: user.id,
+        p_suspend: trainer.is_active, // true = suspend (currently active), false = reactivate
+      });
+      if (!result?.success) {
+        console.error('Suspend failed:', result?.error);
+        return;
+      }
+    }
+    // Also refresh local cache via updateMutation
     await updateMutation.mutateAsync({
       id,
       dto: { is_active: !trainer.is_active },

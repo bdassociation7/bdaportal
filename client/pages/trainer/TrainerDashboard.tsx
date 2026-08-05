@@ -1,19 +1,71 @@
 /**
  * Trainer Dashboard
  * Landing page for trainers (role = 'trainer').
- * Shows quick access to Learning System (Instructor View) and Presentation Mode.
+ * - Shows partner organisation name (from ecp_trainers → partners)
+ * - Shows account status (active / suspended)
+ * - ECP partner and admin can suspend / reactivate the trainer account
  */
 
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Monitor, GraduationCap, KeyRound } from 'lucide-react';
+import { BookOpen, Monitor, GraduationCap, KeyRound, Building2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { supabase } from '@/shared/config/supabase.config';
 import { useAuthContext } from '@/app/providers/AuthProvider';
+
+interface TrainerContext {
+  trainer_id: string;
+  trainer_name: string;
+  is_active: boolean;
+  partner_id: string;
+  partner_name: string;
+  partner_country: string;
+  partner_city: string;
+}
 
 export default function TrainerDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthContext();
-  const name = user?.profile
+  const [ctx, setCtx] = useState<TrainerContext | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const displayName = user?.profile
     ? `${user.profile.first_name || ''} ${user.profile.last_name || ''}`.trim()
     : 'Trainer';
+
+  useEffect(() => {
+    async function loadContext() {
+      if (!user?.id) return;
+      const { data, error } = await supabase.rpc('get_trainer_context', { p_user_id: user.id });
+      if (!error && data && !data.error) {
+        setCtx(data as TrainerContext);
+      }
+      setLoading(false);
+    }
+    loadContext();
+  }, [user?.id]);
+
+  // If account is suspended, show a locked screen
+  if (!loading && ctx && !ctx.is_active) {
+    return (
+      <div className="min-h-screen bg-[#f0f6ff] flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-10 max-w-md w-full text-center">
+          <AlertTriangle className="w-14 h-14 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-[#0d1f4e] mb-2">Account Suspended</h2>
+          <p className="text-slate-500 text-sm mb-4">
+            Your trainer account has been suspended by <strong>{ctx.partner_name}</strong>.
+            Please contact your partner organisation for more information.
+          </p>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left">
+            <p className="text-xs text-slate-400 font-medium uppercase tracking-wide mb-1">Partner Organisation</p>
+            <p className="text-sm font-semibold text-[#0d1f4e]">{ctx.partner_name}</p>
+            {ctx.partner_city && (
+              <p className="text-xs text-slate-400 mt-0.5">{ctx.partner_city}{ctx.partner_country ? `, ${ctx.partner_country}` : ''}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f0f6ff]">
@@ -29,19 +81,48 @@ export default function TrainerDashboard() {
             />
             <div className="border-l border-[#dbeafe] pl-3">
               <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Trainer Portal</p>
-              <p className="text-sm font-bold text-[#0d1f4e]">{name}</p>
+              <p className="text-sm font-bold text-[#0d1f4e]">{displayName}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-lg">
-            <KeyRound className="w-3.5 h-3.5" />
-            Instructor Access
+
+          <div className="flex items-center gap-3">
+            {/* Partner badge */}
+            {ctx?.partner_name && (
+              <div className="flex items-center gap-2 bg-[#f0f6ff] border border-[#dbeafe] text-[#1C4A8B] text-xs font-semibold px-3 py-1.5 rounded-lg">
+                <Building2 className="w-3.5 h-3.5" />
+                {ctx.partner_name}
+              </div>
+            )}
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-lg">
+              <KeyRound className="w-3.5 h-3.5" />
+              Instructor Access
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Partner attribution banner */}
+      {ctx?.partner_name && (
+        <div className="bg-[#0d1f4e] text-white text-xs text-center py-2 px-4">
+          <span className="opacity-60">Authorised Trainer under </span>
+          <span className="font-semibold">{ctx.partner_name}</span>
+          {ctx.partner_city && (
+            <span className="opacity-60"> — {ctx.partner_city}{ctx.partner_country ? `, ${ctx.partner_country}` : ''}</span>
+          )}
+        </div>
+      )}
+
       {/* Main */}
       <div className="container mx-auto px-6 py-10 max-w-5xl">
-        <h1 className="text-2xl font-bold text-[#0d1f4e] mb-2">Welcome, {name}</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-bold text-[#0d1f4e]">Welcome, {displayName}</h1>
+          {ctx?.is_active && (
+            <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold">
+              <CheckCircle className="w-4 h-4" />
+              Account Active
+            </div>
+          )}
+        </div>
         <p className="text-slate-500 text-sm mb-8">
           Access the learning materials and prepare for your training sessions.
         </p>
