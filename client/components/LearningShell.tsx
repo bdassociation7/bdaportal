@@ -122,6 +122,7 @@ const IMMERSIVE_PATTERNS = [
   /\/training-kits\/modules?\//,
   /\/flashcards\/.+/,
   /\/question-bank\/.+/,
+  /\/learning-centre\//,
 ];
 
 function isImmersiveRoute(pathname: string): boolean {
@@ -325,8 +326,17 @@ export function LearningShell() {
 
   // Base path
   const isECP = location.pathname.startsWith('/ecp/');
-  const basePath = isECP ? '/ecp/learning-system' : '/learning-system';
-  const backPath = isECP ? '/ecp/dashboard' : '/individual/dashboard';
+  const isInstructor = location.pathname.startsWith('/instructor/');
+  const basePath = isECP
+    ? '/ecp/learning-system'
+    : isInstructor
+    ? '/instructor/learning-system'
+    : '/learning-system';
+  const backPath = isECP
+    ? '/ecp/dashboard'
+    : isInstructor
+    ? '/instructor/dashboard'
+    : '/individual/dashboard';
 
   // Immersive mode
   const immersive = isImmersiveRoute(location.pathname);
