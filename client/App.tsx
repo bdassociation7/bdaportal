@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PortalLayout } from "@/components/PortalLayout";
 import { LearningSystemLayout } from "@/components/LearningSystemLayout";
 import { LearningShell } from "@/components/LearningShell";
+import { InstructorShell } from "@/components/InstructorShell";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { ProfileCompletionGuard } from "@/components/guards/ProfileCompletionGuard";
 import { RoleGuard } from "@/components/guards/RoleGuard";
@@ -417,17 +418,27 @@ const App = () => (
                 {/* Trainer Accept Invite - public (magic link lands here) */}
                 <Route path="/instructor/accept-invite" element={<TrainerAcceptInvite />} />
 
-                {/* Trainer Dashboard - protected, role = trainer */}
-                <Route path="/instructor/dashboard" element={
+                                {/* ── Instructor Portal — InstructorShell (navy sidebar + top bar) ── */}
+                <Route element={
                   <ProtectedRoute>
                     <RoleGuard allowedRoles={['trainer']}>
-                      <TrainerDashboard />
+                      <InstructorShell />
                     </RoleGuard>
                   </ProtectedRoute>
-                } />
+                }>
+                  {/* Dashboard */}
+                  <Route path="/instructor/dashboard" element={<TrainerDashboard />} />
 
-                {/* Trainer Learning System routes */}
-                {/* Instructor Learning System — with sidebar */}
+                  {/* Mock Exams */}
+                  <Route path="/instructor/mock-exams" element={<MockExamList />} />
+                  <Route path="/instructor/mock-exams/:examId" element={<ExamDetail />} />
+                  <Route path="/instructor/mock-exams/results/:attemptId" element={<ExamResults />} />
+
+                  {/* Learning Centre modules */}
+                  <Route path="/instructor/learning-centre/module/:moduleId" element={<TrainerModulePage />} />
+                </Route>
+
+                {/* Instructor Learning System — TrainerWrapper (LearningShell with navy sidebar) */}
                 <Route element={<TrainerWrapper />}>
                   <Route path="/instructor/learning-system" element={<LearningSystemDashboard />} />
                   <Route path="/instructor/learning-system/training-kits" element={<MyCurriculum />} />
@@ -439,25 +450,11 @@ const App = () => (
                   <Route path="/instructor/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
                 </Route>
 
-                {/* Instructor Mock Exams — standalone (no sidebar) */}
-                <Route element={
+                {/* Mock Exam Take — full screen (no shell) */}
+                <Route path="/instructor/mock-exams/:examId/take" element={
                   <ProtectedRoute>
                     <RoleGuard allowedRoles={['trainer']}>
-                      <Outlet />
-                    </RoleGuard>
-                  </ProtectedRoute>
-                }>
-                  <Route path="/instructor/mock-exams" element={<MockExamList />} />
-                  <Route path="/instructor/mock-exams/:examId" element={<ExamDetail />} />
-                  <Route path="/instructor/mock-exams/:examId/take" element={<TakeExam />} />
-                  <Route path="/instructor/mock-exams/results/:attemptId" element={<ExamResults />} />
-                </Route>
-
-                {/* Trainer Learning Centre - standalone (no sidebar) */}
-                <Route path="/instructor/learning-centre/module/:moduleId" element={
-                  <ProtectedRoute>
-                    <RoleGuard allowedRoles={['trainer']}>
-                      <TrainerModulePage />
+                      <TakeExam />
                     </RoleGuard>
                   </ProtectedRoute>
                 } />

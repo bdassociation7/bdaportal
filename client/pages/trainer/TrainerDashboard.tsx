@@ -18,19 +18,13 @@ import {
   KeyRound,
   Building2,
   AlertTriangle,
-  Award,
-  Clock,
   ShieldCheck,
   ChevronRight,
   BookMarked,
   ClipboardCheck,
   Layers,
   FileText,
-  CheckCircle,
-  LogOut,
   CheckCircle2,
-  Circle,
-  Lock,
   ArrowRight,
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
@@ -156,43 +150,7 @@ export default function TrainerDashboard() {
   const accreditationStatus = cert ? 'Active' : 'In Progress';
 
   return (
-    <div className="min-h-screen bg-[#f7f9fc]">
-
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo + Portal label */}
-          <div className="flex items-center gap-3">
-            <img src="/bda-logo.png" alt="BDA" className="h-8 object-contain"
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            <div className="border-l border-slate-200 pl-3">
-              <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">Business Development Association</p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#0B75C9]">Instructor Portal</p>
-            </div>
-          </div>
-
-          {/* Right: name + status + logout */}
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden md:block">
-              <p className="text-sm font-semibold text-[#082B63]">{displayName}</p>
-              <p className="text-[11px] text-slate-400">
-                BDA Certified Trainer — <span className={cert ? 'text-emerald-600' : 'text-[#0B75C9]'}>{accreditationStatus}</span>
-              </p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-[#0B75C9] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-              {initials}
-            </div>
-            <button
-              onClick={() => signOut?.()}
-              className="text-slate-300 hover:text-red-400 transition-colors"
-              title="Sign out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-[#f0f4f8] min-h-screen">
       {/* ── Main ───────────────────────────────────────────────────────────── */}
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
 
@@ -459,13 +417,7 @@ export default function TrainerDashboard() {
 
       </main>
 
-      {/* ── Footer ── */}
-      <footer className="border-t border-slate-200 bg-white mt-8">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <p className="text-xs text-slate-300">Business Development Association · Instructor Portal · {new Date().getFullYear()}</p>
-          {cert && <p className="text-xs text-slate-300 font-mono">{cert.instructor_id}</p>}
-        </div>
-      </footer>
+
     </div>
   );
 }
