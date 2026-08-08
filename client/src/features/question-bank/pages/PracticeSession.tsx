@@ -309,13 +309,13 @@ export function PracticeSession() {
 
   const basePath = useMemo(() => {
     if (location.pathname.startsWith('/ecp/')) return '/ecp/learning-system';
-    if (location.pathname.startsWith('/trainer/')) return '/trainer/learning-system';
+    if (location.pathname.startsWith('/instructor/')) return '/instructor/learning-system';
     return '/learning-system';
   }, [location.pathname]);
 
   // Instructor mode: ECP partners and trainers both see answer keys
   const isInstructorMode = useMemo(() => {
-    return location.pathname.startsWith('/ecp/') || location.pathname.startsWith('/trainer/');
+    return location.pathname.startsWith('/ecp/') || location.pathname.startsWith('/instructor/');
   }, [location.pathname]);
 
   // Presentation Mode: instructor mode but answer keys hidden (safe to share screen)

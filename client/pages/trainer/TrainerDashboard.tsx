@@ -271,7 +271,7 @@ export default function TrainerDashboard() {
               {modules.map((mod) => (
                 <button
                   key={mod.id}
-                  onClick={() => navigate(`/trainer/learning-centre/module/${mod.id}`)}
+                  onClick={() => navigate(`/instructor/learning-centre/module/${mod.id}`)}
                   className="bg-white rounded-xl border border-[#dbeafe] p-4 text-left hover:border-[#0f91e0] hover:shadow-sm transition-all group flex items-center gap-4"
                 >
                   <div className="w-9 h-9 rounded-xl bg-[#f0f6ff] border border-[#dbeafe] flex items-center justify-center flex-shrink-0 text-[#1C4A8B] font-bold text-sm group-hover:bg-[#0f91e0] group-hover:text-white group-hover:border-[#0f91e0] transition-colors">
@@ -294,7 +294,7 @@ export default function TrainerDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Instructor View */}
             <button
-              onClick={() => navigate('/trainer/learning-system/question-bank')}
+              onClick={() => navigate('/instructor/learning-system/question-bank')}
               className="bg-white rounded-2xl border-2 border-[#dbeafe] p-5 text-left hover:border-[#0f91e0] hover:shadow-md transition-all group"
             >
               <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center mb-3">
@@ -307,7 +307,7 @@ export default function TrainerDashboard() {
 
             {/* Presentation Mode */}
             <button
-              onClick={() => navigate('/trainer/learning-system/question-bank?mode=presentation')}
+              onClick={() => navigate('/instructor/learning-system/question-bank?mode=presentation')}
               className="bg-white rounded-2xl border-2 border-[#dbeafe] p-5 text-left hover:border-[#0f91e0] hover:shadow-md transition-all group"
             >
               <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mb-3">
@@ -320,7 +320,7 @@ export default function TrainerDashboard() {
 
             {/* Mock Exams */}
             <button
-              onClick={() => navigate('/trainer/mock-exams')}
+              onClick={() => navigate('/instructor/mock-exams')}
               className="bg-white rounded-2xl border-2 border-[#dbeafe] p-5 text-left hover:border-[#0f91e0] hover:shadow-md transition-all group"
             >
               <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center mb-3">

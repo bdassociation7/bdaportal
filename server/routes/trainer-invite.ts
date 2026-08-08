@@ -90,7 +90,7 @@ export async function handleTrainerInvite(req: Request, res: Response) {
 
     // Build accept URL
     const portalBase = process.env.PORTAL_URL || 'https://portal.bda-global.org';
-    const acceptUrl = `${portalBase}/trainer/accept-invite?token=${inviteRecord.token}`;
+    const acceptUrl = `${portalBase}/instructor/accept-invite?token=${inviteRecord.token}`;
 
     // Send magic link via Supabase Auth (creates user if not exists, sends email)
     const { error: magicError } = await supabaseAdmin.auth.admin.generateLink({

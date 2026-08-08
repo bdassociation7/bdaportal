@@ -47,7 +47,7 @@ export function DashboardRouter() {
         dashboardPath = '/partnership-pending';
         break;
       case 'trainer':
-        dashboardPath = '/trainer/dashboard';
+        dashboardPath = '/instructor/dashboard';
         break;
       default:
         // Fallback pour rôles inconnus

@@ -62,7 +62,7 @@ export default function TrainerAcceptInvite() {
         await supabase.auth.refreshSession();
 
         // Redirect to trainer dashboard after 2 seconds
-        setTimeout(() => navigate('/trainer/dashboard', { replace: true }), 2000);
+        setTimeout(() => navigate('/instructor/dashboard', { replace: true }), 2000);
       } catch (err: any) {
         setStatus('error');
         setMessage('An unexpected error occurred. Please try again.');

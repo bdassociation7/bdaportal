@@ -197,7 +197,7 @@ export default function TrainerModulePage() {
       <div className="min-h-screen bg-[#f0f6ff] flex items-center justify-center">
         <div className="text-center">
           <p className="text-slate-400 font-medium">Module not found</p>
-          <button onClick={() => navigate('/trainer/dashboard')} className="mt-3 text-[#0f91e0] text-sm font-semibold hover:underline">
+          <button onClick={() => navigate('/instructor/dashboard')} className="mt-3 text-[#0f91e0] text-sm font-semibold hover:underline">
             ← Back to Dashboard
           </button>
         </div>
@@ -211,7 +211,7 @@ export default function TrainerModulePage() {
       <div className="bg-white border-b border-[#dbeafe] shadow-sm">
         <div className="container mx-auto px-6 py-4 max-w-4xl flex items-center gap-4">
           <button
-            onClick={() => navigate('/trainer/dashboard')}
+            onClick={() => navigate('/instructor/dashboard')}
             className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-[#0f91e0] font-medium transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -329,7 +329,7 @@ export default function TrainerModulePage() {
         <div className="flex justify-between pt-4 border-t border-[#dbeafe]">
           {module.order_index > 1 ? (
             <button
-              onClick={() => navigate('/trainer/dashboard')}
+              onClick={() => navigate('/instructor/dashboard')}
               className="flex items-center gap-2 text-sm text-slate-400 hover:text-[#0f91e0] font-medium transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -339,7 +339,7 @@ export default function TrainerModulePage() {
             <div />
           )}
           <button
-            onClick={() => navigate('/trainer/dashboard')}
+            onClick={() => navigate('/instructor/dashboard')}
             className="text-sm text-[#0f91e0] font-semibold hover:underline"
           >
             All Modules →

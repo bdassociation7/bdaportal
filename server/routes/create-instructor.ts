@@ -144,7 +144,7 @@ export async function handleCreateInstructor(req: Request, res: Response) {
       type: 'magiclink',
       email: normalizedEmail,
       options: {
-        redirectTo: `${portalBase}/trainer/dashboard`,
+        redirectTo: `${portalBase}/instructor/dashboard`,
         data: {
           first_name: first_name.trim(),
           last_name: last_name.trim(),

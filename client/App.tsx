@@ -415,10 +415,10 @@ const App = () => (
                 } />
 
                 {/* Trainer Accept Invite - public (magic link lands here) */}
-                <Route path="/trainer/accept-invite" element={<TrainerAcceptInvite />} />
+                <Route path="/instructor/accept-invite" element={<TrainerAcceptInvite />} />
 
                 {/* Trainer Dashboard - protected, role = trainer */}
-                <Route path="/trainer/dashboard" element={
+                <Route path="/instructor/dashboard" element={
                   <ProtectedRoute>
                     <RoleGuard allowedRoles={['trainer']}>
                       <TrainerDashboard />
@@ -428,19 +428,19 @@ const App = () => (
 
                 {/* Trainer Learning System routes */}
                 <Route element={<TrainerWrapper />}>
-                  <Route path="/trainer/learning-system" element={<LearningSystemDashboard />} />
-                  <Route path="/trainer/learning-system/training-kits" element={<MyCurriculum />} />
-                  <Route path="/trainer/learning-system/training-kits/module/:moduleId" element={<ModuleViewer />} />
-                  <Route path="/trainer/learning-system/training-kits/modules/:moduleId/lessons/:lessonId" element={<LessonViewer />} />
-                  <Route path="/trainer/learning-system/question-bank" element={<QuestionBankDashboard />} />
-                  <Route path="/trainer/learning-system/question-bank/:setId" element={<PracticeSession />} />
-                  <Route path="/trainer/learning-system/flashcards" element={<FlashcardsDashboard />} />
-                  <Route path="/trainer/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
-                  <Route path="/trainer/mock-exams" element={<MockExamList />} />
-                  <Route path="/trainer/mock-exams/:examId" element={<ExamDetail />} />
-                  <Route path="/trainer/mock-exams/:examId/take" element={<TakeExam />} />
-                  <Route path="/trainer/mock-exams/results/:attemptId" element={<ExamResults />} />
-                  <Route path="/trainer/learning-centre/module/:moduleId" element={<TrainerModulePage />} />
+                  <Route path="/instructor/learning-system" element={<LearningSystemDashboard />} />
+                  <Route path="/instructor/learning-system/training-kits" element={<MyCurriculum />} />
+                  <Route path="/instructor/learning-system/training-kits/module/:moduleId" element={<ModuleViewer />} />
+                  <Route path="/instructor/learning-system/training-kits/modules/:moduleId/lessons/:lessonId" element={<LessonViewer />} />
+                  <Route path="/instructor/learning-system/question-bank" element={<QuestionBankDashboard />} />
+                  <Route path="/instructor/learning-system/question-bank/:setId" element={<PracticeSession />} />
+                  <Route path="/instructor/learning-system/flashcards" element={<FlashcardsDashboard />} />
+                  <Route path="/instructor/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
+                  <Route path="/instructor/mock-exams" element={<MockExamList />} />
+                  <Route path="/instructor/mock-exams/:examId" element={<ExamDetail />} />
+                  <Route path="/instructor/mock-exams/:examId/take" element={<TakeExam />} />
+                  <Route path="/instructor/mock-exams/results/:attemptId" element={<ExamResults />} />
+                  <Route path="/instructor/learning-centre/module/:moduleId" element={<TrainerModulePage />} />
                 </Route>
 
                 {/* Profile Completion routes - protected but NO profile guard */}
