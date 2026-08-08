@@ -440,8 +440,16 @@ const App = () => (
                   <Route path="/instructor/mock-exams/:examId" element={<ExamDetail />} />
                   <Route path="/instructor/mock-exams/:examId/take" element={<TakeExam />} />
                   <Route path="/instructor/mock-exams/results/:attemptId" element={<ExamResults />} />
-                  <Route path="/instructor/learning-centre/module/:moduleId" element={<TrainerModulePage />} />
                 </Route>
+
+                {/* Trainer Learning Centre - standalone (no sidebar) */}
+                <Route path="/instructor/learning-centre/module/:moduleId" element={
+                  <ProtectedRoute>
+                    <RoleGuard allowedRoles={['trainer']}>
+                      <TrainerModulePage />
+                    </RoleGuard>
+                  </ProtectedRoute>
+                } />
 
                 {/* Profile Completion routes - protected but NO profile guard */}
                 <Route path="/individual/complete-profile" element={
