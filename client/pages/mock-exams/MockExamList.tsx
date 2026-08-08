@@ -442,28 +442,68 @@ export default function MockExamList() {
   }, [exams]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Back button for ECP / Instructor */}
-        {backPath && (
-          <button
-            onClick={() => navigate(backPath)}
-            className="flex items-center gap-2 text-sm font-semibold text-[#0f91e0] hover:underline mb-4"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            {isInstructor ? 'Back to Instructor Dashboard' : 'Back to Dashboard'}
-          </button>
-        )}
-        {/* Page Header - BDA blue instead of gradient */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <BookOpen className="h-7 w-7 text-[#0f91e0]" />
-            {texts.title}
-          </h1>
-          <p className="mt-1 text-gray-500 text-sm">
-            {texts.subtitle}
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* ── Hero Section ─────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #0f91e0 0%, #0d1f4e 100%)' }}
+      >
+        {/* Decorative circles */}
+        <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/5" />
+        <div className="absolute -bottom-8 -left-8 w-40 h-40 rounded-full bg-white/5" />
+        <div className="absolute top-1/2 right-1/3 w-20 h-20 rounded-full bg-white/5" />
+
+        <div className="relative max-w-7xl mx-auto px-6 py-10">
+          {/* Back button */}
+          {backPath && (
+            <button
+              onClick={() => navigate(backPath)}
+              className="flex items-center gap-2 text-sm font-semibold text-white/70 hover:text-white mb-6 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              {isInstructor ? 'Back to Instructor Dashboard' : 'Back to Dashboard'}
+            </button>
+          )}
+
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center">
+                  <BookOpen className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-white/60 text-xs font-semibold uppercase tracking-widest">BDA Certification Preparation</p>
+                  <h1 className="text-2xl font-extrabold text-white leading-tight">{texts.title}</h1>
+                </div>
+              </div>
+              <p className="text-white/65 text-sm max-w-lg leading-relaxed">{texts.subtitle}</p>
+            </div>
+
+            {/* Stats */}
+            {exams && (
+              <div className="flex items-center gap-6 bg-white/10 border border-white/20 rounded-2xl px-6 py-4">
+                <div className="text-center">
+                  <p className="text-2xl font-extrabold text-white">{exams.length}</p>
+                  <p className="text-white/50 text-xs mt-0.5">Total Exams</p>
+                </div>
+                <div className="w-px h-10 bg-white/20" />
+                <div className="text-center">
+                  <p className="text-2xl font-extrabold text-white">{exams.filter(e => !e.is_premium).length}</p>
+                  <p className="text-white/50 text-xs mt-0.5">Free</p>
+                </div>
+                <div className="w-px h-10 bg-white/20" />
+                <div className="text-center">
+                  <p className="text-2xl font-extrabold text-white">{exams.filter(e => e.is_premium).length}</p>
+                  <p className="text-white/50 text-xs mt-0.5">Premium</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* ── Content ──────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Filters */}
         <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
