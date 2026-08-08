@@ -400,8 +400,11 @@ export default function MockExamList() {
   const [difficultyFilter, setDifficultyFilter] = useState<ExamDifficulty | 'all'>('all');
   const [languageFilter, setLanguageFilter] = useState<MockExamLanguage | 'all'>('all');
 
-  // Determine base path for navigation (ECP vs non-ECP routes)
-  const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : '/mock-exams';
+  // Determine base path for navigation (ECP vs Instructor vs Individual routes)
+  const isECP = location.pathname.startsWith('/ecp/');
+  const isInstructor = location.pathname.startsWith('/instructor/');
+  const basePath = isECP ? '/ecp/mock-exams' : isInstructor ? '/instructor/mock-exams' : '/mock-exams';
+  const backPath = isECP ? '/ecp/dashboard' : isInstructor ? '/instructor/dashboard' : null;
 
   const { data: exams, isLoading, error } = useActiveExams({
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
@@ -441,6 +444,16 @@ export default function MockExamList() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4">
+        {/* Back button for ECP / Instructor */}
+        {backPath && (
+          <button
+            onClick={() => navigate(backPath)}
+            className="flex items-center gap-2 text-sm font-semibold text-[#0f91e0] hover:underline mb-4"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            {isInstructor ? 'Back to Instructor Dashboard' : 'Back to Dashboard'}
+          </button>
+        )}
         {/* Page Header - BDA blue instead of gradient */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
