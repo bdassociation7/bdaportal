@@ -56,6 +56,7 @@ import AccreditedPrograms from "./pages/individual/AccreditedPrograms";
 import ProgramDetail from "./pages/public/ProgramDetail";
 import VerifyCertification from "./pages/individual/VerifyCertification";
 import VerifyCertificate from "./pages/VerifyCertificate";
+import InstructorRegistry from "./pages/public/InstructorRegistry";
 import { PublicPageLayout } from "./components/PublicPageLayout";
 import AuthDebug from "./pages/AuthDebug";
 import Settings from "./pages/settings/Settings";
@@ -380,6 +381,11 @@ const App = () => (
                 <Route path="/public/providers" element={
                   <PublicPageLayout>
                     <AuthorizedProviders />
+                  </PublicPageLayout>
+                } />
+                <Route path="/public/instructors" element={
+                  <PublicPageLayout>
+                    <InstructorRegistry />
                   </PublicPageLayout>
                 } />
                 <Route path="/public/verify" element={
