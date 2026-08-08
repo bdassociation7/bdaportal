@@ -71,7 +71,10 @@ function getRequiredFieldsForRole(role: string): readonly string[] {
     return INDIVIDUAL_REQUIRED_FIELDS;
   }
 
-  // Pour admin/super_admin, pas de vérification
+  // Pour admin/super_admin/trainer, pas de vérification
+  if (role === 'trainer') {
+    return [];
+  }
   return [];
 }
 
@@ -173,8 +176,8 @@ export function shouldRedirectToCompletion(
 ): boolean {
   if (!user) return false;
 
-  // Admin/Super Admin ne sont jamais redirigés
-  if (user.role === 'admin' || user.role === 'super_admin') {
+  // Admin/Super Admin/Trainer ne sont jamais redirigés vers la page de completion
+  if (user.role === 'admin' || user.role === 'super_admin' || user.role === 'trainer') {
     return false;
   }
 
