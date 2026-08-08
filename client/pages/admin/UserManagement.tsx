@@ -91,6 +91,7 @@ export default function UserManagement() {
       ecp: t('roles.ecpPartner'),
       pdp: t('roles.pdpPartner'),
       pdp_partner: t('roles.pdpPartner'), // Legacy role name
+      trainer: 'BDA Certified Instructor',
       admin: t('roles.admin'),
       super_admin: t('roles.superAdmin'),
     };
@@ -285,6 +286,7 @@ export default function UserManagement() {
                   <SelectItem value="individual">{getRoleLabel('individual')}</SelectItem>
                   <SelectItem value="ecp">{getRoleLabel('ecp')}</SelectItem>
                   <SelectItem value="pdp">{getRoleLabel('pdp')}</SelectItem>
+                  <SelectItem value="trainer">BDA Certified Instructor</SelectItem>
                   <SelectItem value="admin">{getRoleLabel('admin')}</SelectItem>
                   <SelectItem value="super_admin">{getRoleLabel('super_admin')}</SelectItem>
                 </SelectContent>
@@ -567,14 +569,15 @@ export default function UserManagement() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="individual">{getRoleLabel('individual')}</SelectItem>
-                    <SelectItem value="ecp">{getRoleLabel('ecp')}</SelectItem>
-                    <SelectItem value="pdp">{getRoleLabel('pdp')}</SelectItem>
-                    <SelectItem value="admin">{getRoleLabel('admin')}</SelectItem>
-                    <SelectItem value="super_admin">{getRoleLabel('super_admin')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                                      <SelectItem value="individual">{getRoleLabel('individual')}</SelectItem>
+                  <SelectItem value="ecp">{getRoleLabel('ecp')}</SelectItem>
+                  <SelectItem value="pdp">{getRoleLabel('pdp')}</SelectItem>
+                  <SelectItem value="trainer">BDA Certified Instructor</SelectItem>
+                  <SelectItem value="admin">{getRoleLabel('admin')}</SelectItem>
+                  <SelectItem value="super_admin">{getRoleLabel('super_admin')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
               <div>
                 <Label>{t('common.language')}</Label>

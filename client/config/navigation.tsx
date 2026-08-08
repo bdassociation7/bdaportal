@@ -163,6 +163,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'eco-blueprint', label: 'nav.admin.ecoBlueprint', path: '/admin/exams/eco-blueprint', icon: SlidersHorizontal },
     { id: 'voucher-tracking', label: 'nav.admin.voucherTracking', path: '/admin/voucher-tracking', icon: Ticket },
     { id: 'certifications', label: 'nav.admin.certifications', path: '/admin/certifications', icon: Award },
+    { id: 'instructors', label: 'BDA Certified Instructors', path: '/admin/instructors', icon: UserCheck },
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
 
     // Learning System Section
@@ -229,6 +230,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'eco-blueprint', label: 'nav.admin.ecoBlueprint', path: '/admin/exams/eco-blueprint', icon: SlidersHorizontal },
     { id: 'voucher-tracking', label: 'nav.admin.voucherTracking', path: '/admin/voucher-tracking', icon: Ticket },
     { id: 'certifications', label: 'nav.admin.certifications', path: '/admin/certifications', icon: Award },
+    { id: 'instructors', label: 'BDA Certified Instructors', path: '/admin/instructors', icon: UserCheck },
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
 
     // Learning System Section

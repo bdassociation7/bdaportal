@@ -151,6 +151,7 @@ import Communications from "./pages/admin/Communications";
 import SystemSettings from "./pages/admin/SystemSettings";
 import SecurityLogs from "./pages/admin/SecurityLogs";
 import TrainerManagement from "./pages/admin/TrainerManagement";
+import InstructorManagement from "./pages/admin/InstructorManagement";
 import LearningSystemProducts from "./pages/admin/LearningSystemProducts";
 import CertificateDesigner from "./pages/admin/CertificateDesigner";
 import ExamECOBlueprintManager from "./pages/admin/ExamECOBlueprintManager";
@@ -608,6 +609,7 @@ const App = () => (
                   <Route path="/admin/support/:id" element={<SupportTicketDetail />} />
                   <Route path="/admin/pdcs" element={<PDCValidation />} />
                   <Route path="/admin/trainers" element={<TrainerManagement />} />
+                  <Route path="/admin/instructors" element={<InstructorManagement />} />
                   <Route path="/admin/content" element={<ContentManagement />} />
                   <Route path="/admin/toolkit" element={<ToolkitManagement />} />
                   <Route path="/admin/learning-system-admin" element={<LearningSystemAdmin />} />
