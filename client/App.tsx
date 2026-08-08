@@ -427,6 +427,7 @@ const App = () => (
                 } />
 
                 {/* Trainer Learning System routes */}
+                {/* Instructor Learning System — with sidebar */}
                 <Route element={<TrainerWrapper />}>
                   <Route path="/instructor/learning-system" element={<LearningSystemDashboard />} />
                   <Route path="/instructor/learning-system/training-kits" element={<MyCurriculum />} />
@@ -436,6 +437,16 @@ const App = () => (
                   <Route path="/instructor/learning-system/question-bank/:setId" element={<PracticeSession />} />
                   <Route path="/instructor/learning-system/flashcards" element={<FlashcardsDashboard />} />
                   <Route path="/instructor/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
+                </Route>
+
+                {/* Instructor Mock Exams — standalone (no sidebar) */}
+                <Route element={
+                  <ProtectedRoute>
+                    <RoleGuard allowedRoles={['trainer']}>
+                      <Outlet />
+                    </RoleGuard>
+                  </ProtectedRoute>
+                }>
                   <Route path="/instructor/mock-exams" element={<MockExamList />} />
                   <Route path="/instructor/mock-exams/:examId" element={<ExamDetail />} />
                   <Route path="/instructor/mock-exams/:examId/take" element={<TakeExam />} />
