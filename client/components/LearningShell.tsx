@@ -123,6 +123,7 @@ const IMMERSIVE_PATTERNS = [
   /\/flashcards\/.+/,
   /\/question-bank\/.+/,
   /\/learning-centre\//,
+  /\/mock-exams/,
 ];
 
 function isImmersiveRoute(pathname: string): boolean {
