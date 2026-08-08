@@ -164,6 +164,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'voucher-tracking', label: 'nav.admin.voucherTracking', path: '/admin/voucher-tracking', icon: Ticket },
     { id: 'certifications', label: 'nav.admin.certifications', path: '/admin/certifications', icon: Award },
     { id: 'instructors', label: 'BDA Certified Instructors', path: '/admin/instructors', icon: UserCheck },
+    { id: 'trainer-learning-centre', label: 'Trainer Learning Centre', path: '/admin/trainer-learning-centre', icon: BookMarked },
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
 
     // Learning System Section
@@ -231,6 +232,7 @@ export const navigationConfig: NavigationConfig = {
     { id: 'voucher-tracking', label: 'nav.admin.voucherTracking', path: '/admin/voucher-tracking', icon: Ticket },
     { id: 'certifications', label: 'nav.admin.certifications', path: '/admin/certifications', icon: Award },
     { id: 'instructors', label: 'BDA Certified Instructors', path: '/admin/instructors', icon: UserCheck },
+    { id: 'trainer-learning-centre', label: 'Trainer Learning Centre', path: '/admin/trainer-learning-centre', icon: BookMarked },
     { id: 'exams', label: 'nav.admin.mockExams', path: '/admin/exams', icon: ClipboardCheck },
 
     // Learning System Section

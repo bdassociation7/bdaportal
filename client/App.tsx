@@ -153,6 +153,7 @@ import SystemSettings from "./pages/admin/SystemSettings";
 import SecurityLogs from "./pages/admin/SecurityLogs";
 import TrainerManagement from "./pages/admin/TrainerManagement";
 import InstructorManagement from "./pages/admin/InstructorManagement";
+import TrainerLearningCentreAdmin from "./pages/admin/TrainerLearningCentreAdmin";
 import LearningSystemProducts from "./pages/admin/LearningSystemProducts";
 import CertificateDesigner from "./pages/admin/CertificateDesigner";
 import ExamECOBlueprintManager from "./pages/admin/ExamECOBlueprintManager";
@@ -173,6 +174,7 @@ import PartnershipPending from './pages/PartnershipPending';
 // Trainer pages
 import TrainerDashboard from './pages/trainer/TrainerDashboard';
 import TrainerAcceptInvite from './pages/trainer/AcceptInvite';
+import TrainerModulePage from './pages/trainer/TrainerModulePage';
 
 // ECP Partner pages
 import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPLicense, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
@@ -438,6 +440,7 @@ const App = () => (
                   <Route path="/trainer/mock-exams/:examId" element={<ExamDetail />} />
                   <Route path="/trainer/mock-exams/:examId/take" element={<TakeExam />} />
                   <Route path="/trainer/mock-exams/results/:attemptId" element={<ExamResults />} />
+                  <Route path="/trainer/learning-centre/module/:moduleId" element={<TrainerModulePage />} />
                 </Route>
 
                 {/* Profile Completion routes - protected but NO profile guard */}
@@ -616,6 +619,7 @@ const App = () => (
                   <Route path="/admin/pdcs" element={<PDCValidation />} />
                   <Route path="/admin/trainers" element={<TrainerManagement />} />
                   <Route path="/admin/instructors" element={<InstructorManagement />} />
+                  <Route path="/admin/trainer-learning-centre" element={<TrainerLearningCentreAdmin />} />
                   <Route path="/admin/content" element={<ContentManagement />} />
                   <Route path="/admin/toolkit" element={<ToolkitManagement />} />
                   <Route path="/admin/learning-system-admin" element={<LearningSystemAdmin />} />
