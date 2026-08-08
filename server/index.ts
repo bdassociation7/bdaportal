@@ -13,6 +13,7 @@ import { handleGenerateCertificate } from "./routes/certificate-generate";
 import { handleCredentialOG } from "./routes/credential-og";
 import { handleImportDocxQuestions } from "./routes/import-docx-questions";
 import { handleTrainerInvite } from "./routes/trainer-invite";
+import { handleCreateInstructor } from "./routes/create-instructor";
 
 export function createServer() {
   const app = express();
@@ -54,6 +55,9 @@ export function createServer() {
 
   // Trainer invite — sends magic link to trainer email
   app.post("/api/trainers/invite", handleTrainerInvite);
+
+  // Create independent instructor — creates account + cert + sends invite in one step
+  app.post("/api/instructors/create", handleCreateInstructor);
 
   return app;
 }

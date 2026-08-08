@@ -105,8 +105,15 @@ export default function InstructorManagement() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isGrantOpen, setIsGrantOpen] = useState(false);
+  const [grantMode, setGrantMode] = useState<'existing' | 'new'>('existing');
   const [grantForm, setGrantForm] = useState({
+    // existing user
     email: '',
+    // new user
+    first_name: '',
+    last_name: '',
+    new_email: '',
+    // shared
     notes: '',
     approved_programmes: 'BDA Business Development Foundation,BDA-CP Preparation',
   });
@@ -155,57 +162,73 @@ export default function InstructorManagement() {
     setGrantError(null);
     setGrantLoading(true);
     try {
-      // Find user by email
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, email, first_name, last_name, role')
-        .eq('email', grantForm.email.trim().toLowerCase())
-        .single();
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (userError || !userData) {
-        setGrantError('No user found with this email address.');
-        return;
-      }
-
-      // Check if user has trainer role
-      if (userData.role !== 'trainer') {
-        setGrantError(`This user has role "${userData.role}". Please change their role to "BDA Certified Instructor" in User Management first.`);
-        return;
-      }
-
-      // Check if already has active cert
-      const { data: existing } = await supabase
-        .from('instructor_certifications')
-        .select('id, status')
-        .eq('user_id', userData.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      if (existing) {
-        setGrantError('This user already has an active instructor certification.');
-        return;
-      }
-
-      // Grant certification
-      const programmes = grantForm.approved_programmes
-        .split(',')
-        .map(p => p.trim())
-        .filter(Boolean);
-
-      const { error: insertError } = await supabase
-        .from('instructor_certifications')
-        .insert({
-          user_id: userData.id,
-          approved_programmes: programmes,
-          notes: grantForm.notes || null,
-          created_by: currentUser?.id,
+      if (grantMode === 'new') {
+        // ── Create brand-new instructor from scratch ──
+        if (!grantForm.first_name || !grantForm.last_name || !grantForm.new_email) {
+          setGrantError('First name, last name, and email are required.');
+          return;
+        }
+        const res = await fetch('/api/instructors/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            first_name: grantForm.first_name,
+            last_name: grantForm.last_name,
+            email: grantForm.new_email,
+            approved_programmes: grantForm.approved_programmes,
+            notes: grantForm.notes,
+          }),
         });
+        const json = await res.json();
+        if (!json.success) {
+          setGrantError(json.error || 'Failed to create instructor.');
+          return;
+        }
+      } else {
+        // ── Grant to existing user ──
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id, email, first_name, last_name, role')
+          .eq('email', grantForm.email.trim().toLowerCase())
+          .single();
 
-      if (insertError) throw insertError;
+        if (userError || !userData) {
+          setGrantError('No user found with this email address.');
+          return;
+        }
+
+        if (userData.role !== 'trainer') {
+          setGrantError(`This user has role "${userData.role}". Please change their role to "BDA Certified Instructor" in User Management first.`);
+          return;
+        }
+
+        const { data: existing } = await supabase
+          .from('instructor_certifications')
+          .select('id, status')
+          .eq('user_id', userData.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (existing) {
+          setGrantError('This user already has an active instructor certification.');
+          return;
+        }
+
+        const programmes = grantForm.approved_programmes.split(',').map(p => p.trim()).filter(Boolean);
+        const { error: insertError } = await supabase
+          .from('instructor_certifications')
+          .insert({ user_id: userData.id, approved_programmes: programmes, notes: grantForm.notes || null, created_by: currentUser?.id });
+        if (insertError) throw insertError;
+      }
 
       queryClient.invalidateQueries({ queryKey: ['admin-instructor-certs'] });
       setIsGrantOpen(false);
-      setGrantForm({ email: '', notes: '', approved_programmes: 'BDA Business Development Foundation,BDA-CP Preparation' });
+      setGrantForm({ email: '', first_name: '', last_name: '', new_email: '', notes: '', approved_programmes: 'BDA Business Development Foundation,BDA-CP Preparation' });
     } catch (err: any) {
       setGrantError(err.message || 'Failed to grant certification.');
     } finally {
@@ -464,18 +487,78 @@ export default function InstructorManagement() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="bg-[#f0f6ff] border border-[#dbeafe] rounded-xl p-3 text-xs text-[#1C4A8B]">
-              The user must already have the role <strong>BDA Certified Instructor</strong> in User Management before granting a certification.
+            {/* Mode toggle */}
+            <div className="flex rounded-xl overflow-hidden border border-[#dbeafe]">
+              <button
+                onClick={() => setGrantMode('existing')}
+                className={`flex-1 py-2 text-xs font-semibold transition-colors ${
+                  grantMode === 'existing'
+                    ? 'bg-[#0f91e0] text-white'
+                    : 'bg-white text-slate-500 hover:bg-[#f0f6ff]'
+                }`}
+              >
+                Grant to Existing User
+              </button>
+              <button
+                onClick={() => setGrantMode('new')}
+                className={`flex-1 py-2 text-xs font-semibold transition-colors ${
+                  grantMode === 'new'
+                    ? 'bg-[#0d1f4e] text-white'
+                    : 'bg-white text-slate-500 hover:bg-[#f0f6ff]'
+                }`}
+              >
+                Create New Instructor
+              </button>
             </div>
 
-            <div className="space-y-2">
-              <Label>User Email <span className="text-red-500">*</span></Label>
-              <Input
-                placeholder="instructor@example.com"
-                value={grantForm.email}
-                onChange={e => setGrantForm({ ...grantForm, email: e.target.value })}
-              />
-            </div>
+            {grantMode === 'existing' ? (
+              <>
+                <div className="bg-[#f0f6ff] border border-[#dbeafe] rounded-xl p-3 text-xs text-[#1C4A8B]">
+                  The user must already have the role <strong>BDA Certified Instructor</strong> in User Management before granting a certification.
+                </div>
+                <div className="space-y-2">
+                  <Label>User Email <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="instructor@example.com"
+                    value={grantForm.email}
+                    onChange={e => setGrantForm({ ...grantForm, email: e.target.value })}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+                  A new portal account will be created automatically and an invite email will be sent.
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>First Name <span className="text-red-500">*</span></Label>
+                    <Input
+                      placeholder="Ahmed"
+                      value={grantForm.first_name}
+                      onChange={e => setGrantForm({ ...grantForm, first_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Name <span className="text-red-500">*</span></Label>
+                    <Input
+                      placeholder="Al-Rashidi"
+                      value={grantForm.last_name}
+                      onChange={e => setGrantForm({ ...grantForm, last_name: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Email Address <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="instructor@example.com"
+                    type="email"
+                    value={grantForm.new_email}
+                    onChange={e => setGrantForm({ ...grantForm, new_email: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
               <Label>Approved Programmes</Label>
