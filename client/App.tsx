@@ -16,7 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 import { PortalLayout } from "@/components/PortalLayout";
 import { LearningSystemLayout } from "@/components/LearningSystemLayout";
 import { LearningShell } from "@/components/LearningShell";
-import { InstructorShell } from "@/components/InstructorShell";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { ProfileCompletionGuard } from "@/components/guards/ProfileCompletionGuard";
 import { RoleGuard } from "@/components/guards/RoleGuard";
@@ -57,7 +56,6 @@ import AccreditedPrograms from "./pages/individual/AccreditedPrograms";
 import ProgramDetail from "./pages/public/ProgramDetail";
 import VerifyCertification from "./pages/individual/VerifyCertification";
 import VerifyCertificate from "./pages/VerifyCertificate";
-import InstructorRegistry from "./pages/public/InstructorRegistry";
 import { PublicPageLayout } from "./components/PublicPageLayout";
 import AuthDebug from "./pages/AuthDebug";
 import Settings from "./pages/settings/Settings";
@@ -153,8 +151,6 @@ import Communications from "./pages/admin/Communications";
 import SystemSettings from "./pages/admin/SystemSettings";
 import SecurityLogs from "./pages/admin/SecurityLogs";
 import TrainerManagement from "./pages/admin/TrainerManagement";
-import InstructorManagement from "./pages/admin/InstructorManagement";
-import TrainerLearningCentreAdmin from "./pages/admin/TrainerLearningCentreAdmin";
 import LearningSystemProducts from "./pages/admin/LearningSystemProducts";
 import CertificateDesigner from "./pages/admin/CertificateDesigner";
 import ExamECOBlueprintManager from "./pages/admin/ExamECOBlueprintManager";
@@ -175,7 +171,6 @@ import PartnershipPending from './pages/PartnershipPending';
 // Trainer pages
 import TrainerDashboard from './pages/trainer/TrainerDashboard';
 import TrainerAcceptInvite from './pages/trainer/AcceptInvite';
-import TrainerModulePage from './pages/trainer/TrainerModulePage';
 
 // ECP Partner pages
 import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPLicense, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
@@ -386,11 +381,6 @@ const App = () => (
                     <AuthorizedProviders />
                   </PublicPageLayout>
                 } />
-                <Route path="/public/instructors" element={
-                  <PublicPageLayout>
-                    <InstructorRegistry />
-                  </PublicPageLayout>
-                } />
                 <Route path="/public/verify" element={
                   <PublicPageLayout>
                     <VerifyCertificate />
@@ -418,24 +408,27 @@ const App = () => (
                 {/* Trainer Accept Invite - public (magic link lands here) */}
                 <Route path="/instructor/accept-invite" element={<TrainerAcceptInvite />} />
 
-                                {/* ── Instructor Portal — InstructorShell (navy sidebar + top bar) ── */}
+                {/* ── Instructor Portal — standalone pages ── */}
+                {/* Dashboard */}
+                <Route path="/instructor/dashboard" element={
+                  <ProtectedRoute>
+                    <RoleGuard allowedRoles={['trainer']}>
+                      <TrainerDashboard />
+                    </RoleGuard>
+                  </ProtectedRoute>
+                } />
+
+                {/* Mock Exams — standalone */}
                 <Route element={
                   <ProtectedRoute>
                     <RoleGuard allowedRoles={['trainer']}>
-                      <InstructorShell />
+                      <Outlet />
                     </RoleGuard>
                   </ProtectedRoute>
                 }>
-                  {/* Dashboard */}
-                  <Route path="/instructor/dashboard" element={<TrainerDashboard />} />
-
-                  {/* Mock Exams */}
                   <Route path="/instructor/mock-exams" element={<MockExamList />} />
                   <Route path="/instructor/mock-exams/:examId" element={<ExamDetail />} />
                   <Route path="/instructor/mock-exams/results/:attemptId" element={<ExamResults />} />
-
-                  {/* Learning Centre modules */}
-                  <Route path="/instructor/learning-centre/module/:moduleId" element={<TrainerModulePage />} />
                 </Route>
 
                 {/* Instructor Learning System — TrainerWrapper (LearningShell with navy sidebar) */}
@@ -634,8 +627,6 @@ const App = () => (
                   <Route path="/admin/support/:id" element={<SupportTicketDetail />} />
                   <Route path="/admin/pdcs" element={<PDCValidation />} />
                   <Route path="/admin/trainers" element={<TrainerManagement />} />
-                  <Route path="/admin/instructors" element={<InstructorManagement />} />
-                  <Route path="/admin/trainer-learning-centre" element={<TrainerLearningCentreAdmin />} />
                   <Route path="/admin/content" element={<ContentManagement />} />
                   <Route path="/admin/toolkit" element={<ToolkitManagement />} />
                   <Route path="/admin/learning-system-admin" element={<LearningSystemAdmin />} />
