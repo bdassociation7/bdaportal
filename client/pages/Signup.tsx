@@ -231,11 +231,13 @@ export default function Signup() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <img
-            src="/bda-logo.png"
-            alt="Business Development Association"
-            className="h-16 object-contain brightness-0 invert"
-          />
+          <div className="inline-block bg-white/95 rounded-2xl px-6 py-4">
+            <img
+              src="/bda-logo.png"
+              alt="Business Development Association"
+              className="h-14 object-contain"
+            />
+          </div>
         </div>
 
         {/* Headline */}
