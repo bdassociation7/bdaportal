@@ -1,45 +1,66 @@
+/**
+ * Signup Page — BDA Portal
+ *
+ * Individual Professional registration only.
+ * ECP / PDP partner accounts are created via store purchase or admin grant.
+ *
+ * Layout: Split screen
+ * - Left (hidden on mobile): BDA brand panel with gradient + features
+ * - Right: Registration form
+ */
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { useConfirm } from '@/contexts/ConfirmDialogContext';
 import { UnifiedSignupService, type SignupRequest, type ConflictInfo } from '@/services/unified-signup.service';
 import { ExistingAccountModal } from '@/components/ui/existing-account-modal';
 import { WordPressAPIService } from '@/services/wordpress-api.service';
-import { Loader2, CheckCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import {
+  Loader2,
+  CheckCircle,
+  AlertTriangle,
+  Eye,
+  EyeOff,
+  GraduationCap,
+  BookOpen,
+  Award,
+  Users,
+} from 'lucide-react';
 
+// ─── Brand ────────────────────────────────────────────────────────────────────
+const BDA_BLUE = '#0f91e0';
+const BDA_NAVY = '#0d1f4e';
+const BDA_GRAD = `linear-gradient(135deg, ${BDA_BLUE} 0%, ${BDA_NAVY} 100%)`;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface FormData {
   email: string;
   password: string;
   confirmPassword: string;
   firstName: string;
   lastName: string;
-  userType: 'individual' | 'ecp' | 'pdp';
-  organization: string;
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function Signup() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { confirm } = useConfirm();
 
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [showPass, setShowPass]   = useState(false);
+  const [showConf, setShowConf]   = useState(false);
   const [conflicts, setConflicts] = useState<ConflictInfo[]>([]);
+  const [step, setStep]           = useState<1 | 3>(1);
 
-  // État pour le modal de compte existant
   const [existingAccountModal, setExistingAccountModal] = useState({
     open: false,
     type: 'store' as 'store' | 'portal',
     email: '',
     loading: false,
-    error: ''
+    error: '',
   });
 
   const [formData, setFormData] = useState<FormData>({
@@ -48,548 +69,429 @@ export default function Signup() {
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    userType: 'individual',
-    organization: ''
   });
 
-  const updateFormData = (field: keyof FormData, value: string) => {
+  const update = (field: keyof FormData, value: string) =>
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
 
-  const validateForm = () => {
+  // ── Validation ──────────────────────────────────────────────────────────────
+  const validate = (): boolean => {
     const { email, password, confirmPassword, firstName, lastName } = formData;
-
-    if (!email || !password || !firstName || !lastName) {
-      toast({
-        title: 'Champs requis',
-        description: 'Veuillez remplir tous les champs obligatoires.',
-        variant: 'destructive'
-      });
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
+      toast({ title: 'Required fields missing', description: 'Please fill in all required fields.', variant: 'destructive' });
       return false;
     }
-
     if (password !== confirmPassword) {
-      toast({
-        title: 'Passwords do not match',
-        description: 'Les mots de passe ne correspondent pas.',
-        variant: 'destructive'
-      });
+      toast({ title: 'Passwords do not match', description: 'Please make sure both passwords are identical.', variant: 'destructive' });
       return false;
     }
-
     if (password.length < 8) {
-      toast({
-        title: 'Mot de passe trop court',
-        description: 'Password must contain at least 8 characters.',
-        variant: 'destructive'
-      });
+      toast({ title: 'Password too short', description: 'Password must be at least 8 characters.', variant: 'destructive' });
       return false;
     }
-
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRe.test(email)) {
+      toast({ title: 'Invalid email', description: 'Please enter a valid email address.', variant: 'destructive' });
+      return false;
+    }
     return true;
   };
 
-  // Déterminer automatiquement l'accessType basé sur userType
-  const getAccessType = (userType: string): 'portal-only' | 'store-only' | 'both' => {
-    // Logique transparente : tous les utilisateurs ont accès aux deux par défaut
-    // sauf si besoin spécifique détecté
-    return 'both';
-  };
-
-  // Map form userType to database role
-  // ECP/PDP registrations get a 'pending' role until approved by admin
-  const mapUserTypeToRole = (userType: 'individual' | 'ecp' | 'pdp'): string => {
-    if (userType === 'ecp') return 'ecp_pending';
-    if (userType === 'pdp') return 'pdp_pending';
-    return userType; // 'individual' stays as-is
-  };
-
-  // Gérer la soumission du mot de passe dans le modal
-  const handleExistingAccountPassword = async (password: string) => {
-    setExistingAccountModal(prev => ({ ...prev, loading: true, error: '' }));
-
-    try {
-      if (existingAccountModal.type === 'store') {
-        // Vérifier les credentials WordPress
-        console.log('🔐 [Signup] Verifying Store credentials:', {
-          email: existingAccountModal.email,
-          passwordLength: password.length
-        });
-        const response = await WordPressAPIService.verifyCredentials(
-          existingAccountModal.email,
-          password
-        );
-        console.log('🔐 [Signup] Store verification response:', response);
-
-        if (response.success) {
-          // Credentials valides, procéder avec la liaison
-          const request: SignupRequest = {
-            email: formData.email,
-            password: password, // Utiliser le mot de passe Store vérifié
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            accessType: getAccessType(formData.userType),
-            role: mapUserTypeToRole(formData.userType),
-            organisation: formData.organisation || undefined
-          };
-
-          const result = await UnifiedSignupService.handleSignup(request);
-
-          if (result.success) {
-            setExistingAccountModal({ open: false, type: 'store', email: '', loading: false, error: '' });
-            toast({
-              title: 'Accounts linked successfully!',
-              description: result.message,
-              variant: 'default'
-            });
-
-            if (result.nextStep === 'login') {
-              navigate('/login', {
-                state: {
-                  email: formData.email,
-                  message: 'Your accounts have been linked. You can now sign in.'
-                }
-              });
-            }
-          } else {
-            setExistingAccountModal(prev => ({
-              ...prev,
-              loading: false,
-              error: result.message || 'Error linking accounts.'
-            }));
-          }
-        } else {
-          setExistingAccountModal(prev => ({
-            ...prev,
-            loading: false,
-            error: 'Incorrect password. Please try again.'
-          }));
-        }
-      }
-    } catch (error) {
-      setExistingAccountModal(prev => ({
-        ...prev,
-        loading: false,
-        error: 'An error occurred. Please try again.'
-      }));
-    }
-  };
-
-  // Navigate to login page
-  const handleNavigateToLogin = () => {
-    setExistingAccountModal({ open: false, type: 'store', email: '', loading: false, error: '' });
-    navigate('/login', {
-      state: {
-        email: existingAccountModal.email,
-        message: 'Sign in with your existing credentials.'
-      }
-    });
-  };
-
+  // ── Signup ──────────────────────────────────────────────────────────────────
   const handleSignup = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validate()) return;
     setLoading(true);
     setConflicts([]);
-
     try {
       const request: SignupRequest = {
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        accessType: getAccessType(formData.userType),
-        role: mapUserTypeToRole(formData.userType),
-        organisation: formData.organisation || undefined
+        accessType: 'both',
+        role: 'individual',
       };
-
       const result = await UnifiedSignupService.handleSignup(request);
-
       if (result.success) {
-        // Success - redirect based on nextStep
-        toast({
-          title: 'Success!',
-          description: result.message,
-          variant: 'default'
-        });
-
-        if (result.nextStep === 'login') {
-          navigate('/login', {
-            state: {
-              email: formData.email,
-              message: result.message
-            }
-          });
-        }
-
+        toast({ title: 'Account created!', description: result.message });
+        navigate('/login', { state: { email: formData.email, message: result.message } });
       } else {
-        // Handle cases that require user interaction
         if (result.nextStep === 'confirm_data' && result.conflicts) {
           setConflicts(result.conflicts);
-          setStep(3); // Conflict resolution step
-        } else if (result.action === 'requires_store_password' ||
-                   result.nextStep === 'provide_store_password' ||
-                   result.message?.includes('EXISTING_STORE_ACCOUNT')) {
-          // Store account exists - open modal to enter password
-          setExistingAccountModal({
-            open: true,
-            type: 'store',
-            email: formData.email,
-            loading: false,
-            error: ''
-          });
+          setStep(3);
+        } else if (
+          result.action === 'requires_store_password' ||
+          result.nextStep === 'provide_store_password' ||
+          result.message?.includes('EXISTING_STORE_ACCOUNT')
+        ) {
+          setExistingAccountModal({ open: true, type: 'store', email: formData.email, loading: false, error: '' });
         } else {
-          // Other errors
           toast({
-            title: 'Information',
+            title: 'Notice',
             description: result.message,
-            variant: result.action === 'confirmed_existing' ? 'default' : 'destructive'
+            variant: result.action === 'confirmed_existing' ? 'default' : 'destructive',
           });
-
           if (result.nextStep === 'login') {
-            navigate('/login', {
-              state: {
-                email: formData.email,
-                message: result.message
-              }
-            });
+            navigate('/login', { state: { email: formData.email, message: result.message } });
           }
         }
       }
-
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred.',
-        variant: 'destructive'
-      });
+    } catch {
+      toast({ title: 'Error', description: 'An unexpected error occurred. Please try again.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleConflictResolution = async () => {
-    const confirmed = await confirm({
-      title: 'Resolve conflicts',
-      description: 'Do you want to use the information you entered to update both your Portal and Store accounts?',
-      confirmText: 'Yes, update both accounts',
-      cancelText: 'Cancel',
-      variant: 'warning'
-    });
-
-    if (!confirmed) {
-      return;
-    }
-
-    setLoading(true);
-
+  // ── Existing account modal handler ─────────────────────────────────────────
+  const handleExistingAccountPassword = async (password: string) => {
+    setExistingAccountModal(prev => ({ ...prev, loading: true, error: '' }));
     try {
-      // Call the service again - it will execute the resolve_conflicts_and_link strategy
+      if (existingAccountModal.type === 'store') {
+        const response = await WordPressAPIService.verifyCredentials(existingAccountModal.email, password);
+        if (response.success) {
+          const request: SignupRequest = {
+            email: formData.email,
+            password,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            accessType: 'both',
+            role: 'individual',
+          };
+          const result = await UnifiedSignupService.handleSignup(request);
+          if (result.success) {
+            setExistingAccountModal({ open: false, type: 'store', email: '', loading: false, error: '' });
+            toast({ title: 'Accounts linked!', description: result.message });
+            if (result.nextStep === 'login') navigate('/login', { state: { email: formData.email, message: result.message } });
+          } else {
+            setExistingAccountModal(prev => ({ ...prev, loading: false, error: result.message || 'Error linking accounts.' }));
+          }
+        } else {
+          setExistingAccountModal(prev => ({ ...prev, loading: false, error: 'Incorrect password. Please try again.' }));
+        }
+      }
+    } catch {
+      setExistingAccountModal(prev => ({ ...prev, loading: false, error: 'An error occurred. Please try again.' }));
+    }
+  };
+
+  const handleNavigateToLogin = () => {
+    setExistingAccountModal({ open: false, type: 'store', email: '', loading: false, error: '' });
+    navigate('/login', { state: { email: existingAccountModal.email, message: 'Sign in with your existing credentials.' } });
+  };
+
+  // ── Conflict resolution ────────────────────────────────────────────────────
+  const handleConfirmConflicts = async () => {
+    setLoading(true);
+    try {
       const request: SignupRequest = {
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        accessType: getAccessType(formData.userType),
-        role: mapUserTypeToRole(formData.userType),
-        organisation: formData.organisation || undefined
+        accessType: 'both',
+        role: 'individual',
+        forceUpdate: true,
       };
-
       const result = await UnifiedSignupService.handleSignup(request);
-
       if (result.success) {
-        toast({
-          title: 'Conflicts resolved!',
-          description: result.message,
-          variant: 'default'
-        });
-
-        navigate('/login', {
-          state: {
-            email: formData.email,
-            message: result.message
-          }
-        });
+        toast({ title: 'Account created!', description: result.message });
+        navigate('/login', { state: { email: formData.email, message: result.message } });
       } else {
-        toast({
-          title: 'Resolution failed',
-          description: result.message || 'Unable to resolve conflicts. Please try again.',
-          variant: 'destructive'
-        });
-
-        // Keep user on conflict resolution screen if it failed
-        if (result.nextStep !== 'login') {
-          // Stay on current step
-        }
+        toast({ title: 'Error', description: result.message, variant: 'destructive' });
       }
-
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive'
-      });
+    } catch {
+      toast({ title: 'Error', description: 'An unexpected error occurred.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Features list (left panel) ─────────────────────────────────────────────
+  const features = [
+    { icon: GraduationCap, text: 'BDA Certification — CP & SCP programmes' },
+    { icon: BookOpen,      text: 'Full access to the BDA Learning System' },
+    { icon: Award,         text: 'Verified digital credentials & certificates' },
+    { icon: Users,         text: 'Join a global community of BD professionals' },
+  ];
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Create Account
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Join the BDA Community
-          </p>
+    <div className="min-h-screen flex">
+
+      {/* ── Left panel — brand ── */}
+      <div
+        className="hidden lg:flex lg:w-5/12 xl:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
+        style={{ background: BDA_GRAD }}
+      >
+        {/* Decorative circles */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-10 bg-white pointer-events-none" />
+        <div className="absolute -bottom-16 -right-16 w-72 h-72 rounded-full opacity-10 bg-white pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 bg-white pointer-events-none" />
+
+        {/* Logo */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-white text-sm font-extrabold">
+              BDA
+            </div>
+            <div>
+              <p className="text-white font-bold text-base leading-tight">Business Development</p>
+              <p className="text-white/60 text-xs">Association</p>
+            </div>
+          </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Create Account</CardTitle>
-            <p className="text-sm text-gray-600 mt-2">
-              Automatically access Portal and Store with a single account
+        {/* Headline */}
+        <div className="relative z-10 space-y-6">
+          <div>
+            <h1 className="text-3xl xl:text-4xl font-extrabold text-white leading-tight mb-3">
+              Advance your career in Business Development
+            </h1>
+            <p className="text-white/65 text-base leading-relaxed">
+              Join thousands of professionals who have earned BDA certification and accelerated their careers.
             </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
+          </div>
 
-            {/* Interface simplifiée sur une seule page */}
-            {step === 1 && (
-              <div className="space-y-6">
-                {/* Informations personnelles */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstName">First Name *</Label>
-                      <Input
-                        id="firstName"
-                        value={formData.firstName}
-                        onChange={(e) => updateFormData('firstName', e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="lastName">Last Name *</Label>
-                      <Input
-                        id="lastName"
-                        value={formData.lastName}
-                        onChange={(e) => updateFormData('lastName', e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
+          {/* Features */}
+          <div className="space-y-3">
+            {features.map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4 text-white" />
+                </div>
+                <p className="text-white/80 text-sm">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
-                  <div>
-                    <Label htmlFor="email">Email *</Label>
+        {/* Footer */}
+        <p className="relative z-10 text-white/30 text-xs">
+          &copy; {new Date().getFullYear()} Business Development Association. All rights reserved.
+        </p>
+      </div>
+
+      {/* ── Right panel — form ── */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-[#f7f9fc]">
+        <div className="w-full max-w-md">
+
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-extrabold"
+              style={{ background: BDA_GRAD }}
+            >
+              BDA
+            </div>
+            <span className="font-bold text-[#0d1f4e]">Business Development Association</span>
+          </div>
+
+          {/* ── Step 1: Registration form ── */}
+          {step === 1 && (
+            <>
+              <div className="mb-8">
+                <h2 className="text-2xl font-extrabold text-[#0d1f4e] mb-1">Create your account</h2>
+                <p className="text-slate-500 text-sm">
+                  Already have an account?{' '}
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="font-semibold hover:underline"
+                    style={{ color: BDA_BLUE }}
+                  >
+                    Sign in
+                  </button>
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Name row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="firstName" className="text-sm font-medium text-slate-700">
+                      First Name <span className="text-red-400">*</span>
+                    </Label>
                     <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => updateFormData('email', e.target.value)}
-                      required
+                      id="firstName"
+                      placeholder="John"
+                      value={formData.firstName}
+                      onChange={e => update('firstName', e.target.value)}
+                      className="h-11 border-slate-200 focus:border-[#0f91e0] focus:ring-[#0f91e0]/20"
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lastName" className="text-sm font-medium text-slate-700">
+                      Last Name <span className="text-red-400">*</span>
+                    </Label>
+                    <Input
+                      id="lastName"
+                      placeholder="Smith"
+                      value={formData.lastName}
+                      onChange={e => update('lastName', e.target.value)}
+                      className="h-11 border-slate-200 focus:border-[#0f91e0] focus:ring-[#0f91e0]/20"
+                    />
+                  </div>
+                </div>
 
-                  <div>
-                    <Label htmlFor="password">Password *</Label>
+                {/* Email */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+                    Email Address <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="john.smith@example.com"
+                    value={formData.email}
+                    onChange={e => update('email', e.target.value)}
+                    className="h-11 border-slate-200 focus:border-[#0f91e0] focus:ring-[#0f91e0]/20"
+                  />
+                </div>
+
+                {/* Password */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="text-sm font-medium text-slate-700">
+                    Password <span className="text-red-400">*</span>
+                  </Label>
+                  <div className="relative">
                     <Input
                       id="password"
-                      type="password"
+                      type={showPass ? 'text' : 'password'}
+                      placeholder="Min. 8 characters"
                       value={formData.password}
-                      onChange={(e) => updateFormData('password', e.target.value)}
-                      required
+                      onChange={e => update('password', e.target.value)}
+                      className="h-11 pr-10 border-slate-200 focus:border-[#0f91e0] focus:ring-[#0f91e0]/20"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPass(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
+                </div>
 
-                  <div>
-                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                {/* Confirm Password */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirmPassword" className="text-sm font-medium text-slate-700">
+                    Confirm Password <span className="text-red-400">*</span>
+                  </Label>
+                  <div className="relative">
                     <Input
                       id="confirmPassword"
-                      type="password"
+                      type={showConf ? 'text' : 'password'}
+                      placeholder="Repeat your password"
                       value={formData.confirmPassword}
-                      onChange={(e) => updateFormData('confirmPassword', e.target.value)}
-                      required
+                      onChange={e => update('confirmPassword', e.target.value)}
+                      className="h-11 pr-10 border-slate-200 focus:border-[#0f91e0] focus:ring-[#0f91e0]/20"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConf(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showConf ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
-                {/* User type */}
-                <div className="border-t pt-6">
-                  <Label className="text-base font-medium">Access Type</Label>
-                  <RadioGroup
-                    value={formData.userType}
-                    onValueChange={(value: any) => updateFormData('userType', value)}
-                    className="mt-3"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="individual" id="individual" />
-                      <Label htmlFor="individual" className="cursor-pointer">
-                        <div>
-                          <div className="font-medium">Individual Professional</div>
-                          <div className="text-sm text-gray-500">Individual professional</div>
-                        </div>
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="ecp" id="ecp" />
-                      <Label htmlFor="ecp" className="cursor-pointer">
-                        <div>
-                          <div className="font-medium">ECP Partner</div>
-                          <div className="text-sm text-gray-500">Certification partner</div>
-                        </div>
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="pdp" id="pdp" />
-                      <Label htmlFor="pdp" className="cursor-pointer">
-                        <div>
-                          <div className="font-medium">PDP Partner</div>
-                          <div className="text-sm text-gray-500">Development partner</div>
-                        </div>
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
+                {/* Submit */}
+                <button
+                  type="button"
+                  onClick={handleSignup}
+                  disabled={loading}
+                  className="w-full h-12 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60 mt-2"
+                  style={{ background: BDA_GRAD }}
+                >
+                  {loading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Creating account&hellip;</>
+                  ) : (
+                    <><CheckCircle className="w-4 h-4" /> Create Account</>
+                  )}
+                </button>
 
-                {/* Organisation for ECP/PDP */}
-                {(formData.userType === 'ecp' || formData.userType === 'pdp') && (
-                  <div>
-                    <Label htmlFor="organisation">Organisation</Label>
-                    <Input
-                      id="organisation"
-                      value={formData.organisation}
-                      onChange={(e) => updateFormData('organization', e.target.value)}
-                      placeholder="Your organisation name"
-                    />
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex gap-4 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate('/login')}
-                    className="flex-1"
+                {/* Partner note */}
+                <p className="text-center text-xs text-slate-400 pt-1">
+                  Looking to become an ECP or PDP partner?{' '}
+                  <a
+                    href="https://bda-global.org/partnerships"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-slate-600"
                   >
-                    Sign In
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleSignup}
-                    disabled={loading}
-                    className="flex-1"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Create Account
-                      </>
-                    )}
-                  </Button>
-                </div>
+                    Learn more
+                  </a>
+                </p>
               </div>
-            )}
+            </>
+          )}
 
-            {/* Step 3: Conflict resolution */}
-            {step === 3 && conflicts.length > 0 && (
-              <div className="space-y-4">
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Inconsistencies have been detected between your existing accounts.
-                  </AlertDescription>
-                </Alert>
-
-                {conflicts.map((conflict, index) => (
-                  <div key={index} className="border rounded-lg p-4 bg-orange-50">
-                    <div className="text-sm font-medium text-orange-800 mb-2">
-                      Conflict detected: {conflict.field}
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <div className="text-gray-600 mb-1">Portal Account:</div>
-                        <div className="font-medium">{conflict.portalValue}</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-600 mb-1">Store Account:</div>
-                        <div className="font-medium">{conflict.storeValue}</div>
-                      </div>
-                      <div>
-                        <div className="text-blue-600 mb-1 font-medium">Will Update To:</div>
-                        <div className="font-medium text-blue-800">
-                          {formData.firstName} {formData.lastName}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                <Alert className="bg-blue-50 border-blue-200">
-                  <div className="flex gap-2">
-                    <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-                    <AlertDescription className="text-blue-800">
-                      Clicking "Resolve and Continue" will update both your Portal and Store accounts
-                      with the name you entered: <strong>{formData.firstName} {formData.lastName}</strong>
-                    </AlertDescription>
-                  </div>
-                </Alert>
-
-                <div className="flex gap-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep(2)}
-                    className="flex-1"
-                    disabled={loading}
-                  >
-                    Back to Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleConflictResolution}
-                    disabled={loading}
-                    className="flex-1"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Resolving...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Resolve and Continue
-                      </>
-                    )}
-                  </Button>
-                </div>
+          {/* ── Step 3: Conflict resolution ── */}
+          {step === 3 && conflicts.length > 0 && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-2xl font-extrabold text-[#0d1f4e] mb-1">Account conflict detected</h2>
+                <p className="text-slate-500 text-sm">
+                  We found an existing account with different details. Please review before continuing.
+                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Modal pour gérer les comptes existants */}
-        <ExistingAccountModal
-          open={existingAccountModal.open}
-          onOpenChange={(open) => setExistingAccountModal(prev => ({ ...prev, open }))}
-          email={existingAccountModal.email}
-          accountType={existingAccountModal.type}
-          onPasswordSubmit={handleExistingAccountPassword}
-          onNavigateToLogin={handleNavigateToLogin}
-          loading={existingAccountModal.loading}
-          error={existingAccountModal.error}
-        />
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Your new details will overwrite the existing account data.
+                </AlertDescription>
+              </Alert>
+              {conflicts.map((conflict, i) => (
+                <div key={i} className="border border-slate-200 rounded-xl p-4 bg-white text-sm">
+                  <p className="font-semibold text-slate-700 mb-2">Field: {conflict.field}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-slate-400 text-xs mb-1">Existing</p>
+                      <p className="font-medium text-slate-600">{conflict.portalValue || conflict.storeValue}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs mb-1 font-semibold" style={{ color: BDA_BLUE }}>Will be updated to</p>
+                      <p className="font-medium text-[#0d1f4e]">{formData.firstName} {formData.lastName}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setStep(1)}
+                  className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 transition-colors"
+                >
+                  Go back
+                </button>
+                <button
+                  onClick={handleConfirmConflicts}
+                  disabled={loading}
+                  className="flex-1 h-11 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60"
+                  style={{ background: BDA_GRAD }}
+                >
+                  {loading
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing&hellip;</>
+                    : 'Confirm & Continue'
+                  }
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Existing account modal */}
+      <ExistingAccountModal
+        open={existingAccountModal.open}
+        type={existingAccountModal.type}
+        email={existingAccountModal.email}
+        loading={existingAccountModal.loading}
+        error={existingAccountModal.error}
+        onSubmitPassword={handleExistingAccountPassword}
+        onNavigateToLogin={handleNavigateToLogin}
+        onClose={() => setExistingAccountModal(prev => ({ ...prev, open: false }))}
+      />
     </div>
   );
 }
