@@ -231,15 +231,11 @@ export default function Signup() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-white text-sm font-extrabold">
-              BDA
-            </div>
-            <div>
-              <p className="text-white font-bold text-base leading-tight">Business Development</p>
-              <p className="text-white/60 text-xs">Association</p>
-            </div>
-          </div>
+          <img
+            src="/bda-logo.png"
+            alt="Business Development Association"
+            className="h-16 object-contain brightness-0 invert"
+          />
         </div>
 
         {/* Headline */}
