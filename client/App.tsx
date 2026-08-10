@@ -120,6 +120,7 @@ import ToolkitManagement from "./pages/admin/ToolkitManagement";
 import ResourceConfiguration from "./pages/admin/ResourceConfiguration";
 import ECPManagement from "./pages/admin/ECPManagement";
 import ECPToolkitManagement from "./pages/admin/ECPToolkitManagement";
+import PartnerResourcesManagement from "./pages/admin/PartnerResourcesManagement";
 import ECPDetails from "./pages/admin/ecp/ECPDetails";
 import VoucherAllocation from "./pages/admin/ecp/VoucherAllocation";
 import AdminECPTrainingBatches from "./pages/admin/ecp/TrainingBatches";
@@ -658,6 +659,7 @@ const App = () => (
                   <Route path="/admin/ecp/trainings/:id" element={<AdminECPTrainingBatchDetail />} />
                   <Route path="/admin/ecp/trainings/:id/edit" element={<AdminECPTrainingBatchEdit />} />
                   <Route path="/admin/ecp-toolkit" element={<ECPToolkitManagement />} />
+                  <Route path="/admin/partner-resources" element={<PartnerResourcesManagement />} />
                   <Route path="/admin/pdp-management" element={<PDPManagement />} />
                   <Route path="/admin/pdp/:id" element={<PDPDetails />} />
                   <Route path="/admin/pdp/:id/license" element={<LicenseManagement />} />
