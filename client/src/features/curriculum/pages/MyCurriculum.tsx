@@ -23,7 +23,9 @@ export function MyCurriculum() {
   const location = useLocation();
 
   // Determine base path for navigation (supports both /learning-system and /ecp/learning-system)
-  const learningSystemPath = location.pathname.includes('/ecp/')
+  const learningSystemPath = location.pathname.includes('/instructor/')
+    ? '/instructor/learning-system'
+    : location.pathname.includes('/ecp/')
     ? '/ecp/learning-system'
     : '/learning-system';
   const basePath = `${learningSystemPath}/training-kits`;

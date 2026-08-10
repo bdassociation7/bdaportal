@@ -247,7 +247,9 @@ export function CompetencyAnalyticsPage() {
   const { competencies, summary, isLoading, isError } = useCompetencyAnalytics(certType, 'en');
 
   const handleBack = () => {
-    const basePath = window.location.pathname.startsWith('/ecp')
+    const basePath = window.location.pathname.startsWith('/instructor')
+      ? '/instructor/learning-system'
+      : window.location.pathname.startsWith('/ecp')
       ? '/ecp/learning-system'
       : '/learning-system';
     navigate(`${basePath}?lang=${searchParams.get('lang') ?? 'EN'}`);
