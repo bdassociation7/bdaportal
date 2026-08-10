@@ -245,10 +245,11 @@ export function FlashcardsDashboard() {
   const location = useLocation();
   const { user } = useAuth();
 
-  const basePath = useMemo(
-    () => (location.pathname.startsWith('/ecp/') ? '/ecp/learning-system' : '/learning-system'),
-    [location.pathname]
-  );
+  const basePath = useMemo(() => {
+    if (location.pathname.startsWith('/ecp/')) return '/ecp/learning-system';
+    if (location.pathname.startsWith('/instructor/')) return '/instructor/learning-system';
+    return '/learning-system';
+  }, [location.pathname]);
 
   const { data: _accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(user?.id);
   const { data: hasFlashcardsAccess, isLoading: accessLoading } = useFlashcardsAccess(user?.id, 'EN');

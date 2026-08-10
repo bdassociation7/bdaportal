@@ -214,9 +214,8 @@ export function FlashcardStudySession() {
   // Detect base path for navigation (ECP vs Individual learning system)
   const basePath = useMemo(() => {
     const path = location.pathname;
-    if (path.startsWith('/ecp/learning-system')) {
-      return '/ecp/learning-system';
-    }
+    if (path.startsWith('/ecp/learning-system')) return '/ecp/learning-system';
+    if (path.startsWith('/instructor/learning-system')) return '/instructor/learning-system';
     return '/learning-system';
   }, [location.pathname]);
 

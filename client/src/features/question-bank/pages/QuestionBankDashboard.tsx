@@ -364,7 +364,9 @@ export function QuestionBankDashboard() {
   const { user } = useAuth();
 
   const basePath = useMemo(() => {
-    return location.pathname.startsWith('/ecp/') ? '/ecp/learning-system' : '/learning-system';
+    if (location.pathname.startsWith('/ecp/')) return '/ecp/learning-system';
+    if (location.pathname.startsWith('/instructor/')) return '/instructor/learning-system';
+    return '/learning-system';
   }, [location.pathname]);
 
   // CP / SCP tab

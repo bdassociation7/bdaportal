@@ -54,9 +54,8 @@ export function ModuleViewer() {
   // Detect base path
   const basePath = useMemo(() => {
     const path = location.pathname;
-    if (path.startsWith('/ecp/learning-system')) {
-      return '/ecp/learning-system/training-kits';
-    }
+    if (path.startsWith('/ecp/learning-system')) return '/ecp/learning-system/training-kits';
+    if (path.startsWith('/instructor/learning-system')) return '/instructor/learning-system/training-kits';
     return '/learning-system/training-kits';
   }, [location.pathname]);
 
