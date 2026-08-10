@@ -1,18 +1,11 @@
 /**
- * InstructorShell — App Shell layout for the BDA Instructor Portal
+ * InstructorShell — Instructor Portal Layout
  *
- * Layout:
- * ┌──────────┬──────────────────────────────────────────┐
- * │ Sidebar  │  Top Bar                                 │
- * │ 240px    │  ─────────────────────────────────────── │
- * │ (navy    │  <Outlet /> (page content)               │
- * │ gradient)│                                          │
- * └──────────┴──────────────────────────────────────────┘
- *
- * BDA Brand Colors:
- * - Primary Blue:  #0f91e0
- * - Navy:          #0d1f4e
- * - Gradient:      linear-gradient(135deg, #0f91e0 0%, #0d1f4e 100%)
+ * Mirrors the ECP Portal design:
+ * - Dark navy sidebar (#0d1f4e) with collapsible sections
+ * - Expandable nav groups (Trainer Learning Centre, Official Learning System)
+ * - Top bar with page title
+ * - BDA brand colors throughout
  */
 
 import React, { useState, createContext, useContext } from 'react';
@@ -24,13 +17,13 @@ import {
   GraduationCap,
   KeyRound,
   Monitor,
-  Layers,
-  ChevronLeft,
+  ClipboardCheck,
+  FileText,
+  ChevronDown,
   ChevronRight,
-  ArrowLeft,
+  ChevronLeft,
   LogOut,
-  Building2,
-  ShieldCheck,
+  Users,
 } from 'lucide-react';
 import { useAuthContext } from '@/app/providers/AuthProvider';
 import { AuthService } from '@/entities/auth/auth.service';
@@ -55,53 +48,101 @@ interface ShellCtx { sidebarOpen: boolean; setSidebarOpen: (v: boolean) => void;
 const ShellContext = createContext<ShellCtx>({ sidebarOpen: true, setSidebarOpen: () => {} });
 export function useInstructorShell() { return useContext(ShellContext); }
 
-// ─── Nav Items ────────────────────────────────────────────────────────────────
-const NAV_ITEMS = [
+// ─── Nav Structure ────────────────────────────────────────────────────────────
+interface NavLeaf {
+  id: string;
+  label: string;
+  path: string;
+  icon: React.ElementType;
+}
+
+interface NavGroup {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  children: NavLeaf[];
+}
+
+interface NavFlat {
+  id: string;
+  label: string;
+  path: string;
+  icon: React.ElementType;
+  section?: string;
+}
+
+type NavEntry = NavFlat | NavGroup;
+
+const isGroup = (e: NavEntry): e is NavGroup => 'children' in e;
+
+const NAV: NavEntry[] = [
   {
+    id: 'dashboard',
     label: 'Dashboard',
-    icon: LayoutDashboard,
     path: '/instructor/dashboard',
-    match: (p: string) => p === '/instructor/dashboard',
-  },
+    icon: LayoutDashboard,
+  } as NavFlat,
+
+  // ── Trainer Learning Centre ──────────────────────────────────────────────
   {
-    label: 'Learning Centre',
-    icon: BookOpen,
-    path: '/instructor/learning-centre',
-    match: (p: string) => p.includes('/learning-centre'),
-    section: 'TRAINER ACCREDITATION',
-  },
-  {
-    label: 'BDA Learning System',
+    id: 'learning-centre',
+    label: 'Trainer Learning Centre',
     icon: GraduationCap,
-    path: '/instructor/learning-system',
-    match: (p: string) => p.includes('/learning-system'),
-  },
+    children: [
+      { id: 'm1', label: 'Module 1 — BDA Orientation',              path: '/instructor/learning-centre/module/1', icon: BookOpen },
+      { id: 'm2', label: 'Module 2 — Understanding BDA BoCK',       path: '/instructor/learning-centre/module/2', icon: BookOpen },
+      { id: 'm3', label: 'Module 3 — Teaching the BDA Methodology', path: '/instructor/learning-centre/module/3', icon: BookOpen },
+      { id: 'm4', label: 'Module 4 — Trainer Delivery Standards',   path: '/instructor/learning-centre/module/4', icon: BookOpen },
+      { id: 'm5', label: 'Module 5 — Trainer Assessment',           path: '/instructor/learning-centre/module/5', icon: BookOpen },
+    ],
+  } as NavGroup,
+
+  // ── The Official Learning System ─────────────────────────────────────────
   {
+    id: 'learning-system',
+    label: 'The Official Learning System',
+    icon: BookOpen,
+    children: [
+      {
+        id: 'ls-candidate',
+        label: 'BDA Learning System (Candidate View)',
+        path: '/instructor/learning-system',
+        icon: Users,
+      },
+      {
+        id: 'ls-instructor',
+        label: 'BDA Learning System (Instructor View)',
+        path: '/instructor/learning-system/question-bank',
+        icon: KeyRound,
+      },
+    ],
+  } as NavGroup,
+
+  // ── Flat items ───────────────────────────────────────────────────────────
+  {
+    id: 'mock-exams',
     label: 'Mock Exams',
-    icon: ShieldCheck,
     path: '/instructor/mock-exams',
-    match: (p: string) => p.includes('/mock-exams'),
-    section: 'INSTRUCTOR TOOLS',
-  },
+    icon: ClipboardCheck,
+  } as NavFlat,
+
   {
-    label: 'Instructor View',
-    icon: KeyRound,
-    path: '/instructor/learning-system/question-bank',
-    match: (p: string) => false,
-  },
-  {
-    label: 'Presentation Mode',
-    icon: Monitor,
-    path: '/instructor/learning-system/question-bank?mode=presentation',
-    match: (p: string) => false,
-  },
-  {
-    label: 'Flashcards',
-    icon: Layers,
-    path: '/instructor/learning-system/flashcards',
-    match: (p: string) => p.includes('/flashcards'),
-  },
+    id: 'code-of-conduct',
+    label: 'Trainer Code of Conduct',
+    path: '/instructor/code-of-conduct',
+    icon: FileText,
+  } as NavFlat,
 ];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function isPathActive(path: string, current: string): boolean {
+  if (path === '/instructor/dashboard') return current === path;
+  return current === path || current.startsWith(path + '/') || current.startsWith(path + '?');
+}
+
+function groupHasActiveChild(group: NavGroup, current: string): boolean {
+  return group.children.some(c => isPathActive(c.path, current));
+}
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 function Sidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
@@ -112,7 +153,15 @@ function Sidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const displayName = user?.profile
     ? `${user.profile.first_name || ''} ${user.profile.last_name || ''}`.trim()
     : 'Instructor';
-  const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'IN';
+
+  // Track which groups are expanded
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({
+    'learning-centre': true,
+    'learning-system': false,
+  });
+
+  const toggleGroup = (id: string) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
 
   const handleLogout = async () => {
     try { await AuthService.signOut(); } catch {}
@@ -123,7 +172,7 @@ function Sidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
     <aside
       className={cn(
         'fixed left-0 top-0 bottom-0 z-40 flex flex-col transition-all duration-300 ease-in-out',
-        open ? 'w-60' : 'w-14'
+        open ? 'w-64' : 'w-14'
       )}
       style={{ background: BDA.sidebarBg }}
     >
@@ -140,10 +189,13 @@ function Sidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
         </div>
         {open && (
           <div className="overflow-hidden">
-            <p className="text-white font-bold text-sm leading-tight truncate">Instructor Portal</p>
-            <p className="text-[10px] leading-tight truncate" style={{ color: BDA.sidebarText }}>
-              Business Development Association
-            </p>
+            <p className="text-white font-bold text-sm leading-tight truncate">BDA Portal</p>
+            <div
+              className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider mt-0.5"
+              style={{ background: 'rgba(15,145,224,0.25)', color: '#0f91e0' }}
+            >
+              Instructor
+            </div>
           </div>
         )}
       </div>
@@ -168,88 +220,149 @@ function Sidebar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
       )}
 
       {/* ── Nav ──────────────────────────────────────────────────── */}
-      <nav className="flex-1 py-3 overflow-y-auto overflow-x-hidden">
-        {NAV_ITEMS.map((item) => {
-          const active = item.match(location.pathname);
-          const Icon = item.icon;
-          return (
-            <React.Fragment key={item.path}>
-              {item.section && open && (
-                <div className="px-3.5 pt-4 pb-1.5">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: BDA.sidebarText }}>
-                    {item.section}
-                  </p>
-                </div>
-              )}
-              <button
-                onClick={() => navigate(item.path)}
-                title={!open ? item.label : undefined}
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 text-sm font-medium transition-colors relative group"
-                style={{
-                  background: active ? BDA.sidebarActive : 'transparent',
-                  color: active ? BDA.sidebarTextActive : BDA.sidebarText,
-                }}
-                onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = BDA.sidebarHover; }}
-                onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-              >
-                {active && (
-                  <span
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full"
-                    style={{ background: BDA.blue }}
-                  />
-                )}
-                <span className="shrink-0" style={{ color: active ? BDA.sidebarIconActive : BDA.sidebarIcon }}>
-                  <Icon className="h-4 w-4" />
-                </span>
-                {open && <span className="truncate flex-1 text-left">{item.label}</span>}
-                {!open && (
-                  <span className="absolute left-full ml-2 px-2 py-1 text-xs bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    {item.label}
+      <nav className="flex-1 py-3 overflow-y-auto overflow-x-hidden space-y-0.5 px-2">
+        {NAV.map(entry => {
+          if (isGroup(entry)) {
+            const groupActive = groupHasActiveChild(entry, location.pathname);
+            const isExpanded = expanded[entry.id];
+            const Icon = entry.icon;
+
+            return (
+              <div key={entry.id}>
+                {/* Group header button */}
+                <button
+                  onClick={() => open && toggleGroup(entry.id)}
+                  title={!open ? entry.label : undefined}
+                  className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors relative group"
+                  style={{
+                    background: groupActive && !isExpanded ? BDA.sidebarActive : 'transparent',
+                    color: groupActive ? BDA.sidebarTextActive : BDA.sidebarText,
+                  }}
+                  onMouseEnter={e => { if (!groupActive) (e.currentTarget as HTMLElement).style.background = BDA.sidebarHover; }}
+                  onMouseLeave={e => { if (!groupActive || isExpanded) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                >
+                  {groupActive && !isExpanded && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full" style={{ background: BDA.blue }} />
+                  )}
+                  <span className="shrink-0" style={{ color: groupActive ? BDA.sidebarIconActive : BDA.sidebarIcon }}>
+                    <Icon className="h-4 w-4" />
                   </span>
+                  {open && (
+                    <>
+                      <span className="truncate flex-1 text-left text-xs font-semibold">{entry.label}</span>
+                      {isExpanded
+                        ? <ChevronDown className="h-3.5 w-3.5 shrink-0" style={{ color: BDA.sidebarIcon }} />
+                        : <ChevronRight className="h-3.5 w-3.5 shrink-0" style={{ color: BDA.sidebarIcon }} />
+                      }
+                    </>
+                  )}
+                  {!open && (
+                    <span className="absolute left-full ml-2 px-2 py-1 text-xs bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                      {entry.label}
+                    </span>
+                  )}
+                </button>
+
+                {/* Children */}
+                {open && isExpanded && (
+                  <div className="ml-3 mt-0.5 space-y-0.5" style={{ borderLeft: `1px solid ${BDA.sidebarBorder}`, paddingLeft: '10px' }}>
+                    {entry.children.map(child => {
+                      const childActive = isPathActive(child.path, location.pathname);
+                      const ChildIcon = child.icon;
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => navigate(child.path)}
+                          className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-xs font-medium transition-colors relative"
+                          style={{
+                            background: childActive ? BDA.sidebarActive : 'transparent',
+                            color: childActive ? BDA.sidebarTextActive : BDA.sidebarText,
+                          }}
+                          onMouseEnter={e => { if (!childActive) (e.currentTarget as HTMLElement).style.background = BDA.sidebarHover; }}
+                          onMouseLeave={e => { if (!childActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                        >
+                          {childActive && (
+                            <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{ background: BDA.blue }} />
+                          )}
+                          <span className="shrink-0" style={{ color: childActive ? BDA.sidebarIconActive : BDA.sidebarIcon }}>
+                            <ChildIcon className="h-3.5 w-3.5" />
+                          </span>
+                          <span className="truncate text-left">{child.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
-              </button>
-            </React.Fragment>
+              </div>
+            );
+          }
+
+          // Flat item
+          const flat = entry as NavFlat;
+          const active = isPathActive(flat.path, location.pathname);
+          const Icon = flat.icon;
+
+          return (
+            <button
+              key={flat.id}
+              onClick={() => navigate(flat.path)}
+              title={!open ? flat.label : undefined}
+              className="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium transition-colors relative group"
+              style={{
+                background: active ? BDA.sidebarActive : 'transparent',
+                color: active ? BDA.sidebarTextActive : BDA.sidebarText,
+              }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = BDA.sidebarHover; }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              {active && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full" style={{ background: BDA.blue }} />
+              )}
+              <span className="shrink-0" style={{ color: active ? BDA.sidebarIconActive : BDA.sidebarIcon }}>
+                <Icon className="h-4 w-4" />
+              </span>
+              {open && <span className="truncate flex-1 text-left">{flat.label}</span>}
+              {!open && (
+                <span className="absolute left-full ml-2 px-2 py-1 text-xs bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  {flat.label}
+                </span>
+              )}
+            </button>
           );
         })}
       </nav>
 
-      {/* ── Back to Portal ───────────────────────────────────────── */}
-      <button
-        onClick={() => navigate('/instructor/dashboard')}
-        title={!open ? 'Dashboard' : undefined}
-        className="w-full flex items-center gap-3 px-3.5 py-3 text-sm font-medium transition-colors group relative"
-        style={{ borderTop: `1px solid ${BDA.sidebarBorder}`, color: BDA.sidebarText }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = BDA.sidebarHover; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = BDA.sidebarText; }}
-      >
-        <ArrowLeft className="h-4 w-4 shrink-0" />
-        {open && <span className="truncate">Back to Dashboard</span>}
-      </button>
-
       {/* ── Logout ───────────────────────────────────────────────── */}
-      <button
-        onClick={handleLogout}
-        title={!open ? 'Sign out' : undefined}
-        className="w-full flex items-center gap-3 px-3.5 py-3 text-sm font-medium transition-colors group relative"
-        style={{ borderTop: `1px solid ${BDA.sidebarBorder}`, color: 'rgba(255,100,100,0.7)' }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,50,50,0.08)'; (e.currentTarget as HTMLElement).style.color = '#ff6b6b'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,100,100,0.7)'; }}
-      >
-        <LogOut className="h-4 w-4 shrink-0" />
-        {open && <span className="truncate">Sign Out</span>}
-      </button>
+      <div style={{ borderTop: `1px solid ${BDA.sidebarBorder}` }}>
+        <button
+          onClick={handleLogout}
+          title={!open ? 'Sign out' : undefined}
+          className="w-full flex items-center gap-3 px-3.5 py-3 text-sm font-medium transition-colors group relative"
+          style={{ color: 'rgba(255,100,100,0.7)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,50,50,0.08)'; (e.currentTarget as HTMLElement).style.color = '#ff6b6b'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,100,100,0.7)'; }}
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {open && <span className="truncate">Log Out</span>}
+          {!open && (
+            <span className="absolute left-full ml-2 px-2 py-1 text-xs bg-gray-900 text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+              Log Out
+            </span>
+          )}
+        </button>
 
-      {/* ── Collapse toggle ──────────────────────────────────────── */}
-      <button
-        onClick={onToggle}
-        className="flex items-center justify-center h-9 transition-colors"
-        style={{ borderTop: `1px solid ${BDA.sidebarBorder}`, color: BDA.sidebarIcon }}
-        title={open ? 'Collapse' : 'Expand'}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = BDA.sidebarHover; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = BDA.sidebarIcon; }}
-      >
-        {open ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </button>
+        {/* Collapse toggle */}
+        <button
+          onClick={onToggle}
+          className="flex items-center justify-center w-full h-9 transition-colors"
+          style={{ borderTop: `1px solid ${BDA.sidebarBorder}`, color: BDA.sidebarIcon }}
+          title={open ? 'Collapse sidebar' : 'Expand sidebar'}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = BDA.sidebarHover; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = BDA.sidebarIcon; }}
+        >
+          {open ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+      </div>
     </aside>
   );
 }
@@ -263,31 +376,43 @@ function TopBar({ sidebarOpen }: { sidebarOpen: boolean }) {
     ? `${user.profile.first_name || ''} ${user.profile.last_name || ''}`.trim()
     : 'Instructor';
 
-  // Page title from current route
-  const pageTitle = NAV_ITEMS.find(n => n.match(location.pathname))?.label || 'Instructor Portal';
+  // Derive page title from current path
+  const getTitle = () => {
+    const p = location.pathname;
+    if (p === '/instructor/dashboard') return 'Instructor Dashboard';
+    if (p.includes('/learning-centre/module/1')) return 'Module 1 — BDA Orientation';
+    if (p.includes('/learning-centre/module/2')) return 'Module 2 — Understanding BDA BoCK';
+    if (p.includes('/learning-centre/module/3')) return 'Module 3 — Teaching the BDA Methodology';
+    if (p.includes('/learning-centre/module/4')) return 'Module 4 — Trainer Delivery Standards';
+    if (p.includes('/learning-centre/module/5')) return 'Module 5 — Trainer Assessment';
+    if (p.includes('/mock-exams')) return 'Mock Exams';
+    if (p.includes('/code-of-conduct')) return 'Trainer Code of Conduct';
+    if (p.includes('/learning-system')) return 'BDA Learning System';
+    return 'Instructor Portal';
+  };
 
   return (
     <div
       className={cn(
         'fixed top-0 right-0 z-30 h-16 flex items-center justify-between px-6 transition-all duration-300',
-        sidebarOpen ? 'left-60' : 'left-14'
+        sidebarOpen ? 'left-64' : 'left-14'
       )}
       style={{ background: 'white', borderBottom: '1px solid #e5e7eb' }}
     >
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Instructor Portal</p>
-        <p className="text-base font-bold text-[#0d1f4e] leading-tight">{pageTitle}</p>
+        <p className="text-base font-bold leading-tight" style={{ color: BDA.navy }}>{getTitle()}</p>
       </div>
       <div className="flex items-center gap-3">
         <div className="text-right hidden md:block">
-          <p className="text-sm font-semibold text-[#0d1f4e]">{displayName}</p>
+          <p className="text-sm font-semibold" style={{ color: BDA.navy }}>{displayName}</p>
           <p className="text-[11px] text-slate-400">BDA Certified Instructor</p>
         </div>
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
           style={{ background: BDA.gradient }}
         >
-          {displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+          {displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'IN'}
         </div>
       </div>
     </div>
@@ -304,7 +429,10 @@ export function InstructorShell() {
         <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen(v => !v)} />
         <TopBar sidebarOpen={sidebarOpen} />
         <div
-          className={cn('transition-all duration-300 ease-in-out min-h-screen pt-16', sidebarOpen ? 'pl-60' : 'pl-14')}
+          className={cn(
+            'transition-all duration-300 ease-in-out min-h-screen pt-16',
+            sidebarOpen ? 'pl-64' : 'pl-14'
+          )}
         >
           <Outlet />
         </div>

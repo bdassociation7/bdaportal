@@ -169,6 +169,9 @@ import PartnershipPending from './pages/PartnershipPending';
 // Trainer pages
 import TrainerDashboard from './pages/trainer/TrainerDashboard';
 import TrainerAcceptInvite from './pages/trainer/AcceptInvite';
+import TrainerModulePage from './pages/trainer/TrainerModulePage';
+import TrainerCodeOfConduct from './pages/trainer/TrainerCodeOfConduct';
+import { InstructorShell } from './components/InstructorShell';
 
 // ECP Partner pages
 import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPLicense, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
@@ -279,6 +282,15 @@ const TrainerWrapper = () => (
   <ProtectedRoute>
     <RoleGuard allowedRoles={['trainer']}>
       <LearningShell />
+    </RoleGuard>
+  </ProtectedRoute>
+);
+
+// Instructor Portal wrapper - InstructorShell with collapsible sidebar
+const InstructorWrapper = () => (
+  <ProtectedRoute>
+    <RoleGuard allowedRoles={['trainer']}>
+      <InstructorShell />
     </RoleGuard>
   </ProtectedRoute>
 );
@@ -406,27 +418,18 @@ const App = () => (
                 {/* Trainer Accept Invite - public (magic link lands here) */}
                 <Route path="/instructor/accept-invite" element={<TrainerAcceptInvite />} />
 
-                {/* ── Instructor Portal — standalone pages ── */}
-                {/* Dashboard */}
-                <Route path="/instructor/dashboard" element={
-                  <ProtectedRoute>
-                    <RoleGuard allowedRoles={['trainer']}>
-                      <TrainerDashboard />
-                    </RoleGuard>
-                  </ProtectedRoute>
-                } />
-
-                {/* Mock Exams — standalone */}
-                <Route element={
-                  <ProtectedRoute>
-                    <RoleGuard allowedRoles={['trainer']}>
-                      <Outlet />
-                    </RoleGuard>
-                  </ProtectedRoute>
-                }>
+                {/* ── Instructor Portal — InstructorShell (sidebar + topbar) ── */}
+                <Route element={<InstructorWrapper />}>
+                  {/* Dashboard */}
+                  <Route path="/instructor/dashboard" element={<TrainerDashboard />} />
+                  {/* Mock Exams list & detail */}
                   <Route path="/instructor/mock-exams" element={<MockExamList />} />
                   <Route path="/instructor/mock-exams/:examId" element={<ExamDetail />} />
                   <Route path="/instructor/mock-exams/results/:attemptId" element={<ExamResults />} />
+                  {/* Trainer Learning Centre modules */}
+                  <Route path="/instructor/learning-centre/module/:moduleId" element={<TrainerModulePage />} />
+                  {/* Code of Conduct placeholder */}
+                  <Route path="/instructor/code-of-conduct" element={<TrainerCodeOfConduct />} />
                 </Route>
 
                 {/* Instructor Learning System — TrainerWrapper (LearningShell with navy sidebar) */}
