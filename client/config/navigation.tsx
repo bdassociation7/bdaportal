@@ -148,12 +148,10 @@ export const navigationConfig: NavigationConfig = {
     { id: 'upgrade-requests', label: 'Partnership Requests', path: '/admin/upgrade-requests', icon: UserPlus },
     { id: 'partners', label: 'nav.admin.partners', path: '/admin/partners', icon: Building2 },
     { id: 'ecp-management', label: 'nav.admin.ecpManagement', path: '/admin/ecp-management', icon: Award },
-    { id: 'ecp-toolkit', label: 'nav.admin.ecpToolkit', path: '/admin/ecp-toolkit', icon: Palette },
     { id: 'partner-resources', label: 'Partner Resources', path: '/admin/partner-resources', icon: Package },
     { id: 'training-batches', label: 'nav.admin.trainingBatches', path: '/admin/training-batches', icon: Calendar },
     { id: 'pdp-management', label: 'nav.admin.pdpManagement', path: '/admin/pdp-management', icon: GraduationCap },
     { id: 'pdp-programs', label: 'nav.admin.pdpPrograms', path: '/admin/pdp-programs', icon: BookOpen },
-    { id: 'pdp-guidelines', label: 'nav.admin.pdpGuidelines', path: '/admin/pdp-guidelines', icon: FileText },
     { id: 'pdp-reports', label: 'nav.admin.pdpReports', path: '/admin/pdp-reports', icon: BarChart3 },
 
     // Exams Section
@@ -215,12 +213,10 @@ export const navigationConfig: NavigationConfig = {
     { id: 'upgrade-requests', label: 'Partnership Requests', path: '/admin/upgrade-requests', icon: UserPlus },
     { id: 'partners', label: 'nav.admin.partners', path: '/admin/partners', icon: Building2 },
     { id: 'ecp-management', label: 'nav.admin.ecpManagement', path: '/admin/ecp-management', icon: Award },
-    { id: 'ecp-toolkit', label: 'nav.admin.ecpToolkit', path: '/admin/ecp-toolkit', icon: Palette },
     { id: 'partner-resources', label: 'Partner Resources', path: '/admin/partner-resources', icon: Package },
     { id: 'training-batches', label: 'nav.admin.trainingBatches', path: '/admin/training-batches', icon: Calendar },
     { id: 'pdp-management', label: 'nav.admin.pdpManagement', path: '/admin/pdp-management', icon: GraduationCap },
     { id: 'pdp-programs', label: 'nav.admin.pdpPrograms', path: '/admin/pdp-programs', icon: BookOpen },
-    { id: 'pdp-guidelines', label: 'nav.admin.pdpGuidelines', path: '/admin/pdp-guidelines', icon: FileText },
     { id: 'pdp-reports', label: 'nav.admin.pdpReports', path: '/admin/pdp-reports', icon: BarChart3 },
 
     // Exams Section

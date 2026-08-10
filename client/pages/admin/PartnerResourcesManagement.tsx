@@ -74,7 +74,7 @@ import type { PDPToolkitItem, ToolkitCategory } from '@/entities/pdp/pdp.types';
 import { useCommonConfirms } from '@/hooks/use-confirm';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type PartnerType = 'ecp' | 'pdp';
+type PartnerType = 'ecp' | 'pdp' | 'both';
 type AnyCategory = ECPToolkitCategory | ToolkitCategory;
 
 interface UnifiedItem {
@@ -105,7 +105,7 @@ interface FormData {
 }
 
 const defaultForm: FormData = {
-  partnerType: 'ecp',
+  partnerType: 'both',
   category: 'logos',
   title: '',
   description: '',
@@ -133,8 +133,9 @@ const formatFileSize = (bytes?: number) => {
 };
 
 const PARTNER_LABELS: Record<PartnerType, { label: string; color: string; bg: string }> = {
-  ecp: { label: 'ECP Partner', color: 'text-blue-700', bg: 'bg-blue-100' },
-  pdp: { label: 'PDP Partner', color: 'text-purple-700', bg: 'bg-purple-100' },
+  ecp:  { label: 'ECP Partner',      color: 'text-blue-700',  bg: 'bg-blue-100' },
+  pdp:  { label: 'PDP Partner',      color: 'text-purple-700', bg: 'bg-purple-100' },
+  both: { label: 'ECP + PDP',        color: 'text-teal-700',  bg: 'bg-teal-100' },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -211,7 +212,8 @@ export default function PartnerResourcesManagement() {
     setIsUploading(true);
     try {
       let result;
-      if (formData.partnerType === 'ecp') {
+      // For 'both', upload to ECP bucket (same file URL will be reused for PDP record)
+      if (formData.partnerType === 'ecp' || formData.partnerType === 'both') {
         result = await uploadECP.mutateAsync({ file, category: formData.category as ECPToolkitCategory });
       } else {
         result = await uploadPDP.mutateAsync({ file, category: formData.category as ToolkitCategory });
@@ -245,8 +247,14 @@ export default function PartnerResourcesManagement() {
     };
     if (formData.partnerType === 'ecp') {
       await createECP.mutateAsync(dto as any);
-    } else {
+    } else if (formData.partnerType === 'pdp') {
       await createPDP.mutateAsync(dto as any);
+    } else {
+      // both — create in both tables simultaneously
+      await Promise.all([
+        createECP.mutateAsync(dto as any),
+        createPDP.mutateAsync(dto as any),
+      ]);
     }
     setIsAddOpen(false);
     setFormData(defaultForm);
@@ -599,23 +607,23 @@ function ResourceForm({
       {/* Partner Type */}
       {showPartnerType && (
         <div className="space-y-1.5">
-          <Label>Partner Type <span className="text-red-400">*</span></Label>
-          <div className="grid grid-cols-2 gap-3">
-            {(['ecp', 'pdp'] as PartnerType[]).map(pt => (
+          <Label>Visible To <span className="text-red-400">*</span></Label>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { value: 'ecp',  label: 'ECP Only',    icon: <Users className="w-4 h-4" />,    active: 'border-blue-500 bg-blue-50 text-blue-700' },
+              { value: 'pdp',  label: 'PDP Only',    icon: <Building2 className="w-4 h-4" />, active: 'border-purple-500 bg-purple-50 text-purple-700' },
+              { value: 'both', label: 'ECP + PDP',   icon: <Package className="w-4 h-4" />,   active: 'border-teal-500 bg-teal-50 text-teal-700' },
+            ] as const).map(({ value, label, icon, active }) => (
               <button
-                key={pt}
+                key={value}
                 type="button"
-                onClick={() => update('partnerType', pt)}
-                className={`flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition-colors ${
-                  formData.partnerType === pt
-                    ? pt === 'ecp'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-purple-500 bg-purple-50 text-purple-700'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                onClick={() => update('partnerType', value)}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 text-xs font-medium transition-colors ${
+                  formData.partnerType === value ? active : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                {pt === 'ecp' ? <Users className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
-                {pt === 'ecp' ? 'ECP Partner' : 'PDP Partner'}
+                {icon}
+                {label}
               </button>
             ))}
           </div>

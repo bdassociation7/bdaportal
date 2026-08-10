@@ -119,7 +119,6 @@ import ContentManagement from "./pages/admin/ContentManagement";
 import ToolkitManagement from "./pages/admin/ToolkitManagement";
 import ResourceConfiguration from "./pages/admin/ResourceConfiguration";
 import ECPManagement from "./pages/admin/ECPManagement";
-import ECPToolkitManagement from "./pages/admin/ECPToolkitManagement";
 import PartnerResourcesManagement from "./pages/admin/PartnerResourcesManagement";
 import ECPDetails from "./pages/admin/ecp/ECPDetails";
 import VoucherAllocation from "./pages/admin/ecp/VoucherAllocation";
@@ -133,9 +132,7 @@ import LicenseManagement from "./pages/admin/pdp/LicenseManagement";
 import RequestReview from "./pages/admin/pdp/RequestReview";
 import PDPProgramReview from "./pages/admin/PDPProgramReview";
 import ProgramReview from "./pages/admin/pdp-programs/ProgramReview";
-import PDPGuidelinesAdmin from "./pages/admin/PDPGuidelines";
-import GuidelineCreate from "./pages/admin/pdp-guidelines/GuidelineCreate";
-import GuidelineEdit from "./pages/admin/pdp-guidelines/GuidelineEdit";
+
 import PDPAnnualReportsAdmin from "./pages/admin/PDPAnnualReports";
 import AdminManagement from "./pages/admin/AdminManagement";
 import BulkUserUpload from "./pages/admin/BulkUserUpload";
@@ -658,7 +655,7 @@ const App = () => (
                   <Route path="/admin/ecp/trainings/new" element={<AdminECPTrainingBatchNew />} />
                   <Route path="/admin/ecp/trainings/:id" element={<AdminECPTrainingBatchDetail />} />
                   <Route path="/admin/ecp/trainings/:id/edit" element={<AdminECPTrainingBatchEdit />} />
-                  <Route path="/admin/ecp-toolkit" element={<ECPToolkitManagement />} />
+                  <Route path="/admin/ecp-toolkit" element={<Navigate to="/admin/partner-resources" replace />} />
                   <Route path="/admin/partner-resources" element={<PartnerResourcesManagement />} />
                   <Route path="/admin/pdp-management" element={<PDPManagement />} />
                   <Route path="/admin/pdp/:id" element={<PDPDetails />} />
@@ -666,9 +663,7 @@ const App = () => (
                   <Route path="/admin/pdp/:id/requests/:requestId" element={<RequestReview />} />
                   <Route path="/admin/pdp-programs" element={<PDPProgramReview />} />
                   <Route path="/admin/pdp-programs/:programId/review" element={<ProgramReview />} />
-                  <Route path="/admin/pdp-guidelines" element={<PDPGuidelinesAdmin />} />
-                  <Route path="/admin/pdp-guidelines/create" element={<GuidelineCreate />} />
-                  <Route path="/admin/pdp-guidelines/:id/edit" element={<GuidelineEdit />} />
+                  <Route path="/admin/pdp-guidelines" element={<Navigate to="/admin/partner-resources" replace />} />
                   <Route path="/admin/pdp-reports" element={<PDPAnnualReportsAdmin />} />
                   <Route path="/admin/training-batches" element={<TrainingBatchManagement />} />
                   <Route path="/admin/exam-scheduling" element={<ExamSchedulingAdmin />} />
