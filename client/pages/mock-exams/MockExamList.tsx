@@ -443,9 +443,10 @@ export default function MockExamList() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ── Hero Section ─────────────────────────────────────── */}
+      {/* ── Hero Section ────────────────────────────────────── */}
+      <div className="px-6 pt-6">
       <div
-        className="relative overflow-hidden"
+        className="relative overflow-hidden rounded-xl"
         style={{ background: 'linear-gradient(135deg, #0f91e0 0%, #0d1f4e 100%)' }}
       >
         {/* Decorative circles */}
@@ -500,6 +501,7 @@ export default function MockExamList() {
             )}
           </div>
         </div>
+      </div>
       </div>
 
       {/* ── Content ──────────────────────────────────────────── */}

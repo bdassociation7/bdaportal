@@ -80,8 +80,9 @@ export default function TrainerDashboard() {
   return (
     <div>
       {/* ── Hero Banner ─────────────────────────────────────────────── */}
+      <div className="px-6 pt-6">
       <div
-        className="px-6 py-8"
+        className="px-6 py-8 rounded-xl"
         style={{ background: 'linear-gradient(135deg, #0f91e0 0%, #1a4fa0 50%, #0d1f4e 100%)' }}
       >
         <h1 className="text-2xl font-bold text-white mb-1">Instructor Dashboard</h1>
@@ -111,6 +112,7 @@ export default function TrainerDashboard() {
             Mock Exams
           </button>
         </div>
+      </div>
       </div>
 
       {/* ── Content ─────────────────────────────────────────────────── */}
