@@ -32,8 +32,8 @@ const NAV: NavEntry[] = [
   {
     id: 'learning-system', label: 'The Official Learning System', icon: BookOpen,
     children: [
-      { id: 'ls-candidate', label: 'BDA Learning System (Candidate View)', path: '/instructor/learning-system', icon: Users },
-      { id: 'ls-instructor', label: 'BDA Learning System (Instructor View)', path: '/instructor/learning-system/question-bank', icon: KeyRound },
+      { id: 'ls-candidate', label: 'BDA Learning System (Candidate View)', path: '/instructor/learning-system?mode=candidate', icon: Users },
+      { id: 'ls-instructor', label: 'BDA Learning System (Instructor View)', path: '/instructor/learning-system', icon: KeyRound },
     ],
   },
   { id: 'mock-exams', label: 'Mock Exams', path: '/instructor/mock-exams', icon: ClipboardCheck },

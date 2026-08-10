@@ -314,12 +314,15 @@ export function PracticeSession() {
   }, [location.pathname]);
 
   // Instructor mode: ECP partners and trainers both see answer keys
+  // Exception: ?mode=candidate forces candidate view (no answer keys shown)
+  const searchParams = new URLSearchParams(location.search);
+  const isCandidateMode = searchParams.get('mode') === 'candidate';
   const isInstructorMode = useMemo(() => {
-    return location.pathname.startsWith('/ecp/') || location.pathname.startsWith('/instructor/');
-  }, [location.pathname]);
+    const isInstructorPath = location.pathname.startsWith('/ecp/') || location.pathname.startsWith('/instructor/');
+    return isInstructorPath && !isCandidateMode;
+  }, [location.pathname, isCandidateMode]);
 
   // Presentation Mode: instructor mode but answer keys hidden (safe to share screen)
-  const searchParams = new URLSearchParams(location.search);
   const [isPresentationMode, setIsPresentationMode] = useState(
     searchParams.get('mode') === 'presentation'
   );
