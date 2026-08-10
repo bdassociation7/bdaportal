@@ -270,7 +270,7 @@ const DualPartnerWrapper = () => (
 const LearningSystemWrapper = () => (
   <ProtectedRoute>
     <ProfileCompletionGuard>
-      <RoleGuard allowedRoles={['individual', 'ecp']}>
+      <RoleGuard allowedRoles={['individual', 'ecp', 'trainer']}>
         <LearningShell />
       </RoleGuard>
     </ProfileCompletionGuard>
