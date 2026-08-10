@@ -3,11 +3,32 @@
   functions = "netlify/functions"
   publish = "dist/spa"
 
-
 [functions]
   external_node_modules = ["express"]
   node_bundler = "esbuild"
-  
+
+# ── Cache Control ─────────────────────────────────────────────────────────────
+# index.html: never cache — always fetch fresh so new JS/CSS bundles are loaded
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+# HTML files: never cache
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# JS/CSS assets: cache forever (Vite adds content hash to filename)
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# ── Redirects ─────────────────────────────────────────────────────────────────
 [[redirects]]
   force = true
   from = "/api/*"
