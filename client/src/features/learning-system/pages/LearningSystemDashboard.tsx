@@ -132,6 +132,8 @@ export function LearningSystemDashboard() {
   const { user } = useAuth();
   const basePath = location.pathname.startsWith('/ecp/')
     ? '/ecp/learning-system'
+    : location.pathname.startsWith('/instructor/')
+    ? '/instructor/learning-system'
     : '/learning-system';
 
   const { data: accessSummary, isLoading: isLoadingAccess } = useUserAccesses(user?.id);
