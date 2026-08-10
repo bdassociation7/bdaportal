@@ -87,7 +87,7 @@ export default function TakeExam() {
   const { language } = useLanguage();
   const texts = translations[language];
 
-  const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : '/mock-exams';
+  const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : location.pathname.startsWith('/instructor/') ? '/instructor/mock-exams' : '/mock-exams';
 
   const [session, setSession] = useState<ExamSession | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);

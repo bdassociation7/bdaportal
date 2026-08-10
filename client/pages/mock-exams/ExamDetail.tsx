@@ -116,7 +116,7 @@ export default function ExamDetail() {
   const texts = translations[language];
 
   // Determine base path for navigation (ECP vs non-ECP routes)
-  const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : '/mock-exams';
+  const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : location.pathname.startsWith('/instructor/') ? '/instructor/mock-exams' : '/mock-exams';
 
   const { data: exam, isLoading, error } = useExamDetails(examId || '');
   const { data: attempts } = useMyAttempts({ exam_id: examId });
