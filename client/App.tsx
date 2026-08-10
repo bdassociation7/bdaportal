@@ -171,7 +171,7 @@ import TrainerDashboard from './pages/trainer/TrainerDashboard';
 import TrainerAcceptInvite from './pages/trainer/AcceptInvite';
 import TrainerModulePage from './pages/trainer/TrainerModulePage';
 import TrainerCodeOfConduct from './pages/trainer/TrainerCodeOfConduct';
-import { InstructorShell } from './components/InstructorShell';
+import { InstructorPortalShell } from './components/InstructorPortalShell';
 
 // ECP Partner pages
 import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPLicense, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
@@ -290,7 +290,7 @@ const TrainerWrapper = () => (
 const InstructorWrapper = () => (
   <ProtectedRoute>
     <RoleGuard allowedRoles={['trainer']}>
-      <InstructorShell />
+      <InstructorPortalShell />
     </RoleGuard>
   </ProtectedRoute>
 );

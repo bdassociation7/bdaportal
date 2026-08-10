@@ -150,7 +150,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   );
 }
 
-export function InstructorShell() {
+export function InstructorPortalShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { user } = useAuthContext();
