@@ -2,6 +2,7 @@
  * TrainerGateModules — Admin page to manage Trainer Learning Centre modules
  * Route: /admin/trainer-gate/modules
  * Mirrors the CurriculumModuleManager but uses instructor_curriculum_modules table
+ * Includes TipTap editor for module introduction content
  */
 
 import { useState } from 'react';
@@ -9,11 +10,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Edit, Trash2, Eye, EyeOff, GraduationCap,
-  BookOpen, CheckCircle, FileText, ChevronRight, Clock,
+  BookOpen, CheckCircle, FileText, ChevronRight, Clock, Save, X,
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { RichTextEditor } from '@/features/curriculum/admin/components/RichTextEditor';
+import type { RichContent } from '@/entities/curriculum';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface TrainerModule {
@@ -21,6 +24,7 @@ interface TrainerModule {
   order_index: number;
   title: string;
   description: string | null;
+  intro_content: RichContent | null;
   is_published: boolean;
   estimated_duration_hours: number | null;
   created_at: string;
@@ -44,6 +48,7 @@ function ModuleFormDialog({
     order_index: module?.order_index || 1,
     estimated_duration_hours: module?.estimated_duration_hours || 1,
     is_published: module?.is_published ?? false,
+    intro_content: module?.intro_content || null as RichContent | null,
   });
   const [saving, setSaving] = useState(false);
 
@@ -54,28 +59,24 @@ function ModuleFormDialog({
     }
     setSaving(true);
     try {
+      const payload = {
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        order_index: form.order_index,
+        estimated_duration_hours: form.estimated_duration_hours,
+        is_published: form.is_published,
+        intro_content: form.intro_content,
+      };
       if (module?.id) {
         const { error } = await supabase
           .from('instructor_curriculum_modules')
-          .update({
-            title: form.title.trim(),
-            description: form.description.trim() || null,
-            order_index: form.order_index,
-            estimated_duration_hours: form.estimated_duration_hours,
-            is_published: form.is_published,
-          })
+          .update({ ...payload, updated_at: new Date().toISOString() })
           .eq('id', module.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('instructor_curriculum_modules')
-          .insert({
-            title: form.title.trim(),
-            description: form.description.trim() || null,
-            order_index: form.order_index,
-            estimated_duration_hours: form.estimated_duration_hours,
-            is_published: form.is_published,
-          });
+          .insert(payload);
         if (error) throw error;
       }
       toast({ title: module ? 'Module updated' : 'Module created', description: form.title });
@@ -89,18 +90,23 @@ function ModuleFormDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="px-6 py-4 flex items-center justify-between flex-shrink-0"
           style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)' }}>
           <h2 className="text-lg font-bold text-white">
             {module ? 'Edit Module' : 'New Trainer Module'}
           </h2>
-          <button onClick={onClose} className="text-white/70 hover:text-white text-xl">×</button>
+          <button onClick={onClose} className="text-white/70 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
         </div>
-        <div className="p-6 space-y-4">
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {/* Title */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Module Title *</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Module Title *</label>
             <input
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f91e0]"
               value={form.title}
@@ -108,19 +114,23 @@ function ModuleFormDialog({
               placeholder="e.g. BDA Orientation"
             />
           </div>
+
+          {/* Description */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Short Description</label>
             <textarea
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f91e0] resize-none"
-              rows={3}
+              rows={2}
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Brief description of this module..."
+              placeholder="Brief one-line description shown in the module list..."
             />
           </div>
+
+          {/* Order & Duration */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Order Index</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Order Index</label>
               <input
                 type="number"
                 min={1}
@@ -130,7 +140,7 @@ function ModuleFormDialog({
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Duration (hours)</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Duration (hours)</label>
               <input
                 type="number"
                 min={0.5}
@@ -141,23 +151,50 @@ function ModuleFormDialog({
               />
             </div>
           </div>
+
+          {/* Module Introduction — TipTap editor */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">
+              Module Introduction
+              <span className="ml-2 text-gray-400 font-normal normal-case">
+                — shown at the top of the module page before the lessons
+              </span>
+            </label>
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <RichTextEditor
+                content={form.intro_content}
+                onChange={content => setForm(f => ({ ...f, intro_content: content }))}
+                placeholder="Write a module introduction — objectives, overview, what instructors will learn..."
+                dir="ltr"
+              />
+            </div>
+          </div>
+
+          {/* Published */}
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
-              id="is_published"
+              id="is_published_mod"
               checked={form.is_published}
               onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))}
               className="w-4 h-4 rounded"
             />
-            <label htmlFor="is_published" className="text-sm font-medium text-gray-700">
+            <label htmlFor="is_published_mod" className="text-sm font-medium text-gray-700">
               Published (visible to instructors)
             </label>
           </div>
         </div>
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving}
-            style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)', color: '#fff' }}>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2"
+            style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)', color: '#fff' }}
+          >
+            <Save className="h-4 w-4" />
             {saving ? 'Saving...' : module ? 'Save Changes' : 'Create Module'}
           </Button>
         </div>
@@ -170,7 +207,7 @@ function ModuleFormDialog({
 export default function TrainerGateModules() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [editingModule, setEditingModule] = useState<TrainerModule | null>( null);
+  const [editingModule, setEditingModule] = useState<TrainerModule | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
 
@@ -300,6 +337,7 @@ export default function TrainerGateModules() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">#</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Module Name</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Lessons</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Intro</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Duration</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Status</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">Actions</th>
@@ -308,11 +346,11 @@ export default function TrainerGateModules() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-gray-400">Loading modules...</td>
+                  <td colSpan={7} className="text-center py-12 text-gray-400">Loading modules...</td>
                 </tr>
               ) : modules.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12">
+                  <td colSpan={7} className="text-center py-12">
                     <GraduationCap className="h-10 w-10 mx-auto mb-3 text-gray-300" />
                     <p className="text-gray-500 font-medium">No modules yet</p>
                     <p className="text-gray-400 text-sm mt-1">Create your first Trainer Learning Centre module.</p>
@@ -334,6 +372,16 @@ export default function TrainerGateModules() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm text-gray-600">{mod.lesson_count || 0} lessons</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {mod.intro_content ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                          <CheckCircle className="h-3 w-3" />
+                          Added
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {mod.estimated_duration_hours ? (

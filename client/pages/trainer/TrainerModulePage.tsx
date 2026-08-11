@@ -36,6 +36,7 @@ interface TrainerModule {
   id: string;
   title: string;
   description: string | null;
+  intro_content: any | null;
   order_index: number;
   is_published: boolean;
   estimated_duration_hours: number | null;
@@ -291,6 +292,19 @@ export default function TrainerModulePage() {
               )}
             </div>
           </div>
+
+          {/* Module Introduction */}
+          {module.intro_content && !activeLesson && (
+            <div className="rounded-2xl border p-6 mb-5"
+              style={{ background: '#fff', borderColor: BDA.border, boxShadow: '0 1px 4px rgba(28,74,139,0.06)' }}>
+              <h3 className="text-base font-bold mb-4 flex items-center gap-2" style={{ color: BDA.navyDark }}>
+                <span className="w-1.5 h-5 rounded-full inline-block" style={{ background: BDA.blue }} />
+                Module Introduction
+              </h3>
+              <div className="prose prose-gray max-w-none"
+                dangerouslySetInnerHTML={{ __html: renderTipTap(module.intro_content) }} />
+            </div>
+          )}
 
           {/* Active Lesson Content */}
           {activeLesson ? (
