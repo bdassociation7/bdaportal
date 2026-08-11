@@ -1,28 +1,31 @@
 /**
- * InstructorAssessmentPage — Comprehensive Trainer Assessment
+ * InstructorAssessmentPage — Mandatory qualifying assessment for instructors.
  * Route: /instructor/assessment
- * Reads published questions from instructor_assessment_questions table.
- * Presents them as an interactive MCQ quiz with results and rationale.
+ * A passed attempt (80%+) unlocks the Official Learning System and Mock Exams.
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/shared/config/supabase.config';
+import { useNavigate } from 'react-router-dom';
 import {
-  ClipboardCheck, CheckCircle, XCircle, ChevronRight,
-  ChevronLeft, RotateCcw, Award, BookOpen, AlertCircle,
+  AlertCircle, Award, ChevronLeft, ChevronRight, ClipboardCheck,
+  Loader2, RotateCcw, ShieldCheck, XCircle,
 } from 'lucide-react';
+import { supabase } from '@/shared/config/supabase.config';
+import { useAuthContext } from '@/app/providers/AuthProvider';
 import { Button } from '@/components/ui/button';
 
-// BDA Brand Palette
 const BDA = {
-  navy: '#1C4A8B',
-  navyDark: '#0d1f4e',
+  navy: '#0d1f4e',
   blue: '#0f91e0',
   bluePale: '#f0f6ff',
   blueMid: '#dbeafe',
   border: '#e2eaf6',
 };
+const PASSING_SCORE = 80;
+
+type Answer = 'A' | 'B' | 'C' | 'D';
+type Phase = 'intro' | 'quiz' | 'results';
 
 interface AssessmentQuestion {
   id: string;
@@ -32,69 +35,58 @@ interface AssessmentQuestion {
   option_b: string;
   option_c: string;
   option_d: string;
-  correct_answer: 'A' | 'B' | 'C' | 'D';
-  rationale: string | null;
+  correct_answer: Answer;
 }
 
-type Phase = 'intro' | 'quiz' | 'results';
-
-// ── Option Button ─────────────────────────────────────────────────────────────
 function OptionButton({
-  label, text, selected, correct, revealed, onClick,
+  label, text, selected, onClick,
 }: {
-  label: 'A' | 'B' | 'C' | 'D';
+  label: Answer;
   text: string;
   selected: boolean;
-  correct: boolean;
-  revealed: boolean;
   onClick: () => void;
 }) {
-  let bg = '#fff';
-  let border = BDA.border;
-  let textColor = '#374151';
-
-  if (revealed) {
-    if (correct) { bg = '#f0fdf4'; border = '#86efac'; textColor = '#166534'; }
-    else if (selected && !correct) { bg = '#fef2f2'; border = '#fca5a5'; textColor = '#991b1b'; }
-  } else if (selected) {
-    bg = BDA.bluePale; border = BDA.blue; textColor = BDA.navyDark;
-  }
-
   return (
     <button
+      type="button"
       onClick={onClick}
-      disabled={revealed}
-      className="w-full flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all hover:shadow-sm disabled:cursor-default"
-      style={{ background: bg, borderColor: border, color: textColor }}
+      className="w-full flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all hover:shadow-sm"
+      style={{
+        background: selected ? BDA.bluePale : '#fff',
+        borderColor: selected ? BDA.blue : BDA.border,
+        color: BDA.navy,
+      }}
     >
-      <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border"
+      <span
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold"
         style={{
-          background: revealed && correct ? '#16a34a' : revealed && selected && !correct ? '#dc2626' : selected ? BDA.blue : BDA.bluePale,
-          borderColor: revealed && correct ? '#16a34a' : revealed && selected && !correct ? '#dc2626' : selected ? BDA.blue : BDA.border,
-          color: (revealed && correct) || (revealed && selected && !correct) || selected ? '#fff' : BDA.navy,
-        }}>
+          background: selected ? BDA.blue : BDA.bluePale,
+          borderColor: selected ? BDA.blue : BDA.border,
+          color: selected ? '#fff' : BDA.navy,
+        }}
+      >
         {label}
       </span>
-      <span className="flex-1 text-sm leading-relaxed">{text}</span>
-      {revealed && correct && <CheckCircle className="h-5 w-5 flex-shrink-0 text-green-500 mt-0.5" />}
-      {revealed && selected && !correct && <XCircle className="h-5 w-5 flex-shrink-0 text-red-500 mt-0.5" />}
+      <span className="flex-1 text-sm leading-relaxed text-gray-700">{text}</span>
     </button>
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
 export default function InstructorAssessmentPage() {
+  const navigate = useNavigate();
+  const { user } = useAuthContext();
   const [phase, setPhase] = useState<Phase>('intro');
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>({});
-  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const { data: questions = [], isLoading } = useQuery<AssessmentQuestion[]>({
+  const { data: questions = [], isLoading, isError, refetch } = useQuery<AssessmentQuestion[]>({
     queryKey: ['instructor-assessment-questions'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('instructor_assessment_questions')
-        .select('id, order_index, question_text, option_a, option_b, option_c, option_d, correct_answer, rationale')
+        .select('id, order_index, question_text, option_a, option_b, option_c, option_d, correct_answer')
         .eq('is_published', true)
         .order('order_index', { ascending: true });
       if (error) throw error;
@@ -103,89 +95,115 @@ export default function InstructorAssessmentPage() {
   });
 
   const current = questions[currentIdx];
-  const totalQ = questions.length;
+  const totalQuestions = questions.length;
   const answeredCount = Object.keys(answers).length;
+  const allAnswered = totalQuestions > 0 && answeredCount === totalQuestions;
 
   const score = useMemo(() => {
     if (phase !== 'results') return 0;
-    return questions.filter(q => answers[q.id] === q.correct_answer).length;
-  }, [phase, questions, answers]);
+    const correct = questions.filter(question => answers[question.id] === question.correct_answer).length;
+    return Math.round((correct / totalQuestions) * 100);
+  }, [answers, phase, questions, totalQuestions]);
+  const passed = score >= PASSING_SCORE;
 
-  const pct = totalQ > 0 ? Math.round((score / totalQ) * 100) : 0;
-
-  const handleAnswer = (label: 'A' | 'B' | 'C' | 'D') => {
-    if (revealed[current.id]) return;
-    setAnswers(a => ({ ...a, [current.id]: label }));
+  const chooseAnswer = (answer: Answer) => {
+    if (!current) return;
+    setAnswers(existing => ({ ...existing, [current.id]: answer }));
   };
 
-  const handleCheck = () => {
-    if (!answers[current.id]) return;
-    setRevealed(r => ({ ...r, [current.id]: true }));
-  };
-
-  const handleNext = () => {
-    if (currentIdx < totalQ - 1) {
-      setCurrentIdx(i => i + 1);
-    } else {
-      setPhase('results');
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentIdx > 0) setCurrentIdx(i => i - 1);
-  };
-
-  const handleReset = () => {
+  const resetAttempt = () => {
     setPhase('intro');
     setCurrentIdx(0);
     setAnswers({});
-    setRevealed({});
+    setSubmitError(null);
+    setIsSubmitting(false);
   };
 
-  // ── Intro ──────────────────────────────────────────────────────────────────
+  const submitAssessment = async () => {
+    if (!user?.id || !allAnswered || isSubmitting) return;
+    const correct = questions.filter(question => answers[question.id] === question.correct_answer).length;
+    const percentage = Math.round((correct / totalQuestions) * 100);
+    const didPass = percentage >= PASSING_SCORE;
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const { error } = await supabase
+        .from('instructor_assessment_attempts')
+        .insert({
+          user_id: user.id,
+          score: correct,
+          total_questions: totalQuestions,
+          passed: didPass,
+          answers,
+        });
+      if (error) throw error;
+      setPhase('results');
+    } catch (error: any) {
+      setSubmitError(error?.message || 'We could not save your assessment result. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (phase === 'intro') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: BDA.bluePale }}>
-        <div className="max-w-lg w-full rounded-3xl border p-8 text-center"
-          style={{ background: '#fff', borderColor: BDA.border, boxShadow: '0 4px 24px rgba(28,74,139,0.10)' }}>
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
-            style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)' }}>
+      <div className="min-h-screen p-6 flex items-center justify-center" style={{ background: BDA.bluePale }}>
+        <div className="w-full max-w-xl rounded-3xl border bg-white p-8 text-center shadow-sm" style={{ borderColor: BDA.border }}>
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl" style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)' }}>
             <ClipboardCheck className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold mb-2" style={{ color: BDA.navyDark }}>
-            Instructor Assessment
-          </h1>
-          <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-            This comprehensive assessment covers all five Trainer Learning Centre modules.
-            It is designed to verify your readiness to deliver BDA programmes effectively.
+          <h1 className="text-2xl font-bold" style={{ color: BDA.navy }}>Instructor Assessment</h1>
+          <p className="mt-3 text-sm leading-relaxed text-gray-600">
+            This is a mandatory qualifying assessment covering all five Trainer Learning Centre modules.
+            You must pass it before the Official Learning System and Mock Exams are available.
           </p>
 
           {isLoading ? (
-            <div className="flex items-center justify-center gap-2 text-gray-400 text-sm py-4">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: BDA.blue }} />
-              Loading questions...
+            <div className="mt-7 flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color: BDA.blue }} />
+              Loading assessment…
             </div>
-          ) : totalQ === 0 ? (
-            <div className="rounded-xl border p-5 text-center" style={{ background: BDA.bluePale, borderColor: BDA.border }}>
-              <AlertCircle className="h-8 w-8 mx-auto mb-2" style={{ color: BDA.blue }} />
-              <p className="text-sm font-semibold" style={{ color: BDA.navyDark }}>No questions available yet</p>
-              <p className="text-xs text-gray-500 mt-1">The BDA team is preparing the assessment questions. Please check back soon.</p>
+          ) : isError ? (
+            <div className="mt-6 rounded-xl border p-4 text-left" style={{ background: '#fef2f2', borderColor: '#fecaca' }}>
+              <div className="flex items-start gap-2 text-sm text-red-700">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-semibold">Assessment unavailable</p>
+                  <p className="mt-1 text-xs">We could not load the assessment at the moment.</p>
+                </div>
+              </div>
+              <Button variant="outline" className="mt-3" onClick={() => refetch()}>Try Again</Button>
+            </div>
+          ) : totalQuestions === 0 ? (
+            <div className="mt-6 rounded-xl border p-5" style={{ background: BDA.bluePale, borderColor: BDA.border }}>
+              <AlertCircle className="mx-auto mb-2 h-7 w-7" style={{ color: BDA.blue }} />
+              <p className="text-sm font-semibold" style={{ color: BDA.navy }}>Assessment questions are being prepared</p>
+              <p className="mt-1 text-xs text-gray-500">Please check back soon.</p>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="rounded-xl border p-3 text-center" style={{ background: BDA.bluePale, borderColor: BDA.border }}>
-                  <p className="text-2xl font-bold" style={{ color: BDA.navy }}>{totalQ}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Questions</p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border p-3" style={{ background: BDA.bluePale, borderColor: BDA.border }}>
+                  <p className="text-2xl font-bold" style={{ color: BDA.navy }}>{totalQuestions}</p>
+                  <p className="mt-0.5 text-xs text-gray-500">Questions</p>
                 </div>
-                <div className="rounded-xl border p-3 text-center" style={{ background: BDA.bluePale, borderColor: BDA.border }}>
-                  <p className="text-2xl font-bold" style={{ color: BDA.navy }}>5</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Modules Covered</p>
+                <div className="rounded-xl border p-3" style={{ background: BDA.bluePale, borderColor: BDA.border }}>
+                  <p className="text-2xl font-bold" style={{ color: BDA.navy }}>{PASSING_SCORE}%</p>
+                  <p className="mt-0.5 text-xs text-gray-500">Required to pass</p>
                 </div>
               </div>
-              <Button className="w-full gap-2 text-base py-5 rounded-xl"
+              <div className="mt-4 flex items-start gap-2 rounded-xl border p-4 text-left" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <p className="text-xs leading-relaxed text-amber-800">
+                  This is an official qualifying assessment. Answers and rationales are not shown during or after the attempt. You may retake it without limit if you do not pass.
+                </p>
+              </div>
+              <Button
+                className="mt-6 w-full gap-2 rounded-xl py-5 text-base"
                 style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)', color: '#fff' }}
-                onClick={() => setPhase('quiz')}>
+                onClick={() => setPhase('quiz')}
+              >
                 Start Assessment <ChevronRight className="h-5 w-5" />
               </Button>
             </>
@@ -195,168 +213,93 @@ export default function InstructorAssessmentPage() {
     );
   }
 
-  // ── Results ────────────────────────────────────────────────────────────────
   if (phase === 'results') {
-    const passed = pct >= 70;
     return (
       <div className="min-h-screen p-6" style={{ background: BDA.bluePale }}>
-        <div className="max-w-2xl mx-auto">
-          {/* Score Card */}
-          <div className="rounded-3xl border p-8 text-center mb-6"
-            style={{ background: '#fff', borderColor: BDA.border, boxShadow: '0 4px 24px rgba(28,74,139,0.10)' }}>
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: passed ? '#f0fdf4' : '#fef2f2', border: `3px solid ${passed ? '#86efac' : '#fca5a5'}` }}>
-              {passed
-                ? <Award className="h-10 w-10 text-green-500" />
-                : <XCircle className="h-10 w-10 text-red-400" />}
-            </div>
-            <h2 className="text-2xl font-bold mb-1" style={{ color: BDA.navyDark }}>
-              {passed ? 'Assessment Passed!' : 'Keep Practising'}
-            </h2>
-            <p className="text-gray-500 text-sm mb-4">
-              {passed
-                ? 'You have demonstrated readiness to deliver BDA programmes.'
-                : 'Review the modules and try again to improve your score.'}
-            </p>
-            <div className="text-5xl font-black mb-1" style={{ color: passed ? '#16a34a' : '#dc2626' }}>
-              {pct}%
-            </div>
-            <p className="text-gray-400 text-sm">{score} correct out of {totalQ}</p>
-            <Button className="mt-6 gap-2 px-6 py-3 rounded-xl"
-              style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)', color: '#fff' }}
-              onClick={handleReset}>
-              <RotateCcw className="h-4 w-4" /> Retake Assessment
-            </Button>
+        <div className="mx-auto max-w-xl rounded-3xl border bg-white p-8 text-center shadow-sm" style={{ borderColor: BDA.border }}>
+          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full" style={{ background: passed ? '#f0fdf4' : '#fef2f2', border: `3px solid ${passed ? '#86efac' : '#fca5a5'}` }}>
+            {passed ? <Award className="h-10 w-10 text-green-600" /> : <XCircle className="h-10 w-10 text-red-500" />}
           </div>
-
-          {/* Per-question review */}
-          <div className="space-y-4">
-            {questions.map((q, i) => {
-              const userAns = answers[q.id];
-              const isCorrect = userAns === q.correct_answer;
-              return (
-                <div key={q.id} className="rounded-2xl border p-5"
-                  style={{ background: '#fff', borderColor: BDA.border }}>
-                  <div className="flex items-start gap-3 mb-3">
-                    <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                      style={{ background: BDA.blueMid, color: BDA.navy }}>
-                      {i + 1}
-                    </span>
-                    <p className="text-sm font-medium leading-relaxed" style={{ color: BDA.navyDark }}>{q.question_text}</p>
-                    {isCorrect
-                      ? <CheckCircle className="h-5 w-5 flex-shrink-0 text-green-500" />
-                      : <XCircle className="h-5 w-5 flex-shrink-0 text-red-400" />}
-                  </div>
-                  <div className="flex gap-2 text-xs flex-wrap">
-                    <span className="px-2 py-1 rounded-full font-medium"
-                      style={{ background: '#f0fdf4', color: '#166534' }}>
-                      Correct: {q.correct_answer}
-                    </span>
-                    {!isCorrect && (
-                      <span className="px-2 py-1 rounded-full font-medium"
-                        style={{ background: '#fef2f2', color: '#991b1b' }}>
-                        Your answer: {userAns || 'Not answered'}
-                      </span>
-                    )}
-                  </div>
-                  {q.rationale && (
-                    <p className="mt-3 text-xs text-gray-500 leading-relaxed border-t pt-3" style={{ borderColor: BDA.border }}>
-                      {q.rationale}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+          <h1 className="text-2xl font-bold" style={{ color: BDA.navy }}>
+            {passed ? 'Assessment Passed' : 'Assessment Not Passed'}
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            {passed
+              ? 'You have met the qualification requirement to access the Official Learning System and Mock Exams.'
+              : 'Review the Trainer Learning Centre modules and retake the assessment when you are ready.'}
+          </p>
+          <div className="mt-6 text-6xl font-black" style={{ color: passed ? '#16a34a' : '#dc2626' }}>{score}%</div>
+          <p className="mt-1 text-xs text-gray-500">Passing score: {PASSING_SCORE}%</p>
+          <p className="mt-6 text-xs leading-relaxed text-gray-400">Correct answers and rationales are not disclosed for this qualifying assessment.</p>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            {passed ? (
+              <Button className="gap-2 rounded-xl px-5 py-3" style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)', color: '#fff' }} onClick={() => navigate('/instructor/learning-system')}>
+                Access Learning System <ChevronRight className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button className="gap-2 rounded-xl px-5 py-3" style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)', color: '#fff' }} onClick={resetAttempt}>
+                <RotateCcw className="h-4 w-4" /> Retake Assessment
+              </Button>
+            )}
           </div>
         </div>
       </div>
     );
   }
 
-  // ── Quiz ───────────────────────────────────────────────────────────────────
-  const isRevealed = revealed[current?.id];
-  const userAnswer = answers[current?.id];
-  const options = [
-    { label: 'A' as const, text: current?.option_a },
-    { label: 'B' as const, text: current?.option_b },
-    { label: 'C' as const, text: current?.option_c },
-    { label: 'D' as const, text: current?.option_d },
-  ];
+  const answer = current ? answers[current.id] : undefined;
+  const options = current ? [
+    { label: 'A' as Answer, text: current.option_a },
+    { label: 'B' as Answer, text: current.option_b },
+    { label: 'C' as Answer, text: current.option_c },
+    { label: 'D' as Answer, text: current.option_d },
+  ] : [];
 
   return (
     <div className="min-h-screen p-4 md:p-6" style={{ background: BDA.bluePale }}>
-      <div className="max-w-2xl mx-auto">
-        {/* Progress Bar */}
+      <div className="mx-auto max-w-2xl">
         <div className="mb-5">
-          <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
-            <span>Question {currentIdx + 1} of {totalQ}</span>
-            <span>{answeredCount} answered</span>
+          <div className="mb-1.5 flex items-center justify-between text-xs text-gray-500">
+            <span>Question {currentIdx + 1} of {totalQuestions}</span>
+            <span>{answeredCount} of {totalQuestions} answered</span>
           </div>
           <div className="h-2 rounded-full" style={{ background: BDA.blueMid }}>
-            <div className="h-full rounded-full transition-all duration-300"
-              style={{ width: `${((currentIdx + 1) / totalQ) * 100}%`, background: BDA.blue }} />
+            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${((currentIdx + 1) / totalQuestions) * 100}%`, background: BDA.blue }} />
           </div>
         </div>
 
-        {/* Question Card */}
-        <div className="rounded-2xl border p-6 mb-4"
-          style={{ background: '#fff', borderColor: BDA.border, boxShadow: '0 1px 4px rgba(28,74,139,0.06)' }}>
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-              style={{ background: BDA.blueMid, color: BDA.navy }}>
-              Q{currentIdx + 1}
-            </span>
-            <span className="text-xs text-gray-400">Instructor Assessment</span>
+        <div className="rounded-2xl border bg-white p-6 shadow-sm" style={{ borderColor: BDA.border }}>
+          <div className="mb-4 flex items-center gap-2">
+            <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: BDA.blueMid, color: BDA.navy }}>Q{currentIdx + 1}</span>
+            <span className="text-xs text-gray-400">Instructor Qualifying Assessment</span>
           </div>
-          <p className="text-base font-medium leading-relaxed mb-5" style={{ color: BDA.navyDark }}>
-            {current?.question_text}
-          </p>
-
+          <p className="mb-5 text-base font-medium leading-relaxed" style={{ color: BDA.navy }}>{current?.question_text}</p>
           <div className="space-y-2.5">
-            {options.map(opt => (
-              <OptionButton
-                key={opt.label}
-                label={opt.label}
-                text={opt.text || ''}
-                selected={userAnswer === opt.label}
-                correct={current?.correct_answer === opt.label}
-                revealed={isRevealed}
-                onClick={() => handleAnswer(opt.label)}
-              />
+            {options.map(option => (
+              <OptionButton key={option.label} {...option} selected={answer === option.label} onClick={() => chooseAnswer(option.label)} />
             ))}
           </div>
-
-          {/* Rationale */}
-          {isRevealed && current?.rationale && (
-            <div className="mt-4 p-4 rounded-xl border" style={{ background: BDA.bluePale, borderColor: BDA.border }}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <BookOpen className="h-4 w-4" style={{ color: BDA.blue }} />
-                <span className="text-xs font-semibold" style={{ color: BDA.navy }}>Rationale</span>
-              </div>
-              <p className="text-xs text-gray-600 leading-relaxed">{current.rationale}</p>
-            </div>
-          )}
         </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between gap-3">
-          <Button variant="outline" size="sm" disabled={currentIdx === 0}
-            onClick={handlePrev}
-            style={{ borderColor: BDA.border, color: BDA.navy }}>
-            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-          </Button>
+        {submitError && (
+          <div className="mt-4 flex items-start gap-2 rounded-xl border p-3 text-sm text-red-700" style={{ background: '#fef2f2', borderColor: '#fecaca' }}>
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            {submitError}
+          </div>
+        )}
 
-          {!isRevealed ? (
-            <Button size="sm" disabled={!userAnswer}
-              onClick={handleCheck}
-              style={{ background: BDA.navy, color: '#fff' }}>
-              Check Answer
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <Button variant="outline" size="sm" disabled={currentIdx === 0 || isSubmitting} onClick={() => setCurrentIdx(index => index - 1)} style={{ borderColor: BDA.border, color: BDA.navy }}>
+            <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+          </Button>
+          {currentIdx < totalQuestions - 1 ? (
+            <Button size="sm" disabled={!answer || isSubmitting} onClick={() => setCurrentIdx(index => index + 1)} style={{ background: BDA.navy, color: '#fff' }}>
+              Next <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
-            <Button size="sm"
-              onClick={handleNext}
-              style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)', color: '#fff' }}>
-              {currentIdx === totalQ - 1 ? 'View Results' : 'Next'} <ChevronRight className="h-4 w-4 ml-1" />
+            <Button size="sm" disabled={!allAnswered || isSubmitting} onClick={submitAssessment} style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)', color: '#fff' }}>
+              {isSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ClipboardCheck className="mr-1 h-4 w-4" />}
+              Submit Assessment
             </Button>
           )}
         </div>

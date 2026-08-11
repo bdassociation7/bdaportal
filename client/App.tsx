@@ -177,6 +177,7 @@ import TrainerLessonPage from './pages/trainer/TrainerLessonPage';
 import TrainerCodeOfConduct from './pages/trainer/TrainerCodeOfConduct';
 import InstructorAssessmentPage from './pages/trainer/InstructorAssessmentPage';
 import { InstructorPortalShell } from './components/InstructorPortalShell';
+import InstructorAssessmentGate from './components/InstructorAssessmentGate';
 
 // ECP Partner pages
 import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPLicense, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
@@ -427,10 +428,12 @@ const App = () => (
                 <Route element={<InstructorWrapper />}>
                   {/* Dashboard */}
                   <Route path="/instructor/dashboard" element={<TrainerDashboard />} />
-                  {/* Mock Exams list & detail */}
-                  <Route path="/instructor/mock-exams" element={<MockExamList />} />
-                  <Route path="/instructor/mock-exams/:examId" element={<ExamDetail />} />
-                  <Route path="/instructor/mock-exams/results/:attemptId" element={<ExamResults />} />
+                  {/* Mock Exams require a passed Instructor Assessment */}
+                  <Route element={<InstructorAssessmentGate />}>
+                    <Route path="/instructor/mock-exams" element={<MockExamList />} />
+                    <Route path="/instructor/mock-exams/:examId" element={<ExamDetail />} />
+                    <Route path="/instructor/mock-exams/results/:attemptId" element={<ExamResults />} />
+                  </Route>
                   {/* Trainer Learning Centre modules */}
                   <Route path="/instructor/learning-centre/module/:moduleId" element={<TrainerModulePage />} />
                   <Route path="/instructor/learning-centre/module/:moduleId/lesson/:lessonId" element={<TrainerLessonPage />} />
@@ -442,24 +445,29 @@ const App = () => (
 
                 {/* Instructor Learning System — TrainerWrapper (LearningShell with navy sidebar) */}
                 <Route element={<TrainerWrapper />}>
-                  <Route path="/instructor/learning-system" element={<LearningSystemDashboard />} />
-                  <Route path="/instructor/learning-system/training-kits" element={<MyCurriculum />} />
-                  <Route path="/instructor/learning-system/training-kits/module/:moduleId" element={<ModuleViewer />} />
-                  <Route path="/instructor/learning-system/training-kits/modules/:moduleId/lessons/:lessonId" element={<LessonViewer />} />
-                  <Route path="/instructor/learning-system/question-bank" element={<QuestionBankDashboard />} />
-                  <Route path="/instructor/learning-system/question-bank/:setId" element={<PracticeSession />} />
-                  <Route path="/instructor/learning-system/flashcards" element={<FlashcardsDashboard />} />
-                  <Route path="/instructor/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
+                  {/* The full learning system opens only after the instructor passes Assessment */}
+                  <Route element={<InstructorAssessmentGate />}>
+                    <Route path="/instructor/learning-system" element={<LearningSystemDashboard />} />
+                    <Route path="/instructor/learning-system/training-kits" element={<MyCurriculum />} />
+                    <Route path="/instructor/learning-system/training-kits/module/:moduleId" element={<ModuleViewer />} />
+                    <Route path="/instructor/learning-system/training-kits/modules/:moduleId/lessons/:lessonId" element={<LessonViewer />} />
+                    <Route path="/instructor/learning-system/question-bank" element={<QuestionBankDashboard />} />
+                    <Route path="/instructor/learning-system/question-bank/:setId" element={<PracticeSession />} />
+                    <Route path="/instructor/learning-system/flashcards" element={<FlashcardsDashboard />} />
+                    <Route path="/instructor/learning-system/flashcards/:deckId" element={<FlashcardStudySession />} />
+                  </Route>
                 </Route>
 
-                {/* Mock Exam Take — full screen (no shell) */}
-                <Route path="/instructor/mock-exams/:examId/take" element={
+                {/* Mock Exam Take — full screen, gated by Instructor Assessment */}
+                <Route element={
                   <ProtectedRoute>
                     <RoleGuard allowedRoles={['trainer']}>
-                      <TakeExam />
+                      <InstructorAssessmentGate />
                     </RoleGuard>
                   </ProtectedRoute>
-                } />
+                }>
+                  <Route path="/instructor/mock-exams/:examId/take" element={<TakeExam />} />
+                </Route>
 
                 {/* Profile Completion routes - protected but NO profile guard */}
                 <Route path="/individual/complete-profile" element={
