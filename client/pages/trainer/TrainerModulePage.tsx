@@ -107,13 +107,18 @@ function renderTipTap(node: any): string {
   if (node.type === 'horizontalRule') return `<hr class="my-5 border-[#dbeafe]" />`;
   if (node.type === 'text') {
     let text = node.text || '';
+    let inlineStyle = '';
     if (node.marks) {
       node.marks.forEach((mark: any) => {
         if (mark.type === 'bold') text = `<strong>${text}</strong>`;
         if (mark.type === 'italic') text = `<em>${text}</em>`;
         if (mark.type === 'underline') text = `<u>${text}</u>`;
+        if (mark.type === 'textStyle' && mark.attrs?.color) {
+          inlineStyle += `color:${mark.attrs.color};`;
+        }
       });
     }
+    if (inlineStyle) text = `<span style="${inlineStyle}">${text}</span>`;
     return text;
   }
   return (node.content || []).map(renderTipTap).join('');
@@ -147,19 +152,22 @@ export default function TrainerModulePage() {
     enabled: !!moduleId,
   });
 
+  const resolvedModuleId = module?.id;
+
   const { data: lessons = [] } = useQuery<TrainerLesson[]>({
-    queryKey: ['trainer-lessons', module?.id],
+    queryKey: ['trainer-lessons', resolvedModuleId],
     queryFn: async () => {
-      if (!module?.id) return [];
+      if (!resolvedModuleId) return [];
       const { data, error } = await supabase
         .from('instructor_curriculum_lessons')
         .select('id, order_index, title, content, estimated_duration_minutes, is_published')
-        .eq('module_id', module.id)
+        .eq('module_id', resolvedModuleId)
         .order('order_index', { ascending: true });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!module?.id,
+    enabled: !!resolvedModuleId,
+    staleTime: 0,
   });
 
   const { data: allModules = [] } = useQuery<TrainerModule[]>({
