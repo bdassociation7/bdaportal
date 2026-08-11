@@ -149,6 +149,9 @@ import Communications from "./pages/admin/Communications";
 import SystemSettings from "./pages/admin/SystemSettings";
 import SecurityLogs from "./pages/admin/SecurityLogs";
 import TrainerManagement from "./pages/admin/TrainerManagement";
+import TrainerGateModules from "./pages/admin/TrainerGateModules";
+import TrainerGateLessons from "./pages/admin/TrainerGateLessons";
+import TrainerAssessmentBank from "./pages/admin/TrainerAssessmentBank";
 import LearningSystemProducts from "./pages/admin/LearningSystemProducts";
 import CertificateDesigner from "./pages/admin/CertificateDesigner";
 import ExamECOBlueprintManager from "./pages/admin/ExamECOBlueprintManager";
@@ -628,6 +631,10 @@ const App = () => (
                   <Route path="/admin/support/:id" element={<SupportTicketDetail />} />
                   <Route path="/admin/pdcs" element={<PDCValidation />} />
                   <Route path="/admin/trainers" element={<TrainerManagement />} />
+                  {/* Trainer Gate — Trainer Learning Centre admin */}
+                  <Route path="/admin/trainer-gate/modules" element={<TrainerGateModules />} />
+                  <Route path="/admin/trainer-gate/lessons" element={<TrainerGateLessons />} />
+                  <Route path="/admin/trainer-gate/assessment" element={<TrainerAssessmentBank />} />
                   <Route path="/admin/content" element={<ContentManagement />} />
                   <Route path="/admin/toolkit" element={<ToolkitManagement />} />
                   <Route path="/admin/learning-system-admin" element={<LearningSystemAdmin />} />

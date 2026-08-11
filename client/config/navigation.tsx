@@ -171,6 +171,10 @@ export const navigationConfig: NavigationConfig = {
     { id: 'flashcards', label: 'nav.admin.flashcards', path: '/admin/flashcards', icon: Layers },
     { id: 'curriculum-access', label: 'nav.admin.curriculumAccess', path: '/admin/curriculum/access', icon: UserCog },
     { id: 'learning-system-products', label: 'nav.admin.learningSystemProducts', path: '/admin/learning-system-products', icon: Package },
+    // Trainer Gate Section
+    { id: 'trainer-gate-modules', label: 'Modules', path: '/admin/trainer-gate/modules', icon: BookMarked, section: 'Trainer Gate' },
+    { id: 'trainer-gate-lessons', label: 'Lessons', path: '/admin/trainer-gate/lessons', icon: List },
+    { id: 'trainer-gate-assessment', label: 'Assessment Bank', path: '/admin/trainer-gate/assessment', icon: CircleHelp },
 
     // Products & Sales Section
     { id: 'certification-products', label: 'nav.admin.certificationProducts', path: '/admin/certification-products', icon: Package, section: 'nav.admin.section.productsSales' },
@@ -235,6 +239,10 @@ export const navigationConfig: NavigationConfig = {
     { id: 'question-bank', label: 'nav.admin.assessmentBank', path: '/admin/question-bank', icon: CircleHelp },
     { id: 'flashcards', label: 'nav.admin.flashcards', path: '/admin/flashcards', icon: Layers },
     { id: 'curriculum-access', label: 'nav.admin.curriculumAccess', path: '/admin/curriculum/access', icon: UserCog },
+    // Trainer Gate Section
+    { id: 'trainer-gate-modules', label: 'Modules', path: '/admin/trainer-gate/modules', icon: BookMarked, section: 'Trainer Gate' },
+    { id: 'trainer-gate-lessons', label: 'Lessons', path: '/admin/trainer-gate/lessons', icon: List },
+    { id: 'trainer-gate-assessment', label: 'Assessment Bank', path: '/admin/trainer-gate/assessment', icon: CircleHelp },
     { id: 'learning-system-products', label: 'nav.admin.learningSystemProducts', path: '/admin/learning-system-products', icon: Package },
 
     // Products & Sales Section
