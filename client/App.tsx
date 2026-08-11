@@ -173,6 +173,7 @@ import PartnershipPending from './pages/PartnershipPending';
 import TrainerDashboard from './pages/trainer/TrainerDashboard';
 import TrainerAcceptInvite from './pages/trainer/AcceptInvite';
 import TrainerModulePage from './pages/trainer/TrainerModulePage';
+import TrainerLessonPage from './pages/trainer/TrainerLessonPage';
 import TrainerCodeOfConduct from './pages/trainer/TrainerCodeOfConduct';
 import { InstructorPortalShell } from './components/InstructorPortalShell';
 
@@ -431,6 +432,7 @@ const App = () => (
                   <Route path="/instructor/mock-exams/results/:attemptId" element={<ExamResults />} />
                   {/* Trainer Learning Centre modules */}
                   <Route path="/instructor/learning-centre/module/:moduleId" element={<TrainerModulePage />} />
+                  <Route path="/instructor/learning-centre/module/:moduleId/lesson/:lessonId" element={<TrainerLessonPage />} />
                   {/* Code of Conduct placeholder */}
                   <Route path="/instructor/code-of-conduct" element={<TrainerCodeOfConduct />} />
                 </Route>

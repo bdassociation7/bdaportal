@@ -4,7 +4,7 @@
  * Route: /instructor/learning-centre/module/:moduleId
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/shared/config/supabase.config';
@@ -20,7 +20,6 @@ import {
   Circle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 
 // BDA Brand Palette
 const BDA = {
@@ -51,33 +50,29 @@ interface TrainerLesson {
   content: any;
 }
 
-// Lesson Sidebar Item
-function LessonItem({ lesson, index, isActive, onClick }: {
-  lesson: TrainerLesson; index: number; isActive: boolean; onClick: () => void;
+// Lesson Sidebar Item — navigates to lesson page on click
+function LessonItem({ lesson, index, onClick }: {
+  lesson: TrainerLesson; index: number; onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all ${
-        isActive ? 'bg-[#0f91e0] text-white shadow-sm' : 'hover:bg-[#f0f6ff] text-gray-700'
-      }`}
+      className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all hover:bg-[#f0f6ff]"
     >
-      <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border ${
-        isActive ? 'bg-white text-[#0f91e0] border-white' : 'bg-[#f0f6ff] text-[#1C4A8B] border-[#dbeafe]'
-      }`}>
+      <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border bg-[#f0f6ff] text-[#1C4A8B] border-[#dbeafe]">
         {index + 1}
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium leading-tight truncate ${isActive ? 'text-white' : 'text-[#0d1f4e]'}`}>
+        <p className="text-sm font-medium leading-tight truncate text-[#0d1f4e]">
           {lesson.title}
         </p>
         {lesson.duration_min && (
-          <p className={`text-xs mt-0.5 ${isActive ? 'text-white/70' : 'text-gray-400'}`}>
+          <p className="text-xs mt-0.5 text-gray-400">
             ⏱ {lesson.duration_min}m
           </p>
         )}
       </div>
-      <ChevronRight className={`h-4 w-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-300'}`} />
+      <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-300" />
     </button>
   );
 }
@@ -131,7 +126,6 @@ export default function TrainerModulePage() {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
-  const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
 
   // Support both UUID and order_index (e.g. /module/1 or /module/uuid)
   const isNumeric = moduleId && /^\d+$/.test(moduleId);
@@ -195,10 +189,8 @@ export default function TrainerModulePage() {
     return () => el.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const activeLesson = activeLessonId ? lessons.find(l => l.id === activeLessonId) : null;
-  const currentIndex = allModules.findIndex(m => m.id === moduleId);
+  const currentIndex = allModules.findIndex(m => m.id === (module?.id || moduleId));
   const nextModule = currentIndex >= 0 && currentIndex < allModules.length - 1 ? allModules[currentIndex + 1] : null;
-  const activeLessonIndex = activeLesson ? lessons.indexOf(activeLesson) : -1;
 
   if (moduleLoading) {
     return (
@@ -257,11 +249,8 @@ export default function TrainerModulePage() {
               <div className="text-right">
                 <div className="text-xs text-gray-400">Lessons</div>
                 <div className="text-sm font-bold" style={{ color: BDA.navy }}>
-                  {activeLessonIndex >= 0 ? `${activeLessonIndex + 1}/${lessons.length}` : `0/${lessons.length}`}
+                  {lessons.length} lessons
                 </div>
-              </div>
-              <div className="w-24">
-                <Progress value={activeLessonIndex >= 0 ? ((activeLessonIndex + 1) / lessons.length) * 100 : 0} className="h-2" />
               </div>
             </div>
             <Button variant="ghost" size="sm" className="flex-shrink-0 gap-1.5" style={{ color: BDA.navy }}
@@ -304,7 +293,7 @@ export default function TrainerModulePage() {
           </div>
 
           {/* Module Introduction */}
-          {module.intro_content && !activeLesson && (
+          {module.intro_content && (
             <div className="rounded-2xl border p-6 mb-5"
               style={{ background: '#fff', borderColor: BDA.border, boxShadow: '0 1px 4px rgba(28,74,139,0.06)' }}>
               <h3 className="text-base font-bold mb-4 flex items-center gap-2" style={{ color: BDA.navyDark }}>
@@ -316,34 +305,26 @@ export default function TrainerModulePage() {
             </div>
           )}
 
-          {/* Active Lesson Content */}
-          {activeLesson ? (
+          {/* Lessons CTA */}
+          {lessons.length > 0 ? (
             <div className="rounded-2xl border p-6 mb-5"
               style={{ background: '#fff', borderColor: BDA.border, boxShadow: '0 1px 4px rgba(28,74,139,0.06)' }}>
-              <h3 className="text-xl font-bold mb-4" style={{ color: BDA.navyDark }}>{activeLesson.title}</h3>
-              {activeLesson.content ? (
-                <div className="max-w-none tiptap-content"
-                  dangerouslySetInnerHTML={{ __html: renderTipTap(activeLesson.content) }} />
-              ) : (
-                <div className="text-center py-10">
-                  <BookOpen className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                  <p className="text-gray-500 text-sm">Content for this lesson is being prepared.</p>
-                </div>
-              )}
-              {/* Lesson Navigation */}
-              <div className="flex items-center justify-between mt-6 pt-4 border-t" style={{ borderColor: BDA.border }}>
-                <Button variant="outline" size="sm" disabled={activeLessonIndex === 0}
-                  onClick={() => activeLessonIndex > 0 && setActiveLessonId(lessons[activeLessonIndex - 1].id)}
-                  style={{ borderColor: BDA.border, color: BDA.navy }}>
-                  <ArrowLeft className="h-4 w-4 mr-1" /> Previous
-                </Button>
-                <span className="text-xs text-gray-400">{activeLessonIndex + 1} of {lessons.length}</span>
-                <Button size="sm" disabled={activeLessonIndex === lessons.length - 1}
-                  onClick={() => activeLessonIndex < lessons.length - 1 && setActiveLessonId(lessons[activeLessonIndex + 1].id)}
-                  style={{ background: BDA.navy, color: '#fff' }}>
-                  Next <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
+              <div className="flex items-center gap-2 mb-4">
+                <LayoutList className="h-4 w-4" style={{ color: BDA.navy }} />
+                <h3 className="font-semibold text-sm" style={{ color: BDA.navy }}>Module Lessons</h3>
+                <span className="ml-auto text-xs font-medium px-2 py-0.5 rounded-full"
+                  style={{ background: BDA.blueMid, color: BDA.navy }}>{lessons.length} lessons</span>
               </div>
+              <div className="space-y-1">
+                {lessons.map((lesson, i) => (
+                  <LessonItem key={lesson.id} lesson={lesson} index={i}
+                    onClick={() => navigate(`/instructor/learning-centre/module/${module.id}/lesson/${lesson.id}`)} />
+                ))}
+              </div>
+              <Button className="mt-4 w-full gap-1.5" style={{ background: BDA.navy, color: '#fff' }}
+                onClick={() => navigate(`/instructor/learning-centre/module/${module.id}/lesson/${lessons[0].id}`)}>
+                Start First Lesson <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           ) : (
             <div className="rounded-2xl border p-10 mb-5 text-center"
@@ -352,36 +333,12 @@ export default function TrainerModulePage() {
                 style={{ background: BDA.bluePale }}>
                 <BookOpen className="h-8 w-8" style={{ color: BDA.blue }} />
               </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: BDA.navyDark }}>
-                {lessons.length > 0 ? 'Select a lesson to begin' : 'Content Coming Soon'}
-              </h3>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: BDA.navyDark }}>Content Coming Soon</h3>
               <p className="text-gray-500 text-sm max-w-sm mx-auto">
-                {lessons.length > 0
-                  ? 'Choose a lesson from the sidebar to start reading.'
-                  : 'The detailed content for this module is being prepared by the BDA team.'}
+                The detailed content for this module is being prepared by the BDA team.
               </p>
-              {lessons.length > 0 && (
-                <Button className="mt-4" style={{ background: BDA.navy, color: '#fff' }}
-                  onClick={() => setActiveLessonId(lessons[0].id)}>
-                  Start First Lesson <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              )}
             </div>
           )}
-
-          {/* Mobile Lessons */}
-          <div className="lg:hidden rounded-2xl border p-5 mb-5" style={{ background: '#fff', borderColor: BDA.border }}>
-            <div className="flex items-center gap-2 mb-4">
-              <LayoutList className="h-4 w-4" style={{ color: BDA.navy }} />
-              <h3 className="font-semibold text-sm" style={{ color: BDA.navy }}>Lessons</h3>
-            </div>
-            <div className="space-y-1">
-              {lessons.map((lesson, i) => (
-                <LessonItem key={lesson.id} lesson={lesson} index={i}
-                  isActive={activeLessonId === lesson.id} onClick={() => setActiveLessonId(lesson.id)} />
-              ))}
-            </div>
-          </div>
 
           {/* Next Module CTA */}
           {nextModule ? (
@@ -421,7 +378,7 @@ export default function TrainerModulePage() {
                 </div>
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full"
                   style={{ background: BDA.blueMid, color: BDA.navy }}>
-                  {activeLessonIndex >= 0 ? `${activeLessonIndex + 1}/${lessons.length}` : `0/${lessons.length}`} done
+                  {lessons.length} lessons
                 </span>
               </div>
               <div className="p-3 space-y-1">
@@ -433,7 +390,7 @@ export default function TrainerModulePage() {
                 ) : (
                   lessons.map((lesson, i) => (
                     <LessonItem key={lesson.id} lesson={lesson} index={i}
-                      isActive={activeLessonId === lesson.id} onClick={() => setActiveLessonId(lesson.id)} />
+                      onClick={() => navigate(`/instructor/learning-centre/module/${module.id}/lesson/${lesson.id}`)} />
                   ))
                 )}
               </div>
