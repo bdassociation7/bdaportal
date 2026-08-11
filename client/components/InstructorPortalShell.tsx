@@ -25,8 +25,9 @@ const NAV: NavEntry[] = [
       { id: 'm1', label: 'Module 1 — BDA Orientation', path: '/instructor/learning-centre/module/1', icon: BookOpen },
       { id: 'm2', label: 'Module 2 — Understanding BDA BoCK', path: '/instructor/learning-centre/module/2', icon: BookOpen },
       { id: 'm3', label: 'Module 3 — Teaching the BDA Methodology', path: '/instructor/learning-centre/module/3', icon: BookOpen },
-      { id: 'm4', label: 'Module 4 — Trainer Delivery Standards', path: '/instructor/learning-centre/module/4', icon: BookOpen },
-      { id: 'm5', label: 'Module 5 — Trainer Assessment', path: '/instructor/learning-centre/module/5', icon: BookOpen },
+      { id: 'm4', label: 'Module 4 — Using the Official Learning System', path: '/instructor/learning-centre/module/4', icon: BookOpen },
+      { id: 'm5', label: 'Module 5 — Instructor Delivery Standards', path: '/instructor/learning-centre/module/5', icon: BookOpen },
+      { id: 'instructor-assessment', label: 'Instructor Assessment', path: '/instructor/assessment', icon: ClipboardCheck },
     ],
   },
   {
@@ -163,8 +164,9 @@ export function InstructorPortalShell() {
     if (p.includes('/learning-centre/module/1')) return 'Module 1 — BDA Orientation';
     if (p.includes('/learning-centre/module/2')) return 'Module 2 — Understanding BDA BoCK';
     if (p.includes('/learning-centre/module/3')) return 'Module 3 — Teaching the BDA Methodology';
-    if (p.includes('/learning-centre/module/4')) return 'Module 4 — Trainer Delivery Standards';
-    if (p.includes('/learning-centre/module/5')) return 'Module 5 — Trainer Assessment';
+    if (p.includes('/learning-centre/module/4')) return 'Module 4 — Using the Official Learning System';
+    if (p.includes('/learning-centre/module/5')) return 'Module 5 — Instructor Delivery Standards';
+    if (p.includes('/instructor/assessment')) return 'Instructor Assessment';
     if (p.includes('/mock-exams')) return 'Mock Exams';
     if (p.includes('/code-of-conduct')) return 'Trainer Code of Conduct';
     if (p.includes('/learning-system')) return 'BDA Learning System';

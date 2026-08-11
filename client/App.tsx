@@ -175,6 +175,7 @@ import TrainerAcceptInvite from './pages/trainer/AcceptInvite';
 import TrainerModulePage from './pages/trainer/TrainerModulePage';
 import TrainerLessonPage from './pages/trainer/TrainerLessonPage';
 import TrainerCodeOfConduct from './pages/trainer/TrainerCodeOfConduct';
+import InstructorAssessmentPage from './pages/trainer/InstructorAssessmentPage';
 import { InstructorPortalShell } from './components/InstructorPortalShell';
 
 // ECP Partner pages
@@ -433,6 +434,8 @@ const App = () => (
                   {/* Trainer Learning Centre modules */}
                   <Route path="/instructor/learning-centre/module/:moduleId" element={<TrainerModulePage />} />
                   <Route path="/instructor/learning-centre/module/:moduleId/lesson/:lessonId" element={<TrainerLessonPage />} />
+                  {/* Instructor Assessment (comprehensive quiz from Trainer Gate bank) */}
+                  <Route path="/instructor/assessment" element={<InstructorAssessmentPage />} />
                   {/* Code of Conduct placeholder */}
                   <Route path="/instructor/code-of-conduct" element={<TrainerCodeOfConduct />} />
                 </Route>

@@ -58,6 +58,16 @@ export default function TrainerDashboard() {
       iconColor: 'text-indigo-600',
     },
     {
+      id: 'instructor-assessment',
+      icon: GraduationCap,
+      title: 'Instructor Assessment',
+      description: 'Complete the comprehensive assessment covering the five Trainer Learning Centre modules.',
+      action: 'Start Assessment',
+      path: '/instructor/assessment',
+      iconBg: 'bg-sky-100',
+      iconColor: 'text-sky-700',
+    },
+    {
       id: 'mock-exams',
       icon: ClipboardCheck,
       title: 'Mock Exams',
@@ -73,8 +83,8 @@ export default function TrainerDashboard() {
     { id: '1', title: 'BDA Orientation' },
     { id: '2', title: 'Understanding BDA BoCK' },
     { id: '3', title: 'Teaching the BDA Methodology' },
-    { id: '4', title: 'Trainer Delivery Standards' },
-    { id: '5', title: 'Trainer Assessment' },
+    { id: '4', title: 'Using the Official Learning System' },
+    { id: '5', title: 'Instructor Delivery Standards' },
   ];
 
   return (
@@ -103,6 +113,13 @@ export default function TrainerDashboard() {
           >
             <BookOpen className="h-4 w-4" />
             Learning System
+          </button>
+          <button
+            onClick={() => navigate('/instructor/assessment')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-medium transition-colors border border-white/20"
+          >
+            <GraduationCap className="h-4 w-4" />
+            Instructor Assessment
           </button>
           <button
             onClick={() => navigate('/instructor/mock-exams')}
