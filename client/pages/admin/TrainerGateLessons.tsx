@@ -5,7 +5,7 @@
  * Includes TipTap rich-text editor for lesson content
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -198,7 +198,7 @@ export default function TrainerGateLessons() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const moduleId = searchParams.get('module') || '';
-  const [editingLesson, setEditingLesson] = useState<TrainerLesson | null | 'new'>('new' as any);
+  const [editingLesson, setEditingLesson] = useState<TrainerLesson | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
 
@@ -229,6 +229,13 @@ export default function TrainerGateLessons() {
       return data || [];
     },
   });
+
+  // Auto-redirect to first module when no module is selected
+  useEffect(() => {
+    if (!moduleId && allModules.length > 0) {
+      navigate(`/admin/trainer-gate/lessons?module=${allModules[0].id}`, { replace: true });
+    }
+  }, [moduleId, allModules, navigate]);
 
   // Fetch lessons for this module
   const { data: lessons = [], isLoading, refetch } = useQuery<TrainerLesson[]>({
