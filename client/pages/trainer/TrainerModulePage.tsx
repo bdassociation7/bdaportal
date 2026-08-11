@@ -93,10 +93,12 @@ function renderTipTap(node: any): string {
   if (node.type === 'heading') {
     const inner = (node.content || []).map(renderTipTap).join('');
     const level = node.attrs?.level || 2;
+    // Respect any colour set by the editor via marks; fall back to inherit
+    const colorStyle = node.attrs?.color ? `color:${node.attrs.color}` : '';
     const cls = level === 1 ? 'text-2xl font-bold mt-6 mb-3' :
                 level === 2 ? 'text-xl font-bold mt-5 mb-2' :
                               'text-lg font-semibold mt-4 mb-2';
-    return `<h${level} class="${cls}" style="color:#0f91e0">${inner}</h${level}>`;
+    return `<h${level} class="${cls}"${colorStyle ? ` style="${colorStyle}"` : ''}>${inner}</h${level}>`;
   }
   if (node.type === 'bulletList') return `<ul class="list-disc pl-5 mb-4 space-y-1">${(node.content || []).map(renderTipTap).join('')}</ul>`;
   if (node.type === 'orderedList') return `<ol class="list-decimal pl-5 mb-4 space-y-1">${(node.content || []).map(renderTipTap).join('')}</ol>`;
