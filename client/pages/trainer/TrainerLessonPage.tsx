@@ -72,6 +72,26 @@ function renderTipTap(node: any): string {
     return `<blockquote class="border-l-4 border-[#0f91e0] pl-5 italic text-slate-500 my-5 bg-[#f0f6ff] py-3 pr-4 rounded-r-lg">${(node.content || []).map(renderTipTap).join('')}</blockquote>`;
   if (node.type === 'horizontalRule')
     return `<hr class="my-6 border-[#dbeafe]" />`;
+  if (node.type === 'table') {
+    const rows = (node.content || []).map(renderTipTap).join('');
+    return `<div class="overflow-x-auto my-5"><table class="w-full border-collapse text-sm" style="border:1px solid #e2eaf6">${rows}</table></div>`;
+  }
+  if (node.type === 'tableRow') {
+    const cells = (node.content || []).map(renderTipTap).join('');
+    return `<tr>${cells}</tr>`;
+  }
+  if (node.type === 'tableHeader') {
+    const inner = (node.content || []).map(renderTipTap).join('');
+    const align = node.attrs?.align || 'left';
+    return `<th style="text-align:${align};background:#f0f6ff;border:1px solid #e2eaf6;padding:10px 14px;font-weight:600;color:#0d1f4e">${inner}</th>`;
+  }
+  if (node.type === 'tableCell') {
+    const inner = (node.content || []).map(renderTipTap).join('');
+    const align = node.attrs?.align || 'left';
+    const colspan = node.attrs?.colspan || 1;
+    const rowspan = node.attrs?.rowspan || 1;
+    return `<td colspan="${colspan}" rowspan="${rowspan}" style="text-align:${align};border:1px solid #e2eaf6;padding:9px 14px;color:#374151;vertical-align:top">${inner}</td>`;
+  }
   if (node.type === 'codeBlock') {
     const inner = (node.content || []).map(renderTipTap).join('');
     return `<pre class="bg-gray-900 text-green-300 rounded-xl p-4 mb-4 overflow-x-auto text-sm font-mono"><code>${inner}</code></pre>`;
