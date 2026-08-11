@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle, Award, ChevronLeft, ChevronRight, ClipboardCheck,
-  Loader2, RotateCcw, ShieldCheck, XCircle,
+  Loader2, RotateCcw, XCircle,
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
 import { useAuthContext } from '@/app/providers/AuthProvider';
@@ -192,12 +192,6 @@ export default function InstructorAssessmentPage() {
                   <p className="text-2xl font-bold" style={{ color: BDA.navy }}>{PASSING_SCORE}%</p>
                   <p className="mt-0.5 text-xs text-gray-500">Required to pass</p>
                 </div>
-              </div>
-              <div className="mt-4 flex items-start gap-2 rounded-xl border p-4 text-left" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
-                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-                <p className="text-xs leading-relaxed text-amber-800">
-                  This is an official qualifying assessment. Answers and rationales are not shown during or after the attempt. You may retake it without limit if you do not pass.
-                </p>
               </div>
               <Button
                 className="mt-6 w-full gap-2 rounded-xl py-5 text-base"
