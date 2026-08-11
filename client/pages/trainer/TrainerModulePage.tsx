@@ -125,10 +125,19 @@ export default function TrainerModulePage() {
   const [readingProgress, setReadingProgress] = useState(0);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
 
+  // Support both UUID and order_index (e.g. /module/1 or /module/uuid)
+  const isNumeric = moduleId && /^\d+$/.test(moduleId);
+
   const { data: module, isLoading: moduleLoading } = useQuery<TrainerModule>({
     queryKey: ['trainer-module', moduleId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('instructor_curriculum_modules').select('*').eq('id', moduleId).single();
+      let query = supabase.from('instructor_curriculum_modules').select('*');
+      if (isNumeric) {
+        query = query.eq('order_index', parseInt(moduleId!));
+      } else {
+        query = query.eq('id', moduleId);
+      }
+      const { data, error } = await query.single();
       if (error) throw error;
       return data;
     },
