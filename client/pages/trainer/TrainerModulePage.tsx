@@ -47,7 +47,7 @@ interface TrainerLesson {
   title: string;
   order_index: number;
   is_published: boolean;
-  estimated_duration_minutes: number | null;
+  duration_min: number | null;
   content: any;
 }
 
@@ -71,9 +71,9 @@ function LessonItem({ lesson, index, isActive, onClick }: {
         <p className={`text-sm font-medium leading-tight truncate ${isActive ? 'text-white' : 'text-[#0d1f4e]'}`}>
           {lesson.title}
         </p>
-        {lesson.estimated_duration_minutes && (
+        {lesson.duration_min && (
           <p className={`text-xs mt-0.5 ${isActive ? 'text-white/70' : 'text-gray-400'}`}>
-            ⏱ {lesson.estimated_duration_minutes}m
+            ⏱ {lesson.duration_min}m
           </p>
         )}
       </div>
@@ -160,7 +160,7 @@ export default function TrainerModulePage() {
       if (!resolvedModuleId) return [];
       const { data, error } = await supabase
         .from('instructor_curriculum_lessons')
-        .select('id, order_index, title, content, estimated_duration_minutes, is_published')
+        .select('id, order_index, title, content, duration_min, is_published')
         .eq('module_id', resolvedModuleId)
         .order('order_index', { ascending: true });
       if (error) throw error;
