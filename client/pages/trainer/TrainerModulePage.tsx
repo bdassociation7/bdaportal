@@ -93,10 +93,10 @@ function renderTipTap(node: any): string {
   if (node.type === 'heading') {
     const inner = (node.content || []).map(renderTipTap).join('');
     const level = node.attrs?.level || 2;
-    const cls = level === 1 ? 'text-2xl font-bold text-[#0d1f4e] mt-6 mb-3' :
-                level === 2 ? 'text-xl font-bold text-[#0d1f4e] mt-5 mb-2' :
-                              'text-lg font-semibold text-[#0d1f4e] mt-4 mb-2';
-    return `<h${level} class="${cls}">${inner}</h${level}>`;
+    const cls = level === 1 ? 'text-2xl font-bold mt-6 mb-3' :
+                level === 2 ? 'text-xl font-bold mt-5 mb-2' :
+                              'text-lg font-semibold mt-4 mb-2';
+    return `<h${level} class="${cls}" style="color:#0f91e0">${inner}</h${level}>`;
   }
   if (node.type === 'bulletList') return `<ul class="list-disc pl-5 mb-4 space-y-1">${(node.content || []).map(renderTipTap).join('')}</ul>`;
   if (node.type === 'orderedList') return `<ol class="list-decimal pl-5 mb-4 space-y-1">${(node.content || []).map(renderTipTap).join('')}</ol>`;
@@ -146,18 +146,18 @@ export default function TrainerModulePage() {
   });
 
   const { data: lessons = [] } = useQuery<TrainerLesson[]>({
-    queryKey: ['trainer-lessons', moduleId],
+    queryKey: ['trainer-lessons', module?.id],
     queryFn: async () => {
+      if (!module?.id) return [];
       const { data, error } = await supabase
         .from('instructor_curriculum_lessons')
         .select('id, order_index, title, content, estimated_duration_minutes, is_published')
-        .eq('module_id', moduleId)
-        .eq('is_published', true)
+        .eq('module_id', module.id)
         .order('order_index', { ascending: true });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!moduleId,
+    enabled: !!module?.id,
   });
 
   const { data: allModules = [] } = useQuery<TrainerModule[]>({
@@ -301,7 +301,7 @@ export default function TrainerModulePage() {
                 <span className="w-1.5 h-5 rounded-full inline-block" style={{ background: BDA.blue }} />
                 Module Introduction
               </h3>
-              <div className="prose prose-gray max-w-none"
+              <div className="max-w-none tiptap-content"
                 dangerouslySetInnerHTML={{ __html: renderTipTap(module.intro_content) }} />
             </div>
           )}
@@ -312,7 +312,7 @@ export default function TrainerModulePage() {
               style={{ background: '#fff', borderColor: BDA.border, boxShadow: '0 1px 4px rgba(28,74,139,0.06)' }}>
               <h3 className="text-xl font-bold mb-4" style={{ color: BDA.navyDark }}>{activeLesson.title}</h3>
               {activeLesson.content ? (
-                <div className="prose prose-gray max-w-none"
+                <div className="max-w-none tiptap-content"
                   dangerouslySetInnerHTML={{ __html: renderTipTap(activeLesson.content) }} />
               ) : (
                 <div className="text-center py-10">
