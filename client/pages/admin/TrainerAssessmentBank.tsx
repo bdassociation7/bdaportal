@@ -2,16 +2,15 @@
  * TrainerAssessmentBank — Admin page to manage Trainer Assessment questions
  * Route: /admin/trainer-gate/assessment
  * Uses instructor_assessment_questions table
- * Simple MCQ questions linked to modules — for instructor self-assessment
+ * ONE comprehensive assessment covering all 5 modules — no per-module linking
  */
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import {
   Plus, Edit, Trash2, Eye, EyeOff,
-  GraduationCap, CheckCircle, FileText, HelpCircle,
-  Save, X, ChevronDown, BookOpen,
+  CheckCircle, FileText, HelpCircle,
+  Save, X,
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,6 @@ import { useToast } from '@/components/ui/use-toast';
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AssessmentQuestion {
   id: string;
-  module_id: string | null;
   order_index: number;
   question_text: string;
   option_a: string;
@@ -33,34 +31,27 @@ interface AssessmentQuestion {
   created_at: string;
 }
 
-interface TrainerModule {
-  id: string;
-  title: string;
-  order_index: number;
-}
-
 // ─── Question Form Dialog ─────────────────────────────────────────────────────
 function QuestionFormDialog({
   question,
-  modules,
+  nextOrder,
   onClose,
   onSaved,
 }: {
   question: AssessmentQuestion | null;
-  modules: TrainerModule[];
+  nextOrder: number;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { toast } = useToast();
   const [form, setForm] = useState({
-    module_id: question?.module_id || (modules[0]?.id || ''),
-    order_index: question?.order_index || 1,
+    order_index: question?.order_index ?? nextOrder,
     question_text: question?.question_text || '',
     option_a: question?.option_a || '',
     option_b: question?.option_b || '',
     option_c: question?.option_c || '',
     option_d: question?.option_d || '',
-    correct_answer: question?.correct_answer || 'A' as 'A' | 'B' | 'C' | 'D',
+    correct_answer: (question?.correct_answer || 'A') as 'A' | 'B' | 'C' | 'D',
     rationale: question?.rationale || '',
     is_published: question?.is_published ?? false,
   });
@@ -78,7 +69,7 @@ function QuestionFormDialog({
     setSaving(true);
     try {
       const payload = {
-        module_id: form.module_id || null,
+        module_id: null,          // no module link — global assessment
         order_index: form.order_index,
         question_text: form.question_text.trim(),
         option_a: form.option_a.trim(),
@@ -119,40 +110,28 @@ function QuestionFormDialog({
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between flex-shrink-0"
           style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)' }}>
-          <h2 className="text-lg font-bold text-white">
-            {question ? 'Edit Question' : 'New Assessment Question'}
-          </h2>
+          <div>
+            <h2 className="text-lg font-bold text-white">
+              {question ? 'Edit Question' : 'New Assessment Question'}
+            </h2>
+            <p className="text-white/60 text-xs mt-0.5">Comprehensive Trainer Assessment — covers all modules</p>
+          </div>
           <button onClick={onClose} className="text-white/70 hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {/* Module & Order */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Module</label>
-              <select
-                value={form.module_id}
-                onChange={e => setForm(f => ({ ...f, module_id: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f91e0]"
-              >
-                <option value="">— No module —</option>
-                {modules.map(m => (
-                  <option key={m.id} value={m.id}>Module {m.order_index}: {m.title}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Order</label>
-              <input
-                type="number"
-                min={1}
-                value={form.order_index}
-                onChange={e => setForm(f => ({ ...f, order_index: parseInt(e.target.value) || 1 }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f91e0]"
-              />
-            </div>
+          {/* Order only */}
+          <div className="w-32">
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide">Question Order</label>
+            <input
+              type="number"
+              min={1}
+              value={form.order_index}
+              onChange={e => setForm(f => ({ ...f, order_index: parseInt(e.target.value) || 1 }))}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f91e0]"
+            />
           </div>
 
           {/* Question Text */}
@@ -250,35 +229,18 @@ function QuestionFormDialog({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function TrainerAssessmentBank() {
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [editingQuestion, setEditingQuestion] = useState<AssessmentQuestion | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [filterModule, setFilterModule] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
 
-  // Fetch modules
-  const { data: modules = [] } = useQuery<TrainerModule[]>({
-    queryKey: ['trainer-gate-modules-for-assessment'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('instructor_curriculum_modules')
-        .select('id, title, order_index')
-        .order('order_index', { ascending: true });
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Fetch questions
+  // Fetch questions (no module filter — global assessment)
   const { data: questions = [], isLoading, refetch } = useQuery<AssessmentQuestion[]>({
-    queryKey: ['trainer-assessment-questions', filterModule, filterStatus],
+    queryKey: ['trainer-assessment-questions', filterStatus],
     queryFn: async () => {
       let query = supabase
         .from('instructor_assessment_questions')
         .select('*')
-        .order('module_id', { ascending: true })
         .order('order_index', { ascending: true });
-      if (filterModule !== 'all') query = query.eq('module_id', filterModule);
       if (filterStatus === 'published') query = query.eq('is_published', true);
       if (filterStatus === 'draft') query = query.eq('is_published', false);
       const { data, error } = await query;
@@ -314,14 +276,9 @@ export default function TrainerAssessmentBank() {
     }
   };
 
-  const getModuleTitle = (moduleId: string | null) => {
-    if (!moduleId) return 'General';
-    const m = modules.find(m => m.id === moduleId);
-    return m ? `Module ${m.order_index}: ${m.title}` : 'Unknown';
-  };
-
   const totalQ = questions.length;
   const publishedQ = questions.filter(q => q.is_published).length;
+  const nextOrder = totalQ + 1;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -335,7 +292,7 @@ export default function TrainerAssessmentBank() {
             <div>
               <h1 className="text-2xl font-bold">Trainer Gate — Assessment Bank</h1>
               <p className="text-white/70 text-sm mt-0.5">
-                MCQ questions for instructor self-assessment — linked to Trainer Learning Centre modules.
+                Comprehensive MCQ assessment covering all Trainer Learning Centre modules.
               </p>
             </div>
           </div>
@@ -350,6 +307,15 @@ export default function TrainerAssessmentBank() {
       </div>
 
       <div className="px-6 py-6 space-y-6">
+        {/* Info banner */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-start gap-3">
+          <HelpCircle className="h-5 w-5 text-[#0f91e0] flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-800">
+            This is a <strong>single comprehensive assessment</strong> that covers all five Trainer Learning Centre modules.
+            Questions are not linked to individual modules — the assessment evaluates overall instructor readiness.
+          </p>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           {[
@@ -370,24 +336,8 @@ export default function TrainerAssessmentBank() {
           ))}
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Module filter */}
-          <div className="relative">
-            <select
-              value={filterModule}
-              onChange={e => setFilterModule(e.target.value)}
-              className="appearance-none bg-white border border-gray-200 text-sm rounded-lg pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-[#0f91e0] text-gray-700"
-            >
-              <option value="all">All Modules</option>
-              {modules.map(m => (
-                <option key={m.id} value={m.id}>Module {m.order_index}: {m.title}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-          </div>
-
-          {/* Status filter */}
+        {/* Status filter */}
+        <div className="flex items-center gap-2">
           {(['all', 'published', 'draft'] as const).map(f => (
             <button
               key={f}
@@ -410,7 +360,6 @@ export default function TrainerAssessmentBank() {
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">#</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Question</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-48">Module</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Answer</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Status</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Actions</th>
@@ -419,14 +368,24 @@ export default function TrainerAssessmentBank() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-gray-400">Loading questions...</td>
+                  <td colSpan={5} className="text-center py-12 text-gray-400">Loading questions...</td>
                 </tr>
               ) : questions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12">
+                  <td colSpan={5} className="text-center py-12">
                     <HelpCircle className="h-10 w-10 mx-auto mb-3 text-gray-300" />
                     <p className="text-gray-500 font-medium">No questions yet</p>
-                    <p className="text-gray-400 text-sm mt-1">Add assessment questions for your trainer modules.</p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      Add MCQ questions to build the comprehensive instructor assessment.
+                    </p>
+                    <Button
+                      onClick={() => { setEditingQuestion(null); setShowForm(true); }}
+                      className="mt-4 flex items-center gap-2 mx-auto"
+                      style={{ background: 'linear-gradient(135deg, #0f91e0, #0d1f4e)', color: '#fff' }}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add First Question
+                    </Button>
                   </td>
                 </tr>
               ) : (
@@ -434,7 +393,7 @@ export default function TrainerAssessmentBank() {
                   <tr key={q.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="w-8 h-8 rounded-full bg-[#f0f6ff] text-[#0f91e0] flex items-center justify-center text-sm font-bold">
-                        {idx + 1}
+                        {q.order_index}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -444,12 +403,6 @@ export default function TrainerAssessmentBank() {
                           <span className="font-semibold">Rationale:</span> {q.rationale}
                         </p>
                       )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
-                        <BookOpen className="h-3 w-3" />
-                        {getModuleTitle(q.module_id)}
-                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-50 text-green-700 font-bold text-sm">
@@ -503,7 +456,7 @@ export default function TrainerAssessmentBank() {
       {showForm && (
         <QuestionFormDialog
           question={editingQuestion}
-          modules={modules}
+          nextOrder={nextOrder}
           onClose={() => setShowForm(false)}
           onSaved={refetch}
         />
