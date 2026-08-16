@@ -272,8 +272,8 @@ function CompetencyDirectory({
         </span>
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(250px,0.75fr)_minmax(0,2fr)]">
-        <div className="border-b border-[#e6effb] bg-[#f8faff] p-3 lg:border-b-0 lg:border-r">
+      <div className="grid lg:grid-cols-[minmax(300px,0.9fr)_minmax(0,2.1fr)]">
+        <div className="border-b border-white/15 bg-gradient-to-br from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] p-3 lg:border-b-0 lg:border-r lg:border-white/15">
           <div className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
             {competencies.map((competency, index) => {
               const active = activeCompetency.id === competency.id;
@@ -282,17 +282,17 @@ function CompetencyDirectory({
                   key={competency.id}
                   type="button"
                   onClick={() => setActiveCompetencyId(competency.id)}
-                  className={`min-w-[220px] rounded-xl px-4 py-3 text-left transition-all lg:min-w-0 ${
+                  className={`min-w-[240px] rounded-xl px-4 py-3.5 text-left transition-all lg:min-w-0 ${
                     active
-                      ? 'bg-white text-[#0d1f4e] shadow-[0_4px_14px_rgba(13,31,78,0.10)] ring-1 ring-[#0f91e0]/20'
-                      : 'text-slate-500 hover:bg-white/80 hover:text-[#1c4a8b]'
+                      ? 'bg-white text-[#0d1f4e] shadow-[0_6px_18px_rgba(0,0,0,0.18)] ring-1 ring-white/60'
+                      : 'text-white/85 hover:bg-white/15 hover:text-white'
                   }`}
                 >
                   <span className="flex items-start gap-3">
-                    <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${active ? 'bg-[#0f91e0] text-white' : 'bg-white text-[#1c4a8b]'}`}>{index + 1}</span>
+                    <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${active ? 'bg-[#0f91e0] text-white' : 'bg-white/15 text-white'}`}>{index + 1}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold leading-snug">{competency.name}</span>
-                      <span className="mt-1 block text-[11px] font-medium text-slate-400">{competency.sets.length} {t('sets', false)}</span>
+                      <span className={`mt-1 block text-[11px] font-medium ${active ? 'text-slate-400' : 'text-white/65'}`}>{competency.sets.length} {t('sets', false)}</span>
                     </span>
                   </span>
                 </button>
@@ -301,7 +301,7 @@ function CompetencyDirectory({
           </div>
         </div>
 
-        <div className="min-w-0 p-5 sm:p-6">
+        <div className="min-w-0 p-6 sm:p-8">
           <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#0f91e0]">Selected competency</p>
@@ -478,9 +478,9 @@ export function QuestionBankDashboard() {
       </section>
 
       {/* ── Certification Selection & Content ───────────────────────────── */}
-      <div className="container mx-auto max-w-6xl px-6 py-8 sm:py-10">
+      <div className="mx-auto w-full max-w-[1640px] px-6 py-8 sm:px-10 sm:py-10 lg:px-16 xl:px-24">
         {!certType ? (
-          <section className="mx-auto grid min-h-[calc(100vh-25rem)] max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+          <section className="mx-auto grid min-h-[calc(100vh-25rem)] max-w-6xl grid-cols-1 gap-6 md:grid-cols-2">
             {(['CP', 'SCP'] as const).map((type) => {
               const isCP = type === 'CP';
               return (
