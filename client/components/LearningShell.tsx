@@ -129,21 +129,24 @@ function LearningTopBar({
   }, [onMenuChange]);
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white shadow-[0_8px_24px_rgba(13,31,78,0.18)]">
+    <header
+      className="sticky top-0 z-50 w-full shadow-[0_8px_24px_rgba(13,31,78,0.18)]"
+      style={{
+        background:
+          "linear-gradient(108deg, #0f91e0 0%, #1d67b1 44%, #0d1f4e 100%)",
+      }}
+    >
       <div
         ref={menuRef}
-        className="relative flex min-h-[82px] w-full sm:min-h-[92px]"
+        className="relative flex min-h-[82px] w-full items-center justify-between px-6 sm:min-h-[92px] sm:px-10 lg:px-16 xl:px-24"
       >
-        <div className="flex shrink-0 items-center border-r border-[#d6e8f5] bg-white pl-6 pr-4 sm:pl-10 sm:pr-6 lg:pl-16 lg:pr-6 xl:pl-24 xl:pr-6">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
           <img
-            src="/bda-logo-official.webp"
+            src="/bda-logo.png"
             alt="Business Development Association"
-            className="h-14 w-[166px] object-contain sm:h-16 sm:w-[192px]"
+            className="h-12 w-[108px] shrink-0 object-contain brightness-0 invert sm:h-14 sm:w-[132px]"
           />
-        </div>
-
-        <div className="relative flex min-w-0 flex-1 items-center justify-between bg-gradient-to-r from-[#0f91e0] via-[#1d67b1] to-[#0d1f4e] px-4 sm:px-7 lg:px-10">
-          <div className="min-w-0">
+          <div className="min-w-0 border-l border-white/25 pl-3 sm:pl-4">
             <p className="truncate text-lg font-bold tracking-[-0.02em] text-white sm:text-2xl">
               BDA Learning System
             </p>
@@ -151,63 +154,57 @@ function LearningTopBar({
               Business Development Association
             </p>
           </div>
-
-          <button
-            type="button"
-            onClick={() => onMenuChange(!menuOpen)}
-            className="relative z-20 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-[#0d1f4e] shadow-[0_5px_18px_rgba(0,0,0,0.18)] transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
-            aria-label={
-              menuOpen
-                ? "Close learning navigation"
-                : "Open learning navigation"
-            }
-            aria-expanded={menuOpen}
-          >
-            {menuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </button>
-
-          <nav
-            className={`absolute right-[68px] top-1/2 z-10 flex -translate-y-1/2 items-stretch gap-1.5 rounded-xl border border-white/20 bg-[#0d1f4e]/25 p-1.5 shadow-[0_8px_22px_rgba(0,0,0,0.12)] backdrop-blur-sm transition-all duration-200 sm:right-[82px] sm:gap-2 sm:p-2 ${
-              menuOpen
-                ? "pointer-events-auto translate-x-0 opacity-100"
-                : "pointer-events-none translate-x-4 opacity-0"
-            }`}
-            aria-label="Learning system navigation"
-          >
-            {navItems.map((item) => {
-              const active = item.matchFn(location.pathname);
-              return (
-                <button
-                  type="button"
-                  key={item.path}
-                  onClick={() => {
-                    navigate(item.path);
-                    onMenuChange(false);
-                  }}
-                  className={`group flex min-w-[52px] flex-col items-center gap-1 rounded-lg px-2 py-2 text-center transition-all sm:min-w-[66px] sm:px-2.5 sm:py-2.5 ${
-                    active
-                      ? "bg-white text-[#0d1f4e] shadow-[0_3px_10px_rgba(0,0,0,0.15)]"
-                      : "text-white hover:bg-white/15"
-                  }`}
-                  aria-current={active ? "page" : undefined}
-                >
-                  <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-md ${active ? "bg-[#f0f6ff] text-[#0f91e0]" : "bg-white/10 text-white"}`}
-                  >
-                    {item.icon}
-                  </span>
-                  <span className="max-w-[62px] truncate text-[9px] font-semibold leading-tight sm:text-[10px]">
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
         </div>
+
+        <button
+          type="button"
+          onClick={() => onMenuChange(!menuOpen)}
+          className="relative z-20 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-[#0d1f4e] shadow-[0_5px_18px_rgba(0,0,0,0.18)] transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
+          aria-label={
+            menuOpen ? "Close learning navigation" : "Open learning navigation"
+          }
+          aria-expanded={menuOpen}
+        >
+          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+
+        <nav
+          className={`absolute right-[68px] top-1/2 z-10 flex -translate-y-1/2 items-stretch gap-1.5 rounded-xl border border-white/20 bg-[#0d1f4e]/25 p-1.5 shadow-[0_8px_22px_rgba(0,0,0,0.12)] backdrop-blur-sm transition-all duration-200 sm:right-[82px] sm:gap-2 sm:p-2 ${
+            menuOpen
+              ? "pointer-events-auto translate-x-0 opacity-100"
+              : "pointer-events-none translate-x-4 opacity-0"
+          }`}
+          aria-label="Learning system navigation"
+        >
+          {navItems.map((item) => {
+            const active = item.matchFn(location.pathname);
+            return (
+              <button
+                type="button"
+                key={item.path}
+                onClick={() => {
+                  navigate(item.path);
+                  onMenuChange(false);
+                }}
+                className={`group flex min-w-[52px] flex-col items-center gap-1 rounded-lg px-2 py-2 text-center transition-all sm:min-w-[66px] sm:px-2.5 sm:py-2.5 ${
+                  active
+                    ? "bg-white text-[#0d1f4e] shadow-[0_3px_10px_rgba(0,0,0,0.15)]"
+                    : "text-white hover:bg-white/15"
+                }`}
+                aria-current={active ? "page" : undefined}
+              >
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-md ${active ? "bg-[#f0f6ff] text-[#0f91e0]" : "bg-white/10 text-white"}`}
+                >
+                  {item.icon}
+                </span>
+                <span className="max-w-[62px] truncate text-[9px] font-semibold leading-tight sm:text-[10px]">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );
