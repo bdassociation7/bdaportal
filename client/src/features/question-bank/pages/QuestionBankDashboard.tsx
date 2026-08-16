@@ -383,9 +383,11 @@ export function QuestionBankDashboard() {
   const { data: hasQuestionBankAccess, isLoading: accessLoading } = useQuestionBankAccess(user?.id, 'EN');
   const { data: languageAccess, isLoading: languageAccessLoading } = useLanguageAccess(user?.id, 'EN');
 
-  // All content is stored under 'CP' — use CP for fetching regardless of selected cert type
-  const { data: questionSets, isLoading: isLoadingSets } = useQuestionSetsWithProgress(user?.id, 'CP', 'EN');
-  const { data: stats } = useQuestionBankStats(user?.id, 'CP', 'en');
+  // Question sets are shared structurally, while the service filters each set by
+  // its CP or SCP question count. Use the selected certification for the data query.
+  const selectedCertification = certType ?? 'CP';
+  const { data: questionSets, isLoading: isLoadingSets } = useQuestionSetsWithProgress(user?.id, selectedCertification, 'EN');
+  const { data: stats } = useQuestionBankStats(user?.id, selectedCertification, 'en');
 
   // Group hierarchically
   const groupedSets = useMemo(() => {
