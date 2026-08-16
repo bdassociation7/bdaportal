@@ -7,8 +7,9 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import {
   useModuleDetail,
-  useUpdateProgress,
   useIncrementTimeSpent,
+  useLessonsByModule,
+  useLessonProgress,
 } from "@/entities/curriculum";
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
@@ -70,6 +71,15 @@ export function ModuleViewer() {
     isLoading,
     error,
   } = useModuleDetail(user?.id, moduleId!);
+  const { data: moduleLessons = [] } = useLessonsByModule(moduleId);
+  const lessonProgressFilters = useMemo(
+    () => ({ module_id: moduleId }),
+    [moduleId],
+  );
+  const { data: moduleLessonProgress = [] } = useLessonProgress(
+    user?.id,
+    lessonProgressFilters,
+  );
 
   // Reading progress tracker
   useEffect(() => {
@@ -148,8 +158,27 @@ export function ModuleViewer() {
 
   const moduleTitle = stripModulePrefix(module.competency_name);
   const moduleDesc = module.description;
-  const progressPct = progress?.progress_percentage || 0;
-  const isCompleted = progress?.status === "completed";
+
+  // Lesson progress is the authoritative source for competency progress.
+  // The legacy module-progress row is retained only as a fallback for modules
+  // that do not yet contain lessons.
+  const publishedLessons = moduleLessons.filter(
+    (lesson) => lesson.is_published,
+  );
+  const lessonTotal = publishedLessons.length;
+  const completedLessonCount = publishedLessons.filter((lesson) =>
+    moduleLessonProgress.some(
+      (lessonProgress) =>
+        lessonProgress.lesson_id === lesson.id &&
+        lessonProgress.status === "completed",
+    ),
+  ).length;
+  const progressPct = lessonTotal
+    ? Math.round((completedLessonCount / lessonTotal) * 100)
+    : progress?.progress_percentage || 0;
+  const isCompleted = lessonTotal
+    ? completedLessonCount === lessonTotal
+    : progress?.status === "completed";
 
   // Section badge
   const sectionLabel =
@@ -373,10 +402,12 @@ export function ModuleViewer() {
                   className="text-sm font-semibold"
                   style={{ color: BDA.navyDark }}
                 >
-                  Ready to start?
+                  {completedLessonCount > 0 ? "Keep going" : "Ready to start?"}
                 </p>
                 <p className="text-xs mt-0.5 text-gray-500">
-                  Select a lesson from the sidebar to begin learning.
+                  {completedLessonCount > 0
+                    ? `You have completed ${completedLessonCount} of ${lessonTotal} lessons. Continue where you left off.`
+                    : "Select a lesson from the sidebar to begin learning."}
                 </p>
               </div>
               <div
