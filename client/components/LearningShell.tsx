@@ -153,7 +153,7 @@ function LearningTopBar({
             <img
               src="/bda-mark.webp"
               alt="BDA"
-              className="h-14 w-[148px] object-contain drop-shadow-[0_1px_1px_rgba(255,255,255,0.28)] sm:h-16 sm:w-[178px]"
+              className="h-14 w-[148px] object-contain brightness-0 invert drop-shadow-[0_1px_1px_rgba(255,255,255,0.24)] sm:h-16 sm:w-[178px]"
             />
           </button>
           <div className="min-w-0 border-l border-white/25 pl-3 sm:pl-4">
