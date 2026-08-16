@@ -115,10 +115,10 @@ export function LessonViewer() {
   const timeTrackerRef = useRef<NodeJS.Timeout>();
   const progressUpdateTimeoutRef = useRef<NodeJS.Timeout>();
   const progressPercentageRef = useRef<number>(0);
+  const completionRequestedRef = useRef(false);
   const saveProgressRef = useRef<((scrollProgress: number) => void) | null>(
     null,
   );
-  const autoCompleteAttemptedRef = useRef<string | null>(null);
 
   // Detect base path
   const basePath = useMemo(() => {
@@ -180,9 +180,13 @@ export function LessonViewer() {
         document.documentElement.clientHeight;
       const scrollProgress =
         docHeight > 0 ? Math.round((scrollTop / docHeight) * 100) : 0;
-      const clamped = Math.min(scrollProgress, 100);
+      // Keep reading progress below completion. Completion is now an explicit action
+      // so a layout update at the end of a long lesson never shifts the page.
+      const clamped = Math.min(scrollProgress, 95);
 
-      setReadingProgress(clamped);
+      if (!completionRequestedRef.current) {
+        setReadingProgress(clamped);
+      }
       setShowScrollTop(scrollTop > 400);
 
       if (progressUpdateTimeoutRef.current)
@@ -215,35 +219,6 @@ export function LessonViewer() {
     };
   }, [lessonId, user?.id]);
 
-  // Auto-complete for short content
-  useEffect(() => {
-    if (!user?.id || !lessonId) return;
-    if (progress?.status === "completed") return;
-    if (autoCompleteAttemptedRef.current === lessonId) return;
-
-    const checkAndAutoComplete = () => {
-      const docHeight =
-        document.documentElement.scrollHeight -
-        document.documentElement.clientHeight;
-      if (docHeight <= 10) {
-        autoCompleteAttemptedRef.current = lessonId;
-        setReadingProgress(100);
-        updateProgress.mutate({
-          userId: user.id,
-          lessonId,
-          updates: {
-            progress_percentage: 100,
-            status: "completed",
-            completed_at: new Date().toISOString(),
-          },
-        });
-      }
-    };
-
-    const t = setTimeout(checkAndAutoComplete, 1200);
-    return () => clearTimeout(t);
-  }, [user?.id, lessonId, progress?.status]);
-
   // Time tracking
   useEffect(() => {
     if (!user || !lessonId) return;
@@ -252,6 +227,23 @@ export function LessonViewer() {
       if (timeTrackerRef.current) clearInterval(timeTrackerRef.current);
     };
   }, [user, lessonId]);
+
+  const markLessonComplete = () => {
+    if (!user?.id || !lessonId || isCompleted) return;
+
+    completionRequestedRef.current = true;
+    setReadingProgress(100);
+    progressPercentageRef.current = 100;
+    updateProgress.mutate({
+      userId: user.id,
+      lessonId,
+      updates: {
+        progress_percentage: 100,
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      },
+    });
+  };
 
   // Scroll to heading
   const scrollToHeading = (id: string) => {
@@ -313,7 +305,9 @@ export function LessonViewer() {
   }
 
   const isCompleted =
-    readingProgress >= 100 || progress?.status === "completed";
+    completionRequestedRef.current ||
+    readingProgress >= 100 ||
+    progress?.status === "completed";
   const hasToc = tocItems.length >= 3;
   const competencyName = (
     moduleData?.module?.competency_name || "BDA Competency"
@@ -396,39 +390,53 @@ export function LessonViewer() {
             </div>
           </article>
 
-          {/* ── Completion banner ────────────────────────────────────────── */}
-          {isCompleted && (
-            <div className="bg-green-50 border border-green-200 rounded-xl px-6 py-5 mb-6 text-center shadow-sm">
-              <div className="flex items-center justify-center gap-2 text-green-700 font-semibold text-lg mb-1">
-                <CheckCircle className="h-5 w-5" />
-                Lesson Completed!
+          {/* ── Stable completion section — explicit, never scroll-triggered ── */}
+          <section className="mb-6 min-h-[164px]" aria-live="polite">
+            {isCompleted ? (
+              <div className="flex min-h-[164px] flex-col items-center justify-center rounded-xl border border-green-200 bg-green-50 px-6 py-5 text-center shadow-sm">
+                <div className="mb-1 flex items-center justify-center gap-2 text-lg font-semibold text-green-700">
+                  <CheckCircle className="h-5 w-5" />
+                  Lesson Completed!
+                </div>
+                <p className="text-sm text-green-600">
+                  Great work. Use the navigation below to continue to the next
+                  lesson.
+                </p>
+                {lesson.lesson_quiz_id && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 border-green-300 text-green-700 hover:bg-green-100"
+                    onClick={() => setShowOptionalQuiz(true)}
+                  >
+                    <Award className="mr-2 h-4 w-4" />
+                    Practice Quiz
+                  </Button>
+                )}
               </div>
-              <p className="text-sm text-green-600">
-                Great work. Use the navigation below to continue to the next
-                lesson.
-              </p>
-              {lesson.lesson_quiz_id && (
+            ) : (
+              <div className="flex min-h-[164px] flex-col items-center justify-center rounded-xl border border-[#dbeafe] bg-white px-6 py-5 text-center shadow-sm">
+                <p className="text-base font-semibold text-[#0d1f4e]">
+                  Ready to continue?
+                </p>
+                <p className="mt-1 max-w-lg text-sm text-slate-600">
+                  When you have finished this lesson, mark it as complete to
+                  unlock the practice quiz and continue your learning journey.
+                </p>
                 <Button
-                  variant="outline"
                   size="sm"
-                  className="mt-3 border-green-300 text-green-700 hover:bg-green-100"
-                  onClick={() => setShowOptionalQuiz(true)}
+                  className="mt-4 bg-[#0f91e0] text-white hover:bg-[#1c4a8b]"
+                  onClick={markLessonComplete}
+                  disabled={updateProgress.isPending}
                 >
-                  <Award className="mr-2 h-4 w-4" />
-                  Practice Quiz
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  {updateProgress.isPending
+                    ? "Completing lesson..."
+                    : "Mark lesson as complete"}
                 </Button>
-              )}
-            </div>
-          )}
-
-          {/* Reserve space whether completed or not to prevent layout shift */}
-          {!isCompleted && (
-            <div className="mb-6" style={{ minHeight: "24px" }}>
-              <p className="text-center text-sm text-gray-400">
-                Scroll to the bottom to mark this lesson as complete.
-              </p>
-            </div>
-          )}
+              </div>
+            )}
+          </section>
 
           {/* ── Lesson navigator ─────────────────────────────────────────── */}
           <LessonNavigator
