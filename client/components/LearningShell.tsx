@@ -7,6 +7,7 @@
 
 import React, {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   createContext,
@@ -245,6 +246,27 @@ export function LearningShell() {
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
+
+  // Every learning-system route starts from its Hero instead of inheriting the
+  // scroll position of the previous page or the browser's history restoration.
+  useLayoutEffect(() => {
+    const previousScrollRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+
+    const scrollToPageStart = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    scrollToPageStart();
+    const animationFrame = window.requestAnimationFrame(scrollToPageStart);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.history.scrollRestoration = previousScrollRestoration;
+    };
+  }, [location.key, location.pathname, location.search]);
 
   return (
     <ShellContext.Provider
