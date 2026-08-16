@@ -180,7 +180,7 @@ function LearningTopBar({
         </button>
 
         <nav
-          className={`absolute right-[68px] top-1/2 z-10 flex -translate-y-1/2 items-stretch gap-1.5 rounded-xl border border-white/20 bg-[#0d1f4e]/25 p-1.5 shadow-[0_8px_22px_rgba(0,0,0,0.12)] backdrop-blur-sm transition-all duration-200 sm:right-[82px] sm:gap-2 sm:p-2 ${
+          className={`absolute right-[68px] top-1/2 z-10 flex w-max max-w-[calc(100vw-5.5rem)] flex-nowrap -translate-y-1/2 items-stretch gap-1.5 overflow-x-auto rounded-xl border border-white/20 bg-[#0d1f4e]/25 p-1.5 shadow-[0_8px_22px_rgba(0,0,0,0.12)] backdrop-blur-sm transition-all duration-200 sm:right-[82px] sm:max-w-[calc(100vw-6.5rem)] sm:gap-2 sm:p-2 ${
             menuOpen
               ? "pointer-events-auto translate-x-0 opacity-100"
               : "pointer-events-none translate-x-4 opacity-0"
