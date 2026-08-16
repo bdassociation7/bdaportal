@@ -22,7 +22,6 @@ import {
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   ArrowLeft,
-  Clock,
   CheckCircle,
   BookOpen,
   Award,
@@ -321,72 +320,38 @@ export function LessonViewer() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fb]">
-      {/* ── Sticky top bar ───────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
-          {/* Left: back + breadcrumb */}
-          <div className="flex items-center gap-3 min-w-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="shrink-0 text-gray-600 hover:text-gray-900"
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-14 text-white sm:py-16 lg:py-18">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_86%_8%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_70%_100%,rgba(15,145,224,0.42),transparent_38%)]" />
+        <div className="relative mx-auto max-w-[1640px] px-6 sm:px-10 lg:px-16 xl:px-24">
+          <div className="flex items-center justify-between gap-4">
+            <button
+              type="button"
               onClick={() => navigate(getModuleUrl(lesson.module_id))}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
             >
-              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              <ArrowLeft className="h-4 w-4" />
               Back
-            </Button>
-
-            <div className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 min-w-0">
-              <BookOpen className="h-4 w-4 shrink-0" />
-              <span className="truncate font-medium text-gray-800">
-                {lesson.title}
-              </span>
-              <span className="shrink-0 text-gray-400">
-                · Lesson {lesson.order_index}
-              </span>
-            </div>
-          </div>
-
-          {/* Right: TOC toggle + progress tracker */}
-          <div className="flex items-center gap-3 shrink-0">
+            </button>
             {hasToc && (
               <button
+                type="button"
                 onClick={() => setTocOpen((v) => !v)}
-                title={tocOpen ? "Hide contents" : "Show contents"}
                 aria-expanded={tocOpen}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold shadow-sm transition-all ${
+                className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors ${
                   tocOpen
-                    ? "border-[#0d1f4e] bg-gradient-to-r from-[#0d1f4e] to-[#0f91e0] text-white"
-                    : "border-[#b9ddf6] bg-white text-[#1c4a8b] hover:border-[#0f91e0] hover:bg-[#f0f6ff]"
+                    ? "border-white/35 bg-white/20 text-white"
+                    : "border-white/25 bg-white text-[#1c4a8b] hover:bg-[#f0f6ff]"
                 }`}
               >
-                <List className="h-3.5 w-3.5" />
+                <List className="h-4 w-4" />
                 Contents
               </button>
             )}
-            <LessonProgressTracker
-              progress={progress}
-              readingProgress={readingProgress}
-            />
           </div>
-        </div>
-
-        {/* Reading progress bar */}
-        <div className="h-0.5 bg-gray-100">
-          <div
-            className="h-full bg-blue-600 transition-all duration-300"
-            style={{ width: `${readingProgress}%` }}
-          />
-        </div>
-      </header>
-
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-9 text-white sm:py-11">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_86%_8%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_70%_100%,rgba(15,145,224,0.42),transparent_38%)]" />
-        <div className="relative mx-auto max-w-[1640px] px-6 sm:px-10 lg:px-16 xl:px-24">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/75">
+          <p className="mt-9 text-xs font-bold uppercase tracking-[0.16em] text-white/75">
             {competencyName}
           </p>
-          <h1 className="mt-3 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">
+          <h1 className="mt-3 max-w-5xl text-3xl font-bold tracking-[-0.03em] sm:text-4xl lg:text-5xl">
             Lesson {lesson.order_index}: {lesson.title}
           </h1>
         </div>
@@ -397,15 +362,6 @@ export function LessonViewer() {
       >
         {/* ── Main content column ──────────────────────────────────────────── */}
         <main className="flex-1 min-w-0">
-          {/* Description / intro card */}
-          {lesson.description && (
-            <div className="bg-blue-50 border border-blue-100 rounded-xl px-6 py-4 mb-8">
-              <p className="text-gray-700 leading-relaxed text-[1.02rem]">
-                {lesson.description}
-              </p>
-            </div>
-          )}
-
           {/* Learning Objectives */}
           {lesson.learning_objectives &&
             lesson.learning_objectives.length > 0 && (
