@@ -167,24 +167,9 @@ function LearningTopBar({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => onMenuChange(!menuOpen)}
-          className="relative z-20 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-[#0d1f4e] shadow-[0_5px_18px_rgba(0,0,0,0.18)] transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
-          aria-label={
-            menuOpen ? "Close learning navigation" : "Open learning navigation"
-          }
-          aria-expanded={menuOpen}
-        >
-          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-
-        <nav
-          className={`absolute right-[68px] top-1/2 z-10 flex w-max max-w-[calc(100vw-5.5rem)] flex-nowrap -translate-y-1/2 items-stretch gap-1.5 overflow-x-auto rounded-xl border border-white/20 bg-[#0d1f4e]/25 p-1.5 shadow-[0_8px_22px_rgba(0,0,0,0.12)] backdrop-blur-sm transition-all duration-200 sm:right-[82px] sm:max-w-[calc(100vw-6.5rem)] sm:gap-2 sm:p-2 ${
-            menuOpen
-              ? "pointer-events-auto translate-x-0 opacity-100"
-              : "pointer-events-none translate-x-4 opacity-0"
-          }`}
+        <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
+          <nav
+            className={`${menuOpen ? "flex" : "hidden"} min-w-0 max-w-[calc(100vw-5.5rem)] flex-nowrap items-stretch gap-1.5 overflow-x-auto rounded-xl border border-white/20 bg-[#0d1f4e]/25 p-1.5 shadow-[0_8px_22px_rgba(0,0,0,0.12)] backdrop-blur-sm sm:max-w-[calc(100vw-6.5rem)] sm:gap-2 sm:p-2`}
           aria-label="Learning system navigation"
         >
           {navItems.map((item) => {
@@ -215,7 +200,17 @@ function LearningTopBar({
               </button>
             );
           })}
-        </nav>
+          </nav>
+          <button
+            type="button"
+            onClick={() => onMenuChange(!menuOpen)}
+            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-[#0d1f4e] shadow-[0_5px_18px_rgba(0,0,0,0.18)] transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
+            aria-label={menuOpen ? "Close learning navigation" : "Open learning navigation"}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
     </header>
   );
