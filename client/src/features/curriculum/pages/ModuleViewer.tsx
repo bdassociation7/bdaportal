@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { ContentRenderer } from "../components/ContentRenderer";
 import { ModuleLessons } from "../components/ModuleLessons";
 
@@ -161,13 +160,6 @@ export function ModuleViewer() {
           ? "Behavioural Competency"
           : "Knowledge-Based Competency";
 
-  const sectionBadgeStyle =
-    module.section_type === "intro" || module.section_type === "outro"
-      ? { background: BDA.blueMid, color: BDA.navy }
-      : module.section_type === "behavioral"
-        ? { background: BDA.blueMid, color: BDA.navy }
-        : { background: "#e0f2fe", color: "#0369a1" };
-
   const nextModuleTitle = nextModule
     ? stripModulePrefix(nextModule.competency_name)
     : null;
@@ -180,85 +172,22 @@ export function ModuleViewer() {
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
       }}
     >
-      {/* ─── TOP BAR ─── */}
-      <div
-        className="sticky top-0 z-30 border-b"
-        style={{
-          background: "#fff",
-          borderColor: BDA.border,
-          boxShadow: "0 1px 4px rgba(28,74,139,0.08)",
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          {/* Left: Back + Breadcrumb */}
-          <div className="flex items-center gap-3 min-w-0">
-            {!isFullscreen && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-shrink-0 gap-1.5 font-medium"
-                  style={{ color: BDA.navy }}
-                  onClick={() => navigate(getBackUrl())}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span className="hidden sm:inline">Curriculum</span>
-                </Button>
-                <div className="h-5 w-px bg-gray-200 flex-shrink-0" />
-              </>
-            )}
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span
-                  className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                  style={sectionBadgeStyle}
-                >
-                  {sectionLabel}
-                </span>
-                {isCompleted && (
-                  <span
-                    className="text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1"
-                    style={{ background: "#dcfce7", color: "#166534" }}
-                  >
-                    <CheckCircle className="h-3 w-3" />
-                    Completed
-                  </span>
-                )}
-              </div>
-              <h1
-                className="text-base font-bold truncate mt-0.5"
-                style={{ color: BDA.navyDark }}
-              >
-                Module {module.order_index}: {moduleTitle}
-              </h1>
-            </div>
-          </div>
-
-          {/* Right: Progress + Fullscreen toggle */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="hidden md:flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-xs text-gray-400">Progress</div>
-                <div className="text-sm font-bold" style={{ color: BDA.navy }}>
-                  {progressPct}%
-                </div>
-              </div>
-              <div className="w-24">
-                <Progress
-                  value={progressPct}
-                  className="h-2"
-                  style={
-                    { "--progress-color": BDA.navy } as React.CSSProperties
-                  }
-                />
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-shrink-0 gap-1.5"
-              style={{ color: BDA.navy }}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-12 text-white sm:py-14 lg:py-16">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_8%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_70%_100%,rgba(15,145,224,0.42),transparent_38%)]" />
+        <div className="relative mx-auto max-w-[1640px] px-6 sm:px-10 lg:px-16 xl:px-24">
+          <div className="flex items-center justify-between gap-4">
+            <button
+              type="button"
+              onClick={() => navigate(getBackUrl())}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Curriculum
+            </button>
+            <button
+              type="button"
               onClick={() => setIsFullscreen(!isFullscreen)}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20"
               title={isFullscreen ? "Exit fullscreen" : "Expand to fullscreen"}
             >
               {isFullscreen ? (
@@ -266,67 +195,40 @@ export function ModuleViewer() {
               ) : (
                 <Maximize2 className="h-4 w-4" />
               )}
-              <span className="hidden sm:inline text-xs font-medium">
+              <span className="hidden sm:inline">
                 {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
               </span>
-            </Button>
-            {isFullscreen && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                style={{ borderColor: BDA.border, color: BDA.navy }}
-                onClick={() => {
-                  setIsFullscreen(false);
-                  navigate(getBackUrl());
-                }}
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Curriculum
-              </Button>
-            )}
+            </button>
           </div>
-        </div>
-
-        {/* Reading progress bar */}
-        <div className="h-0.5" style={{ background: BDA.blueMid }}>
-          <div
-            className="h-full transition-all duration-300"
-            style={{ width: `${readingProgress}%`, background: BDA.blue }}
-          />
-        </div>
-      </div>
-
-      <section className="relative overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-10 text-white sm:py-12">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_8%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_70%_100%,rgba(15,145,224,0.42),transparent_38%)]" />
-        <div className="relative mx-auto flex max-w-[1640px] flex-col gap-6 px-6 sm:px-10 lg:flex-row lg:items-end lg:justify-between lg:px-16 xl:px-24">
-          <div className="max-w-4xl">
-            <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-white/90">
-              {sectionLabel}
-            </span>
-            <h1 className="mt-4 text-3xl font-bold tracking-[-0.03em] sm:text-4xl lg:text-5xl">
-              Module {module.order_index}: {moduleTitle}
-            </h1>
-            {moduleDesc && (
-              <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/80 sm:text-base">
-                {moduleDesc}
-              </p>
-            )}
-          </div>
-          <div className="grid min-w-[235px] grid-cols-2 gap-3">
-            <div className="rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-              <p className="text-xs font-semibold text-white/75">
-                Your progress
-              </p>
-              <p className="mt-1 text-2xl font-bold">{progressPct}%</p>
+          <div className="mt-9 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-4xl">
+              <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-white/90">
+                {sectionLabel}
+              </span>
+              <h1 className="mt-4 text-3xl font-bold tracking-[-0.03em] sm:text-4xl lg:text-5xl">
+                Module {module.order_index}: {moduleTitle}
+              </h1>
+              {moduleDesc && (
+                <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/80 sm:text-base">
+                  {moduleDesc}
+                </p>
+              )}
             </div>
-            <div className="rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-              <p className="text-xs font-semibold text-white/75">Duration</p>
-              <p className="mt-1 text-2xl font-bold">
-                {module.estimated_duration_hours ||
-                  Math.ceil((module.estimated_minutes || 60) / 60)}
-                h
-              </p>
+            <div className="grid min-w-[235px] grid-cols-2 gap-3">
+              <div className="rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+                <p className="text-xs font-semibold text-white/75">
+                  Your progress
+                </p>
+                <p className="mt-1 text-2xl font-bold">{progressPct}%</p>
+              </div>
+              <div className="rounded-xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+                <p className="text-xs font-semibold text-white/75">Duration</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {module.estimated_duration_hours ||
+                    Math.ceil((module.estimated_minutes || 60) / 60)}
+                  h
+                </p>
+              </div>
             </div>
           </div>
         </div>
