@@ -140,7 +140,7 @@ function LearningTopBar({ navItems, backPath, menuOpen, onMenuChange }: Learning
             <img
               src="/bda-logo.png"
               alt="Business Development Association"
-              className="h-12 w-[108px] shrink-0 object-contain sm:h-14 sm:w-[132px]"
+              className="h-12 w-[108px] shrink-0 object-contain brightness-0 invert sm:h-14 sm:w-[132px]"
             />
             <div className="min-w-0 border-l border-white/25 pl-3 sm:pl-4">
               <p className="truncate text-lg font-bold tracking-[-0.02em] text-white sm:text-2xl">BDA Learning System</p>
