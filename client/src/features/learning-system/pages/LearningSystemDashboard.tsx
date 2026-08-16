@@ -22,9 +22,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   ExternalLink,
-  Layers3,
   LibraryBig,
-  Target,
   Trophy,
   UsersRound,
 } from 'lucide-react';
@@ -46,6 +44,14 @@ interface CarouselSectionProps {
   basePath: string;
 }
 
+const competencyImages = [
+  '/images/learning-dashboard/competency-strategy.jpg',
+  '/images/learning-dashboard/competency-meeting.jpg',
+  '/images/learning-dashboard/competency-learning.jpg',
+  '/images/learning-dashboard/competency-teamwork.jpg',
+  '/images/learning-dashboard/competency-analysis.jpg',
+];
+
 function CompetencyCard({ module, basePath }: { module: CurriculumModuleWithStatus; basePath: string }) {
   const navigate = useNavigate();
   const progress = (module.user_progress as { progress_percentage?: number } | undefined)?.progress_percentage ?? 0;
@@ -55,14 +61,22 @@ function CompetencyCard({ module, basePath }: { module: CurriculumModuleWithStat
     <button
       type="button"
       onClick={() => navigate(`${basePath}/module/${module.id}`)}
-      className="group min-w-[272px] snap-start overflow-hidden rounded-2xl border border-[#dbeafe] bg-white text-left shadow-[0_5px_16px_rgba(13,31,78,0.06)] transition-all duration-200 hover:-translate-y-1 hover:border-[#0f91e0] hover:shadow-[0_14px_28px_rgba(15,145,224,0.15)] sm:min-w-[292px]"
+      className="group min-w-[290px] snap-start overflow-hidden rounded-2xl border border-[#dbeafe] bg-white text-left shadow-[0_7px_20px_rgba(13,31,78,0.07)] transition-all duration-200 hover:-translate-y-1 hover:border-[#0f91e0] hover:shadow-[0_16px_30px_rgba(15,145,224,0.16)] sm:min-w-[316px]"
     >
-      <div className="h-1.5 bg-gradient-to-r from-[#0f91e0] via-[#1c62ad] to-[#0d1f4e]" />
+      <div className="relative h-36 overflow-hidden bg-[#0d1f4e]">
+        <img
+          src={competencyImages[Math.max(0, ((module.order_index ?? 1) - 1) % competencyImages.length)]}
+          alt=""
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0d1f4e]/70 via-[#0d1f4e]/10 to-[#0f91e0]/15" />
+        <span className="absolute bottom-3 left-4 inline-flex h-9 min-w-9 items-center justify-center rounded-lg bg-white/95 px-2 text-sm font-bold text-[#1c4a8b] shadow-sm">
+          {String(module.order_index ?? 0).padStart(2, '0')}
+        </span>
+      </div>
       <div className="p-5">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <span className="inline-flex h-10 min-w-10 items-center justify-center rounded-xl bg-[#f0f6ff] px-2 text-sm font-bold text-[#1c4a8b]">
-            {String(module.order_index ?? 0).padStart(2, '0')}
-          </span>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <span className="text-xs font-semibold text-slate-400">Competency</span>
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${
             isComplete ? 'bg-[#e6f4ff] text-[#0f91e0]' : 'bg-[#f6f9fe] text-slate-400'
           }`}>
@@ -138,30 +152,35 @@ const resources = [
     description: 'Practise under timed conditions and build confidence before your certification exam.',
     href: 'https://bda-global.org/en/store/bda-mock-exams/',
     icon: ClipboardCheck,
+    image: '/images/learning-dashboard/competency-analysis.jpg',
   },
   {
     title: 'BDA Certification Study Plan',
     description: 'Follow a structured preparation plan designed for steady, focused progress.',
     href: 'https://bda-global.org/en/product/bda-certification-study-plan/',
     icon: CalendarDays,
+    image: '/images/learning-dashboard/competency-strategy.jpg',
   },
   {
     title: 'BDA Glossary',
     description: 'Review essential business development terminology and definitions.',
     href: 'https://bda-global.org/en/store/bda-glossary/',
     icon: LibraryBig,
+    image: '/images/learning-dashboard/competency-learning.jpg',
   },
   {
     title: 'BDA BoCK',
     description: 'Access the official BDA Body of Competency and Knowledge reference.',
     href: 'https://bda-global.org/en/store/bda-bock/',
     icon: BookOpen,
+    image: '/images/learning-dashboard/competency-teamwork.jpg',
   },
   {
     title: 'BDA Membership',
     description: 'Explore membership benefits and continue your professional development journey.',
     href: 'https://bda-global.org/en/store/individual-membership/',
     icon: UsersRound,
+    image: '/images/learning-dashboard/competency-meeting.jpg',
   },
 ];
 
@@ -185,16 +204,22 @@ function AdditionalResources() {
               href={resource.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex min-h-[224px] flex-col rounded-2xl border border-[#dbeafe] bg-white p-5 shadow-[0_5px_16px_rgba(13,31,78,0.05)] transition-all duration-200 hover:-translate-y-1 hover:border-[#0f91e0] hover:shadow-[0_14px_28px_rgba(15,145,224,0.14)]"
+              className="group flex min-h-[274px] flex-col overflow-hidden rounded-2xl border border-[#dbeafe] bg-white shadow-[0_7px_20px_rgba(13,31,78,0.06)] transition-all duration-200 hover:-translate-y-1 hover:border-[#0f91e0] hover:shadow-[0_16px_30px_rgba(15,145,224,0.15)]"
             >
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#f0f6ff] text-[#1c4a8b] transition-colors group-hover:bg-[#0f91e0] group-hover:text-white">
-                <Icon className="h-5 w-5" />
-              </span>
-              <h3 className="mt-5 text-base font-bold leading-snug text-[#0d1f4e]">{resource.title}</h3>
-              <p className="mt-2 text-xs leading-relaxed text-slate-500">{resource.description}</p>
-              <span className="mt-auto flex items-center gap-1.5 pt-5 text-sm font-semibold text-[#0f91e0]">
-                View resource <ExternalLink className="h-3.5 w-3.5" />
-              </span>
+              <div className="relative h-32 overflow-hidden bg-[#0d1f4e]">
+                <img src={resource.image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0d1f4e]/65 to-[#0f91e0]/10" />
+                <span className="absolute bottom-3 left-4 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 text-[#1c4a8b] shadow-sm">
+                  <Icon className="h-4.5 w-4.5" />
+                </span>
+              </div>
+              <div className="flex flex-1 flex-col p-5">
+                <h3 className="text-base font-bold leading-snug text-[#0d1f4e]">{resource.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-slate-500">{resource.description}</p>
+                <span className="mt-auto flex items-center gap-1.5 pt-5 text-sm font-semibold text-[#0f91e0]">
+                  View resource <ExternalLink className="h-3.5 w-3.5" />
+                </span>
+              </div>
             </a>
           );
         })}
@@ -260,12 +285,11 @@ export function LearningSystemDashboard() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-82px)] bg-[#f8f9fb] sm:min-h-[calc(100vh-92px)]">
-      <div className="mx-auto max-w-[1440px] space-y-12 px-4 py-6 sm:px-7 sm:py-8 lg:px-10 lg:py-10">
-        <section className="relative overflow-hidden rounded-3xl px-6 py-8 text-white shadow-[0_16px_34px_rgba(13,31,78,0.20)] sm:px-9 sm:py-10">
+    <div className="flex min-h-[calc(100vh-82px)] flex-col bg-white sm:min-h-[calc(100vh-92px)]">
+      <section className="relative w-full overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-12 text-white shadow-[0_16px_34px_rgba(13,31,78,0.16)] sm:py-14 lg:py-16">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_14%,rgba(255,255,255,0.22),transparent_23%),radial-gradient(circle_at_72%_100%,rgba(15,145,224,0.55),transparent_36%)]" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0]" />
-          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="relative mx-auto flex max-w-[1640px] flex-col gap-8 px-6 sm:px-10 lg:flex-row lg:items-end lg:justify-between lg:px-16 xl:px-24">
             <div className="max-w-3xl">
               <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.15em] text-white/90">
                 <Trophy className="h-3.5 w-3.5" /> BDA Learning Journey
@@ -298,6 +322,7 @@ export function LearningSystemDashboard() {
           </div>
         </section>
 
+        <main className="mx-auto w-full max-w-[1640px] space-y-20 px-6 py-14 sm:px-10 sm:py-16 lg:px-16 lg:py-20 xl:px-24">
         <section>
           <div className="mb-5">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0f91e0]">Plan your preparation</p>
@@ -333,7 +358,10 @@ export function LearningSystemDashboard() {
         />
 
         <AdditionalResources />
-      </div>
+        </main>
+      <footer className="mt-auto w-full bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] px-6 py-5 text-center text-sm font-medium text-white/90 sm:px-10 lg:px-16">
+        © {new Date().getFullYear()} Business Development Association. All rights reserved.
+      </footer>
     </div>
   );
 }
