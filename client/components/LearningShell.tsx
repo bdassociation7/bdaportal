@@ -1,9 +1,8 @@
 /**
  * LearningShell — Shared navigation shell for the BDA Learning System.
  *
- * The learning experience uses a compact BDA-gradient top bar rather than
- * a persistent sidebar. The circular menu expands horizontally to the left
- * and preserves the current routes and learning-system functionality.
+ * The learning experience uses a full-width BDA-gradient top bar. The circular
+ * menu expands horizontally within the header and preserves every existing route.
  */
 
 import React, { useEffect, useRef, useState, createContext, useContext } from 'react';
@@ -118,16 +117,16 @@ function LearningTopBar({ navItems, backPath, menuOpen, onMenuChange }: Learning
   }, [onMenuChange]);
 
   return (
-    <header className="sticky top-0 z-50 px-3 py-3 sm:px-5 sm:py-4" style={{ background: '#f8f9fb' }}>
-      <div
-        className="mx-auto flex min-h-[64px] max-w-[1440px] items-center justify-between rounded-2xl px-3 shadow-[0_10px_30px_rgba(13,31,78,0.16)] sm:min-h-[72px] sm:px-5"
-        style={{ background: 'linear-gradient(112deg, #0f91e0 0%, #1c62ad 45%, #0d1f4e 100%)' }}
-      >
-        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+    <header
+      className="sticky top-0 z-50 w-full shadow-[0_8px_24px_rgba(13,31,78,0.18)]"
+      style={{ background: 'linear-gradient(108deg, #0f91e0 0%, #1d67b1 44%, #0d1f4e 100%)' }}
+    >
+      <div ref={menuRef} className="relative flex min-h-[82px] w-full items-center justify-between px-4 sm:min-h-[92px] sm:px-7 lg:px-10">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
           <button
             type="button"
             onClick={() => navigate(backPath)}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-2.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/20 sm:px-3.5 sm:text-sm"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg px-1 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10 sm:px-2"
             aria-label="Back to Portal"
             title="Back to Portal"
           >
@@ -135,70 +134,62 @@ function LearningTopBar({ navItems, backPath, menuOpen, onMenuChange }: Learning
             <span className="hidden sm:inline">Back to Portal</span>
           </button>
 
-          <div className="h-8 w-px shrink-0 bg-white/20" />
+          <div className="h-9 w-px shrink-0 bg-white/25" />
 
-          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-            <div className="flex h-10 w-[76px] shrink-0 items-center rounded-lg bg-white px-1.5 shadow-sm sm:h-11 sm:w-[96px]">
-              <img
-                src="/bda-logo.png"
-                alt="Business Development Association"
-                className="h-full w-full object-contain"
-              />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold tracking-[-0.01em] text-white sm:text-base">BDA Learning System</p>
-              <p className="hidden text-[11px] font-medium text-white/70 sm:block">Business Development Association</p>
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <img
+              src="/bda-logo.png"
+              alt="Business Development Association"
+              className="h-12 w-[108px] shrink-0 object-contain sm:h-14 sm:w-[132px]"
+            />
+            <div className="min-w-0 border-l border-white/25 pl-3 sm:pl-4">
+              <p className="truncate text-lg font-bold tracking-[-0.02em] text-white sm:text-2xl">BDA Learning System</p>
+              <p className="hidden text-xs font-medium tracking-wide text-white/75 sm:block">Business Development Association</p>
             </div>
           </div>
         </div>
 
-        <div ref={menuRef} className="relative ml-3 shrink-0">
-          <button
-            type="button"
-            onClick={() => onMenuChange(!menuOpen)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#0d1f4e] shadow-[0_4px_14px_rgba(0,0,0,0.16)] transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
-            aria-label={menuOpen ? 'Close learning navigation' : 'Open learning navigation'}
-            aria-expanded={menuOpen}
-          >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+        <button
+          type="button"
+          onClick={() => onMenuChange(!menuOpen)}
+          className="relative z-20 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-[#0d1f4e] shadow-[0_5px_18px_rgba(0,0,0,0.18)] transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30"
+          aria-label={menuOpen ? 'Close learning navigation' : 'Open learning navigation'}
+          aria-expanded={menuOpen}
+        >
+          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
 
-          <div
-            className={`absolute right-0 top-[calc(100%+12px)] origin-top-right transition-all duration-200 ${
-              menuOpen ? 'pointer-events-auto translate-y-0 scale-100 opacity-100' : 'pointer-events-none -translate-y-2 scale-95 opacity-0'
-            }`}
-          >
-            <nav
-              className="flex w-[min(360px,calc(100vw-2rem))] items-stretch justify-between gap-1 rounded-2xl border border-[#dbeafe] bg-white p-2 shadow-[0_18px_45px_rgba(13,31,78,0.18)] sm:w-[440px] sm:gap-2 sm:p-2.5"
-              aria-label="Learning system navigation"
-            >
-              {navItems.map((item) => {
-                const active = item.matchFn(location.pathname);
-                return (
-                  <button
-                    type="button"
-                    key={item.path}
-                    onClick={() => {
-                      navigate(item.path);
-                      onMenuChange(false);
-                    }}
-                    className={`group flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-xl px-1.5 py-2.5 text-center transition-all sm:px-2.5 sm:py-3 ${
-                      active
-                        ? 'bg-[#0f91e0] text-white shadow-[0_5px_12px_rgba(15,145,224,0.28)]'
-                        : 'text-[#1c4a8b] hover:bg-[#f0f6ff]'
-                    }`}
-                    aria-current={active ? 'page' : undefined}
-                  >
-                    <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${active ? 'bg-white/15' : 'bg-[#f0f6ff] group-hover:bg-white'}`}>
-                      {item.icon}
-                    </span>
-                    <span className="max-w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
+        <nav
+          className={`absolute right-[68px] top-1/2 z-10 flex -translate-y-1/2 items-stretch gap-1.5 rounded-xl border border-white/20 bg-[#0d1f4e]/25 p-1.5 shadow-[0_8px_22px_rgba(0,0,0,0.12)] backdrop-blur-sm transition-all duration-200 sm:right-[82px] sm:gap-2 sm:p-2 ${
+            menuOpen ? 'pointer-events-auto translate-x-0 opacity-100' : 'pointer-events-none translate-x-4 opacity-0'
+          }`}
+          aria-label="Learning system navigation"
+        >
+          {navItems.map((item) => {
+            const active = item.matchFn(location.pathname);
+            return (
+              <button
+                type="button"
+                key={item.path}
+                onClick={() => {
+                  navigate(item.path);
+                  onMenuChange(false);
+                }}
+                className={`group flex min-w-[52px] flex-col items-center gap-1 rounded-lg px-2 py-2 text-center transition-all sm:min-w-[66px] sm:px-2.5 sm:py-2.5 ${
+                  active
+                    ? 'bg-white text-[#0d1f4e] shadow-[0_3px_10px_rgba(0,0,0,0.15)]'
+                    : 'text-white hover:bg-white/15'
+                }`}
+                aria-current={active ? 'page' : undefined}
+              >
+                <span className={`flex h-7 w-7 items-center justify-center rounded-md ${active ? 'bg-[#f0f6ff] text-[#0f91e0]' : 'bg-white/10 text-white'}`}>
+                  {item.icon}
+                </span>
+                <span className="max-w-[62px] truncate text-[9px] font-semibold leading-tight sm:text-[10px]">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );
@@ -239,7 +230,7 @@ export function LearningShell() {
           menuOpen={menuOpen}
           onMenuChange={setMenuOpen}
         />
-        <main className="min-h-[calc(100vh-96px)]">
+        <main className="min-h-[calc(100vh-82px)] sm:min-h-[calc(100vh-92px)]">
           <Outlet />
         </main>
       </div>
