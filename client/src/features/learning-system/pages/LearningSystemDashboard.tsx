@@ -27,14 +27,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { ExamGoalWidget } from "@/features/learning-goals";
-
-const BDA = {
-  navy: "#0d1f4e",
-  deepBlue: "#1c4a8b",
-  primary: "#0f91e0",
-  pale: "#f0f6ff",
-  border: "#dbeafe",
-};
+import { BDAAbstractHero } from "@/components/BDAAbstractHero";
 
 interface CarouselSectionProps {
   title: string;
@@ -367,8 +360,7 @@ export function LearningSystemDashboard() {
   return (
     <div className="flex min-h-[calc(100vh-82px)] flex-col bg-white sm:min-h-[calc(100vh-92px)]">
       <section className="relative w-full overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-12 text-white shadow-[0_16px_34px_rgba(13,31,78,0.16)] sm:py-14 lg:py-16">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_14%,rgba(255,255,255,0.22),transparent_23%),radial-gradient(circle_at_72%_100%,rgba(15,145,224,0.55),transparent_36%)]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0]" />
+        <BDAAbstractHero />
         <div className="relative mx-auto flex max-w-[1640px] flex-col gap-8 px-6 sm:px-10 lg:flex-row lg:items-end lg:justify-between lg:px-16 xl:px-24">
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.15em] text-white/90">

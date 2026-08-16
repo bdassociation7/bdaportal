@@ -35,6 +35,7 @@ import { LessonProgressTracker } from "../components/LessonProgressTracker";
 import { LessonNavigator } from "../components/LessonNavigator";
 import { LessonQuizGate } from "../components/LessonQuizGate";
 import type { Json } from "@/shared/database.types";
+import { BDAAbstractHero } from "@/components/BDAAbstractHero";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type TipTapNode = {
@@ -321,39 +322,7 @@ export function LessonViewer() {
   return (
     <div className="min-h-screen bg-[#f8f9fb]">
       <section className="relative overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-14 text-white sm:py-16 lg:py-18">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_86%_8%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_70%_100%,rgba(15,145,224,0.42),transparent_38%)]" />
-        <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-          <div className="absolute -right-24 -top-36 h-[480px] w-[480px] rounded-full border border-white/15" />
-          <div className="absolute right-14 top-10 h-56 w-56 rounded-full border border-white/10" />
-          <div className="absolute -bottom-24 right-[26%] h-72 w-72 rotate-12 rounded-[3.5rem] border border-cyan-200/15 bg-cyan-300/5" />
-          <svg
-            className="absolute inset-y-0 right-0 h-full w-[58%] text-white/20"
-            viewBox="0 0 760 360"
-            fill="none"
-            preserveAspectRatio="none"
-          >
-            <path
-              d="M135 -30C225 45 170 135 268 190C372 248 463 145 570 208C636 247 678 291 782 271"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            />
-            <path
-              d="M212 -15C307 54 268 113 362 162C458 212 538 146 652 205C700 230 735 260 796 251"
-              stroke="currentColor"
-              strokeWidth="1"
-              strokeDasharray="5 7"
-            />
-            <path
-              d="M85 340C175 280 226 294 294 246C367 196 425 248 504 208C590 164 625 89 770 136"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            />
-            <circle cx="570" cy="208" r="5" fill="currentColor" />
-            <circle cx="362" cy="162" r="3" fill="currentColor" />
-            <circle cx="504" cy="208" r="4" fill="currentColor" />
-          </svg>
-          <div className="absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.35)_1px,transparent_1px)] [background-size:32px_32px] [mask-image:linear-gradient(to_right,transparent_5%,black_40%,black_100%)]" />
-        </div>
+        <BDAAbstractHero />
         <div className="relative mx-auto max-w-[1640px] px-6 sm:px-10 lg:px-16 xl:px-24">
           <div className="flex items-center justify-between gap-4">
             <button

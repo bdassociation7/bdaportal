@@ -18,6 +18,7 @@ import type {
   CurriculumModuleWithStatus,
 } from "@/entities/curriculum";
 import { format } from "date-fns";
+import { BDAAbstractHero } from "@/components/BDAAbstractHero";
 
 const BDA = {
   navy: "#1C4A8B",
@@ -157,7 +158,7 @@ export function CurriculumDashboard({
       style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif" }}
     >
       <section className="relative overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-12 text-white sm:py-14 lg:py-16">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_8%,rgba(255,255,255,0.18),transparent_25%),radial-gradient(circle_at_68%_100%,rgba(15,145,224,0.45),transparent_38%)]" />
+        <BDAAbstractHero />
         <div className="relative mx-auto flex max-w-[1640px] flex-col gap-8 px-6 sm:px-10 lg:flex-row lg:items-end lg:justify-between lg:px-16 xl:px-24">
           <div className="max-w-3xl">
             <button

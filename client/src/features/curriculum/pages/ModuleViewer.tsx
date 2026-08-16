@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ContentRenderer } from "../components/ContentRenderer";
 import { ModuleLessons } from "../components/ModuleLessons";
+import { BDAAbstractHero } from "@/components/BDAAbstractHero";
 
 // BDA Brand Colors
 const BDA = {
@@ -173,7 +174,7 @@ export function ModuleViewer() {
       }}
     >
       <section className="relative overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-12 text-white sm:py-14 lg:py-16">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_8%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_70%_100%,rgba(15,145,224,0.42),transparent_38%)]" />
+        <BDAAbstractHero />
         <div className="relative mx-auto max-w-[1640px] px-6 sm:px-10 lg:px-16 xl:px-24">
           <div className="flex items-center justify-between gap-4">
             <button
