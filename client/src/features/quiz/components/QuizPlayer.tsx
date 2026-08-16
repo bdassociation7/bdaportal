@@ -429,18 +429,6 @@ export const QuizPlayer = ({
                       ? "إجابتك غير صحيحة"
                       : "Incorrect answer"}
                 </p>
-                <p
-                  className={cn(
-                    "mt-0.5 text-sm",
-                    currentQuestionFeedback.isCorrect
-                      ? "text-emerald-700"
-                      : "text-rose-700",
-                  )}
-                >
-                  {isArabic
-                    ? "راجِع الإجابة قبل الانتقال إلى السؤال التالي."
-                    : "Review the feedback before moving to the next question."}
-                </p>
               </div>
             </div>
             {currentQuestionFeedback.rationale && (
