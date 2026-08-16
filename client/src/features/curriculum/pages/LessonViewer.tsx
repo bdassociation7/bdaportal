@@ -110,7 +110,7 @@ export function LessonViewer() {
   const [showOptionalQuiz, setShowOptionalQuiz] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [activeHeadingId, setActiveHeadingId] = useState<string>("");
-  const [tocOpen, setTocOpen] = useState(true);
+  const [tocOpen, setTocOpen] = useState(false);
 
   const timeTrackerRef = useRef<NodeJS.Timeout>();
   const progressUpdateTimeoutRef = useRef<NodeJS.Timeout>();
@@ -353,12 +353,12 @@ export function LessonViewer() {
               <button
                 onClick={() => setTocOpen((v) => !v)}
                 title={tocOpen ? "Hide contents" : "Show contents"}
-                className={`hidden lg:flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors
-                  ${
-                    tocOpen
-                      ? "bg-blue-50 border-blue-200 text-blue-700"
-                      : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"
-                  }`}
+                aria-expanded={tocOpen}
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold shadow-sm transition-all ${
+                  tocOpen
+                    ? "border-[#0d1f4e] bg-gradient-to-r from-[#0d1f4e] to-[#0f91e0] text-white"
+                    : "border-[#b9ddf6] bg-white text-[#1c4a8b] hover:border-[#0f91e0] hover:bg-[#f0f6ff]"
+                }`}
               >
                 <List className="h-3.5 w-3.5" />
                 Contents
@@ -393,7 +393,7 @@ export function LessonViewer() {
       </section>
 
       <div
-        className={`mx-auto max-w-[1640px] px-6 py-12 sm:px-10 sm:py-14 lg:px-16 lg:py-16 xl:px-24 ${hasToc && tocOpen ? "lg:pr-[340px]" : ""}`}
+        className={`mx-auto max-w-[1640px] px-6 py-12 sm:px-10 sm:py-14 lg:px-16 lg:py-16 xl:px-24 ${hasToc && tocOpen ? "lg:grid lg:grid-cols-[minmax(0,1fr)_310px] lg:items-start lg:gap-8" : ""}`}
       >
         {/* ── Main content column ──────────────────────────────────────────── */}
         <main className="flex-1 min-w-0">
@@ -483,57 +483,58 @@ export function LessonViewer() {
           />
         </main>
 
-        {/* ── Table of Contents Sidebar (fixed) ──────────────────────────────── */}
+        {/* ── Optional Contents Panel: in layout flow, never over lesson text ── */}
         {hasToc && tocOpen && (
-          <aside
-            className="hidden lg:block"
-            style={{
-              position: "fixed",
-              top: "72px",
-              right: "24px",
-              width: "272px",
-              maxHeight: "calc(100vh - 90px)",
-              overflowY: "auto",
-              zIndex: 10,
-            }}
-          >
-            <div>
-              <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-1">
-                  On this page
-                </p>
-                <nav className="space-y-0.5">
+          <aside className="mt-8 lg:sticky lg:top-24 lg:mt-0 lg:max-h-[calc(100vh-128px)] lg:overflow-y-auto">
+            <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] p-[1px] shadow-[0_16px_32px_rgba(13,31,78,0.22)]">
+              <div className="rounded-[15px] bg-gradient-to-br from-[#12326b]/95 via-[#1c4a8b]/92 to-[#0f91e0]/90 p-5 text-white">
+                <div className="flex items-center justify-between gap-3 border-b border-white/20 pb-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/65">
+                      Lesson navigation
+                    </p>
+                    <h2 className="mt-1 text-base font-bold">Contents</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTocOpen(false)}
+                    className="rounded-lg border border-white/25 bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/20"
+                  >
+                    Hide
+                  </button>
+                </div>
+                <nav className="mt-4 space-y-1">
                   {tocItems.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => scrollToHeading(item.id)}
-                      className={`w-full text-left text-sm rounded-lg px-3 py-1.5 transition-colors leading-snug
-                        ${item.level === 1 ? "font-semibold" : ""}
-                        ${item.level === 2 ? "pl-5 text-gray-600" : ""}
-                        ${item.level === 3 ? "pl-7 text-gray-500 text-xs" : ""}
-                        ${
-                          activeHeadingId === item.id
-                            ? "bg-blue-50 text-blue-700 font-medium"
-                            : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                        }
-                      `}
+                      className={`w-full rounded-lg px-3 py-2 text-left text-sm leading-snug transition-colors ${
+                        item.level === 1
+                          ? "font-semibold"
+                          : item.level === 2
+                            ? "pl-5"
+                            : "pl-7 text-xs"
+                      } ${
+                        activeHeadingId === item.id
+                          ? "bg-white/25 font-semibold text-white shadow-sm"
+                          : "text-white/85 hover:bg-white/15 hover:text-white"
+                      }`}
                     >
                       {item.level === 2 && (
-                        <span className="mr-1 text-gray-300">–</span>
+                        <span className="mr-1 text-white/55">–</span>
                       )}
                       {item.level === 3 && (
-                        <span className="mr-1 text-gray-300">·</span>
+                        <span className="mr-1 text-white/55">·</span>
                       )}
                       {item.text}
                     </button>
                   ))}
                 </nav>
-
-                {/* Scroll to top inside TOC */}
-                <div className="mt-4 pt-3 border-t border-gray-100">
+                <div className="mt-4 border-t border-white/20 pt-3">
                   <button
+                    type="button"
                     onClick={scrollToTop}
-                    className="w-full flex items-center gap-2 text-xs text-gray-400 hover:text-gray-700 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-white/80 transition-colors hover:bg-white/15 hover:text-white"
                   >
                     <ArrowUp className="h-3.5 w-3.5" />
                     Back to top
