@@ -20,34 +20,18 @@ import {
   ArrowRight,
   HelpCircle,
   CheckCircle,
-  Clock,
   TrendingUp,
   Star,
-  ChevronLeft,
   Brain,
   Target,
   BookOpen,
-  Award,
-  BarChart2,
   Layers,
-  ChevronDown,
-  ChevronUp,
   Lock,
   Play,
   RefreshCw,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { BDAAbstractHero } from '@/components/BDAAbstractHero';
 import type { QuestionSetWithProgress } from '@/entities/question-bank';
-
-// ─── BDA Brand Palette ────────────────────────────────────────────────────────
-const BDA = {
-  navy: '#0d1f4e',
-  blue: '#1C4A8B',
-  accent: '#0f91e0',
-  light: '#f0f6ff',
-  lightBorder: '#dbeafe',
-};
 
 // ─── Translations ─────────────────────────────────────────────────────────────
 function t(key: string, isAR: boolean): string {
@@ -164,193 +148,169 @@ function QuestionSetCard({ questionSet, onClick }: QuestionSetCardProps) {
   const bestScore = progress?.best_score_percentage || 0;
   const passingScore = questionSet.passing_score || 70;
 
-  const title = questionSet.title;
-
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      className="bg-white rounded-xl border border-[#dbeafe] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer overflow-hidden group"
+      className="group relative flex min-h-[226px] w-full flex-col overflow-hidden rounded-2xl border border-[#dbeafe] bg-white p-5 text-left shadow-[0_3px_12px_rgba(13,31,78,0.05)] transition-all duration-200 hover:-translate-y-1 hover:border-[#0f91e0]/60 hover:shadow-[0_14px_28px_rgba(13,31,78,0.12)] focus:outline-none focus:ring-2 focus:ring-[#0f91e0]/50"
     >
-      {/* Header */}
-      <div
-        className="p-4 border-b"
-        style={{ background: 'linear-gradient(135deg, #f0f6ff 0%, #e8f2ff 100%)' }}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-[#0d1f4e] text-sm leading-snug line-clamp-2 flex-1">
-            {title}
-          </h3>
-          {isCompleted && (
-            <span className="flex items-center gap-1 bg-[#e8f4fd] text-[#0f91e0] px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0">
-              <CheckCircle className="w-3 h-3" />
-              {t('passed', false)}
-            </span>
-          )}
-        </div>
-        {questionSet.is_final_test && (
-          <div className="flex items-center gap-1 mt-2 text-[#1C4A8B] text-xs font-medium">
-            <Target className="w-3 h-3" />
-            {t('finalTest', false)}
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0]" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f0f6ff] text-[#0f91e0]">
+            {questionSet.is_final_test ? <Target className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
           </div>
-        )}
-      </div>
-
-      {/* Stats */}
-      <div className="p-4">
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="text-center">
-            <p className="text-lg font-bold text-[#1C4A8B]">{questionSet.question_count}</p>
-            <p className="text-xs text-slate-400">{t('questions', false)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-bold text-[#0f91e0]">{progress?.attempts_count || 0}</p>
-            <p className="text-xs text-slate-400">{t('attempts', false)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-bold text-[#0d1f4e]">{bestScore}%</p>
-            <p className="text-xs text-slate-400">{t('bestScore', false)}</p>
-          </div>
-        </div>
-
-        {hasAttempted && (
-          <div>
-            <div className="flex justify-between text-xs text-slate-400 mb-1">
-              <span>{t('lastScore', false)}</span>
-              <span className={lastScore >= passingScore ? 'text-[#0f91e0] font-semibold' : 'text-amber-600 font-semibold'}>
-                {lastScore}%
-              </span>
-            </div>
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${lastScore >= passingScore ? 'bg-[#0f91e0]' : 'bg-amber-400'}`}
-                style={{ width: `${lastScore}%` }}
-              />
-            </div>
-            <p className="text-xs text-slate-300 mt-1">{t('passingScore', false)}: {passingScore}%</p>
-          </div>
-        )}
-
-        {questionSet.time_limit_minutes && (
-          <div className="flex items-center gap-1 text-slate-400 text-xs mt-2">
-            <Clock className="w-3 h-3" />
-            {questionSet.time_limit_minutes} {t('min', false)}
-          </div>
-        )}
-      </div>
-
-      {/* CTA */}
-      <div
-        className="px-4 py-3 border-t flex items-center justify-between group-hover:bg-[#f0f6ff] transition-colors"
-        style={{ borderColor: '#dbeafe' }}
-      >
-        <span className="text-sm font-semibold text-[#0f91e0] flex items-center gap-1.5">
-          {hasAttempted ? (
-            <><RefreshCw className="w-3.5 h-3.5" />{t('practiceAgain', false)}</>
-          ) : (
-            <><Play className="w-3.5 h-3.5 fill-current" />{t('startPractice', false)}</>
-          )}
-        </span>
-        <ChevronLeft className="w-4 h-4 text-slate-300 rotate-180" />
-      </div>
-    </div>
-  );
-}
-
-// ─── Accordion Section ────────────────────────────────────────────────────────
-function AccordionSection({
-  title,
-  subtitle,
-  icon,
-  color,
-  count,
-  children,
-  defaultOpen = false,
-}: {
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  color: string;
-  count: number;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="bg-white rounded-2xl border border-[#dbeafe] shadow-sm overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-5 hover:bg-[#f8faff] transition-colors"
-      >
-        <div className="flex items-center gap-4">
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color}`}>
-            {icon}
-          </div>
-          <div className="text-right">
-            <h2 className="font-bold text-[#0d1f4e] text-base">{title}</h2>
-            <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-[#0f91e0] bg-[#f0f6ff] border border-[#dbeafe] px-3 py-1 rounded-full">
-            {count}
+          <span className="text-[11px] font-bold uppercase tracking-[0.11em] text-[#0f91e0]">
+            {questionSet.is_final_test ? t('finalTest', false) : 'Practice set'}
           </span>
-          {open ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
         </div>
-      </button>
-      {open && <div className="px-5 pb-5">{children}</div>}
-    </div>
+        {isCompleted && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#e8f4fd] px-2 py-1 text-[11px] font-bold text-[#0f91e0]">
+            <CheckCircle className="h-3 w-3" />
+            {t('passed', false)}
+          </span>
+        )}
+      </div>
+
+      <h3 className="mt-4 line-clamp-2 text-[15px] font-bold leading-snug text-[#0d1f4e]">
+        {questionSet.title}
+      </h3>
+
+      <div className="mt-5 grid grid-cols-3 divide-x divide-[#e6effb] rounded-xl bg-[#f8faff] py-3">
+        <div className="px-2 text-center">
+          <p className="text-base font-bold text-[#0d1f4e]">{questionSet.question_count}</p>
+          <p className="mt-0.5 text-[10px] font-medium text-slate-400">{t('questions', false)}</p>
+        </div>
+        <div className="px-2 text-center">
+          <p className="text-base font-bold text-[#0f91e0]">{progress?.attempts_count || 0}</p>
+          <p className="mt-0.5 text-[10px] font-medium text-slate-400">{t('attempts', false)}</p>
+        </div>
+        <div className="px-2 text-center">
+          <p className="text-base font-bold text-[#0d1f4e]">{bestScore}%</p>
+          <p className="mt-0.5 text-[10px] font-medium text-slate-400">{t('bestScore', false)}</p>
+        </div>
+      </div>
+
+      {hasAttempted && (
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-slate-400">
+            <span>{t('lastScore', false)}</span>
+            <span className={lastScore >= passingScore ? 'font-bold text-[#0f91e0]' : 'font-bold text-slate-500'}>{lastScore}%</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-[#e6effb]">
+            <div className="h-full rounded-full bg-[#0f91e0] transition-all" style={{ width: `${lastScore}%` }} />
+          </div>
+        </div>
+      )}
+
+      <div className="mt-auto flex items-center justify-between pt-5 text-sm font-bold text-[#0f91e0]">
+        <span className="inline-flex items-center gap-2">
+          {hasAttempted ? <RefreshCw className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 fill-current" />}
+          {hasAttempted ? t('practiceAgain', false) : t('startPractice', false)}
+        </span>
+        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+      </div>
+    </button>
   );
 }
 
-// ─── Competency Sub-Accordion ─────────────────────────────────────────────────
-function CompetencyAccordion({
-  competencyName,
-  subUnits,
+// ─── Competency Directory ─────────────────────────────────────────────────────
+type CompetencyGroups = Record<string, Record<string, QuestionSetWithProgress[]>>;
+
+function CompetencyDirectory({
+  title,
+  description,
+  icon,
+  groups,
   basePath,
   certType,
 }: {
-  competencyName: string;
-  subUnits: Record<string, QuestionSetWithProgress[]>;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  groups: CompetencyGroups;
   basePath: string;
   certType: 'CP' | 'SCP';
 }) {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
+  const [activeCompetencyId, setActiveCompetencyId] = useState<string | null>(null);
 
-  // Flatten all sets sorted by sub_unit order_index, then set order within sub_unit
-  const allSets = Object.entries(subUnits)
-    .sort(([keyA, a], [keyB, b]) => {
-      if (keyA === '__no_sub__') return -1;
-      if (keyB === '__no_sub__') return 1;
-      return (a[0]?.sub_unit?.order_index || 0) - (b[0]?.sub_unit?.order_index || 0);
+  const competencies = Object.entries(groups)
+    .map(([id, subUnits]) => {
+      const firstSet = Object.values(subUnits)[0]?.[0];
+      const competency = firstSet?.competency;
+      const sets = Object.entries(subUnits)
+        .sort(([keyA, a], [keyB, b]) => {
+          if (keyA === '__no_sub__') return -1;
+          if (keyB === '__no_sub__') return 1;
+          return (a[0]?.sub_unit?.order_index || 0) - (b[0]?.sub_unit?.order_index || 0);
+        })
+        .flatMap(([, value]) => value);
+      return competency ? { id, name: competency.competency_name, order: competency.order_index ?? 999, sets } : null;
     })
-    .flatMap(([, sets]) => sets);
+    .filter((entry): entry is { id: string; name: string; order: number; sets: QuestionSetWithProgress[] } => entry !== null)
+    .sort((a, b) => a.order - b.order);
 
-  const totalSets = allSets.length;
-  const subLessonCount = Object.keys(subUnits).filter(k => k !== '__no_sub__').length;
+  const activeCompetency = competencies.find((competency) => competency.id === activeCompetencyId) || competencies[0];
+
+  if (!activeCompetency) return null;
 
   return (
-    <div className="border border-[#dbeafe] rounded-xl overflow-hidden mb-2">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-[#f8faff] hover:bg-[#f0f6ff] transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <BookOpen className="w-4 h-4 text-[#0f91e0]" />
-          <span className="font-semibold text-[#0d1f4e] text-sm">{competencyName}</span>
+    <section className="overflow-hidden rounded-3xl border border-[#dbeafe] bg-white shadow-[0_6px_20px_rgba(13,31,78,0.05)]">
+      <div className="flex flex-col gap-4 border-b border-[#e6effb] px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f0f6ff] text-[#0f91e0]">
+            {icon}
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-[#0d1f4e]">{title}</h2>
+            <p className="mt-1 text-sm text-slate-500">{description}</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">
-            {subLessonCount > 0 ? `${subLessonCount} ${t('subLessons', false)} · ` : ''}{totalSets} {t('sets', false)}
-          </span>
-          {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        <span className="self-start rounded-full border border-[#dbeafe] bg-[#f8faff] px-3 py-1.5 text-xs font-bold text-[#1c4a8b] sm:self-auto">
+          {competencies.length} {t('competencies', false)}
+        </span>
+      </div>
+
+      <div className="grid lg:grid-cols-[minmax(250px,0.75fr)_minmax(0,2fr)]">
+        <div className="border-b border-[#e6effb] bg-[#f8faff] p-3 lg:border-b-0 lg:border-r">
+          <div className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+            {competencies.map((competency, index) => {
+              const active = activeCompetency.id === competency.id;
+              return (
+                <button
+                  key={competency.id}
+                  type="button"
+                  onClick={() => setActiveCompetencyId(competency.id)}
+                  className={`min-w-[220px] rounded-xl px-4 py-3 text-left transition-all lg:min-w-0 ${
+                    active
+                      ? 'bg-white text-[#0d1f4e] shadow-[0_4px_14px_rgba(13,31,78,0.10)] ring-1 ring-[#0f91e0]/20'
+                      : 'text-slate-500 hover:bg-white/80 hover:text-[#1c4a8b]'
+                  }`}
+                >
+                  <span className="flex items-start gap-3">
+                    <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${active ? 'bg-[#0f91e0] text-white' : 'bg-white text-[#1c4a8b]'}`}>{index + 1}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold leading-snug">{competency.name}</span>
+                      <span className="mt-1 block text-[11px] font-medium text-slate-400">{competency.sets.length} {t('sets', false)}</span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </button>
-      {open && (
-        <div className="p-4">
-          {/* All sets in a single responsive grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {allSets.map((set) => (
+
+        <div className="min-w-0 p-5 sm:p-6">
+          <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#0f91e0]">Selected competency</p>
+              <h3 className="mt-1 text-lg font-bold text-[#0d1f4e]">{activeCompetency.name}</h3>
+            </div>
+            <p className="text-xs font-semibold text-slate-400">{activeCompetency.sets.length} {t('practiceSets', false)}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {activeCompetency.sets.map((set) => (
               <QuestionSetCard
                 key={set.id}
                 questionSet={set}
@@ -359,8 +319,8 @@ function CompetencyAccordion({
             ))}
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
 }
 
@@ -575,88 +535,47 @@ export function QuestionBankDashboard() {
               </button>
             </div>
 
-        {/* ── Behavioural Competencies ───────────────────────────────────── */}
+        {/* ── Competency directories ───────────────────────────────────── */}
         {Object.keys(groupedSets.behavioural).length > 0 && (
-          <AccordionSection
+          <CompetencyDirectory
             title={t('behavioral', false)}
-            subtitle={`${Object.keys(groupedSets.behavioural).length} ${t('competencies', false)}`}
-            icon={<Layers className="w-5 h-5 text-[#0f91e0]" />}
-            color="bg-[#e8f4fd]"
-            count={Object.values(groupedSets.behavioural).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
-            defaultOpen
-          >
-            <div className="mt-2 space-y-2">
-              {Object.entries(groupedSets.behavioural)
-                .sort(([, aUnits], [, bUnits]) => {
-                  const aOrder = (Object.values(aUnits)[0]?.[0] as any)?.competency?.order_index ?? 999;
-                  const bOrder = (Object.values(bUnits)[0]?.[0] as any)?.competency?.order_index ?? 999;
-                  return aOrder - bOrder;
-                })
-                .map(([cId, subUnits]) => {
-                const firstSet = Object.values(subUnits)[0]?.[0];
-                const competency = firstSet?.competency;
-                if (!competency) return null;
-                const name = competency.competency_name;
-                return (
-                  <CompetencyAccordion
-                    key={cId}
-                    competencyName={name}
-                    subUnits={subUnits}
-                    basePath={basePath}
-                    certType={certType}
-                  />
-                );
-              })}
-            </div>
-          </AccordionSection>
+            description="Select a competency to explore its focused practice sets."
+            icon={<Layers className="h-6 w-6" />}
+            groups={groupedSets.behavioural}
+            basePath={basePath}
+            certType={certType}
+          />
         )}
 
-        {/* ── Knowledge Competencies ────────────────────────────────────── */}
         {Object.keys(groupedSets.knowledge).length > 0 && (
-          <AccordionSection
+          <CompetencyDirectory
             title={t('knowledge', false)}
-            subtitle={`${Object.keys(groupedSets.knowledge).length} ${t('competencies', false)}`}
-            icon={<Brain className="w-5 h-5 text-[#1C4A8B]" />}
-            color="bg-[#f0f6ff]"
-            count={Object.values(groupedSets.knowledge).reduce((s, sub) => s + Object.values(sub).reduce((ss, arr) => ss + arr.length, 0), 0)}
-            defaultOpen
-          >
-            <div className="mt-2 space-y-2">
-              {Object.entries(groupedSets.knowledge)
-                .sort(([, aUnits], [, bUnits]) => {
-                  const aOrder = (Object.values(aUnits)[0]?.[0] as any)?.competency?.order_index ?? 999;
-                  const bOrder = (Object.values(bUnits)[0]?.[0] as any)?.competency?.order_index ?? 999;
-                  return aOrder - bOrder;
-                })
-                .map(([cId, subUnits]) => {
-                const firstSet = Object.values(subUnits)[0]?.[0];
-                const competency = firstSet?.competency;
-                if (!competency) return null;
-                const name = competency.competency_name;
-                return (
-                  <CompetencyAccordion
-                    key={cId}
-                    competencyName={name}
-                    subUnits={subUnits}
-                    basePath={basePath}
-                    certType={certType}
-                  />
-                );
-              })}
-            </div>
-          </AccordionSection>
+            description="Build applied knowledge across the BDA business development framework."
+            icon={<Brain className="h-6 w-6" />}
+            groups={groupedSets.knowledge}
+            basePath={basePath}
+            certType={certType}
+          />
         )}
 
-        {/* ── Standalone Sets ───────────────────────────────────────────── */}
+        {/* ── Standalone Practice Sets ──────────────────────────────────── */}
         {groupedSets.standalone.length > 0 && (
-          <AccordionSection
-            title={t('practiceSets', false)}
-            subtitle={t('practiceSetsSub', false)}
-            icon={<Target className="w-5 h-5 text-[#0f91e0]" />}
-            color="bg-[#e8f4fd]"
-            count={groupedSets.standalone.length}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+          <section className="overflow-hidden rounded-3xl border border-[#dbeafe] bg-white shadow-[0_6px_20px_rgba(13,31,78,0.05)]">
+            <div className="flex flex-col gap-4 border-b border-[#e6effb] bg-gradient-to-r from-[#f8faff] via-white to-[#f0f6ff] px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#0d1f4e] text-white shadow-sm">
+                  <Target className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#0d1f4e]">{t('practiceSets', false)}</h2>
+                  <p className="mt-1 text-sm text-slate-500">{t('practiceSetsSub', false)}</p>
+                </div>
+              </div>
+              <span className="self-start rounded-full border border-[#dbeafe] bg-white px-3 py-1.5 text-xs font-bold text-[#1c4a8b] shadow-sm sm:self-auto">
+                {groupedSets.standalone.length} {t('sets', false)}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-3">
               {groupedSets.standalone.map((set) => (
                 <QuestionSetCard
                   key={set.id}
@@ -665,7 +584,7 @@ export function QuestionBankDashboard() {
                 />
               ))}
             </div>
-          </AccordionSection>
+          </section>
         )}
 
         {/* ── Empty State ───────────────────────────────────────────────── */}
