@@ -5,15 +5,22 @@
  * Integrates the QuizPlayer directly into the lesson flow
  */
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CheckCircle, Award, PlayCircle, Home } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useCompleteQuiz, useLessonsByModule } from '@/entities/curriculum';
-import { QuizPlayer } from '@/features/quiz/components/QuizPlayer';
-import type { Lesson, LessonProgress } from '@/entities/curriculum';
-import type { QuizResults } from '@/entities/quiz';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  Award,
+  PlayCircle,
+  Home,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useCompleteQuiz, useLessonsByModule } from "@/entities/curriculum";
+import { QuizPlayer } from "@/features/quiz/components/QuizPlayer";
+import type { Lesson, LessonProgress } from "@/entities/curriculum";
+import type { QuizResults } from "@/entities/quiz";
 
 interface LessonQuizGateProps {
   lesson: Lesson;
@@ -27,7 +34,7 @@ export function LessonQuizGate({
   lesson,
   progress,
   onBack,
-  basePath = '/learning-system/training-kits',
+  basePath = "/learning-system/training-kits",
 }: LessonQuizGateProps) {
   const navigate = useNavigate();
   const [isPlayingQuiz, setIsPlayingQuiz] = useState(false);
@@ -42,13 +49,16 @@ export function LessonQuizGate({
     ? [...moduleLessons].sort((a, b) => a.order_index - b.order_index)
     : [];
   const currentIndex = sortedLessons.findIndex((l) => l.id === lesson.id);
-  const nextLesson = currentIndex >= 0 && currentIndex < sortedLessons.length - 1
-    ? sortedLessons[currentIndex + 1]
-    : null;
+  const nextLesson =
+    currentIndex >= 0 && currentIndex < sortedLessons.length - 1
+      ? sortedLessons[currentIndex + 1]
+      : null;
 
   const goToNextLesson = () => {
     if (nextLesson) {
-      navigate(`${basePath}/modules/${lesson.module_id}/lessons/${nextLesson.id}`);
+      navigate(
+        `${basePath}/modules/${lesson.module_id}/lessons/${nextLesson.id}`,
+      );
     } else {
       navigate(`${basePath}/module/${lesson.module_id}`);
     }
@@ -78,7 +88,10 @@ export function LessonQuizGate({
             <h2 className="text-2xl font-bold mb-2">Quiz Completed!</h2>
             {progress.best_quiz_score !== null && (
               <p className="text-muted-foreground">
-                Your score: <span className="font-semibold text-gray-800">{progress.best_quiz_score}%</span>
+                Your score:{" "}
+                <span className="font-semibold text-gray-800">
+                  {progress.best_quiz_score}%
+                </span>
               </p>
             )}
           </div>
@@ -102,7 +115,11 @@ export function LessonQuizGate({
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Lesson
             </Button>
-            <Button variant="ghost" onClick={() => setIsPlayingQuiz(true)} className="w-full">
+            <Button
+              variant="ghost"
+              onClick={() => setIsPlayingQuiz(true)}
+              className="w-full"
+            >
               <PlayCircle className="mr-2 h-4 w-4" />
               Retake Quiz
             </Button>
@@ -120,6 +137,7 @@ export function LessonQuizGate({
           <QuizPlayer
             quizId={lesson.lesson_quiz_id}
             onQuizComplete={handleQuizComplete}
+            enablePerQuestionFeedback
           />
         </div>
       </div>
@@ -171,11 +189,7 @@ export function LessonQuizGate({
           )}
 
           {/* Navigation buttons */}
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={goToNextLesson}
-          >
+          <Button variant="outline" className="w-full" onClick={goToNextLesson}>
             {nextLesson ? (
               <>
                 Skip & Go to Next Lesson
@@ -198,7 +212,8 @@ export function LessonQuizGate({
         {/* Help Text */}
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <p className="text-sm text-muted-foreground">
-            You can retake this quiz as many times as you like. Only your best score will be saved.
+            You can retake this quiz as many times as you like. Only your best
+            score will be saved.
           </p>
         </div>
       </Card>

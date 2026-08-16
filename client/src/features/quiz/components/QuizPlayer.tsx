@@ -1,23 +1,29 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
   Flag,
   AlertCircle,
+  CheckCircle2,
   Loader2,
-} from 'lucide-react';
-import { useQuiz, useStartQuizAttempt, useCompleteQuizAttempt } from '@/entities/quiz';
-import type { UserAnswer, QuizResults } from '@/entities/quiz';
-import { QuestionCard } from './QuestionCard';
-import { Timer } from '@/shared/ui';
-import { cn } from '@/shared/utils/cn';
+  XCircle,
+} from "lucide-react";
+import {
+  useQuiz,
+  useStartQuizAttempt,
+  useCompleteQuizAttempt,
+} from "@/entities/quiz";
+import type { UserAnswer, QuizResults } from "@/entities/quiz";
+import { QuestionCard } from "./QuestionCard";
+import { Timer } from "@/shared/ui";
+import { cn } from "@/shared/utils/cn";
 import {
   QUIZ_MESSAGES,
   QUIZ_MESSAGES_AR,
   calculateQuizDuration,
-} from '@/shared/constants/quiz.constants';
-import { ROUTES } from '@/shared/constants/routes';
+} from "@/shared/constants/quiz.constants";
+import { ROUTES } from "@/shared/constants/routes";
 
 /**
  * QuizPlayer Component
@@ -40,12 +46,18 @@ export interface QuizPlayerProps {
    * Callback when quiz is completed (optional, defaults to navigation)
    */
   onQuizComplete?: (results: QuizResults) => void;
+
+  /**
+   * Enables submit-and-review feedback for each question. Used only by lesson practice quizzes.
+   */
+  enablePerQuestionFeedback?: boolean;
 }
 
 export const QuizPlayer = ({
   quizId,
   isArabic = false,
   onQuizComplete,
+  enablePerQuestionFeedback = false,
 }: QuizPlayerProps) => {
   const navigate = useNavigate();
 
@@ -58,11 +70,16 @@ export const QuizPlayer = ({
 
   // Quiz state
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<Map<string, UserAnswer>>(new Map());
+  const [userAnswers, setUserAnswers] = useState<Map<string, UserAnswer>>(
+    new Map(),
+  );
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
+  const [submittedQuestionIds, setSubmittedQuestionIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const messages = isArabic ? QUIZ_MESSAGES_AR : QUIZ_MESSAGES;
 
@@ -107,7 +124,7 @@ export const QuizPlayer = ({
 
       let newSelectedIds: string[];
 
-      if (currentQuestion.question_type === 'multi_select') {
+      if (currentQuestion.question_type === "multi_select") {
         // Multi-select: toggle answer
         const currentIds = currentAnswer?.selected_answer_ids || [];
         newSelectedIds = currentIds.includes(answerId)
@@ -125,13 +142,48 @@ export const QuizPlayer = ({
 
       setUserAnswers((prev) => new Map(prev).set(questionId, newAnswer));
     },
-    [currentQuestion, userAnswers]
+    [currentQuestion, userAnswers],
   );
+
+  const getQuestionFeedback = useCallback(
+    (question: NonNullable<typeof currentQuestion>) => {
+      const selectedAnswerIds =
+        userAnswers.get(question.id)?.selected_answer_ids || [];
+      const correctAnswerIds = question.answers
+        .filter((answer) => answer.is_correct)
+        .map((answer) => answer.id);
+      const isCorrect =
+        selectedAnswerIds.length === correctAnswerIds.length &&
+        selectedAnswerIds.every((id) => correctAnswerIds.includes(id));
+      const correctAnswer = question.answers.find(
+        (answer) => answer.is_correct,
+      );
+      const rationale = isArabic
+        ? correctAnswer?.explanation_ar || correctAnswer?.explanation
+        : correctAnswer?.explanation;
+
+      return { isCorrect, rationale };
+    },
+    [currentQuestion, isArabic, userAnswers],
+  );
+
+  const submitCurrentAnswer = useCallback(() => {
+    if (!currentQuestion) return;
+    const selectedAnswerIds =
+      userAnswers.get(currentQuestion.id)?.selected_answer_ids || [];
+    if (selectedAnswerIds.length === 0) return;
+
+    setSubmittedQuestionIds((previous) => {
+      const next = new Set(previous);
+      next.add(currentQuestion.id);
+      return next;
+    });
+  }, [currentQuestion, userAnswers]);
 
   // Calculate results
   const calculateResults = useCallback((): QuizResults => {
     if (!quiz || !startTime) {
-      throw new Error('Quiz not loaded');
+      throw new Error("Quiz not loaded");
     }
 
     const endTime = new Date();
@@ -176,7 +228,7 @@ export const QuizPlayer = ({
     }
 
     const scorePercentage = Math.round(
-      (correctAnswers / quiz.questions.length) * 100
+      (correctAnswers / quiz.questions.length) * 100,
     );
     const passed = scorePercentage >= quiz.passing_score_percentage;
 
@@ -213,11 +265,11 @@ export const QuizPlayer = ({
         onQuizComplete(results);
       } else {
         // Store results in sessionStorage and navigate
-        sessionStorage.setItem('quiz_results', JSON.stringify(results));
-        navigate(ROUTES.QUIZ.RESULTS.replace(':id', quiz.id));
+        sessionStorage.setItem("quiz_results", JSON.stringify(results));
+        navigate(ROUTES.QUIZ.RESULTS.replace(":id", quiz.id));
       }
     } catch (error) {
-      console.error('Error submitting quiz:', error);
+      console.error("Error submitting quiz:", error);
       setIsSubmitting(false);
     }
   }, [
@@ -273,7 +325,7 @@ export const QuizPlayer = ({
                 onClick={() => navigate(ROUTES.QUIZ.LIST)}
                 className="mt-3 text-sm font-medium text-red-600 hover:text-red-700 hover:underline"
               >
-                {isArabic ? 'العودة إلى القائمة' : 'Back to quiz list'}
+                {isArabic ? "العودة إلى القائمة" : "Back to quiz list"}
               </button>
             </div>
           </div>
@@ -286,7 +338,16 @@ export const QuizPlayer = ({
   const currentAnswer = currentQuestion
     ? userAnswers.get(currentQuestion.id)
     : undefined;
-  const hasAnswered = currentAnswer && currentAnswer.selected_answer_ids.length > 0;
+  const hasAnswered = Boolean(
+    currentAnswer && currentAnswer.selected_answer_ids.length > 0,
+  );
+  const isCurrentQuestionSubmitted = Boolean(
+    currentQuestion && submittedQuestionIds.has(currentQuestion.id),
+  );
+  const currentQuestionFeedback =
+    currentQuestion && enablePerQuestionFeedback && isCurrentQuestionSubmitted
+      ? getQuestionFeedback(currentQuestion)
+      : null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -320,7 +381,7 @@ export const QuizPlayer = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">
-                {isArabic ? 'التقدم' : 'Progress'}: {answeredQuestions} /{' '}
+                {isArabic ? "التقدم" : "Progress"}: {answeredQuestions} /{" "}
                 {quiz.questions.length}
               </span>
               <span className="text-gray-600">{progressPercentage}%</span>
@@ -334,6 +395,65 @@ export const QuizPlayer = ({
           </div>
         </div>
 
+        {/* Question feedback — enabled only for lesson practice quizzes */}
+        {currentQuestionFeedback && (
+          <div
+            className={cn(
+              "mb-5 rounded-xl border p-5 shadow-sm",
+              currentQuestionFeedback.isCorrect
+                ? "border-emerald-200 bg-emerald-50"
+                : "border-rose-200 bg-rose-50",
+            )}
+            role="status"
+          >
+            <div className="flex items-center gap-3">
+              {currentQuestionFeedback.isCorrect ? (
+                <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" />
+              ) : (
+                <XCircle className="h-6 w-6 shrink-0 text-rose-600" />
+              )}
+              <div>
+                <p
+                  className={cn(
+                    "font-bold",
+                    currentQuestionFeedback.isCorrect
+                      ? "text-emerald-800"
+                      : "text-rose-800",
+                  )}
+                >
+                  {currentQuestionFeedback.isCorrect
+                    ? isArabic
+                      ? "إجابتك صحيحة"
+                      : "Correct answer"
+                    : isArabic
+                      ? "إجابتك غير صحيحة"
+                      : "Incorrect answer"}
+                </p>
+                <p
+                  className={cn(
+                    "mt-0.5 text-sm",
+                    currentQuestionFeedback.isCorrect
+                      ? "text-emerald-700"
+                      : "text-rose-700",
+                  )}
+                >
+                  {isArabic
+                    ? "راجِع الإجابة قبل الانتقال إلى السؤال التالي."
+                    : "Review the feedback before moving to the next question."}
+                </p>
+              </div>
+            </div>
+            {currentQuestionFeedback.rationale && (
+              <div className="mt-4 border-t border-current/10 pt-4 text-sm leading-relaxed text-slate-700">
+                <p className="mb-1 font-semibold text-slate-900">
+                  {isArabic ? "التبرير" : "Rationale"}
+                </p>
+                <p>{currentQuestionFeedback.rationale}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Question Card */}
         {currentQuestion && (
           <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
@@ -343,6 +463,7 @@ export const QuizPlayer = ({
               onAnswerSelect={handleAnswerSelect}
               questionNumber={currentQuestionIndex + 1}
               totalQuestions={quiz.questions.length}
+              disabled={isCurrentQuestionSubmitted}
               isArabic={isArabic}
             />
           </div>
@@ -354,27 +475,36 @@ export const QuizPlayer = ({
             onClick={goToPreviousQuestion}
             disabled={currentQuestionIndex === 0}
             className={cn(
-              'flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition-all',
-              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+              "flex items-center gap-2 rounded-lg px-4 py-2 font-medium transition-all",
+              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
               {
-                'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50':
+                "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50":
                   currentQuestionIndex > 0,
-                'bg-gray-100 text-gray-400 cursor-not-allowed':
+                "bg-gray-100 text-gray-400 cursor-not-allowed":
                   currentQuestionIndex === 0,
-              }
+              },
             )}
           >
             <ChevronLeft className="h-4 w-4" />
-            {isArabic ? 'السابق' : 'Previous'}
+            {isArabic ? "السابق" : "Previous"}
           </button>
 
           <div className="flex items-center gap-3">
-            {!isLastQuestion ? (
+            {enablePerQuestionFeedback && !isCurrentQuestionSubmitted ? (
+              <button
+                onClick={submitCurrentAnswer}
+                disabled={!hasAnswered}
+                className="flex items-center gap-2 rounded-lg bg-[#0f91e0] px-6 py-2 font-medium text-white transition-all hover:bg-[#1c4a8b] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isArabic ? "إرسال الإجابة" : "Submit Answer"}
+                <CheckCircle2 className="h-4 w-4" />
+              </button>
+            ) : !isLastQuestion ? (
               <button
                 onClick={goToNextQuestion}
                 className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-700 active:bg-blue-800 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
-                {isArabic ? 'التالي' : 'Next'}
+                {isArabic ? "التالي" : "Next"}
                 <ChevronRight className="h-4 w-4" />
               </button>
             ) : (
@@ -386,11 +516,11 @@ export const QuizPlayer = ({
                 <Flag className="h-4 w-4" />
                 {isSubmitting
                   ? isArabic
-                    ? 'جاري الإرسال...'
-                    : 'Submitting...'
+                    ? "جاري الإرسال..."
+                    : "Submitting..."
                   : isArabic
-                  ? 'إنهاء الاختبار'
-                  : 'Finish Quiz'}
+                    ? "إنهاء الاختبار"
+                    : "Finish Quiz"}
               </button>
             )}
           </div>
@@ -401,7 +531,7 @@ export const QuizPlayer = ({
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="max-w-md rounded-lg bg-white p-6 shadow-xl">
               <h3 className="text-lg font-semibold text-gray-900">
-                {isArabic ? 'تأكيد الإرسال' : 'Confirm Submission'}
+                {isArabic ? "تأكيد الإرسال" : "Confirm Submission"}
               </h3>
               <p className="mt-2 text-sm text-gray-600">
                 {isArabic
@@ -413,7 +543,7 @@ export const QuizPlayer = ({
                   onClick={() => setShowSubmitConfirmation(false)}
                   className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  {isArabic ? 'إلغاء' : 'Cancel'}
+                  {isArabic ? "إلغاء" : "Cancel"}
                 </button>
                 <button
                   onClick={() => {
@@ -423,7 +553,7 @@ export const QuizPlayer = ({
                   disabled={isSubmitting}
                   className="rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700 transition-colors disabled:opacity-50"
                 >
-                  {isArabic ? 'تأكيد الإرسال' : 'Confirm & Submit'}
+                  {isArabic ? "تأكيد الإرسال" : "Confirm & Submit"}
                 </button>
               </div>
             </div>
@@ -434,4 +564,4 @@ export const QuizPlayer = ({
   );
 };
 
-QuizPlayer.displayName = 'QuizPlayer';
+QuizPlayer.displayName = "QuizPlayer";
