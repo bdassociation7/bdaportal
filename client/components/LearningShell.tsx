@@ -141,11 +141,19 @@ function LearningTopBar({
         className="relative flex min-h-[82px] w-full items-center justify-between px-6 sm:min-h-[92px] sm:px-10 lg:px-16 xl:px-24"
       >
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-          <img
-            src="/bda-logo.png"
-            alt="Business Development Association"
-            className="h-12 w-[108px] shrink-0 object-contain brightness-0 invert sm:h-14 sm:w-[132px]"
-          />
+          <button
+            type="button"
+            onClick={() => navigate(backPath)}
+            className="shrink-0 rounded-md transition-opacity hover:opacity-85 focus:outline-none focus:ring-2 focus:ring-white/60"
+            aria-label="Back to Portal"
+            title="Back to Portal"
+          >
+            <img
+              src="/bda-logo.png"
+              alt="Business Development Association"
+              className="h-12 w-[108px] object-contain brightness-0 invert sm:h-14 sm:w-[132px]"
+            />
+          </button>
           <div className="min-w-0 border-l border-white/25 pl-3 sm:pl-4">
             <p className="truncate text-lg font-bold tracking-[-0.02em] text-white sm:text-2xl">
               BDA Learning System
