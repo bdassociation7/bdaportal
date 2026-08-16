@@ -37,6 +37,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { BDAAbstractHero } from '@/components/BDAAbstractHero';
 import type { QuestionSetWithProgress } from '@/entities/question-bank';
 
 // ─── BDA Brand Palette ────────────────────────────────────────────────────────
@@ -458,41 +459,55 @@ export function QuestionBankDashboard() {
   return (
     <div className="bg-[#f8f9fb]">
 
-      {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div className="container mx-auto px-6 pt-8 pb-2 max-w-6xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#0f91e0] flex items-center justify-center shadow-sm">
-              <HelpCircle className="w-5 h-5 text-white" />
+      {/* ── Hero ───────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-12 text-white sm:py-14">
+        <BDAAbstractHero />
+        <div className="relative mx-auto max-w-[1640px] px-6 sm:px-10 lg:px-16 xl:px-24">
+          <button
+            type="button"
+            onClick={() => navigate(basePath)}
+            className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-white/85 transition-colors hover:text-white"
+          >
+            <ArrowRight className="h-4 w-4 rotate-180" />
+            {t('backToLearning', false)}
+          </button>
+
+          <div className="flex flex-col gap-7 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-2xl">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 shadow-sm backdrop-blur-sm">
+                <HelpCircle className="h-6 w-6 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{t('questionBank', false)}</h1>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/80 sm:text-base">{t('questionBankSub', false)}</p>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-[#0d1f4e]">{t('questionBank', false)}</h1>
-              <p className="text-sm text-slate-400">{t('questionBankSub', false)}</p>
-            </div>
+
+            {stats && (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[610px]">
+                <div className="rounded-xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm">
+                  <HelpCircle className="mb-2 h-4 w-4 text-white/80" />
+                  <p className="text-lg font-bold leading-none">{stats.questionsAttempted}</p>
+                  <p className="mt-1 text-[11px] font-medium text-white/70">{t('questionsAttempted', false)}</p>
+                </div>
+                <div className="rounded-xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm">
+                  <CheckCircle className="mb-2 h-4 w-4 text-white/80" />
+                  <p className="text-lg font-bold leading-none">{stats.questionsAttempted > 0 ? Math.round((stats.questionsCorrect / stats.questionsAttempted) * 100) : 0}%</p>
+                  <p className="mt-1 text-[11px] font-medium text-white/70">{t('accuracy', false)}</p>
+                </div>
+                <div className="rounded-xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm">
+                  <TrendingUp className="mb-2 h-4 w-4 text-white/80" />
+                  <p className="text-lg font-bold leading-none">{Math.round(stats.averageScore)}%</p>
+                  <p className="mt-1 text-[11px] font-medium text-white/70">{t('avgScore', false)}</p>
+                </div>
+                <div className="rounded-xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm">
+                  <Star className="mb-2 h-4 w-4 text-white/80" />
+                  <p className="text-lg font-bold leading-none">{stats.setsCompleted}/{stats.totalQuestionSets}</p>
+                  <p className="mt-1 text-[11px] font-medium text-white/70">{t('setsCompleted', false)}</p>
+                </div>
+              </div>
+            )}
           </div>
-          {/* Stats Pills */}
-          {stats && (
-            <div className="flex flex-wrap gap-2">
-              <span className="flex items-center gap-1.5 bg-white border border-[#dbeafe] rounded-full px-3 py-1.5 text-xs font-semibold text-[#0d1f4e] shadow-sm">
-                <HelpCircle className="w-3.5 h-3.5 text-[#0f91e0]" />
-                {stats.questionsAttempted} {t('questionsAttempted', false)}
-              </span>
-              <span className="flex items-center gap-1.5 bg-white border border-[#dbeafe] rounded-full px-3 py-1.5 text-xs font-semibold text-[#0d1f4e] shadow-sm">
-                <CheckCircle className="w-3.5 h-3.5 text-[#0f91e0]" />
-                {stats.questionsAttempted > 0 ? Math.round((stats.questionsCorrect / stats.questionsAttempted) * 100) : 0}% {t('accuracy', false)}
-              </span>
-              <span className="flex items-center gap-1.5 bg-white border border-[#dbeafe] rounded-full px-3 py-1.5 text-xs font-semibold text-[#0d1f4e] shadow-sm">
-                <TrendingUp className="w-3.5 h-3.5 text-[#0f91e0]" />
-                {Math.round(stats.averageScore)}% {t('avgScore', false)}
-              </span>
-              <span className="flex items-center gap-1.5 bg-white border border-[#dbeafe] rounded-full px-3 py-1.5 text-xs font-semibold text-[#0d1f4e] shadow-sm">
-                <Star className="w-3.5 h-3.5 text-[#0f91e0]" />
-                {stats.setsCompleted}/{stats.totalQuestionSets} {t('setsCompleted', false)}
-              </span>
-            </div>
-          )}
         </div>
-      </div>
+      </section>
 
       {/* ── Body ─────────────────────────────────────────────────────────── */}
       <div className="container mx-auto px-6 py-6 max-w-6xl space-y-6">

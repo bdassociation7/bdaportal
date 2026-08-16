@@ -217,7 +217,7 @@ function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, on
       {/* Question Header */}
       <div className="p-6 border-b border-[#f0f6ff]" style={{ background: 'linear-gradient(135deg, #f8faff 0%, #f0f6ff 100%)' }}>
         <div className="flex items-start justify-between gap-4">
-          <p className="text-base font-medium text-[#0d1f4e] leading-relaxed flex-1">
+          <p className="text-sm font-medium text-[#0d1f4e] leading-relaxed flex-1">
             {questionText}
           </p>
           {question.difficulty_level && difficultyLabel(question.difficulty_level, false)}
@@ -252,7 +252,7 @@ function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, on
                 }`}>
                   {option.id.toUpperCase()}
                 </span>
-                <span className={`text-sm ${isAnswered && !isCorrectOption && !isSelected ? 'text-slate-400' : 'text-[#0d1f4e]'}`}>
+                <span className={`text-xs leading-relaxed ${isAnswered && !isCorrectOption && !isSelected ? 'text-slate-400' : 'text-[#0d1f4e]'}`}>
                   {optionText}
                 </span>
               </div>
