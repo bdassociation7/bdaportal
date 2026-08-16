@@ -95,6 +95,9 @@ function t(key: string, isAR: boolean): string {
     visitShop: 'زيارة المتجر',
     loading: 'جاري تحميل بنك الأسئلة...',
     competencies: 'كفاءة',
+    chooseCertification: 'اختر الشهادة التي تستعد لها',
+    changeCertification: 'تغيير الشهادة',
+    exploreQuestionBank: 'استكشف بنك الأسئلة',
   };
   const en: Record<string, string> = {
     backToLearning: 'Back to Learning System',
@@ -140,6 +143,9 @@ function t(key: string, isAR: boolean): string {
     visitShop: 'Visit Shop',
     loading: 'Loading question bank...',
     competencies: 'Competencies',
+    chooseCertification: 'Choose the certification you are preparing for',
+    changeCertification: 'Change certification',
+    exploreQuestionBank: 'Explore Question Bank',
   };
   return isAR ? (ar[key] ?? key) : (en[key] ?? key);
 }
@@ -370,8 +376,8 @@ export function QuestionBankDashboard() {
     return '/learning-system';
   }, [location.pathname]);
 
-  // CP / SCP tab
-  const [certType, setCertType] = useState<'CP' | 'SCP'>('CP');
+  // A certification must be selected before its question sets are shown.
+  const [certType, setCertType] = useState<'CP' | 'SCP' | null>(null);
 
   const { data: accessSummary, isLoading: accessSummaryLoading } = useUserAccesses(user?.id);
   const { data: hasQuestionBankAccess, isLoading: accessLoading } = useQuestionBankAccess(user?.id, 'EN');
@@ -481,7 +487,7 @@ export function QuestionBankDashboard() {
               <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/80 sm:text-base">{t('questionBankSub', false)}</p>
             </div>
 
-            {stats && (
+            {certType && stats && (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:min-w-[610px]">
                 <div className="rounded-xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm">
                   <HelpCircle className="mb-2 h-4 w-4 text-white/80" />
@@ -509,63 +515,63 @@ export function QuestionBankDashboard() {
         </div>
       </section>
 
-      {/* ── Body ─────────────────────────────────────────────────────────── */}
-      <div className="container mx-auto px-6 py-6 max-w-6xl space-y-6">
-
-        {/* ── CP / SCP Selector ─────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-[#dbeafe] p-6 shadow-sm">
-          <p className="text-sm font-semibold text-slate-500 mb-4">{t('certSelect', false)}</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ── Certification Selection & Content ───────────────────────────── */}
+      <div className="container mx-auto max-w-6xl px-6 py-8 sm:py-10">
+        {!certType ? (
+          <section className="mx-auto grid min-h-[calc(100vh-25rem)] max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
             {(['CP', 'SCP'] as const).map((type) => {
-              const isSelected = certType === type;
               const isCP = type === 'CP';
               return (
                 <button
+                  type="button"
                   key={type}
                   onClick={() => setCertType(type)}
-                  className={`relative flex items-center gap-5 p-5 rounded-2xl border-2 transition-all text-left ${
-                    isSelected
-                      ? 'border-[#0f91e0] bg-[#0f91e0] text-white shadow-xl scale-[1.01]'
-                      : 'border-[#dbeafe] bg-[#f8faff] hover:border-[#0f91e0]/50 hover:shadow-md text-[#0d1f4e]'
-                  }`}
+                  className="group relative flex min-h-[340px] flex-col overflow-hidden rounded-3xl border border-[#dbeafe] bg-white p-8 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[#0f91e0]/60 hover:shadow-xl sm:min-h-[420px] sm:p-10"
                 >
-                  {/* Badge Image */}
-                  <div className="w-20 h-20 flex-shrink-0 drop-shadow-md">
+                  <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0]" />
+                  <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-[#0f91e0]/[0.06] transition-transform duration-300 group-hover:scale-110" />
+                  <div className="relative flex h-32 items-center justify-center sm:h-40">
                     <img
                       src={isCP ? '/bda-cp-badge.webp' : '/bda-scp-badge.webp'}
                       alt={isCP ? 'BDA-CP Badge' : 'BDA-SCP Badge'}
-                      className="w-full h-full object-contain"
+                      className="h-full w-auto object-contain drop-shadow-xl transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
-                  {/* Text */}
-                  <div className="flex-1 min-w-0">
-                    <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded-full mb-1.5 ${
-                      isSelected ? 'bg-white/20 text-white' : 'bg-[#0f91e0]/10 text-[#0f91e0]'
-                    }`}>
+                  <div className="relative mt-auto pt-10">
+                    <span className="inline-flex rounded-full bg-[#f0f6ff] px-3 py-1 text-xs font-bold text-[#0f91e0]">
                       {isCP ? t('certCPShort', false) : t('certSCPShort', false)}
                     </span>
-                    <p className={`font-bold text-base leading-tight mb-1 ${
-                      isSelected ? 'text-white' : 'text-[#0d1f4e]'
-                    }`}>
+                    <h2 className="mt-4 text-2xl font-bold tracking-tight text-[#0d1f4e] sm:text-3xl">
                       {isCP ? t('certCP', false) : t('certSCP', false)}
-                    </p>
-                    <p className={`text-xs leading-relaxed ${
-                      isSelected ? 'text-white/70' : 'text-slate-400'
-                    }`}>
+                    </h2>
+                    <p className="mt-3 max-w-sm text-sm leading-relaxed text-slate-500">
                       {isCP ? t('certCPDesc', false) : t('certSCPDesc', false)}
                     </p>
+                    <span className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-[#0f91e0]">
+                      {t('exploreQuestionBank', false)}
+                      <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                    </span>
                   </div>
-                  {/* Selected check */}
-                  {isSelected && (
-                    <CheckCircle className="w-5 h-5 text-white/80 absolute top-3 right-3" />
-                  )}
                 </button>
               );
             })}
-          </div>
-        </div>
-
-        {/* Introduction section hidden — competencies only */}
+          </section>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex flex-col gap-3 rounded-2xl border border-[#dbeafe] bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#0f91e0]">{certType === 'CP' ? t('certCPShort', false) : t('certSCPShort', false)}</p>
+                <p className="mt-1 text-sm font-semibold text-[#0d1f4e]">{certType === 'CP' ? t('certCP', false) : t('certSCP', false)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCertType(null)}
+                className="inline-flex items-center gap-2 self-start rounded-lg border border-[#dbeafe] px-3 py-2 text-xs font-bold text-[#1c4a8b] transition-colors hover:bg-[#f0f6ff] sm:self-auto"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                {t('changeCertification', false)}
+              </button>
+            </div>
 
         {/* ── Behavioural Competencies ───────────────────────────────────── */}
         {Object.keys(groupedSets.behavioural).length > 0 && (
@@ -672,6 +678,8 @@ export function QuestionBankDashboard() {
             >
               {t('backToLearning', false)}
             </button>
+          </div>
+        )}
           </div>
         )}
       </div>
