@@ -11,21 +11,31 @@
  * - Scroll-to-top button
  */
 
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/shared/hooks/useAuth';
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/shared/hooks/useAuth";
 import {
   useLessonProgressById,
   useLesson,
+  useModuleDetail,
   useUpdateLessonProgress,
-} from '@/entities/curriculum';
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { ArrowLeft, Clock, CheckCircle, BookOpen, Award, ChevronRight, ArrowUp, List } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { LessonContent } from '../components/LessonContent';
-import { LessonProgressTracker } from '../components/LessonProgressTracker';
-import { LessonNavigator } from '../components/LessonNavigator';
-import { LessonQuizGate } from '../components/LessonQuizGate';
-import type { Json } from '@/shared/database.types';
+} from "@/entities/curriculum";
+import { useState, useEffect, useRef, useMemo } from "react";
+import {
+  ArrowLeft,
+  Clock,
+  CheckCircle,
+  BookOpen,
+  Award,
+  ChevronRight,
+  ArrowUp,
+  List,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { LessonContent } from "../components/LessonContent";
+import { LessonProgressTracker } from "../components/LessonProgressTracker";
+import { LessonNavigator } from "../components/LessonNavigator";
+import { LessonQuizGate } from "../components/LessonQuizGate";
+import type { Json } from "@/shared/database.types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type TipTapNode = {
@@ -45,31 +55,39 @@ type TocItem = {
 
 /** Extract plain text from a TipTap inline content array */
 function extractText(nodes: TipTapNode[] | undefined): string {
-  if (!nodes) return '';
-  return nodes.map((n) => n.text || extractText(n.content)).join('');
+  if (!nodes) return "";
+  return nodes.map((n) => n.text || extractText(n.content)).join("");
 }
 
 /** Slugify heading text into a DOM id */
 function slugify(text: string, index: number): string {
-  return `heading-${index}-${text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`;
+  return `heading-${index}-${text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")}`;
 }
 
 /** Walk TipTap JSON and collect all H1/H2/H3 headings */
 function extractToc(content: Json): TocItem[] {
-  if (!content || typeof content !== 'object' || !('type' in content)) return [];
+  if (!content || typeof content !== "object" || !("type" in content))
+    return [];
   const doc = content as Record<string, any>;
-  if (doc.type !== 'doc' || !Array.isArray(doc.content)) return [];
+  if (doc.type !== "doc" || !Array.isArray(doc.content)) return [];
 
   const items: TocItem[] = [];
   let headingIndex = 0;
 
   for (const node of doc.content as TipTapNode[]) {
-    if (node.type === 'heading') {
+    if (node.type === "heading") {
       const level = (node.attrs?.level || 2) as 1 | 2 | 3;
       if (level <= 3) {
         const text = extractText(node.content);
         if (text.trim()) {
-          items.push({ id: slugify(text, headingIndex), text: text.trim(), level });
+          items.push({
+            id: slugify(text, headingIndex),
+            text: text.trim(),
+            level,
+          });
           headingIndex++;
         }
       }
@@ -80,7 +98,10 @@ function extractToc(content: Json): TocItem[] {
 
 // ── Component ──────────────────────────────────────────────────────────────
 export function LessonViewer() {
-  const { lessonId, moduleId } = useParams<{ lessonId: string; moduleId: string }>();
+  const { lessonId, moduleId } = useParams<{
+    lessonId: string;
+    moduleId: string;
+  }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -88,27 +109,36 @@ export function LessonViewer() {
   const [readingProgress, setReadingProgress] = useState(0);
   const [showOptionalQuiz, setShowOptionalQuiz] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [activeHeadingId, setActiveHeadingId] = useState<string>('');
+  const [activeHeadingId, setActiveHeadingId] = useState<string>("");
   const [tocOpen, setTocOpen] = useState(true);
 
   const timeTrackerRef = useRef<NodeJS.Timeout>();
   const progressUpdateTimeoutRef = useRef<NodeJS.Timeout>();
   const progressPercentageRef = useRef<number>(0);
-  const saveProgressRef = useRef<((scrollProgress: number) => void) | null>(null);
+  const saveProgressRef = useRef<((scrollProgress: number) => void) | null>(
+    null,
+  );
   const autoCompleteAttemptedRef = useRef<string | null>(null);
 
   // Detect base path
   const basePath = useMemo(() => {
     const path = location.pathname;
-    if (path.startsWith('/ecp/learning-system')) return '/ecp/learning-system/training-kits';
-    if (path.startsWith('/instructor/learning-system')) return '/instructor/learning-system/training-kits';
-    return '/learning-system/training-kits';
+    if (path.startsWith("/ecp/learning-system"))
+      return "/ecp/learning-system/training-kits";
+    if (path.startsWith("/instructor/learning-system"))
+      return "/instructor/learning-system/training-kits";
+    return "/learning-system/training-kits";
   }, [location.pathname]);
 
   const getModuleUrl = (modId: string) => `${basePath}/module/${modId}`;
 
   const { data: lesson, isLoading: isLoadingLesson } = useLesson(lessonId);
-  const { data: progress, isLoading: isLoadingProgress } = useLessonProgressById(user?.id, lessonId);
+  const { data: moduleData } = useModuleDetail(
+    user?.id,
+    lesson?.module_id || moduleId || "",
+  );
+  const { data: progress, isLoading: isLoadingProgress } =
+    useLessonProgressById(user?.id, lessonId);
   const updateProgress = useUpdateLessonProgress();
 
   // Extract Table of Contents from lesson content
@@ -131,8 +161,9 @@ export function LessonViewer() {
         lessonId,
         updates: {
           progress_percentage: scrollProgress,
-          status: scrollProgress === 100 ? 'completed' : 'in_progress',
-          completed_at: scrollProgress === 100 ? new Date().toISOString() : undefined,
+          status: scrollProgress === 100 ? "completed" : "in_progress",
+          completed_at:
+            scrollProgress === 100 ? new Date().toISOString() : undefined,
         },
       });
     };
@@ -144,14 +175,18 @@ export function LessonViewer() {
 
     const handleScroll = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const scrollProgress = docHeight > 0 ? Math.round((scrollTop / docHeight) * 100) : 0;
+      const docHeight =
+        document.documentElement.scrollHeight -
+        document.documentElement.clientHeight;
+      const scrollProgress =
+        docHeight > 0 ? Math.round((scrollTop / docHeight) * 100) : 0;
       const clamped = Math.min(scrollProgress, 100);
 
       setReadingProgress(clamped);
       setShowScrollTop(scrollTop > 400);
 
-      if (progressUpdateTimeoutRef.current) clearTimeout(progressUpdateTimeoutRef.current);
+      if (progressUpdateTimeoutRef.current)
+        clearTimeout(progressUpdateTimeoutRef.current);
 
       if (clamped > progressPercentageRef.current) {
         progressUpdateTimeoutRef.current = setTimeout(() => {
@@ -161,39 +196,46 @@ export function LessonViewer() {
       }
 
       // Update active heading in TOC
-      const headingEls = document.querySelectorAll('[data-toc-id]');
-      let currentId = '';
+      const headingEls = document.querySelectorAll("[data-toc-id]");
+      let currentId = "";
       headingEls.forEach((el) => {
         const rect = el.getBoundingClientRect();
         if (rect.top <= 120) {
-          currentId = el.getAttribute('data-toc-id') || '';
+          currentId = el.getAttribute("data-toc-id") || "";
         }
       });
       if (currentId) setActiveHeadingId(currentId);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (progressUpdateTimeoutRef.current) clearTimeout(progressUpdateTimeoutRef.current);
+      window.removeEventListener("scroll", handleScroll);
+      if (progressUpdateTimeoutRef.current)
+        clearTimeout(progressUpdateTimeoutRef.current);
     };
   }, [lessonId, user?.id]);
 
   // Auto-complete for short content
   useEffect(() => {
     if (!user?.id || !lessonId) return;
-    if (progress?.status === 'completed') return;
+    if (progress?.status === "completed") return;
     if (autoCompleteAttemptedRef.current === lessonId) return;
 
     const checkAndAutoComplete = () => {
-      const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const docHeight =
+        document.documentElement.scrollHeight -
+        document.documentElement.clientHeight;
       if (docHeight <= 10) {
         autoCompleteAttemptedRef.current = lessonId;
         setReadingProgress(100);
         updateProgress.mutate({
           userId: user.id,
           lessonId,
-          updates: { progress_percentage: 100, status: 'completed', completed_at: new Date().toISOString() },
+          updates: {
+            progress_percentage: 100,
+            status: "completed",
+            completed_at: new Date().toISOString(),
+          },
         });
       }
     };
@@ -206,7 +248,9 @@ export function LessonViewer() {
   useEffect(() => {
     if (!user || !lessonId) return;
     timeTrackerRef.current = setInterval(() => {}, 60000);
-    return () => { if (timeTrackerRef.current) clearInterval(timeTrackerRef.current); };
+    return () => {
+      if (timeTrackerRef.current) clearInterval(timeTrackerRef.current);
+    };
   }, [user, lessonId]);
 
   // Scroll to heading
@@ -214,14 +258,14 @@ export function LessonViewer() {
     const el = document.querySelector(`[data-toc-id="${id}"]`);
     if (el) {
       const top = el.getBoundingClientRect().top + window.scrollY - 80;
-      window.scrollTo({ top, behavior: 'smooth' });
+      window.scrollTo({ top, behavior: "smooth" });
       setActiveHeadingId(id);
     }
   };
 
   // Scroll to top
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const isLoading = isLoadingLesson || isLoadingProgress;
@@ -243,8 +287,10 @@ export function LessonViewer() {
         <div className="text-center max-w-md">
           <BookOpen className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Lesson Not Found</h2>
-          <p className="text-muted-foreground mb-6">This lesson does not exist or has been deleted.</p>
-          <Button onClick={() => navigate(getModuleUrl(moduleId || ''))}>
+          <p className="text-muted-foreground mb-6">
+            This lesson does not exist or has been deleted.
+          </p>
+          <Button onClick={() => navigate(getModuleUrl(moduleId || ""))}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Module
           </Button>
@@ -256,21 +302,28 @@ export function LessonViewer() {
   if (showOptionalQuiz && lesson.lesson_quiz_id && progress) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <LessonQuizGate lesson={lesson} progress={progress} onBack={() => setShowOptionalQuiz(false)} basePath={basePath} />
+        <LessonQuizGate
+          lesson={lesson}
+          progress={progress}
+          onBack={() => setShowOptionalQuiz(false)}
+          basePath={basePath}
+        />
       </div>
     );
   }
 
-  const isCompleted = readingProgress >= 100 || progress?.status === 'completed';
+  const isCompleted =
+    readingProgress >= 100 || progress?.status === "completed";
   const hasToc = tocItems.length >= 3;
+  const competencyName = (
+    moduleData?.module?.competency_name || "BDA Competency"
+  ).replace(/^Module\s+\d+:\s*/i, "");
 
   return (
     <div className="min-h-screen bg-[#f8f9fb]">
-
       {/* ── Sticky top bar ───────────────────────────────────────────────── */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
-
           {/* Left: back + breadcrumb */}
           <div className="flex items-center gap-3 min-w-0">
             <Button
@@ -285,8 +338,12 @@ export function LessonViewer() {
 
             <div className="hidden sm:flex items-center gap-1.5 text-sm text-gray-500 min-w-0">
               <BookOpen className="h-4 w-4 shrink-0" />
-              <span className="truncate font-medium text-gray-800">{lesson.title}</span>
-              <span className="shrink-0 text-gray-400">· Lesson {lesson.order_index}</span>
+              <span className="truncate font-medium text-gray-800">
+                {lesson.title}
+              </span>
+              <span className="shrink-0 text-gray-400">
+                · Lesson {lesson.order_index}
+              </span>
             </div>
           </div>
 
@@ -295,17 +352,22 @@ export function LessonViewer() {
             {hasToc && (
               <button
                 onClick={() => setTocOpen((v) => !v)}
-                title={tocOpen ? 'Hide contents' : 'Show contents'}
+                title={tocOpen ? "Hide contents" : "Show contents"}
                 className={`hidden lg:flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors
-                  ${tocOpen
-                    ? 'bg-blue-50 border-blue-200 text-blue-700'
-                    : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+                  ${
+                    tocOpen
+                      ? "bg-blue-50 border-blue-200 text-blue-700"
+                      : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"
+                  }`}
               >
                 <List className="h-3.5 w-3.5" />
                 Contents
               </button>
             )}
-            <LessonProgressTracker progress={progress} readingProgress={readingProgress} />
+            <LessonProgressTracker
+              progress={progress}
+              readingProgress={readingProgress}
+            />
           </div>
         </div>
 
@@ -318,64 +380,62 @@ export function LessonViewer() {
         </div>
       </header>
 
-      {/* 25002500 Main content (with right padding for fixed TOC) 25002500250025002500250025002500250025002500250025002500250025002500250025002500 */}
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 ${hasToc && tocOpen ? 'lg:pr-[308px]' : ''}`}>
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-9 text-white sm:py-11">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_86%_8%,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_70%_100%,rgba(15,145,224,0.42),transparent_38%)]" />
+        <div className="relative mx-auto max-w-[1640px] px-6 sm:px-10 lg:px-16 xl:px-24">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/75">
+            {competencyName}
+          </p>
+          <h1 className="mt-3 text-3xl font-bold tracking-[-0.03em] sm:text-4xl">
+            Lesson {lesson.order_index}: {lesson.title}
+          </h1>
+        </div>
+      </section>
 
+      <div
+        className={`mx-auto max-w-[1640px] px-6 py-12 sm:px-10 sm:py-14 lg:px-16 lg:py-16 xl:px-24 ${hasToc && tocOpen ? "lg:pr-[340px]" : ""}`}
+      >
         {/* ── Main content column ──────────────────────────────────────────── */}
         <main className="flex-1 min-w-0">
-
-          {/* Lesson title */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 leading-tight mb-3">
-              {lesson.title}
-            </h1>
-
-            {/* Meta row */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-              {lesson.estimated_duration_hours && (
-                <span className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" />
-                  {lesson.estimated_duration_hours} hour{lesson.estimated_duration_hours > 1 ? 's' : ''} estimated
-                </span>
-              )}
-              {isCompleted && (
-                <span className="flex items-center gap-1.5 text-green-600 font-medium">
-                  <CheckCircle className="h-4 w-4" />
-                  Completed
-                </span>
-              )}
-            </div>
-          </div>
-
           {/* Description / intro card */}
           {lesson.description && (
             <div className="bg-blue-50 border border-blue-100 rounded-xl px-6 py-4 mb-8">
-              <p className="text-gray-700 leading-relaxed text-[1.02rem]">{lesson.description}</p>
+              <p className="text-gray-700 leading-relaxed text-[1.02rem]">
+                {lesson.description}
+              </p>
             </div>
           )}
 
           {/* Learning Objectives */}
-          {lesson.learning_objectives && lesson.learning_objectives.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-xl px-6 py-5 mb-8 shadow-sm">
-              <h2 className="text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <ChevronRight className="h-4 w-4 text-blue-600" />
-                Learning Objectives
-              </h2>
-              <ul className="space-y-2">
-                {lesson.learning_objectives.map((obj, i) => (
-                  <li key={i} className="flex items-start gap-2 text-gray-700 text-sm leading-relaxed">
-                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
-                    {obj}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {lesson.learning_objectives &&
+            lesson.learning_objectives.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl px-6 py-5 mb-8 shadow-sm">
+                <h2 className="text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <ChevronRight className="h-4 w-4 text-blue-600" />
+                  Learning Objectives
+                </h2>
+                <ul className="space-y-2">
+                  {lesson.learning_objectives.map((obj, i) => (
+                    <li
+                      key={i}
+                      className="flex items-start gap-2 text-gray-700 text-sm leading-relaxed"
+                    >
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+                      {obj}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
           {/* ── Lesson body content ──────────────────────────────────────── */}
           <article className="bg-white rounded-xl px-8 sm:px-14 py-10 mb-8">
             <div className="prose prose-gray max-w-none">
-              <LessonContent content={lesson.content} contentAr={undefined} tocItems={tocItems} />
+              <LessonContent
+                content={lesson.content}
+                contentAr={undefined}
+                tocItems={tocItems}
+              />
             </div>
           </article>
 
@@ -387,7 +447,8 @@ export function LessonViewer() {
                 Lesson Completed!
               </div>
               <p className="text-sm text-green-600">
-                Great work. Use the navigation below to continue to the next lesson.
+                Great work. Use the navigation below to continue to the next
+                lesson.
               </p>
               {lesson.lesson_quiz_id && (
                 <Button
@@ -405,7 +466,7 @@ export function LessonViewer() {
 
           {/* Reserve space whether completed or not to prevent layout shift */}
           {!isCompleted && (
-            <div className="mb-6" style={{ minHeight: '24px' }}>
+            <div className="mb-6" style={{ minHeight: "24px" }}>
               <p className="text-center text-sm text-gray-400">
                 Scroll to the bottom to mark this lesson as complete.
               </p>
@@ -426,7 +487,15 @@ export function LessonViewer() {
         {hasToc && tocOpen && (
           <aside
             className="hidden lg:block"
-            style={{ position: 'fixed', top: '72px', right: '24px', width: '272px', maxHeight: 'calc(100vh - 90px)', overflowY: 'auto', zIndex: 10 }}
+            style={{
+              position: "fixed",
+              top: "72px",
+              right: "24px",
+              width: "272px",
+              maxHeight: "calc(100vh - 90px)",
+              overflowY: "auto",
+              zIndex: 10,
+            }}
           >
             <div>
               <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
@@ -439,16 +508,22 @@ export function LessonViewer() {
                       key={item.id}
                       onClick={() => scrollToHeading(item.id)}
                       className={`w-full text-left text-sm rounded-lg px-3 py-1.5 transition-colors leading-snug
-                        ${item.level === 1 ? 'font-semibold' : ''}
-                        ${item.level === 2 ? 'pl-5 text-gray-600' : ''}
-                        ${item.level === 3 ? 'pl-7 text-gray-500 text-xs' : ''}
-                        ${activeHeadingId === item.id
-                          ? 'bg-blue-50 text-blue-700 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}
+                        ${item.level === 1 ? "font-semibold" : ""}
+                        ${item.level === 2 ? "pl-5 text-gray-600" : ""}
+                        ${item.level === 3 ? "pl-7 text-gray-500 text-xs" : ""}
+                        ${
+                          activeHeadingId === item.id
+                            ? "bg-blue-50 text-blue-700 font-medium"
+                            : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                        }
                       `}
                     >
-                      {item.level === 2 && <span className="mr-1 text-gray-300">–</span>}
-                      {item.level === 3 && <span className="mr-1 text-gray-300">·</span>}
+                      {item.level === 2 && (
+                        <span className="mr-1 text-gray-300">–</span>
+                      )}
+                      {item.level === 3 && (
+                        <span className="mr-1 text-gray-300">·</span>
+                      )}
                       {item.text}
                     </button>
                   ))}

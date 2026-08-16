@@ -1,22 +1,31 @@
-import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Award, TrendingUp, BookOpen, PlayCircle, CheckCircle2, ChevronRight, Brain, Zap, Flag, BarChart2 } from 'lucide-react';
-import { ModuleCard } from './ModuleCard';
+import { useNavigate } from "react-router-dom";
+import {
+  Calendar,
+  Clock,
+  Award,
+  BookOpen,
+  PlayCircle,
+  CheckCircle2,
+  ChevronRight,
+  Brain,
+  Zap,
+  Flag,
+  ArrowLeft,
+} from "lucide-react";
+import { ModuleCard } from "./ModuleCard";
 import type {
   UserCurriculumAccess,
   CurriculumModuleWithStatus,
-} from '@/entities/curriculum';
-import { format } from 'date-fns';
+} from "@/entities/curriculum";
+import { format } from "date-fns";
 
-// BDA Brand Colors — strict blue palette only
 const BDA = {
-  navy: '#1C4A8B',
-  navyDark: '#0d1f4e',
-  blue: '#0f91e0',
-  bluePale: '#f5f9ff',
-  blueMid: '#e8f0fb',
-  blueSoft: '#dbeafe',
-  border: '#d0e4f7',
-  borderLight: '#e8f0fb',
+  navy: "#1C4A8B",
+  navyDark: "#0d1f4e",
+  blue: "#0f91e0",
+  bluePale: "#f0f6ff",
+  blueMid: "#dbeafe",
+  border: "#d0e4f7",
 };
 
 interface CurriculumDashboardProps {
@@ -34,7 +43,80 @@ interface CurriculumDashboardProps {
   nextModule?: CurriculumModuleWithStatus | null;
   basePath?: string;
   backPath?: string;
-  selectedLanguage?: 'EN';
+  selectedLanguage?: "EN";
+}
+
+interface SectionProps {
+  icon: React.ReactNode;
+  eyebrow: string;
+  title: string;
+  description: string;
+  modules: CurriculumModuleWithStatus[];
+  onModuleClick: (id: string) => void;
+}
+
+function ModuleSection({
+  icon,
+  eyebrow,
+  title,
+  description,
+  modules,
+  onModuleClick,
+}: SectionProps) {
+  if (modules.length === 0) return null;
+
+  return (
+    <section className="space-y-6">
+      <div
+        className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between"
+        style={{ borderColor: "#e2eaf6" }}
+      >
+        <div className="flex items-start gap-4">
+          <div
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: BDA.bluePale, color: BDA.navy }}
+          >
+            {icon}
+          </div>
+          <div>
+            <p
+              className="text-xs font-bold uppercase tracking-[0.16em]"
+              style={{ color: BDA.blue }}
+            >
+              {eyebrow}
+            </p>
+            <h2
+              className="mt-1 text-2xl font-bold tracking-[-0.02em]"
+              style={{ color: BDA.navyDark }}
+            >
+              {title}
+            </h2>
+            <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-slate-500">
+              {description}
+            </p>
+          </div>
+        </div>
+        <span
+          className="self-start rounded-full px-3 py-1.5 text-xs font-bold sm:self-auto"
+          style={{ background: BDA.bluePale, color: BDA.navy }}
+        >
+          {modules.length}{" "}
+          {modules.length === 1 ? "competency" : "competencies"}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        {modules.map((module) => (
+          <ModuleCard
+            key={module.id}
+            module={module}
+            onClick={() => onModuleClick(module.id)}
+            showArabicName={false}
+          />
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export function CurriculumDashboard({
@@ -45,283 +127,179 @@ export function CurriculumDashboard({
   outroModules = [],
   overallProgress,
   nextModule,
-  basePath = '/learning-system/training-kits',
-  backPath = '/learning-system',
-  selectedLanguage = 'EN',
+  basePath = "/learning-system/training-kits",
+  backPath = "/learning-system",
 }: CurriculumDashboardProps) {
   const navigate = useNavigate();
-
   const expiryDate = new Date(access.expires_at);
   const daysUntilExpiry = Math.ceil(
-    (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
   );
-  const isExpiringSoon = daysUntilExpiry <= 30;
-
   const totalModules =
-    (introModules?.length || 0) +
+    introModules.length +
     behavioralModules.length +
     knowledgeModules.length +
-    (outroModules?.length || 0);
+    outroModules.length;
   const completedCount = overallProgress?.completed || 0;
-  const progressPct = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
-  const timeSpentHours = Math.floor((overallProgress?.totalTimeSpent || 0) / 60);
-
-  const getModuleName = (m: CurriculumModuleWithStatus) => {
-    const raw = m.competency_name || 'Untitled';
-    return raw.replace(/^Module\s+\d+:\s*/i, '');
-  };
-
-  const navigateToModule = (id: string) => navigate(`${basePath}/module/${id}`);
-
-  // Section header component
-  const SectionHeader = ({
-    icon, title, subtitle, count,
-  }: { icon: React.ReactNode; title: string; subtitle: string; count: number }) => (
-    <div className="flex items-center justify-between mb-5">
-      <div className="flex items-center gap-3">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: BDA.blueMid }}
-        >
-          <span style={{ color: BDA.navy }}>{icon}</span>
-        </div>
-        <div>
-          <h2 className="text-lg font-bold" style={{ color: BDA.navyDark }}>
-            {title}
-          </h2>
-          <p className="text-xs" style={{ color: '#64748b' }}>{subtitle}</p>
-        </div>
-      </div>
-      <span
-        className="text-xs font-semibold px-3 py-1 rounded-full"
-        style={{ background: BDA.blueSoft, color: BDA.navy }}
-      >
-        {count} modules
-      </span>
-    </div>
+  const progressPct =
+    totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
+  const timeSpentHours = Math.floor(
+    (overallProgress?.totalTimeSpent || 0) / 60,
   );
+  const nextTitle =
+    nextModule?.competency_name?.replace(/^Module\s+\d+:\s*/i, "") ||
+    "Your next competency";
+  const goToModule = (id: string) => navigate(`${basePath}/module/${id}`);
 
   return (
-    <div style={{ background: BDA.bluePale, minHeight: '100vh', fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-
-        {/* ── Page Header ── */}
-        <div className="flex items-center gap-4 mb-6">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0"
-            style={{ background: BDA.navy }}
-          >
-            <BookOpen className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold" style={{ color: BDA.navyDark }}>
-              BDA Learning System
+    <div
+      className="min-h-screen bg-white"
+      style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif" }}
+    >
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] py-12 text-white sm:py-14 lg:py-16">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_8%,rgba(255,255,255,0.18),transparent_25%),radial-gradient(circle_at_68%_100%,rgba(15,145,224,0.45),transparent_38%)]" />
+        <div className="relative mx-auto flex max-w-[1640px] flex-col gap-8 px-6 sm:px-10 lg:flex-row lg:items-end lg:justify-between lg:px-16 xl:px-24">
+          <div className="max-w-3xl">
+            <button
+              type="button"
+              onClick={() => navigate(backPath)}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-white/75 transition-colors hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to Learning System
+            </button>
+            <span className="mt-7 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.15em] text-white/90">
+              <BookOpen className="h-3.5 w-3.5" /> BDA Training Kits
+            </span>
+            <h1 className="mt-5 text-3xl font-bold tracking-[-0.035em] sm:text-4xl lg:text-5xl">
+              Learn the BDA Body of Competency and Knowledge.
             </h1>
-            <p className="text-sm mt-0.5" style={{ color: '#64748b' }}>
-              Body of Competency &amp; Knowledge (BoCK) · {totalModules} Modules
+            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/80 sm:text-base">
+              Explore a structured set of behavioural and knowledge-based
+              competencies designed to build confident, commercially focused
+              business development practice.
             </p>
+            {nextModule && (
+              <button
+                type="button"
+                onClick={() => goToModule(nextModule.id)}
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold shadow-[0_7px_18px_rgba(0,0,0,0.18)] transition-colors hover:bg-[#f0f6ff]"
+                style={{ color: BDA.navy }}
+              >
+                Continue: {nextTitle} <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="grid min-w-[280px] grid-cols-2 gap-3 sm:min-w-[330px]">
+            <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+              <p className="text-xs font-semibold text-white/75">
+                Curriculum progress
+              </p>
+              <p className="mt-1 text-3xl font-bold">{progressPct}%</p>
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/20">
+                <div
+                  className="h-full rounded-full bg-white"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
+              <p className="text-xs font-semibold text-white/75">Completed</p>
+              <p className="mt-1 text-3xl font-bold">
+                {completedCount}
+                <span className="ml-1 text-base font-semibold text-white/70">
+                  / {totalModules}
+                </span>
+              </p>
+              <p className="mt-3 text-xs font-medium text-white/75">
+                {timeSpentHours}h learning time
+              </p>
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* ── Access + Progress Banner ── */}
-        <div
-          className="mb-5 px-5 py-4 rounded-2xl border flex flex-col md:flex-row md:items-center md:justify-between gap-4"
-          style={{
-            background: '#fff',
-            borderColor: isExpiringSoon ? '#fde68a' : BDA.border,
-            boxShadow: '0 1px 4px rgba(15,145,224,0.07)',
-          }}
+      <main className="mx-auto w-full max-w-[1640px] space-y-20 px-6 py-14 sm:px-10 sm:py-16 lg:px-16 lg:py-20 xl:px-24">
+        <section
+          className="grid gap-6 rounded-2xl border bg-white p-6 shadow-[0_7px_20px_rgba(13,31,78,0.05)] lg:grid-cols-[1.3fr_1fr] lg:items-center lg:p-8"
+          style={{ borderColor: BDA.border }}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-4">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: isExpiringSoon ? '#fef3c7' : BDA.blueMid }}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: BDA.bluePale, color: BDA.navy }}
             >
-              <Calendar className="w-4 h-4" style={{ color: isExpiringSoon ? '#d97706' : BDA.blue }} />
+              <Calendar className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-semibold text-sm" style={{ color: BDA.navyDark }}>
-                Access valid until {format(expiryDate, 'MMMM d, yyyy')}
+              <p
+                className="text-xs font-bold uppercase tracking-[0.14em]"
+                style={{ color: BDA.blue }}
+              >
+                Your access
               </p>
-              <p className="text-xs mt-0.5" style={{ color: isExpiringSoon ? '#d97706' : '#64748b' }}>
-                {daysUntilExpiry} days remaining{isExpiringSoon && ' · Consider renewing soon'}
+              <h2
+                className="mt-1 text-xl font-bold"
+                style={{ color: BDA.navyDark }}
+              >
+                Keep your learning journey moving.
+              </h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
+                Your BDA Learning System access is valid until{" "}
+                {format(expiryDate, "MMMM d, yyyy")} —{" "}
+                {Math.max(0, daysUntilExpiry)} days remaining.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 min-w-[240px]">
-            <div className="flex-1 rounded-full h-2" style={{ background: BDA.blueMid }}>
-              <div
-                className="h-2 rounded-full transition-all duration-700"
-                style={{ width: `${progressPct}%`, background: BDA.blue }}
-              />
+          <div
+            className="flex items-center justify-between rounded-xl px-4 py-3"
+            style={{ background: BDA.bluePale }}
+          >
+            <div
+              className="flex items-center gap-2 text-sm font-semibold"
+              style={{ color: BDA.navy }}
+            >
+              <Award className="h-4 w-4" /> Your learning goal
             </div>
-            <span className="text-sm font-bold whitespace-nowrap" style={{ color: BDA.navy }}>
-              {completedCount}/{totalModules} completed
+            <span className="text-xs font-bold" style={{ color: BDA.blue }}>
+              {progressPct}% complete
             </span>
           </div>
-        </div>
+        </section>
 
-        {/* ── Stats Row ── */}
-        {overallProgress && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            {[
-              {
-                icon: <TrendingUp className="w-4 h-4" />,
-                label: 'Overall Progress',
-                value: `${progressPct}%`,
-                sub: 'of curriculum',
-              },
-              {
-                icon: <CheckCircle2 className="w-4 h-4" />,
-                label: 'Completed',
-                value: `${completedCount}`,
-                sub: 'modules done',
-              },
-              {
-                icon: <Clock className="w-4 h-4" />,
-                label: 'Time Spent',
-                value: `${timeSpentHours}h`,
-                sub: 'learning time',
-              },
-              {
-                icon: <BarChart2 className="w-4 h-4" />,
-                label: 'Remaining',
-                value: `${totalModules - completedCount}`,
-                sub: 'modules left',
-              },
-            ].map((stat, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border p-4"
-                style={{
-                  background: '#fff',
-                  borderColor: BDA.borderLight,
-                  boxShadow: '0 1px 3px rgba(15,145,224,0.07)',
-                }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center"
-                    style={{ background: BDA.blueMid }}
-                  >
-                    <span style={{ color: BDA.blue }}>{stat.icon}</span>
-                  </div>
-                  <span className="text-xs font-medium" style={{ color: '#64748b' }}>{stat.label}</span>
-                </div>
-                <p className="text-2xl font-bold" style={{ color: BDA.navyDark }}>{stat.value}</p>
-                <p className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>{stat.sub}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Continue Learning CTA ── */}
-        {nextModule && (
-          <div
-            className="rounded-2xl p-5 mb-8 flex items-center justify-between gap-4"
-            style={{
-              background: `linear-gradient(135deg, ${BDA.navy} 0%, #0a2d6e 100%)`,
-              boxShadow: '0 4px 20px rgba(28,74,139,0.25)',
-            }}
-          >
-            <div className="flex items-center gap-4">
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(255,255,255,0.12)' }}
-              >
-                <PlayCircle className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: '#93c5fd' }}>
-                  Continue Learning
-                </p>
-                <h3 className="text-base font-bold text-white leading-snug">
-                  {getModuleName(nextModule)}
-                </h3>
-                <p className="text-xs mt-0.5" style={{ color: '#bfdbfe' }}>
-                  Module {nextModule.order_index} · {Math.ceil((nextModule.estimated_minutes || 120) / 60)}h estimated
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigateToModule(nextModule.id)}
-              className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90 hover:shadow-md"
-              style={{ background: '#fff', color: BDA.navy }}
-            >
-              Continue <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* ── Program Introduction ── */}
-        {introModules.length > 0 && (
-          <section className="mb-10">
-            <SectionHeader
-              icon={<PlayCircle className="w-5 h-5" />}
-              title="Program Introduction"
-              subtitle="Start here — orientation and overview"
-              count={introModules.length}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {introModules.map((m) => (
-                <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={false} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Behavioural Competencies ── */}
-        {behavioralModules.length > 0 && (
-          <section className="mb-10">
-            <SectionHeader
-              icon={<Zap className="w-5 h-5" />}
-              title="Behavioural Competencies"
-              subtitle="Essential professional skills for BD practitioners"
-              count={behavioralModules.length}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {behavioralModules.map((m) => (
-                <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={false} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Knowledge-Based Competencies ── */}
-        {knowledgeModules.length > 0 && (
-          <section className="mb-10">
-            <SectionHeader
-              icon={<Brain className="w-5 h-5" />}
-              title="Knowledge-Based Competencies"
-              subtitle="Core business development expertise and frameworks"
-              count={knowledgeModules.length}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {knowledgeModules.map((m) => (
-                <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={false} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Program Wrap-Up ── */}
-        {outroModules.length > 0 && (
-          <section className="mb-10">
-            <SectionHeader
-              icon={<Flag className="w-5 h-5" />}
-              title="Program Wrap-Up"
-              subtitle="Final reflection and next steps"
-              count={outroModules.length}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {outroModules.map((m) => (
-                <ModuleCard key={m.id} module={m} onClick={() => navigateToModule(m.id)} showArabicName={false} />
-              ))}
-            </div>
-          </section>
-        )}
-
-      </div>
+        <ModuleSection
+          icon={<PlayCircle className="h-5 w-5" />}
+          eyebrow="Begin here"
+          title="Programme Introduction"
+          description="Start with orientation content that introduces the BDA learning experience and the structure of the curriculum."
+          modules={introModules}
+          onModuleClick={goToModule}
+        />
+        <ModuleSection
+          icon={<Zap className="h-5 w-5" />}
+          eyebrow="Develop how you lead, communicate and influence"
+          title="Behavioural Competencies"
+          description="Build the professional behaviours that enable effective, trusted and commercially focused business development practice."
+          modules={behavioralModules}
+          onModuleClick={goToModule}
+        />
+        <ModuleSection
+          icon={<Brain className="h-5 w-5" />}
+          eyebrow="Strengthen technical foundations"
+          title="Knowledge-Based Competencies"
+          description="Explore the practical knowledge areas that support informed commercial decisions, strategic insight and sustainable growth."
+          modules={knowledgeModules}
+          onModuleClick={goToModule}
+        />
+        <ModuleSection
+          icon={<Flag className="h-5 w-5" />}
+          eyebrow="Conclude and reflect"
+          title="Programme Wrap-Up"
+          description="Complete the final reflection and consolidate your learning journey."
+          modules={outroModules}
+          onModuleClick={goToModule}
+        />
+      </main>
     </div>
   );
 }

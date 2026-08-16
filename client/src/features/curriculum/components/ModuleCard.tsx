@@ -1,15 +1,19 @@
-import { CheckCircle2, Clock, BookOpen, ChevronRight, PlayCircle } from 'lucide-react';
-import type { CurriculumModuleWithStatus } from '@/entities/curriculum';
+import {
+  CheckCircle2,
+  Clock,
+  BookOpen,
+  ChevronRight,
+  PlayCircle,
+} from "lucide-react";
+import type { CurriculumModuleWithStatus } from "@/entities/curriculum";
 
-// BDA Brand Colors — strict blue palette only
 const BDA = {
-  navy: '#1C4A8B',
-  navyDark: '#0d1f4e',
-  blue: '#0f91e0',
-  bluePale: '#f5f9ff',
-  blueMid: '#e8f0fb',
-  blueSoft: '#dbeafe',
-  border: '#d0e4f7',
+  navy: "#1C4A8B",
+  navyDark: "#0d1f4e",
+  blue: "#0f91e0",
+  bluePale: "#f0f6ff",
+  blueMid: "#dbeafe",
+  border: "#d0e4f7",
 };
 
 interface ModuleCardProps {
@@ -18,147 +22,165 @@ interface ModuleCardProps {
   showArabicName?: boolean;
 }
 
-// Section-type badge styles — all within BDA blue palette
-const SECTION_STYLES: Record<string, { badge: React.CSSProperties; accent: string }> = {
-  intro:           { badge: { background: BDA.blueMid, color: BDA.navy }, accent: BDA.navy },
-  behavioral:      { badge: { background: BDA.blueSoft, color: BDA.navy }, accent: BDA.navy },
-  knowledge_based: { badge: { background: '#e0f2fe', color: '#0369a1' }, accent: BDA.blue },
-  outro:           { badge: { background: BDA.blueMid, color: BDA.navy }, accent: BDA.navy },
-};
-
 const SECTION_LABELS: Record<string, string> = {
-  intro: 'Introduction',
-  behavioral: 'Behavioural',
-  knowledge_based: 'Knowledge',
-  outro: 'Wrap-Up',
+  intro: "Introduction",
+  behavioral: "Behavioural",
+  knowledge_based: "Knowledge",
+  outro: "Wrap-Up",
 };
 
-export function ModuleCard({ module, onClick, showArabicName = false }: ModuleCardProps) {
+const cardImages = [
+  "/images/learning-dashboard/competency-strategy.jpg",
+  "/images/learning-dashboard/competency-meeting.jpg",
+  "/images/learning-dashboard/competency-learning.jpg",
+  "/images/learning-dashboard/competency-teamwork.jpg",
+  "/images/learning-dashboard/competency-analysis.jpg",
+];
+
+export function ModuleCard({
+  module,
+  onClick,
+  showArabicName = false,
+}: ModuleCardProps) {
   const progress = module.user_progress;
-  const isCompleted = progress?.status === 'completed';
-  const isInProgress = progress?.status === 'in_progress' || progress?.status === 'quiz_pending';
+  const isCompleted = progress?.status === "completed";
+  const isInProgress =
+    progress?.status === "in_progress" || progress?.status === "quiz_pending";
   const progressPct = progress?.progress_percentage || 0;
-
-  const sectionType = module.section_type || 'knowledge_based';
-  const style = SECTION_STYLES[sectionType] || SECTION_STYLES['knowledge_based'];
-  const sectionLabel = SECTION_LABELS[sectionType] || 'Module';
-
+  const sectionType = module.section_type || "knowledge_based";
+  const sectionLabel = SECTION_LABELS[sectionType] || "Module";
   const moduleName = showArabicName
-    ? (module.competency_name_ar || module.competency_name || 'وحدة بدون عنوان')
-    : (module.competency_name || module.competency_name_ar || 'Untitled Module');
-
-  const cleanName = moduleName.replace(/^Module\s+\d+:\s*/i, '');
+    ? module.competency_name_ar || module.competency_name || "وحدة بدون عنوان"
+    : module.competency_name || module.competency_name_ar || "Untitled Module";
+  const cleanName = moduleName.replace(/^Module\s+\d+:\s*/i, "");
   const estimatedHours = Math.ceil((module.estimated_minutes || 60) / 60);
+  const imageIndex = Math.max(
+    0,
+    ((module.order_index ?? 1) - 1) % cardImages.length,
+  );
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      className="group relative rounded-2xl cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 flex flex-col"
+      className="group flex min-h-[330px] w-full flex-col overflow-hidden rounded-2xl border bg-white text-left shadow-[0_7px_20px_rgba(13,31,78,0.07)] transition-all duration-200 hover:-translate-y-1 hover:border-[#0f91e0] hover:shadow-[0_17px_32px_rgba(15,145,224,0.16)]"
       style={{
-        border: isCompleted
-          ? `1px solid ${BDA.blue}40`
-          : isInProgress
-          ? `1px solid ${BDA.border}`
-          : '1px solid #e8f0fb',
-        background: isCompleted ? BDA.bluePale : '#ffffff',
-        boxShadow: '0 1px 3px rgba(15,145,224,0.07)',
+        borderColor: isCompleted ? "#9ed9fb" : BDA.border,
         fontFamily: "'Inter', 'Segoe UI', sans-serif",
       }}
+      aria-label={`Open ${cleanName}`}
     >
-      {/* Top accent line for completed */}
-      {isCompleted && (
-        <div
-          className="h-1 rounded-t-2xl w-full"
-          style={{ background: BDA.blue }}
+      <div className="relative h-36 w-full overflow-hidden bg-[#0d1f4e]">
+        <img
+          src={cardImages[imageIndex]}
+          alt=""
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-      )}
-
-      <div className="p-5 flex flex-col flex-1">
-        {/* Completed check */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0d1f4e]/75 via-[#0d1f4e]/15 to-[#0f91e0]/10" />
+        <span
+          className="absolute bottom-3 left-4 inline-flex h-9 min-w-9 items-center justify-center rounded-lg bg-white/95 px-2 text-sm font-bold shadow-sm"
+          style={{ color: BDA.navy }}
+        >
+          {String(module.order_index ?? 0).padStart(2, "0")}
+        </span>
         {isCompleted && (
-          <div className="absolute top-4 right-4">
-            <CheckCircle2 className="w-5 h-5" style={{ color: BDA.blue }} />
-          </div>
-        )}
-
-        {/* Section badge + Module number */}
-        <div className="flex items-center gap-2 mb-3">
           <span
-            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
-            style={style.badge}
+            className="absolute right-4 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-sm"
+            title="Completed"
+          >
+            <CheckCircle2 className="h-4.5 w-4.5" style={{ color: BDA.blue }} />
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <span
+            className="text-xs font-semibold uppercase tracking-[0.12em]"
+            style={{ color: BDA.navy }}
           >
             {sectionLabel}
           </span>
-          <span className="text-xs font-medium" style={{ color: '#94a3b8' }}>
-            Module {module.order_index}
-          </span>
           {isInProgress && !isCompleted && (
             <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-              style={{ background: BDA.blueMid, color: BDA.blue }}
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]"
+              style={{ background: BDA.bluePale, color: BDA.blue }}
             >
-              <PlayCircle className="h-3 w-3" />
-              In Progress
+              <PlayCircle className="h-3 w-3" /> In progress
+            </span>
+          )}
+          {!isInProgress && !isCompleted && (
+            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+              Explore
+            </span>
+          )}
+          {isCompleted && (
+            <span
+              className="text-[10px] font-bold uppercase tracking-[0.08em]"
+              style={{ color: BDA.blue }}
+            >
+              Completed
             </span>
           )}
         </div>
 
-        {/* Title */}
         <h3
-          className="font-bold mb-2 text-sm leading-snug line-clamp-2"
+          className="min-h-[48px] text-base font-bold leading-snug"
           style={{ color: BDA.navyDark }}
-          dir={showArabicName ? 'rtl' : 'ltr'}
+          dir={showArabicName ? "rtl" : "ltr"}
         >
           {cleanName}
         </h3>
 
-        {/* Description */}
-        {module.description && !showArabicName && (
-          <p className="text-xs mb-3 line-clamp-2 leading-relaxed flex-1" style={{ color: '#64748b' }}>
-            {module.description}
+        {!showArabicName && (
+          <p className="mt-2 line-clamp-2 min-h-[38px] text-xs leading-relaxed text-slate-500">
+            {module.description ||
+              "Build practical business development capability through focused learning content."}
           </p>
         )}
-        {module.description_ar && showArabicName && (
-          <p className="text-xs mb-3 line-clamp-2 leading-relaxed flex-1" style={{ color: '#64748b' }} dir="rtl">
+        {showArabicName && module.description_ar && (
+          <p
+            className="mt-2 line-clamp-2 min-h-[38px] text-xs leading-relaxed text-slate-500"
+            dir="rtl"
+          >
             {module.description_ar}
           </p>
         )}
 
-        {/* Progress bar */}
-        {progressPct > 0 && (
-          <div className="mb-3">
-            <div className="w-full rounded-full h-1.5" style={{ background: BDA.blueMid }}>
-              <div
-                className="h-1.5 rounded-full transition-all duration-500"
-                style={{
-                  width: `${progressPct}%`,
-                  background: BDA.blue,
-                }}
-              />
-            </div>
-            <p className="text-xs mt-1 font-medium" style={{ color: BDA.blue }}>{progressPct}% complete</p>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div
-          className="flex items-center justify-between mt-auto pt-3 border-t"
-          style={{ borderColor: '#f1f5f9' }}
-        >
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: '#94a3b8' }}>
-            <Clock className="w-3.5 h-3.5" />
-            <span>{estimatedHours}h</span>
-          </div>
+        <div className="mt-4">
           <div
-            className="flex items-center gap-1 text-xs font-semibold transition-colors group-hover:opacity-80"
-            style={{ color: BDA.blue }}
+            className="h-1.5 overflow-hidden rounded-full"
+            style={{ background: BDA.blueMid }}
           >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Open</span>
-            <ChevronRight className="w-3 h-3" />
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${progressPct}%`, background: BDA.blue }}
+            />
+          </div>
+          <div className="mt-2 flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1.5 text-slate-400">
+              <Clock className="h-3.5 w-3.5" />
+              {estimatedHours}h
+            </span>
+            <span className="font-semibold" style={{ color: BDA.blue }}>
+              {progressPct > 0
+                ? `${Math.round(progressPct)}% complete`
+                : "Start learning"}
+            </span>
           </div>
         </div>
+
+        <div
+          className="mt-4 flex items-center justify-between border-t pt-3 text-sm font-semibold"
+          style={{ borderColor: "#edf3fb", color: BDA.navy }}
+        >
+          <span className="flex items-center gap-1.5">
+            <BookOpen className="h-3.5 w-3.5" />
+            Open competency
+          </span>
+          <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </div>
       </div>
-    </div>
+    </button>
   );
 }
