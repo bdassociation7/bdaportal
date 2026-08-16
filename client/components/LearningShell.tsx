@@ -98,12 +98,14 @@ function isImmersiveRoute(pathname: string): boolean {
 
 interface LearningTopBarProps {
   navItems: NavItem[];
+  backPath: string;
   menuOpen: boolean;
   onMenuChange: (open: boolean) => void;
 }
 
 function LearningTopBar({
   navItems,
+  backPath,
   menuOpen,
   onMenuChange,
 }: LearningTopBarProps) {
@@ -149,9 +151,9 @@ function LearningTopBar({
             title="Back to Portal"
           >
             <img
-              src="/bda-logo.png"
-              alt="Business Development Association"
-              className="h-12 w-[108px] object-contain brightness-0 invert sm:h-14 sm:w-[132px]"
+              src="/bda-mark.webp"
+              alt="BDA"
+              className="h-14 w-[148px] object-contain drop-shadow-[0_1px_1px_rgba(255,255,255,0.28)] sm:h-16 sm:w-[178px]"
             />
           </button>
           <div className="min-w-0 border-l border-white/25 pl-3 sm:pl-4">
@@ -258,6 +260,7 @@ export function LearningShell() {
       >
         <LearningTopBar
           navItems={navItems}
+          backPath={backPath}
           menuOpen={menuOpen}
           onMenuChange={setMenuOpen}
         />
