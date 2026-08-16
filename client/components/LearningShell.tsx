@@ -133,7 +133,7 @@ function LearningTopBar({
       className="sticky top-0 z-50 w-full shadow-[0_8px_24px_rgba(13,31,78,0.18)]"
       style={{
         background:
-          "linear-gradient(108deg, #0f91e0 0%, #1d67b1 44%, #0d1f4e 100%)",
+          "linear-gradient(108deg, #e6f6ff 0%, #6fc4f0 27%, #1d67b1 52%, #0d1f4e 100%)",
       }}
     >
       <div
