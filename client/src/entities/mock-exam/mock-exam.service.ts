@@ -57,6 +57,14 @@ export class MockExamService {
       const isECP =
         userProfile?.role === 'ecp' || userProfile?.role === 'dual_partner';
 
+      if (userProfile?.role === 'trainer') {
+        const { data: hasTrainerAccess, error: trainerAccessError } = await supabase
+          .rpc('has_active_trainer_mock_access', { p_user_id: targetUserId });
+
+        if (!trainerAccessError && hasTrainerAccess) return true;
+        return false;
+      }
+
       if (isECP) {
         const { data: ecpLicense } = await supabase
           .from('ecp_licenses')
@@ -170,6 +178,39 @@ export class MockExamService {
 
       const isECP =
         userProfile?.role === 'ecp' || userProfile?.role === 'dual_partner';
+
+      if (userProfile?.role === 'trainer') {
+        const { data: hasTrainerAccess, error: trainerAccessError } = await supabase
+          .rpc('has_active_trainer_mock_access', { p_user_id: targetUserId });
+
+        if (!trainerAccessError && hasTrainerAccess) {
+          const { data: allPremiumExams } = await supabase
+            .from('mock_exams')
+            .select('id')
+            .eq('is_premium', true)
+            .eq('is_active', true);
+
+          return {
+            data: (allPremiumExams || []).map(
+              (exam) =>
+                ({
+                  id: `trainer-${exam.id}`,
+                  user_id: targetUserId,
+                  mock_exam_id: exam.id,
+                  attempts_allowed: 999,
+                  attempts_used: 0,
+                  expires_at: null,
+                  granted_by: 'trainer_assessment',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                } as unknown as MockExamPremiumAccess)
+            ),
+            error: null,
+          };
+        }
+
+        return { data: [], error: null };
+      }
 
       if (isECP) {
         // Verify the ECP has an active, non-expired licence
