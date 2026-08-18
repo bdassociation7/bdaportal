@@ -85,11 +85,11 @@ export default function TakeExam() {
   const { toast } = useToast();
   const { confirm } = useConfirm();
   const { language } = useLanguage();
-  const texts = translations[language];
 
   const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : location.pathname.startsWith('/instructor/') ? '/instructor/mock-exams' : '/mock-exams';
 
   const [session, setSession] = useState<ExamSession | null>(null);
+  const texts = translations[session?.exam.language === 'ar' ? 'ar' : language];
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [timeRemaining, setTimeRemaining] = useState(0);
@@ -198,6 +198,9 @@ export default function TakeExam() {
     }
     return answer.answer_text;
   };
+
+  const stripOptionPrefix = (text: string) =>
+    text.replace(/^\s*(?:\(\s*)?(?:[A-Da-d]|[أبجد])\s*[)\].:،-]\s*/, '');
 
   const handleAnswerSelect = (answerId: string) => {
     if (!currentQuestion) return;
@@ -321,8 +324,10 @@ export default function TakeExam() {
 
   return (
     <div
-      className="min-h-screen bg-gray-50 flex flex-col"
+      className="notranslate min-h-screen bg-gray-50 flex flex-col"
       dir={isRTL ? 'rtl' : 'ltr'}
+      lang={isRTL ? 'ar' : 'en'}
+      translate="no"
       style={{ paddingBottom: navigatorExpanded ? '280px' : '80px' }}
     >
       {/* ── Top Header ── */}
@@ -421,21 +426,24 @@ export default function TakeExam() {
           <div className="space-y-3">
             {currentQuestion.answers.map((answer, idx) => {
               const isSelected = (answers[currentQuestion.id] || []).includes(answer.id);
-              const optionLetter = String.fromCharCode(65 + idx); // A, B, C, D
+              const optionLetter = isRTL ? ['أ', 'ب', 'ج', 'د'][idx] : String.fromCharCode(65 + idx);
+              const answerText = isRTL
+                ? stripOptionPrefix(getAnswerText(answer))
+                : getAnswerText(answer);
 
               return (
                 <button
                   key={answer.id}
                   onClick={() => handleAnswerSelect(answer.id)}
                   className={cn(
-                    'w-full p-4 rounded-lg border-2 transition-all text-left group',
+                    'w-full p-4 rounded-lg border-2 transition-all group',
                     isRTL ? 'text-right' : 'text-left',
                     isSelected
                       ? 'border-blue-500 bg-blue-50 shadow-sm'
                       : 'border-gray-200 bg-white hover:border-blue-200 hover:bg-gray-50'
                   )}
                 >
-                  <div className={cn('flex items-start gap-3', isRTL && 'flex-row-reverse')}>
+                  <div className="flex items-start gap-3">
                     {/* Option letter circle */}
                     <div
                       className={cn(
@@ -457,7 +465,7 @@ export default function TakeExam() {
                         isSelected && 'text-gray-900 font-medium'
                       )}
                     >
-                      {getAnswerText(answer)}
+                      {answerText}
                     </span>
                   </div>
                 </button>
