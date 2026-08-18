@@ -46,6 +46,7 @@ import PDCValidation from "./pages/admin/PDCValidation";
 // Dashboard for testing
 import IndividualDashboard from "./pages/individual/Dashboard";
 import HelpCenter from "./pages/individual/HelpCenter";
+import HelpCategoryPage from "./pages/individual/HelpCategoryPage";
 import Resources from "./pages/individual/Resources";
 import PDCs from "./pages/individual/PDCs";
 import MyBooks from "./pages/individual/MyBooks";
@@ -513,6 +514,7 @@ const App = () => (
                   <Route path="/resources" element={<Resources />} />
                   <Route path="/verify-certification" element={<VerifyCertification />} />
                   <Route path="/help-center" element={<HelpCenter />} />
+                  <Route path="/help-center/category/:slug" element={<HelpCategoryPage />} />
 
                   {/* Certification Exam routes */}
                   <Route path="/certification-exams" element={<TakeCertificationExam />} />
