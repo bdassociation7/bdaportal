@@ -17,7 +17,6 @@ import { useAttemptResults } from '@/entities/mock-exam';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/utils/cn';
 import { formatDistanceToNow } from 'date-fns';
-import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * ExamResults Page
@@ -97,7 +96,6 @@ export default function ExamResults() {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { language } = useLanguage();
   const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
 
   // Determine base path for navigation (ECP vs non-ECP routes)
@@ -105,7 +103,8 @@ export default function ExamResults() {
 
   const { data: results, isLoading, error } = useAttemptResults(attemptId || '');
   const isArabicExam = results?.exam?.language === 'ar';
-  const texts = translations[isArabicExam ? 'ar' : language];
+  // Portal chrome remains English. Only the question content uses the exam language.
+  const texts = translations.en;
 
   // Get localized text based on exam language
   const getQuestionText = (question: { question_text: string; question_text_ar?: string | null }) => {
@@ -189,12 +188,7 @@ export default function ExamResults() {
   const answeredQuestionCount = results.questions_with_answers.filter((item) => item.was_answered).length;
 
   return (
-    <div
-      className="notranslate min-h-screen bg-gray-50 py-8"
-      dir={isArabicExam ? 'rtl' : 'ltr'}
-      lang={isArabicExam ? 'ar' : 'en'}
-      translate="no"
-    >
+    <div className="notranslate min-h-screen bg-gray-50 py-8" lang="en" translate="no">
       <div className="max-w-4xl mx-auto px-4">
         {/* Header - Pass/Fail Banner */}
         <div
@@ -353,7 +347,11 @@ export default function ExamResults() {
                           {texts.question} {index + 1}
                           {isUnanswered && <span className="ms-2 text-sm font-normal text-gray-500">— {texts.unanswered}</span>}
                         </p>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p
+                          className={cn('text-sm text-gray-600 mt-1', isArabicExam && 'text-right')}
+                          dir={isArabicExam ? 'rtl' : 'ltr'}
+                          lang={isArabicExam ? 'ar' : 'en'}
+                        >
                           {getQuestionText(item.question)}
                         </p>
                       </div>
@@ -416,7 +414,11 @@ export default function ExamResults() {
                             <div className="flex items-start gap-2">
                               {answerStyle.icon}
                               <div className="flex-1">
-                                <p className={cn("font-medium", answerStyle.textColor)}>
+                                <p
+                                  className={cn('font-medium', answerStyle.textColor, isArabicExam && 'text-right')}
+                                  dir={isArabicExam ? 'rtl' : 'ltr'}
+                                  lang={isArabicExam ? 'ar' : 'en'}
+                                >
                                   {getAnswerText(answer)}
                                 </p>
                                 {answerStyle.label}
@@ -432,7 +434,11 @@ export default function ExamResults() {
                           <p className="text-sm font-semibold text-blue-900 mb-1">
                             {texts.explanation}
                           </p>
-                          <p className="text-sm text-blue-800">
+                          <p
+                            className={cn('text-sm text-blue-800', isArabicExam && 'text-right')}
+                            dir={isArabicExam ? 'rtl' : 'ltr'}
+                            lang={isArabicExam ? 'ar' : 'en'}
+                          >
                             {getExplanationText(item.question)}
                           </p>
                         </div>
