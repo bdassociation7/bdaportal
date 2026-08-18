@@ -46,6 +46,48 @@ const AUTO_SAVE_INTERVAL = 30000;
 // Storage key prefix for local backup
 const STORAGE_KEY_PREFIX = 'exam_attempt_';
 
+const examTexts = {
+  en: {
+    certificationExam: 'Certification Exam',
+    saved: 'Saved',
+    saving: 'Saving...',
+    question: 'Question',
+    submitExam: 'Submit Exam',
+    submitting: 'Submitting...',
+    singleChoice: 'Single Choice',
+    multipleChoice: 'Select All That Apply',
+    points: 'points',
+    multipleChoiceHint: 'This question has multiple correct answers. Select all that apply.',
+    previous: 'Previous',
+    next: 'Next',
+    answered: 'Answered',
+    notAnswered: 'Not answered',
+    save: 'Save',
+    questionNavigator: 'Question Navigator',
+  },
+  ar: {
+    certificationExam: 'الاختبار الرسمي للشهادة',
+    saved: 'تم الحفظ',
+    saving: 'جارٍ الحفظ...',
+    question: 'السؤال',
+    submitExam: 'تقديم الاختبار',
+    submitting: 'جارٍ التقديم...',
+    singleChoice: 'إجابة واحدة',
+    multipleChoice: 'اختر جميع الإجابات الصحيحة',
+    points: 'نقطة',
+    multipleChoiceHint: 'يحتوي هذا السؤال على أكثر من إجابة صحيحة. اختر جميع الإجابات الصحيحة.',
+    previous: 'السابق',
+    next: 'التالي',
+    answered: 'تمت الإجابة',
+    notAnswered: 'غير مجاب',
+    save: 'حفظ',
+    questionNavigator: 'مستعرض الأسئلة',
+  },
+};
+
+const stripOptionPrefix = (text: string) =>
+  text.replace(/^\s*(?:\(\s*)?(?:[A-Da-d]|[أبجد])\s*[)\].:،-]\s*/, '');
+
 interface AttemptState {
   answers: Record<string, string[]>;
   currentQuestionIndex: number;
@@ -101,6 +143,8 @@ export default function TakeCertificationExamAttempt() {
     },
     enabled: !!examId,
   });
+  const isArabicExam = exam?.exam_language === 'ar';
+  const texts = examTexts[isArabicExam ? 'ar' : 'en'];
 
   // Fetch attempt data to check status and get start time
   const { data: attempt, isLoading: attemptLoading } = useQuery({
@@ -335,7 +379,7 @@ export default function TakeCertificationExamAttempt() {
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
-  const isRTL = exam?.exam_language === 'ar';
+  const isRTL = isArabicExam;
 
   // Determine if question allows multiple answers
   const isMultiSelect = (questionType: string | undefined) => {
@@ -658,7 +702,12 @@ export default function TakeCertificationExamAttempt() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div
+      className="notranslate min-h-screen bg-gray-50"
+      dir={isRTL ? 'rtl' : 'ltr'}
+      lang={isRTL ? 'ar' : 'en'}
+      translate="no"
+    >
       {/* Top Bar - Sticky */}
       <div
         className={`sticky top-0 z-50 shadow-md ${
@@ -672,9 +721,11 @@ export default function TakeCertificationExamAttempt() {
             <div className="flex items-center gap-4">
               <FileCheck className="h-6 w-6" />
               <div>
-                <h1 className="text-lg font-bold">{exam.title}</h1>
+                <h1 className="text-lg font-bold">
+                  {isRTL && exam.title_ar ? exam.title_ar : exam.title}
+                </h1>
                 <Badge variant="outline" className="border-white/30 text-white bg-white/10 mt-1">
-                  BDA-{exam.certification_type} Certification Exam
+                  BDA-{exam.certification_type} {texts.certificationExam}
                 </Badge>
               </div>
             </div>
@@ -684,12 +735,12 @@ export default function TakeCertificationExamAttempt() {
                 {isSaving ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>Saving...</span>
+                    <span>{texts.saving}</span>
                   </>
                 ) : lastSaved ? (
                   <>
                     <Save className="h-4 w-4" />
-                    <span className="hidden sm:inline">Saved</span>
+                    <span className="hidden sm:inline">{texts.saved}</span>
                   </>
                 ) : null}
               </div>
@@ -709,7 +760,7 @@ export default function TakeCertificationExamAttempt() {
 
               {/* Question counter */}
               <div className="text-sm">
-                Question {currentQuestionIndex + 1} / {questions.length}
+                {texts.question} {currentQuestionIndex + 1} / {questions.length}
               </div>
 
               {/* Submit Button - Always visible in header */}
@@ -721,12 +772,12 @@ export default function TakeCertificationExamAttempt() {
                 {isSubmitting ? (
                   <>
                     <div className="h-4 w-4 mr-2 border-2 border-green-700 border-t-transparent rounded-full animate-spin" />
-                    Submitting...
+                    {texts.submitting}
                   </>
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Submit Exam
+                    {texts.submitExam}
                   </>
                 )}
               </Button>
@@ -795,14 +846,14 @@ export default function TakeCertificationExamAttempt() {
                       variant={isMultiSelect(currentQuestion?.question_type) ? 'secondary' : 'default'}
                     >
                       {isMultiSelect(currentQuestion?.question_type)
-                        ? 'Select All That Apply'
-                        : 'Single Choice'}
+                        ? texts.multipleChoice
+                        : texts.singleChoice}
                     </Badge>
-                    <Badge variant="outline">{currentQuestion?.points || 1} points</Badge>
+                    <Badge variant="outline">{currentQuestion?.points || 1} {texts.points}</Badge>
                   </div>
                   {isMultiSelect(currentQuestion?.question_type) && (
                     <p className="text-sm text-amber-600 mt-2">
-                      ⚠️ This question has multiple correct answers. Select all that apply.
+                      ⚠️ {texts.multipleChoiceHint}
                     </p>
                   )}
                   <h2 className={cn(
@@ -821,7 +872,10 @@ export default function TakeCertificationExamAttempt() {
             <div className="space-y-3 mb-8">
               {(currentQuestion?.answers || []).map((answer: any, index: number) => {
                 const isSelected = (answers[currentQuestion.id] || []).includes(answer.id);
-                const letter = String.fromCharCode(65 + index); // A, B, C, D...
+                const letter = isRTL ? ['أ', 'ب', 'ج', 'د'][index] : String.fromCharCode(65 + index);
+                const answerText = isRTL && answer.answer_text_ar
+                  ? stripOptionPrefix(answer.answer_text_ar)
+                  : answer.answer_text;
                 const isMulti = isMultiSelect(currentQuestion?.question_type);
 
                 return (
@@ -836,14 +890,8 @@ export default function TakeCertificationExamAttempt() {
                         : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'
                     )}
                   >
-                    <div className={cn(
-                      "flex items-start gap-3",
-                      isRTL && "flex-row-reverse"
-                    )}>
-                      <div className={cn(
-                        "flex items-center gap-3",
-                        isRTL && "flex-row-reverse"
-                      )}>
+                    <div className="flex items-start gap-3">
+                      <div className="flex items-center gap-3">
                         <span
                           className={cn(
                             'flex-shrink-0 w-8 h-8 flex items-center justify-center font-bold text-sm',
@@ -868,9 +916,7 @@ export default function TakeCertificationExamAttempt() {
                       </div>
                       <div className="flex-1">
                         <p className="text-gray-900">
-                          {isRTL && answer.answer_text_ar
-                            ? answer.answer_text_ar
-                            : answer.answer_text}
+                          {answerText}
                         </p>
                       </div>
                     </div>
@@ -886,7 +932,7 @@ export default function TakeCertificationExamAttempt() {
                 onClick={handlePrevious}
                 disabled={currentQuestionIndex === 0}
               >
-                Previous
+                {texts.previous}
               </Button>
 
               <div className="flex items-center gap-4">
@@ -894,21 +940,21 @@ export default function TakeCertificationExamAttempt() {
                   {answers[currentQuestion?.id]?.length > 0 ? (
                     <span className="text-green-600 font-medium flex items-center gap-2">
                       <CheckCircle className="h-4 w-4" />
-                      Answered
+                      {texts.answered}
                     </span>
                   ) : (
-                    <span className="text-gray-500">Not answered</span>
+                      <span className="text-gray-500">{texts.notAnswered}</span>
                   )}
                 </div>
 
                 <Button variant="outline" size="sm" onClick={handleManualSave} disabled={isSaving}>
                   <Save className="h-4 w-4 mr-1" />
-                  Save
+                  {texts.save}
                 </Button>
               </div>
 
               {!isLastQuestion ? (
-                <Button onClick={handleNext}>Next</Button>
+                <Button onClick={handleNext}>{texts.next}</Button>
               ) : (
                 <Button
                   onClick={() => handleSubmitExam(false)}
@@ -918,12 +964,12 @@ export default function TakeCertificationExamAttempt() {
                   {isSubmitting ? (
                     <>
                       <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Submitting...
+                      {texts.submitting}
                     </>
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      Submit Exam
+                      {texts.submitExam}
                     </>
                   )}
                 </Button>
@@ -936,9 +982,9 @@ export default function TakeCertificationExamAttempt() {
         <Card className="mt-4">
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-sm font-medium text-gray-700">Question Navigator</h3>
+              <h3 className="text-sm font-medium text-gray-700">{texts.questionNavigator}</h3>
               <span className="text-xs text-gray-500">
-                {Object.keys(answers).length} / {questions.length} answered
+                {Object.keys(answers).length} / {questions.length} {texts.answered}
               </span>
             </div>
             <div className="grid grid-cols-10 gap-2">
@@ -977,12 +1023,12 @@ export default function TakeCertificationExamAttempt() {
             {isSubmitting ? (
               <>
                 <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Submitting...
+                {texts.submitting}
               </>
             ) : (
               <>
                 <Send className="h-4 w-4 mr-2" />
-                Submit Exam
+                {texts.submitExam}
               </>
             )}
           </Button>

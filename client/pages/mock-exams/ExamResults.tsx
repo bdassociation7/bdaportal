@@ -4,6 +4,7 @@ import {
   XCircle,
   CheckCircle2,
   Clock,
+  Circle,
   Target,
   TrendingUp,
   Home,
@@ -38,6 +39,9 @@ const translations = {
     examSummary: 'Exam Summary',
     yourScore: 'Your Score',
     correct: 'Correct',
+    answered: 'Answered',
+    unanswered: 'Unanswered',
+    unansweredDescription: 'This question was not answered. No answer or explanation is shown.',
     points: 'Points',
     minutes: 'Minutes',
     passingScoreRequired: 'Passing Score Required:',
@@ -68,6 +72,9 @@ const translations = {
     examSummary: 'ملخص الامتحان',
     yourScore: 'درجتك',
     correct: 'صحيح',
+    answered: 'تمت الإجابة',
+    unanswered: 'غير مجاب',
+    unansweredDescription: 'لم تتم الإجابة عن هذا السؤال، لذلك لا تظهر الإجابة الصحيحة أو التوضيح.',
     points: 'النقاط',
     minutes: 'الدقائق',
     passingScoreRequired: 'درجة النجاح المطلوبة:',
@@ -91,13 +98,14 @@ export default function ExamResults() {
   const navigate = useNavigate();
   const location = useLocation();
   const { language } = useLanguage();
-  const texts = translations[language];
   const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
 
   // Determine base path for navigation (ECP vs non-ECP routes)
   const basePath = location.pathname.startsWith('/ecp/') ? '/ecp/mock-exams' : location.pathname.startsWith('/instructor/') ? '/instructor/mock-exams' : '/mock-exams';
 
   const { data: results, isLoading, error } = useAttemptResults(attemptId || '');
+  const isArabicExam = results?.exam?.language === 'ar';
+  const texts = translations[isArabicExam ? 'ar' : language];
 
   // Get localized text based on exam language
   const getQuestionText = (question: { question_text: string; question_text_ar?: string | null }) => {
@@ -118,10 +126,14 @@ export default function ExamResults() {
 
   const getExplanationText = (question: { explanation?: string | null; explanation_ar?: string | null }) => {
     const examLanguage = results?.exam?.language || 'en';
-    if (examLanguage === 'ar' && question.explanation_ar) {
-      return question.explanation_ar;
-    }
-    return question.explanation;
+    const explanation = examLanguage === 'ar' && question.explanation_ar
+      ? question.explanation_ar
+      : question.explanation;
+
+    if (examLanguage !== 'ar' || !explanation) return explanation;
+
+    const arabicLetters: Record<string, string> = { A: 'أ', B: 'ب', C: 'ج', D: 'د' };
+    return explanation.replace(/\b([ABCD])\b/g, (_, letter: string) => arabicLetters[letter]);
   };
 
   const toggleQuestion = (index: number) => {
@@ -174,8 +186,15 @@ export default function ExamResults() {
     );
   }
 
+  const answeredQuestionCount = results.questions_with_answers.filter((item) => item.was_answered).length;
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div
+      className="notranslate min-h-screen bg-gray-50 py-8"
+      dir={isArabicExam ? 'rtl' : 'ltr'}
+      lang={isArabicExam ? 'ar' : 'en'}
+      translate="no"
+    >
       <div className="max-w-4xl mx-auto px-4">
         {/* Header - Pass/Fail Banner */}
         <div
@@ -210,7 +229,7 @@ export default function ExamResults() {
         {/* Score Overview */}
         <div className="rounded-lg border bg-white p-6 shadow-sm mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">{texts.examSummary}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="text-center p-4 rounded-lg bg-gray-50">
               <Target className="h-6 w-6 text-gray-600 mx-auto mb-2" />
               <p className="text-2xl font-bold text-gray-900">
@@ -225,6 +244,14 @@ export default function ExamResults() {
                 {results.correct_answers}/{results.total_questions}
               </p>
               <p className="text-sm text-gray-600">{texts.correct}</p>
+            </div>
+
+            <div className="text-center p-4 rounded-lg bg-gray-50">
+              <Circle className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-gray-900">
+                {answeredQuestionCount}/{results.total_questions}
+              </p>
+              <p className="text-sm text-gray-600">{texts.answered}</p>
             </div>
 
             <div className="text-center p-4 rounded-lg bg-gray-50">
@@ -283,6 +310,7 @@ export default function ExamResults() {
             {results.questions_with_answers.map((item, index) => {
               const isExpanded = expandedQuestions.has(index);
               const isCorrect = item.is_correct;
+              const isUnanswered = !item.was_answered;
               const correctAnswerIds = item.question.answers
                 .filter((a) => a.is_correct)
                 .map((a) => a.id);
@@ -292,21 +320,30 @@ export default function ExamResults() {
                   key={item.question.id}
                   className={cn(
                     'rounded-lg border-2 overflow-hidden transition-all',
-                    isCorrect ? 'border-green-200' : 'border-red-200'
+                    isUnanswered
+                      ? 'border-gray-200'
+                      : isCorrect
+                        ? 'border-green-200'
+                        : 'border-red-200'
                   )}
                 >
                   {/* Question Header */}
                   <button
                     onClick={() => toggleQuestion(index)}
                     className={cn(
-                      'w-full p-4 flex items-center justify-between text-left transition-colors',
-                      isCorrect
-                        ? 'bg-green-50 hover:bg-green-100'
-                        : 'bg-red-50 hover:bg-red-100'
+                      'w-full p-4 flex items-center justify-between transition-colors',
+                      isArabicExam ? 'text-right' : 'text-left',
+                      isUnanswered
+                        ? 'bg-gray-50 hover:bg-gray-100'
+                        : isCorrect
+                          ? 'bg-green-50 hover:bg-green-100'
+                          : 'bg-red-50 hover:bg-red-100'
                     )}
                   >
                     <div className="flex items-start gap-3 flex-1">
-                      {isCorrect ? (
+                      {isUnanswered ? (
+                        <Circle className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                      ) : isCorrect ? (
                         <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                       ) : (
                         <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -314,6 +351,7 @@ export default function ExamResults() {
                       <div className="flex-1">
                         <p className="font-medium text-gray-900">
                           {texts.question} {index + 1}
+                          {isUnanswered && <span className="ms-2 text-sm font-normal text-gray-500">— {texts.unanswered}</span>}
                         </p>
                         <p className="text-sm text-gray-600 mt-1">
                           {getQuestionText(item.question)}
@@ -330,6 +368,13 @@ export default function ExamResults() {
                   {/* Question Details */}
                   {isExpanded && (
                     <div className="p-4 bg-white border-t space-y-3">
+                      {isUnanswered ? (
+                        <div className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+                          <Circle className="h-5 w-5 flex-shrink-0 text-gray-400" />
+                          <p>{texts.unansweredDescription}</p>
+                        </div>
+                      ) : (
+                        <>
                       {item.question.answers.map((answer) => {
                         const wasSelected = item.user_answer_ids.includes(answer.id);
                         const isCorrectAnswer = correctAnswerIds.includes(answer.id);
@@ -407,6 +452,8 @@ export default function ExamResults() {
                           {item.points_earned} / {item.question.points}
                         </span>
                       </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

@@ -353,6 +353,7 @@ export interface ExamResults {
   questions_with_answers: {
     question: QuestionWithAnswers;
     user_answer_ids: string[];
+    was_answered: boolean;
     is_correct: boolean;
     points_earned: number;
   }[];

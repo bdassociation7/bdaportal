@@ -818,6 +818,7 @@ export class MockExamService {
               ),
             },
             user_answer_ids: userAnswer?.selected_answer_ids || [],
+            was_answered: Boolean(userAnswer && (userAnswer.selected_answer_ids || []).length > 0),
             is_correct: isCorrect,
             points_earned: pointsEarned,
           };
@@ -988,6 +989,7 @@ export class MockExamService {
             ),
           },
           user_answer_ids: userAnswer?.selected_answer_ids || [],
+          was_answered: Boolean(userAnswer && (userAnswer.selected_answer_ids || []).length > 0),
           is_correct: userAnswer?.is_correct || false,
           points_earned: userAnswer?.points_earned || 0,
         };
