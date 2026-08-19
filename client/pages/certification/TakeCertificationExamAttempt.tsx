@@ -26,6 +26,8 @@ import {
   Save,
   RefreshCw,
   ShieldAlert,
+  ShieldCheck,
+  Maximize2,
   Square,
   CheckSquare,
   Send,
@@ -38,6 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/shared/utils/cn';
 import { useCommonConfirms } from '@/hooks/use-confirm';
+import { useSecureCertificationExamSession } from '@/hooks/useSecureCertificationExamSession';
 
 // Auto-save interval in milliseconds (every 30 seconds)
 const AUTO_SAVE_INTERVAL = 30000;
@@ -162,16 +165,26 @@ export default function TakeCertificationExamAttempt() {
     enabled: !!attemptId,
   });
 
+  const secureExam = useSecureCertificationExamSession(
+    attemptId,
+    attempt?.status === 'in_progress',
+    attemptCompleted,
+  );
+
   // Fetch the candidate-safe, attempt-specific question set. Correct answers never leave the server.
   const { data: attemptQuestionSet, isLoading: questionSetLoading } = useQuery({
     queryKey: ['secure-exam-attempt-question-set', attemptId],
     queryFn: async () => {
       if (!attemptId) return [];
-      const { data, error } = await supabase.rpc('get_certification_attempt_questions', { p_attempt_id: attemptId });
+      if (!secureExam.sessionToken) throw new Error('Secure exam session is not ready');
+      const { data, error } = await supabase.rpc('get_certification_attempt_questions', {
+        p_attempt_id: attemptId,
+        p_session_token: secureExam.sessionToken,
+      });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!attemptId,
+    enabled: !!attemptId && secureExam.ready && !!secureExam.sessionToken,
   });
 
   // Load saved answers from database
@@ -180,7 +193,11 @@ export default function TakeCertificationExamAttempt() {
 
     try {
       // Read only the candidate's own selections through the secure RPC.
-      const { data: savedAnswers, error } = await supabase.rpc('get_certification_attempt_answers', { p_attempt_id: attemptId });
+      if (!secureExam.sessionToken) return;
+      const { data: savedAnswers, error } = await supabase.rpc('get_certification_attempt_answers', {
+        p_attempt_id: attemptId,
+        p_session_token: secureExam.sessionToken,
+      });
 
       if (!error && savedAnswers && savedAnswers.length > 0) {
         const answersMap: Record<string, string[]> = {};
@@ -205,12 +222,12 @@ export default function TakeCertificationExamAttempt() {
     } catch (err) {
       console.error('Error loading saved answers:', err);
     }
-  }, [attemptId, storageKey]);
+  }, [attemptId, storageKey, secureExam.sessionToken]);
 
   // Save answers to database
   const saveAnswers = useCallback(
     async (currentAnswers: Record<string, string[]>, showToast = false) => {
-      if (!attemptId || Object.keys(currentAnswers).length === 0) return;
+      if (!attemptId || !secureExam.sessionToken || Object.keys(currentAnswers).length === 0) return;
 
       setIsSaving(true);
       try {
@@ -220,6 +237,7 @@ export default function TakeCertificationExamAttempt() {
               attempt_id: attemptId,
               question_id: questionId,
               selected_answer_ids: selectedIds,
+              session_token: secureExam.sessionToken,
             })
           )
         );
@@ -256,12 +274,12 @@ export default function TakeCertificationExamAttempt() {
         setIsSaving(false);
       }
     },
-    [attemptId, currentQuestionIndex, storageKey, toast]
+    [attemptId, currentQuestionIndex, storageKey, toast, secureExam.sessionToken]
   );
 
   // Initialize attempt state
   useEffect(() => {
-    if (attempt && !attemptLoaded) {
+    if (attempt && secureExam.ready && !attemptLoaded) {
       // Check if attempt is already completed
       if (attempt.completed_at) {
         setAttemptCompleted(true);
@@ -273,7 +291,7 @@ export default function TakeCertificationExamAttempt() {
       loadSavedAnswers();
       setAttemptLoaded(true);
     }
-  }, [attempt, attemptLoaded, loadSavedAnswers]);
+  }, [attempt, secureExam.ready, attemptLoaded, loadSavedAnswers]);
 
   // Calculate remaining time based on server start time
   useEffect(() => {
@@ -315,7 +333,7 @@ export default function TakeCertificationExamAttempt() {
 
   // Auto-save at intervals
   useEffect(() => {
-    if (attemptCompleted || !attemptLoaded) return;
+    if (attemptCompleted || !attemptLoaded || !secureExam.ready) return;
 
     const autoSave = setInterval(() => {
       if (Object.keys(answers).length > 0) {
@@ -324,11 +342,11 @@ export default function TakeCertificationExamAttempt() {
     }, AUTO_SAVE_INTERVAL);
 
     return () => clearInterval(autoSave);
-  }, [answers, attemptCompleted, attemptLoaded, saveAnswers]);
+  }, [answers, attemptCompleted, attemptLoaded, saveAnswers, secureExam.ready]);
 
   // Save on answer change (debounced)
   useEffect(() => {
-    if (!attemptLoaded || attemptCompleted) return;
+    if (!attemptLoaded || attemptCompleted || !secureExam.ready) return;
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -343,7 +361,7 @@ export default function TakeCertificationExamAttempt() {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [answers, attemptLoaded, attemptCompleted, saveAnswers]);
+  }, [answers, attemptLoaded, attemptCompleted, saveAnswers, secureExam.ready]);
 
   // Warn before leaving page
   useEffect(() => {
@@ -438,8 +456,10 @@ export default function TakeCertificationExamAttempt() {
       // Save the latest selections through the server, then let the server finalise,
       // score, and issue any eligible certification atomically.
       await saveAnswers(answers);
+      if (!secureExam.sessionToken) throw new Error('Secure exam session is not ready');
       const { data: result, error: finaliseError } = await supabase.rpc('finalize_certification_exam_attempt', {
         p_attempt_id: attemptId,
+        p_session_token: secureExam.sessionToken,
         p_auto_submit: autoSubmit,
       });
       if (finaliseError) throw finaliseError;
@@ -499,7 +519,20 @@ export default function TakeCertificationExamAttempt() {
   };
 
   // Loading state
-  if (examLoading || attemptLoading || questionSetLoading) {
+  if (secureExam.error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="max-w-lg rounded-xl border border-red-200 bg-white p-8 text-center shadow-sm">
+          <ShieldAlert className="mx-auto mb-4 h-14 w-14 text-red-600" />
+          <h2 className="text-2xl font-bold text-[#0d1f4e]">Secure Exam Mode Required</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">{secureExam.error}</p>
+          <Button className="mt-6" onClick={() => window.location.reload()}>Retry Secure Session</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (examLoading || attemptLoading || questionSetLoading || !secureExam.ready) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -654,6 +687,33 @@ export default function TakeCertificationExamAttempt() {
                 )}
               </Button>
             </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/20 bg-slate-950/20 px-3 py-2 text-xs text-white/90">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-300" />
+              <span>{isRTL ? 'وضع الاختبار الآمن نشط' : 'Secure Exam Mode active'}</span>
+              {secureExam.violations > 0 && (
+                <Badge className="border-amber-200/30 bg-amber-300/15 text-amber-100 hover:bg-amber-300/15">
+                  {isRTL ? `تنبيهات الجلسة: ${secureExam.violations}` : `Session alerts: ${secureExam.violations}`}
+                </Badge>
+              )}
+              {secureExam.flaggedForReview && (
+                <Badge className="border-red-200/30 bg-red-300/15 text-red-100 hover:bg-red-300/15">
+                  {isRTL ? 'تتطلب مراجعة' : 'Review required'}
+                </Badge>
+              )}
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => void secureExam.enterFullscreen()}
+              className="h-7 gap-1.5 text-white hover:bg-white/10 hover:text-white"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              {isRTL ? 'ملء الشاشة' : 'Full screen'}
+            </Button>
           </div>
 
           {/* Progress Bar */}

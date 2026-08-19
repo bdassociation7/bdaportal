@@ -211,12 +211,13 @@ export class CertificationExamService {
    * Save an answer during the exam
    * Uses server-side validation and scoring
    */
-  static async saveAnswer(params: SaveExamAnswerParams): Promise<QuizResult<QuizAttemptAnswer>> {
+  static async saveAnswer(params: SaveExamAnswerParams & { session_token: string }): Promise<QuizResult<QuizAttemptAnswer>> {
     try {
       const { data, error } = await supabase.rpc('save_exam_answer', {
         p_attempt_id: params.attempt_id,
         p_question_id: params.question_id,
         p_selected_answer_ids: params.selected_answer_ids,
+        p_session_token: params.session_token,
         p_time_spent_seconds: params.time_spent_seconds || null,
       });
 
@@ -580,6 +581,75 @@ export class CertificationExamService {
           details: err,
         },
       };
+    }
+  }
+
+  // ==========================================================================
+  // SECURE EXAM SESSION
+  // ==========================================================================
+
+  static async beginSecureSession(
+    attemptId: string,
+    deviceFingerprint: string,
+    clientMetadata: Record<string, unknown>
+  ): Promise<QuizResult<{ session_token: string; heartbeat_seconds: number; fullscreen_requested: boolean; resumed: boolean }>> {
+    try {
+      const { data, error } = await supabase.rpc('begin_secure_certification_session', {
+        p_attempt_id: attemptId,
+        p_device_fingerprint: deviceFingerprint,
+        p_client_metadata: clientMetadata,
+      });
+      if (error) return { data: null, error: { code: error.code, message: error.message, details: error } };
+      return { data: data as { session_token: string; heartbeat_seconds: number; fullscreen_requested: boolean; resumed: boolean }, error: null };
+    } catch (err) {
+      return { data: null, error: { code: 'UNKNOWN_ERROR', message: 'Unable to start the secure exam session', details: err } };
+    }
+  }
+
+  static async secureHeartbeat(attemptId: string, sessionToken: string): Promise<QuizResult<{ ok: boolean; flagged_for_review: boolean }>> {
+    try {
+      const { data, error } = await supabase.rpc('secure_certification_heartbeat', {
+        p_attempt_id: attemptId,
+        p_session_token: sessionToken,
+      });
+      if (error) return { data: null, error: { code: error.code, message: error.message, details: error } };
+      return { data: data as { ok: boolean; flagged_for_review: boolean }, error: null };
+    } catch (err) {
+      return { data: null, error: { code: 'UNKNOWN_ERROR', message: 'Unable to maintain the secure exam session', details: err } };
+    }
+  }
+
+  static async recordSecureEvent(
+    attemptId: string,
+    sessionToken: string,
+    eventType: string,
+    eventData: Record<string, unknown> = {}
+  ): Promise<QuizResult<{ ok: boolean; violation: boolean; suspicious_activity_count: number; flagged_for_review: boolean }>> {
+    try {
+      const { data, error } = await supabase.rpc('record_secure_certification_event', {
+        p_attempt_id: attemptId,
+        p_session_token: sessionToken,
+        p_event_type: eventType,
+        p_event_data: eventData,
+      });
+      if (error) return { data: null, error: { code: error.code, message: error.message, details: error } };
+      return { data: data as { ok: boolean; violation: boolean; suspicious_activity_count: number; flagged_for_review: boolean }, error: null };
+    } catch (err) {
+      return { data: null, error: { code: 'UNKNOWN_ERROR', message: 'Unable to record secure exam activity', details: err } };
+    }
+  }
+
+  static async endSecureSession(attemptId: string, sessionToken: string, reason = 'exam_completed'): Promise<QuizResult<void>> {
+    try {
+      const { error } = await supabase.rpc('end_secure_certification_session', {
+        p_attempt_id: attemptId,
+        p_session_token: sessionToken,
+        p_reason: reason,
+      });
+      if (error) return { data: null, error: { code: error.code, message: error.message, details: error } };
+      return { data: null, error: null };
+    } catch (err) {
+      return { data: null, error: { code: 'UNKNOWN_ERROR', message: 'Unable to close the secure exam session', details: err } };
     }
   }
 
