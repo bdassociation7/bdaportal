@@ -12,8 +12,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { QuizService } from '@/entities/quiz';
-import { CertificationService } from '@/entities/user-certifications';
+import { CertificationExamService, QuizService } from '@/entities/quiz';
 import { useAuthContext } from '@/app/providers/AuthProvider';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/shared/config/supabase.config';
@@ -163,18 +162,14 @@ export default function TakeCertificationExamAttempt() {
     enabled: !!attemptId,
   });
 
-  // Fetch attempt-specific question set (ECO weighted randomization)
+  // Fetch the candidate-safe, attempt-specific question set. Correct answers never leave the server.
   const { data: attemptQuestionSet, isLoading: questionSetLoading } = useQuery({
-    queryKey: ['exam-attempt-question-set', attemptId],
+    queryKey: ['secure-exam-attempt-question-set', attemptId],
     queryFn: async () => {
-      if (!attemptId) return null;
-      const { data, error } = await supabase
-        .from('exam_attempt_question_set')
-        .select('order_index, certification_question_bank(*, answers:certification_question_bank_answers(*))')
-        .eq('attempt_id', attemptId)
-        .order('order_index');
+      if (!attemptId) return [];
+      const { data, error } = await supabase.rpc('get_certification_attempt_questions', { p_attempt_id: attemptId });
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!attemptId,
   });
@@ -184,11 +179,8 @@ export default function TakeCertificationExamAttempt() {
     if (!attemptId) return;
 
     try {
-      // First, try to load from quiz_attempt_answers table
-      const { data: savedAnswers, error } = await supabase
-        .from('quiz_attempt_answers')
-        .select('question_id, selected_answer_ids')
-        .eq('attempt_id', attemptId);
+      // Read only the candidate's own selections through the secure RPC.
+      const { data: savedAnswers, error } = await supabase.rpc('get_certification_attempt_answers', { p_attempt_id: attemptId });
 
       if (!error && savedAnswers && savedAnswers.length > 0) {
         const answersMap: Record<string, string[]> = {};
@@ -222,21 +214,17 @@ export default function TakeCertificationExamAttempt() {
 
       setIsSaving(true);
       try {
-        // Prepare upsert data
-        const upsertData = Object.entries(currentAnswers).map(([questionId, selectedIds]) => ({
-          attempt_id: attemptId,
-          question_id: questionId,
-          selected_answer_ids: selectedIds,
-          is_correct: false, // Will be calculated on submission
-          points_earned: 0, // Will be calculated on submission
-        }));
-
-        // Upsert answers
-        const { error } = await supabase.from('quiz_attempt_answers').upsert(upsertData, {
-          onConflict: 'attempt_id,question_id',
-        });
-
-        if (error) throw error;
+        const saveResults = await Promise.all(
+          Object.entries(currentAnswers).map(([questionId, selectedIds]) =>
+            CertificationExamService.saveAnswer({
+              attempt_id: attemptId,
+              question_id: questionId,
+              selected_answer_ids: selectedIds,
+            })
+          )
+        );
+        const failedSave = saveResults.find((result) => result.error);
+        if (failedSave?.error) throw failedSave.error;
 
         // Also save to localStorage as backup
         const localState: AttemptState = {
@@ -370,12 +358,8 @@ export default function TakeCertificationExamAttempt() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [answers, attemptCompleted]);
 
-  // Use attempt-specific question set if available (ECO weighted), otherwise fall back to all quiz questions
-  const questions: any[] = (
-    attemptQuestionSet?.length
-      ? attemptQuestionSet.map((row: any) => row.certification_question_bank)
-      : exam?.questions
-  ) || [];
+  // Certification questions are delivered only through the candidate-safe RPC.
+  const questions: any[] = attemptQuestionSet || [];
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
@@ -451,135 +435,23 @@ export default function TakeCertificationExamAttempt() {
     setIsSubmitting(true);
 
     try {
-      // Calculate score
-      let correctAnswers = 0;
-      let totalPoints = 0;
-      let earnedPoints = 0;
-
-      // Update each answer with correctness
-      const answerUpdates: Array<{
-        attempt_id: string;
-        question_id: string;
-        selected_answer_ids: string[];
-        is_correct: boolean;
-        points_earned: number;
-      }> = [];
-
-      questions.forEach((question: any) => {
-        const questionPoints = question.points || 1;
-        totalPoints += questionPoints;
-
-        const userAnswers = answers[question.id] || [];
-        const correctAnswerIds = question.answers
-          .filter((a: any) => a.is_correct)
-          .map((a: any) => a.id);
-
-        // Check if answer is correct
-        const isCorrect =
-          userAnswers.length === correctAnswerIds.length &&
-          userAnswers.every((id: string) => correctAnswerIds.includes(id));
-
-        if (isCorrect) {
-          correctAnswers++;
-          earnedPoints += questionPoints;
-        }
-
-        answerUpdates.push({
-          attempt_id: attemptId!,
-          question_id: question.id,
-          selected_answer_ids: userAnswers,
-          is_correct: isCorrect,
-          points_earned: isCorrect ? questionPoints : 0,
-        });
+      // Save the latest selections through the server, then let the server finalise,
+      // score, and issue any eligible certification atomically.
+      await saveAnswers(answers);
+      const { data: result, error: finaliseError } = await supabase.rpc('finalize_certification_exam_attempt', {
+        p_attempt_id: attemptId,
+        p_auto_submit: autoSubmit,
       });
+      if (finaliseError) throw finaliseError;
 
-      // Save final answers with correctness
-      if (answerUpdates.length > 0) {
-        await supabase.from('quiz_attempt_answers').upsert(answerUpdates, {
-          onConflict: 'attempt_id,question_id',
-        });
-      }
-
-      const scorePercentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-      const passed = scorePercentage >= (exam?.passing_score_percentage || 70);
-
-      // Submit attempt
-      const result = await QuizService.submitQuizAttempt({
-        attempt_id: attemptId!,
-        answers,
-        score: scorePercentage,
-        passed,
-        total_points_earned: earnedPoints,
-        total_points_possible: totalPoints,
-      });
-
-      if (result.error) throw result.error;
-
-      // Clear local storage
       localStorage.removeItem(storageKey);
-
-      // Mark as completed to prevent further changes
       setAttemptCompleted(true);
 
-      // If passed, issue certification automatically
-      if (passed && user?.profile?.id && exam?.certification_type) {
-        try {
-          const certResult = await CertificationService.issueCertification({
-            user_id: user.profile.id,
-            certification_type: exam.certification_type as 'CP' | 'SCP',
-            quiz_attempt_id: attemptId!,
-            score: scorePercentage,
-          });
-
-          if (certResult.error) {
-            // Check if error is due to already having certification
-            const errorMessage = certResult.error.message || '';
-            if (errorMessage.includes('already has an active certification')) {
-              toast({
-                title: '🎉 Congratulations!',
-                description: `You passed with ${scorePercentage}%! You already have an active $BDA-{exam.certification_type} certification.`,
-                duration: 10000,
-              });
-            } else {
-              console.error('Error issuing certification:', certResult.error);
-              toast({
-                title: 'Congratulations!',
-                description: `You passed with ${scorePercentage}%! There was an issue issuing your certification. Please contact support.`,
-                variant: 'default',
-              });
-            }
-          } else {
-            toast({
-              title: '🎉 Congratulations!',
-              description: `You passed with ${scorePercentage}%! Your $BDA-{exam.certification_type} certification has been issued!`,
-              duration: 10000,
-            });
-          }
-        } catch (certError: any) {
-          // Also handle thrown errors (not just returned errors)
-          const errorMessage = certError?.message || '';
-          if (errorMessage.includes('already has an active certification')) {
-            toast({
-              title: '🎉 Congratulations!',
-              description: `You passed with ${scorePercentage}%! You already have an active $BDA-{exam.certification_type} certification.`,
-              duration: 10000,
-            });
-          } else {
-            console.error('Error in certification process:', certError);
-            toast({
-              title: 'Congratulations!',
-              description: `You passed with ${scorePercentage}%! There was an issue issuing your certification.`,
-              variant: 'default',
-            });
-          }
-        }
-      } else {
-        toast({
-          title: autoSubmit ? 'Time Expired' : 'Exam Completed',
-          description: `You scored ${scorePercentage}%. ${passed ? 'Congratulations!' : `You need ${exam?.passing_score_percentage}% to pass.`}`,
-          variant: passed ? 'default' : 'destructive',
-        });
-      }
+      toast({
+        title: autoSubmit ? 'Time Expired' : 'Exam Completed',
+        description: `You scored ${Math.round(Number(result?.score || 0))}%. ${result?.passed ? 'Congratulations!' : `You need ${exam?.passing_score_percentage}% to pass.`}`,
+        variant: result?.passed ? 'default' : 'destructive',
+      });
 
       queryClient.invalidateQueries({ queryKey: ['certification-attempt-history'] });
       queryClient.invalidateQueries({ queryKey: ['user-certifications'] });
