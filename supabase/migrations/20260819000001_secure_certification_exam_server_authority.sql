@@ -21,12 +21,12 @@ AS $$
 DECLARE
   v_attempt public.quiz_attempts;
 BEGIN
-  SELECT * INTO v_attempt
-  FROM public.quiz_attempts
-  WHERE id = p_attempt_id
-    AND user_id = auth.uid()
-    AND exam_type = 'certification'
-    AND status IN ('not_started', 'in_progress');
+  SELECT qa.* INTO v_attempt
+  FROM public.quiz_attempts qa
+  WHERE qa.id = p_attempt_id
+    AND qa.user_id = auth.uid()
+    AND qa.exam_type = 'certification'
+    AND qa.status IN ('not_started', 'in_progress');
 
   IF v_attempt IS NULL THEN
     RAISE EXCEPTION 'Certification attempt is not available';
@@ -39,7 +39,7 @@ BEGIN
     cqb.question_text,
     cqb.question_text_ar,
     cqb.question_type,
-    cqb.points,
+    cqb.points::NUMERIC,
     COALESCE(
       jsonb_agg(
         jsonb_build_object(
@@ -68,10 +68,10 @@ SET search_path = public
 AS $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM public.quiz_attempts
-    WHERE id = p_attempt_id
-      AND user_id = auth.uid()
-      AND exam_type = 'certification'
+    SELECT 1 FROM public.quiz_attempts qa
+    WHERE qa.id = p_attempt_id
+      AND qa.user_id = auth.uid()
+      AND qa.exam_type = 'certification'
   ) THEN
     RAISE EXCEPTION 'Certification attempt is not available';
   END IF;
@@ -141,11 +141,15 @@ BEGIN
     SELECT 1 FROM public.exam_vouchers
     WHERE id = p_voucher_id
       AND user_id = auth.uid()
-      AND status = 'active'
+      AND status IN ('available', 'assigned')
   ) AND NOT EXISTS (
-    SELECT 1 FROM public.ecp_vouchers
-    WHERE id = p_voucher_id
-      AND status = 'active'
+    SELECT 1
+    FROM public.ecp_vouchers ev
+    JOIN public.users candidate ON candidate.id = auth.uid()
+    WHERE ev.id = p_voucher_id
+      AND LOWER(ev.assigned_to_email) = LOWER(candidate.email)
+      AND ev.certification_type = v_quiz.certification_type
+      AND ev.status IN ('available', 'assigned')
   ) THEN
     RAISE EXCEPTION 'Voucher is not valid for this examination';
   END IF;
@@ -164,12 +168,16 @@ BEGIN
 
   UPDATE public.exam_vouchers
   SET status = 'used', used_at = NOW(), attempt_id = v_attempt.id
-  WHERE id = p_voucher_id AND user_id = auth.uid() AND status = 'active';
+    WHERE id = p_voucher_id AND user_id = auth.uid() AND status IN ('available', 'assigned');
 
   IF NOT FOUND THEN
-    UPDATE public.ecp_vouchers
+    UPDATE public.ecp_vouchers ev
     SET status = 'used', used_at = NOW(), exam_attempt_id = v_attempt.id
-    WHERE id = p_voucher_id AND status = 'active';
+    FROM public.users candidate
+    WHERE ev.id = p_voucher_id
+      AND candidate.id = auth.uid()
+      AND LOWER(ev.assigned_to_email) = LOWER(candidate.email)
+      AND ev.status IN ('available', 'assigned');
   END IF;
 
   IF p_booking_id IS NOT NULL THEN
@@ -201,8 +209,8 @@ BEGIN
       FOR v_question_id IN
         SELECT id
         FROM public.certification_question_bank
-        WHERE certification_type = v_quiz.certification_type
-          AND exam_language = v_quiz.exam_language
+        WHERE certification_type::TEXT = v_quiz.certification_type::TEXT
+          AND exam_language::TEXT = v_quiz.exam_language::TEXT
           AND competency_name = v_blueprint.competency_name
           AND is_active = TRUE
         ORDER BY RANDOM()
@@ -217,8 +225,8 @@ BEGIN
     INSERT INTO public.exam_attempt_question_set (attempt_id, question_id, order_index)
     SELECT v_attempt.id, id, ROW_NUMBER() OVER (ORDER BY created_at)
     FROM public.certification_question_bank
-    WHERE certification_type = v_quiz.certification_type
-      AND exam_language = v_quiz.exam_language
+    WHERE certification_type::TEXT = v_quiz.certification_type::TEXT
+      AND exam_language::TEXT = v_quiz.exam_language::TEXT
       AND is_active = TRUE;
   END IF;
 
@@ -237,11 +245,7 @@ CREATE FUNCTION public.save_exam_answer(
   p_question_id UUID,
   p_selected_answer_ids UUID[],
   p_time_spent_seconds INTEGER DEFAULT NULL
-) RETURNS TABLE (
-  question_id UUID,
-  selected_answer_ids UUID[],
-  answered_at TIMESTAMPTZ
-)
+) RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -274,8 +278,9 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1 FROM public.exam_attempt_question_set
-    WHERE attempt_id = p_attempt_id AND question_id = p_question_id
+    SELECT 1 FROM public.exam_attempt_question_set assigned_question
+    WHERE assigned_question.attempt_id = p_attempt_id
+      AND assigned_question.question_id = p_question_id
   ) THEN
     RAISE EXCEPTION 'Question is not assigned to this certification attempt';
   END IF;
@@ -330,7 +335,7 @@ BEGIN
   INSERT INTO public.exam_activity_log (attempt_id, event_type, event_data)
   VALUES (p_attempt_id, 'answer_saved', jsonb_build_object('question_id', p_question_id));
 
-  RETURN QUERY SELECT p_question_id, p_selected_answer_ids, NOW();
+  RETURN;
 END;
 $$;
 
