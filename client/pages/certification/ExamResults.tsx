@@ -43,6 +43,8 @@ interface AttemptWithQuiz {
   time_spent_minutes: number | null;
   started_at: string;
   completed_at: string | null;
+  integrity_risk_score: number | null;
+  integrity_review_status: 'not_required' | 'pending' | 'approved' | 'voided' | null;
   quiz: {
     id: string;
     title: string;
@@ -249,6 +251,7 @@ export default function ExamResults() {
   }
 
   const passed = attempt.passed ?? false;
+  const underIntegrityReview = attempt.integrity_review_status === 'pending';
   const score = attempt.score ?? 0;
   const totalPointsEarned = attempt.total_points_earned ?? 0;
   const totalPointsPossible = attempt.total_points_possible ?? 0;
@@ -283,31 +286,35 @@ export default function ExamResults() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-8 px-4">
       {/* Header */}
-      <div className={cn('rounded-lg p-6 text-white', passed ? 'bg-gradient-to-r from-green-600 to-green-700' : 'bg-gradient-to-r from-red-600 to-red-700')}>
+      <div className={cn('rounded-lg p-6 text-white', underIntegrityReview ? 'bg-gradient-to-r from-amber-600 to-amber-700' : passed ? 'bg-gradient-to-r from-green-600 to-green-700' : 'bg-gradient-to-r from-red-600 to-red-700')}>
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h1 className="text-3xl font-bold flex items-center gap-2 mb-3">
-              {passed ? <CheckCircle2 className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
-              {passed ? (isSCP ? 'Outstanding Achievement!' : 'Congratulations!') : (isSCP ? 'Thank you for completing the BDA-SCP Exam.' : 'Thank you for completing the BDA-CP Exam.')}
+              {underIntegrityReview ? <ShieldCheck className="h-8 w-8" /> : passed ? <CheckCircle2 className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
+              {underIntegrityReview ? 'Exam Integrity Review Required' : passed ? (isSCP ? 'Outstanding Achievement!' : 'Congratulations!') : (isSCP ? 'Thank you for completing the BDA-SCP Exam.' : 'Thank you for completing the BDA-CP Exam.')}
             </h1>
             <p className="text-xl font-semibold mb-2">
-              {passed
-                ? isSCP ? 'You have earned the BDA-SCP Senior Certified Professional Credential.' : 'You have successfully earned the BDA-CP Certification.'
-                : isSCP ? 'Unfortunately, the required passing score was not achieved.' : 'Unfortunately, you did not meet the passing score this time.'}
+              {underIntegrityReview
+                ? 'Your examination result has been recorded and is awaiting a routine integrity review before certification is released.'
+                : passed
+                  ? isSCP ? 'You have earned the BDA-SCP Senior Certified Professional Credential.' : 'You have successfully earned the BDA-CP Certification.'
+                  : isSCP ? 'Unfortunately, the required passing score was not achieved.' : 'Unfortunately, you did not meet the passing score this time.'}
             </p>
             <p className="text-base opacity-95">
-              {passed
-                ? isSCP
-                  ? 'This designation reflects your advanced expertise, strategic leadership ability, and mastery of the BDA BoCK® competencies at a senior professional level.'
-                  : 'You are now recognised as a BDA Certified Professional in Business Development.'
-                : isSCP
-                  ? 'The SCP credential represents advanced business development expertise. We encourage you to revisit the BDA Learning System modules and strengthen your strategic competency areas.'
-                  : 'We encourage you to continue developing your competencies. You may review your areas of improvement through the BDA Learning System and retake the exam when ready.'}
+              {underIntegrityReview
+                ? 'No action is required from you at this stage. BDA will notify you once the review has been completed.'
+                : passed
+                  ? isSCP
+                    ? 'This designation reflects your advanced expertise, strategic leadership ability, and mastery of the BDA BoCK® competencies at a senior professional level.'
+                    : 'You are now recognised as a BDA Certified Professional in Business Development.'
+                  : isSCP
+                    ? 'The SCP credential represents advanced business development expertise. We encourage you to revisit the BDA Learning System modules and strengthen your strategic competency areas.'
+                    : 'We encourage you to continue developing your competencies. You may review your areas of improvement through the BDA Learning System and retake the exam when ready.'}
             </p>
           </div>
           <div className="text-center ml-6">
             <div className="text-6xl font-bold">{score}%</div>
-            <div className="text-sm opacity-80 mt-1">{passed ? 'PASSED' : 'NOT PASSED'}</div>
+            <div className="text-sm opacity-80 mt-1">{underIntegrityReview ? 'REVIEW PENDING' : passed ? 'PASSED' : 'NOT PASSED'}</div>
           </div>
         </div>
       </div>
@@ -368,8 +375,8 @@ export default function ExamResults() {
           </div>
           <div>
             <div className="text-sm text-gray-600 mb-1">Status</div>
-            <Badge variant="outline" className={cn('border', passed ? 'text-green-700 bg-green-100 border-green-300' : 'text-red-700 bg-red-100 border-red-300')}>
-              {passed ? 'PASSED' : 'NOT PASSED'}
+              <Badge variant="outline" className={cn('border', underIntegrityReview ? 'text-amber-800 bg-amber-100 border-amber-300' : passed ? 'text-green-700 bg-green-100 border-green-300' : 'text-red-700 bg-red-100 border-red-300')}>
+                {underIntegrityReview ? 'REVIEW PENDING' : passed ? 'PASSED' : 'NOT PASSED'}
             </Badge>
           </div>
         </CardContent>
@@ -532,7 +539,19 @@ export default function ExamResults() {
       </Card>
 
       {/* Next Steps */}
-      {passed ? (
+      {underIntegrityReview ? (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-900 mb-1">Integrity Review in Progress</h3>
+                <p className="text-sm text-amber-800">Your score is recorded, but your certification has not been issued. BDA will complete the review and notify you of the final outcome.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : passed ? (
         <Card className="border-green-200 bg-green-50">
           <CardContent className="p-6">
             <div className="flex items-start gap-3">
@@ -569,9 +588,9 @@ export default function ExamResults() {
         <Button variant="outline" onClick={() => navigate('/individual/dashboard')} className="flex-1 min-w-[140px]">
           <Home className="h-4 w-4 mr-2" />Back to Dashboard
         </Button>
-        <Button variant="outline" onClick={handleSendResultsEmail} disabled={sendingEmail} className="flex-1 min-w-[140px]">
+        <Button variant="outline" onClick={handleSendResultsEmail} disabled={sendingEmail || underIntegrityReview} className="flex-1 min-w-[140px]" title={underIntegrityReview ? 'Results email is available after the integrity review.' : undefined}>
           {sendingEmail ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
-          {sendingEmail ? 'Sending...' : 'Email My Results'}
+          {underIntegrityReview ? 'Review Pending' : sendingEmail ? 'Sending...' : 'Email My Results'}
         </Button>
         <Button onClick={() => navigate('/certification-exams')} className="flex-1 min-w-[140px]">
           View Certification Exams

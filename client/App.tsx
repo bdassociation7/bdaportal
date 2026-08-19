@@ -113,6 +113,7 @@ import PartnershipProducts from "./pages/admin/PartnershipProducts";
 import MembershipProducts from "./pages/admin/MembershipProducts";
 import CertificationExamsAdmin from "./pages/admin/CertificationExams";
 import CertificationExamQuestionManager from "./pages/admin/CertificationExamQuestionManager";
+import CertificationIntegrityReviews from "./pages/admin/CertificationIntegrityReviews";
 import ExamQuestionBank from "./pages/admin/ExamQuestionBank";
 import Vouchers from "./pages/admin/Vouchers";
 import CustomersVouchers from "./pages/admin/CustomersVouchers";
@@ -631,6 +632,7 @@ const App = () => (
                   <Route path="/admin/exams/:examId/edit" element={<ExamForm />} />
                   <Route path="/admin/exams/:examId/questions" element={<ExamQuestionManager />} />
                   <Route path="/admin/certification-exams" element={<CertificationExamsAdmin />} />
+                  <Route path="/admin/certification-exams/integrity-reviews" element={<CertificationIntegrityReviews />} />
                   <Route path="/admin/certification-exams/:examId/questions" element={<CertificationExamQuestionManager />} />
                   <Route path="/admin/exam-question-bank" element={<ExamQuestionBank />} />
                   <Route path="/admin/certification-products" element={<CertificationProducts />} />

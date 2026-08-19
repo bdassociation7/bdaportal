@@ -156,6 +156,7 @@ export const navigationConfig: NavigationConfig = {
 
     // Exams Section
     { id: 'certification-exams', label: 'nav.admin.certificationExams', path: '/admin/certification-exams', icon: FileCheck, section: 'nav.admin.section.examinations' },
+    { id: 'certification-integrity-reviews', label: 'Integrity Reviews', path: '/admin/certification-exams/integrity-reviews', icon: Shield },
     { id: 'exam-scheduling', label: 'nav.admin.examScheduling', path: '/admin/exam-scheduling', icon: Calendar },
     { id: 'exam-bookings', label: 'nav.admin.examBookings', path: '/admin/exam-bookings', icon: CalendarCheck },
     { id: 'exam-windows', label: 'nav.admin.examWindows', path: '/admin/exam-windows', icon: CalendarClock },
@@ -226,6 +227,7 @@ export const navigationConfig: NavigationConfig = {
 
     // Exams Section
     { id: 'certification-exams', label: 'nav.admin.certificationExams', path: '/admin/certification-exams', icon: FileCheck, section: 'nav.admin.section.examinations' },
+    { id: 'certification-integrity-reviews', label: 'Integrity Reviews', path: '/admin/certification-exams/integrity-reviews', icon: Shield },
     { id: 'exam-scheduling', label: 'nav.admin.examScheduling', path: '/admin/exam-scheduling', icon: Calendar },
     { id: 'exam-bookings', label: 'nav.admin.examBookings', path: '/admin/exam-bookings', icon: CalendarCheck },
     { id: 'exam-windows', label: 'nav.admin.examWindows', path: '/admin/exam-windows', icon: CalendarClock },
