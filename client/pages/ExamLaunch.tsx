@@ -23,6 +23,7 @@ import {
   ChevronUp,
   RotateCcw,
   Clock,
+  ShieldCheck,
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
 import TechCheckWidget, { TechCheckResult } from '@/components/TechCheckWidget';
@@ -82,6 +83,7 @@ export default function ExamLaunch() {
   const [techCheckExpanded, setTechCheckExpanded] = useState(!DEV_MODE_SKIP_ALL_CHECKS);
   const [techCheckResults, setTechCheckResults] = useState<TechCheckResult[]>([]);
   const [schedulingStatus, setSchedulingStatus] = useState<SchedulingStatus | null>(null);
+  const [integrityAccepted, setIntegrityAccepted] = useState(false);
 
   // Check if current time is within the allowed scheduling window
   const checkSchedulingWindow = (bookingData: any): SchedulingStatus => {
@@ -305,6 +307,15 @@ export default function ExamLaunch() {
       return;
     }
 
+    if (!eligibility?.has_existing_attempt && !integrityAccepted) {
+      toast({
+        title: 'Integrity acknowledgement required',
+        description: 'Please confirm the BDA Secure Exam requirements before starting your attempt.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Check scheduling window before allowing launch
     if (booking && schedulingStatus && !schedulingStatus.canLaunch) {
       toast({
@@ -375,6 +386,8 @@ export default function ExamLaunch() {
           platform: navigator.platform,
           language: navigator.language,
           screen: { width: screen.width, height: screen.height },
+          integrity_policy_version: '2026-08-19',
+          integrity_acknowledged_at: new Date().toISOString(),
         },
       });
 
@@ -687,6 +700,29 @@ export default function ExamLaunch() {
           </Alert>
         )}
 
+        {!eligibility?.has_existing_attempt && eligibility?.eligible && (!schedulingStatus || schedulingStatus.canLaunch) && (
+          <Card className="mb-6 border-[#bfdbfe] bg-[#f0f6ff]">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#0d1f4e]" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-[#0d1f4e]">BDA Secure Exam Requirements</h3>
+                  <p className="mt-1 text-sm text-slate-700">This official examination runs in a monitored secure session. Leaving the examination, changing tabs or windows, attempting to copy, paste, print, or opening another active session may be recorded for integrity review.</p>
+                  <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-md border border-[#bfdbfe] bg-white p-3 text-sm text-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={integrityAccepted}
+                      onChange={(event) => setIntegrityAccepted(event.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#0f91e0] focus:ring-[#0f91e0]"
+                    />
+                    <span>I understand and agree to comply with the BDA examination integrity requirements. I understand that a high-risk attempt may be reviewed before any certification is issued.</span>
+                  </label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         <div className="space-y-3">
           {eligibility?.has_existing_attempt ? (
@@ -708,7 +744,7 @@ export default function ExamLaunch() {
               onClick={handleLaunchExam}
               className="w-full bg-green-600 hover:bg-green-700"
               size="lg"
-              disabled={isLaunching || (schedulingStatus && !schedulingStatus.canLaunch)}
+              disabled={isLaunching || !integrityAccepted || (schedulingStatus && !schedulingStatus.canLaunch)}
             >
               {isLaunching ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -723,7 +759,9 @@ export default function ExamLaunch() {
                     : schedulingStatus.isExpired
                       ? 'Exam Window Expired'
                       : 'Exam Not Available Yet'
-                  : 'Launch Exam Now'}
+                  : !integrityAccepted
+                    ? 'Accept Integrity Requirements'
+                    : 'Launch Exam Now'}
             </Button>
           ) : (
             <Button
