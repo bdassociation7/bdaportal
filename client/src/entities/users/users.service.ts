@@ -112,34 +112,6 @@ export class UsersService {
   }
 
   /**
-   * Permanently delete a portal account through the administrator-only server function.
-   */
-  static async permanentlyDeleteUser(id: string): Promise<UserResult<{ message: string; wordpress_account_retained: boolean }>> {
-    try {
-      const { data, error } = await supabase.functions.invoke('delete-portal-user', {
-        body: { user_id: id, confirmation: 'DELETE' },
-      });
-
-      if (error) {
-        const response = await error.context?.json().catch(() => null) as { error?: string } | null;
-        throw new Error(response?.error || error.message || 'Unable to permanently delete this account.');
-      }
-      if (!data?.success) throw new Error(data?.error || 'Unable to permanently delete this account.');
-
-      return {
-        data: {
-          message: data.message,
-          wordpress_account_retained: Boolean(data.wordpress_account_retained),
-        },
-        error: null,
-      };
-    } catch (error) {
-      console.error('Error permanently deleting user:', error);
-      return { data: null, error: error as Error };
-    }
-  }
-
-  /**
    * Get user statistics
    */
   static async getUserStats(): Promise<UserResult<UserStats>> {

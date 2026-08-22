@@ -119,25 +119,3 @@ export function useToggleUserStatus() {
     },
   });
 }
-
-/**
- * Permanently delete a user after the administrator has confirmed the destructive action.
- */
-export function usePermanentDeleteUser() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
-      const result = await UsersService.permanentlyDeleteUser(id);
-      if (result.error) throw result.error;
-      return result.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: usersKeys.all });
-      toast.success(data?.message || 'User permanently deleted');
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to permanently delete user: ${error.message}`);
-    },
-  });
-}
