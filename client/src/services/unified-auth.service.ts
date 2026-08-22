@@ -272,6 +272,7 @@ export class UnifiedAuthService {
           email: userData.email,
           password: userData.password,
           options: {
+            emailRedirectTo: `${window.location.origin}/complete-profile`,
             data: {
               first_name: userData.first_name,
               last_name: userData.last_name,

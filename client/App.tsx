@@ -26,6 +26,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import SetPassword from "./pages/auth/SetPassword";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import VerifyEmail from "./pages/auth/VerifyEmail";
 import NotFound from "./pages/NotFound";
 
 // Admin pages
@@ -414,6 +415,7 @@ const App = () => (
                 {/* Auth routes - no layout */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/auth/set-password" element={<SetPassword />} />
 

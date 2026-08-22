@@ -51,7 +51,7 @@ export interface SignupResult {
   portalAccount?: any;
   storeAccount?: any;
   conflicts?: ConflictInfo[];
-  nextStep?: 'login' | 'confirm_data' | 'complete_setup';
+  nextStep?: 'login' | 'confirm_data' | 'complete_setup' | 'verify_email';
   message: string;
 }
 
@@ -379,8 +379,8 @@ export class UnifiedSignupService {
           action: 'created' as const,
           portalAccount: result.user,
           storeAccount: result.user, // UnifiedAuthService creates both, unified user contains both
-          message: 'Portal and Store accounts created and linked successfully!',
-          nextStep: 'login' as const
+          message: 'Your account has been created. Please confirm your email address to activate your BDA Portal access.',
+          nextStep: 'verify_email' as const
         };
         console.log('🎉 [createNewAccounts] Unified success result:', finalResult);
         return finalResult;

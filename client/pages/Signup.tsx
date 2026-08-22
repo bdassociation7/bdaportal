@@ -114,7 +114,9 @@ export default function Signup() {
       const result = await UnifiedSignupService.handleSignup(request);
       if (result.success) {
         toast({ title: 'Account created!', description: result.message });
-        navigate('/login', { state: { email: formData.email, message: result.message } });
+        navigate(result.nextStep === 'verify_email' ? '/verify-email' : '/login', {
+          state: { email: formData.email, message: result.message },
+        });
       } else {
         if (result.nextStep === 'confirm_data' && result.conflicts) {
           setConflicts(result.conflicts);
@@ -196,7 +198,9 @@ export default function Signup() {
       const result = await UnifiedSignupService.handleSignup(request);
       if (result.success) {
         toast({ title: 'Account created!', description: result.message });
-        navigate('/login', { state: { email: formData.email, message: result.message } });
+        navigate(result.nextStep === 'verify_email' ? '/verify-email' : '/login', {
+          state: { email: formData.email, message: result.message },
+        });
       } else {
         toast({ title: 'Error', description: result.message, variant: 'destructive' });
       }
