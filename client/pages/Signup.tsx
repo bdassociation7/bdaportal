@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { IndividualRegistrationService } from '@/services/individual-registration.service';
+import { IndividualRegistrationService, type ExistingAccountStatus } from '@/services/individual-registration.service';
 import {
   Loader2,
   CheckCircle,
@@ -19,6 +19,8 @@ import {
   BookOpen,
   Award,
   Users,
+  KeyRound,
+  LogIn,
 } from 'lucide-react';
 
 const BDA_BLUE = '#0f91e0';
@@ -39,6 +41,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [showConf, setShowConf] = useState(false);
+  const [existingAccountStatus, setExistingAccountStatus] = useState<ExistingAccountStatus | null>(null);
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
@@ -47,8 +50,10 @@ export default function Signup() {
     lastName: '',
   });
 
-  const update = (field: keyof FormData, value: string) =>
+  const update = (field: keyof FormData, value: string) => {
+    if (field === 'email') setExistingAccountStatus(null);
     setFormData((previous) => ({ ...previous, [field]: value }));
+  };
 
   const validate = (): boolean => {
     const { email, password, confirmPassword, firstName, lastName } = formData;
@@ -99,7 +104,16 @@ export default function Signup() {
         lastName: formData.lastName,
       });
 
-      toast({ title: 'Account created', description: result.message });
+      if (result.accountStatus === 'existing_confirmed') {
+        setExistingAccountStatus('existing_confirmed');
+        toast({ title: 'Account already exists', description: result.message });
+        return;
+      }
+
+      toast({
+        title: result.accountStatus === 'existing_unconfirmed' ? 'Confirmation email sent' : 'Account created',
+        description: result.message,
+      });
       navigate('/verify-email', {
         state: { email: formData.email, message: result.message },
       });
@@ -181,6 +195,30 @@ export default function Signup() {
               </button>
             </p>
           </div>
+
+          {existingAccountStatus === 'existing_confirmed' && (
+            <div role="alert" className="mb-6 rounded-xl border border-[#0f91e0]/25 bg-[#f0f6ff] p-4">
+              <div className="flex gap-3">
+                <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#0f91e0]/10">
+                  <KeyRound className="h-4 w-4 text-[#0f91e0]" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-[#0d1f4e]">Account already exists</h3>
+                  <p className="mt-1 text-sm leading-5 text-slate-600">
+                    An account is already registered with this email address. Please sign in or reset your password.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => navigate('/login')} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-white" style={{ background: BDA_GRAD }}>
+                      <LogIn className="h-3.5 w-3.5" /> Sign in
+                    </button>
+                    <button type="button" onClick={() => navigate('/forgot-password')} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#0f91e0]/30 bg-white px-3 text-sm font-semibold text-[#0d1f4e] hover:bg-[#f0f6ff]">
+                      <KeyRound className="h-3.5 w-3.5" /> Reset password
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">

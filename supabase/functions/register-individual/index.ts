@@ -130,6 +130,48 @@ async function sendConfirmationEmail(
   }
 }
 
+async function resolveExistingAccount(
+  admin: ReturnType<typeof createClient>,
+  resendApiKey: string,
+  email: string,
+): Promise<Response | null> {
+  const { data: profile, error: profileError } = await admin
+    .from('users')
+    .select('id, first_name')
+    .eq('email', email)
+    .maybeSingle()
+
+  if (profileError) throw profileError
+  if (!profile) return null
+
+  const { data: authData, error: authError } = await admin.auth.admin.getUserById(profile.id)
+  if (authError || !authData.user) throw authError || new Error('Unable to look up the existing account')
+
+  if (authData.user.email_confirmed_at) {
+    return response({
+      success: true,
+      account_status: 'existing_confirmed',
+      message: 'An account already exists with this email address. Please sign in or reset your password.',
+    })
+  }
+
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    type: 'magiclink',
+    email,
+    options: { redirectTo: `${PORTAL_ORIGIN}/complete-profile` },
+  })
+  if (linkError || !linkData?.properties?.action_link) {
+    throw linkError || new Error('Unable to generate confirmation link')
+  }
+
+  await sendConfirmationEmail(resendApiKey, email, profile.first_name || 'there', linkData.properties.action_link)
+  return response({
+    success: true,
+    account_status: 'existing_unconfirmed',
+    message: 'An account already exists and is awaiting email confirmation. A new confirmation link has been sent.',
+  })
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (request.method !== 'POST') return response({ error: 'Method not allowed' }, 405)
@@ -174,28 +216,12 @@ Deno.serve(async (request) => {
       return response({ error: 'Too many confirmation requests. Please wait one hour before trying again.' }, 429)
     }
 
+    const existingAccountResponse = await resolveExistingAccount(admin, resendApiKey, email)
+    if (existingAccountResponse) return existingAccountResponse
+
     if (action === 'resend') {
-      const { data: profile, error: profileError } = await admin
-        .from('users')
-        .select('first_name')
-        .eq('email', email)
-        .maybeSingle()
-
-      if (profileError) throw profileError
-      if (!profile) {
-        // Keep the response non-enumerating while providing the same safe next step.
-        return response({ success: true, message: 'If an account is awaiting confirmation, a new link has been sent.' })
-      }
-
-      const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-        type: 'magiclink',
-        email,
-        options: { redirectTo: `${PORTAL_ORIGIN}/complete-profile` },
-      })
-      if (linkError || !linkData?.properties?.action_link) throw linkError || new Error('Unable to generate confirmation link')
-
-      await sendConfirmationEmail(resendApiKey, email, profile.first_name || 'there', linkData.properties.action_link)
-      return response({ success: true, message: 'A new confirmation link has been sent.' })
+      // Keep the response non-enumerating when no account exists for the email.
+      return response({ success: true, message: 'If an account is awaiting confirmation, a new link has been sent.' })
     }
 
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
@@ -234,8 +260,8 @@ Deno.serve(async (request) => {
       await sendConfirmationEmail(resendApiKey, email, firstName, existingLink.properties.action_link)
       return response({
         success: true,
-        existing: true,
-        message: 'An account already exists for this email. A new secure confirmation link has been sent.',
+        account_status: 'existing_unconfirmed',
+        message: 'An account already exists and is awaiting email confirmation. A new confirmation link has been sent.',
       })
     }
 

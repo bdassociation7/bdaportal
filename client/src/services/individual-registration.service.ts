@@ -5,10 +5,12 @@ interface RegisterIndividualInput {
   lastName: string;
 }
 
+export type ExistingAccountStatus = 'existing_confirmed' | 'existing_unconfirmed';
+
 interface RegistrationResponse {
   success: boolean;
   message: string;
-  existing?: boolean;
+  accountStatus?: ExistingAccountStatus;
 }
 
 export class IndividualRegistrationService {
@@ -34,7 +36,12 @@ export class IndividualRegistrationService {
       throw new Error('Unable to reach the registration service. Please check your connection and try again.');
     }
 
-    const data = await response.json().catch(() => null) as { success?: boolean; message?: string; error?: string; existing?: boolean } | null;
+    const data = await response.json().catch(() => null) as {
+      success?: boolean;
+      message?: string;
+      error?: string;
+      account_status?: ExistingAccountStatus;
+    } | null;
     const message = data?.message || data?.error || 'Unable to create your account. Please try again shortly.';
 
     if (!response.ok || !data?.success) {
@@ -44,7 +51,7 @@ export class IndividualRegistrationService {
     return {
       success: true,
       message,
-      existing: Boolean(data.existing),
+      accountStatus: data.account_status,
     };
   }
 
