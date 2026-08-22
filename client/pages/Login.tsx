@@ -3,14 +3,14 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useAuthContext } from '@/app/providers/AuthProvider';
+import { useUnifiedAuth } from '@/shared/hooks/useUnifiedAuth';
 import { useToast } from "@/hooks/use-toast";
 import { AuthStorageService } from "@/shared/utils/auth-storage";
 import { Mail, Lock } from "lucide-react";
 
 export default function Login() {
   const { t, isRTL } = useLanguage();
-  const { user, login, isLoading } = useAuthContext();
+  const { user, login, isLoading } = useUnifiedAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
