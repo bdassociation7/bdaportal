@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/supabase';
+import { IndividualRegistrationService } from '@/services/individual-registration.service';
 
 interface VerifyEmailLocationState {
   email?: string;
@@ -36,19 +36,11 @@ export default function VerifyEmail() {
 
     setIsResending(true);
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: emailHint,
-        options: {
-          emailRedirectTo: `${window.location.origin}/complete-profile`,
-        },
-      });
-
-      if (error) throw error;
+      const result = await IndividualRegistrationService.resendConfirmation(emailHint);
       setSent(true);
       toast({
         title: 'Confirmation email sent',
-        description: 'Check your inbox and use the confirmation link to activate your BDA account.',
+        description: result.message,
       });
     } catch (error) {
       console.error('Unable to resend confirmation email:', error);
