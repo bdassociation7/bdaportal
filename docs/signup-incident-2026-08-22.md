@@ -38,3 +38,5 @@ On 22 August 2026, an isolated Mail.tm mailbox received the BDA confirmation ema
 The sandbox’s direct requests to the Supabase `/auth/v1/verify` endpoint returned Cloudflare HTTP 522 even with an invalid probe token and no redirect target, while `/auth/v1/health` returned HTTP 401. This isolates the 522 to the verification endpoint in this execution environment and does not provide a usable confirmation result. The Auth logs recorded the successful `admin/generate_link` call with the corrected redirect destination, but did not record a matching `/verify` request from the 522 attempts.
 
 The test account is pending confirmation and must be removed during end-of-test cleanup if confirmation remains unavailable.
+
+The public Supabase status page showed the project region `eu-west-3` as operational and Auth as operational on 22 August 2026, while API Gateway was marked degraded. No public incident was listed for this project-specific confirmation failure. This does not override the reproducible HTTP 522 results from the project Auth endpoints.

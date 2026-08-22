@@ -6,17 +6,45 @@ import type { User, Session } from '@supabase/supabase-js';
  * Service d'authentification - Gère toutes les opérations d'auth
  */
 export class AuthService {
+  private static readonly AUTH_RETRY_DELAYS = [400, 1000] as const;
+
+  private static isTransientAuthFailure(error: unknown): boolean {
+    if (!error) return false;
+
+    const candidate = error as { status?: number; message?: string; name?: string };
+    const status = Number(candidate.status || 0);
+    const message = `${candidate.name || ''} ${candidate.message || ''}`.toLowerCase();
+
+    return [408, 429, 500, 502, 503, 504, 522].includes(status)
+      || /network|fetch|gateway|timeout|temporarily unavailable|status code 5|status code 522/.test(message);
+  }
+
   /**
    * Connexion avec email/password
    */
   static async signIn(email: string, password: string): Promise<{ user: User | null; error: AuthError | null }> {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      let authResponse = await supabase.auth.signInWithPassword({ email, password });
 
+      for (const delay of this.AUTH_RETRY_DELAYS) {
+        if (!authResponse.error || !this.isTransientAuthFailure(authResponse.error)) break;
+        await new Promise<void>((resolve) => window.setTimeout(resolve, delay));
+        authResponse = await supabase.auth.signInWithPassword({ email, password });
+      }
+
+      const { data, error } = authResponse;
       if (error) {
+        if (this.isTransientAuthFailure(error)) {
+          return {
+            user: null,
+            error: {
+              code: 'AUTH_GATEWAY_UNAVAILABLE',
+              message: 'The BDA authentication service is temporarily unavailable. Please try again in a moment.',
+              details: error,
+            },
+          };
+        }
+
         return {
           user: null,
           error: {
@@ -28,6 +56,17 @@ export class AuthService {
 
       return { user: data.user, error: null };
     } catch (err) {
+      if (this.isTransientAuthFailure(err)) {
+        return {
+          user: null,
+          error: {
+            code: 'AUTH_GATEWAY_UNAVAILABLE',
+            message: 'The BDA authentication service is temporarily unavailable. Please try again in a moment.',
+            details: err,
+          },
+        };
+      }
+
       return {
         user: null,
         error: {

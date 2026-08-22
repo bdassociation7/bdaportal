@@ -95,6 +95,15 @@ export class UnifiedAuthService {
       if (portalResult.error) {
         const errorCode = portalResult.error.code || '';
 
+        // If it is an upstream authentication outage, preserve the clear
+        // operational message and do not fall through into WordPress checks.
+        if (errorCode === 'AUTH_GATEWAY_UNAVAILABLE') {
+          return {
+            success: false,
+            error: portalResult.error,
+          };
+        }
+
         // If it's NOT an invalid credentials error, it's a real error
         if (!errorCode.includes('Invalid login credentials') &&
             !errorCode.includes('Invalid email or password') &&
