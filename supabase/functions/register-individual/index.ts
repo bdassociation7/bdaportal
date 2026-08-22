@@ -158,7 +158,7 @@ async function resolveExistingAccount(
   const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
     type: 'magiclink',
     email,
-    options: { redirectTo: `${PORTAL_ORIGIN}/individual/complete-profile` },
+    options: { redirectTo: `${PORTAL_ORIGIN}/complete-profile` },
   })
   if (linkError || !linkData?.properties?.action_link) {
     throw linkError || new Error('Unable to generate confirmation link')
@@ -229,7 +229,7 @@ Deno.serve(async (request) => {
       email,
       password,
       options: {
-        redirectTo: `${PORTAL_ORIGIN}/individual/complete-profile`,
+        redirectTo: `${PORTAL_ORIGIN}/complete-profile`,
         data: {
           first_name: firstName,
           last_name: lastName,
@@ -251,7 +251,7 @@ Deno.serve(async (request) => {
       const { data: existingLink, error: existingLinkError } = await admin.auth.admin.generateLink({
         type: 'magiclink',
         email,
-        options: { redirectTo: `${PORTAL_ORIGIN}/individual/complete-profile` },
+        options: { redirectTo: `${PORTAL_ORIGIN}/complete-profile` },
       })
       if (existingLinkError || !existingLink?.properties?.action_link) {
         throw existingLinkError || new Error('Unable to generate confirmation link')
