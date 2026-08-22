@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { AlertCircle, CheckCircle2, User, LogOut } from 'lucide-react';
 import { checkProfileCompletion, getFieldLabel } from '@/services/profile-completion.service';
 import { UsersService } from '@/entities/users';
+import { COUNTRY_OPTIONS, countryDialCode } from '@/constants/countries';
 
 /**
  * Page de completion de profil pour utilisateurs Individual
@@ -33,7 +34,6 @@ export default function CompleteProfile() {
     job_title: user?.profile?.job_title || '',
     company_name: user?.profile?.company_name || '',
     industry: user?.profile?.industry || '',
-    preferred_language: user?.profile?.preferred_language || 'en',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,6 +50,16 @@ export default function CompleteProfile() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.country_code || !formData.phone.trim()) {
+      toast({
+        title: 'Complete your account details',
+        description: 'First name, last name, country, and mobile number are required to enter the BDA Portal.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -121,9 +131,9 @@ export default function CompleteProfile() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
             <User className="h-8 w-8 text-blue-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your Profile</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Activate Your BDA Account</h1>
           <p className="text-gray-600">
-            Please complete your profile to access all features of the BDA Portal
+            Add your essential account details to enter the BDA Portal. You can complete your professional profile later from Settings.
           </p>
           {user?.email && (
             <p className="text-sm text-gray-500 mt-2">
@@ -162,9 +172,9 @@ export default function CompleteProfile() {
         {/* Form */}
         <Card>
           <CardHeader>
-            <CardTitle>Personal & Professional Information</CardTitle>
+            <CardTitle>Account Details</CardTitle>
             <CardDescription>
-              Fields marked with <span className="text-red-500">*</span> are required
+              Fields marked with <span className="text-red-500">*</span> are required to activate your account.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -203,110 +213,94 @@ export default function CompleteProfile() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="phone">
-                      Phone Number <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => handleChange('phone', e.target.value)}
-                      required
-                      placeholder="+1 234 567 8900"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="country_code">
                       Country <span className="text-red-500">*</span>
                     </Label>
-                    <Input
-                      id="country_code"
+                    <Select
                       value={formData.country_code}
-                      onChange={(e) => handleChange('country_code', e.target.value.toUpperCase())}
-                      required
-                      maxLength={2}
-                      placeholder="US"
-                      className="uppercase"
-                    />
-                    <p className="text-xs text-gray-500">2-letter country code (e.g., US, FR, EG)</p>
+                      onValueChange={(value) => handleChange('country_code', value)}
+                    >
+                      <SelectTrigger id="country_code">
+                        <SelectValue placeholder="Select your country" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-72">
+                        {COUNTRY_OPTIONS.map((country) => (
+                          <SelectItem key={country.code} value={country.code}>
+                            {country.name} ({country.dialCode})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="preferred_language">
-                    Preferred Language <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.preferred_language}
-                    onValueChange={(value) => handleChange('preferred_language', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="ar">العربية (Arabic)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">
+                      Mobile Number <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="flex gap-2">
+                      <div className="flex h-10 min-w-16 items-center justify-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground">
+                        {countryDialCode(formData.country_code) || '+'}
+                      </div>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => handleChange('phone', e.target.value)}
+                        required
+                        placeholder="Mobile number"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Professional Information */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Professional Information</h3>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Professional Profile</h3>
+                  <p className="mt-1 text-sm text-gray-500">Recommended. You can also complete or update these details later in Settings.</p>
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="job_title">
-                    Job Title <span className="text-red-500">*</span>
+                    Job Title <span className="text-sm font-normal text-gray-500">(optional)</span>
                   </Label>
                   <Input
                     id="job_title"
                     value={formData.job_title}
                     onChange={(e) => handleChange('job_title', e.target.value)}
-                    required
                     placeholder="Business Analyst"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="company_name">
-                    Company/Organisation <span className="text-red-500">*</span>
+                    Company/Organisation <span className="text-sm font-normal text-gray-500">(optional)</span>
                   </Label>
                   <Input
                     id="company_name"
                     value={formData.company_name}
                     onChange={(e) => handleChange('company_name', e.target.value)}
-                    required
                     placeholder="Acme Corporation"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="industry">
-                    Industry <span className="text-red-500">*</span>
+                    Industry <span className="text-sm font-normal text-gray-500">(optional)</span>
                   </Label>
                   <Input
                     id="industry"
                     value={formData.industry}
                     onChange={(e) => handleChange('industry', e.target.value)}
-                    required
                     placeholder="Information Technology"
                   />
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-between pt-6 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/dashboard')}
-                  disabled={isSubmitting}
-                >
-                  Skip for Now
-                </Button>
-                <Button type="submit" disabled={isSubmitting} className="min-w-[150px]">
+              <div className="flex items-center justify-end pt-6 border-t">
+                <Button type="submit" disabled={isSubmitting} className="min-w-[220px]">
                   {isSubmitting ? (
                     <>
                       <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
@@ -315,7 +309,7 @@ export default function CompleteProfile() {
                   ) : (
                     <>
                       <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Complete Profile
+                      Complete Profile & Enter Portal
                     </>
                   )}
                 </Button>
@@ -329,13 +323,7 @@ export default function CompleteProfile() {
           <div className="flex gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-amber-900">
-              <strong>Important:</strong> A complete profile is required to:
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Apply for certification exams</li>
-                <li>Access purchased curriculum and books</li>
-                <li>Submit PDC credits</li>
-                <li>Download certificates</li>
-              </ul>
+              <strong>Why we ask:</strong> Your contact details keep your BDA account secure and allow us to support your certification journey. Professional details are optional and can be completed later from Settings.
             </div>
           </div>
         </div>

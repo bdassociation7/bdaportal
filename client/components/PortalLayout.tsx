@@ -1,12 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuthContext } from '@/app/providers/AuthProvider';
 import { AuthService } from '@/entities/auth/auth.service';
 import { navigationConfig } from '@/config/navigation';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { Menu, X, Settings, LogOut, Users } from 'lucide-react';
+import { Menu, X, Settings, LogOut, Users, BriefcaseBusiness } from 'lucide-react';
 import { ROLE_DEFINITIONS, type UserRole } from '@/shared/types/roles.types';
 import { useMergedVouchers } from '@/entities/quiz';
 
@@ -20,6 +28,8 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showProfessionalPrompt, setShowProfessionalPrompt] = useState(false);
+  const [professionalPromptDismissed, setProfessionalPromptDismissed] = useState(false);
 
   // Hide the white top bar for pages that have their own hero section
   const hideTopBar = [
@@ -29,6 +39,21 @@ export function PortalLayout({ children }: PortalLayoutProps) {
 
   // Get current role from authenticated user
   const currentRole = (user?.profile?.role || 'individual') as UserRole;
+  const hasProfessionalProfile = Boolean(
+    user?.profile?.job_title?.trim() &&
+    (user?.profile?.company_name?.trim() || user?.profile?.organization?.trim()) &&
+    user?.profile?.industry?.trim()
+  );
+
+  useEffect(() => {
+    const isSettingsPage = location.pathname.startsWith('/settings');
+    setShowProfessionalPrompt(
+      currentRole === 'individual' &&
+      !hasProfessionalProfile &&
+      !isSettingsPage &&
+      !professionalPromptDismissed
+    );
+  }, [currentRole, hasProfessionalProfile, location.pathname, professionalPromptDismissed]);
 
   // Get base navigation items based on current role
   const baseNavItems = navigationConfig[currentRole];
@@ -86,6 +111,35 @@ export function PortalLayout({ children }: PortalLayoutProps) {
 
   return (
     <div className={cn("min-h-screen bg-gray-50", isRTL && "font-arabic")}>
+      <Dialog open={showProfessionalPrompt} onOpenChange={setShowProfessionalPrompt}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#0f91e0]">
+              <BriefcaseBusiness className="h-5 w-5" />
+            </div>
+            <DialogTitle>Complete your professional profile</DialogTitle>
+            <DialogDescription className="leading-6">
+              Add your job title, organisation, and industry to keep your BDA professional profile up to date. You can complete this at any time from Settings.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => {
+              setProfessionalPromptDismissed(true);
+              setShowProfessionalPrompt(false);
+            }}>
+              Not now
+            </Button>
+            <Button type="button" onClick={() => {
+              setProfessionalPromptDismissed(true);
+              setShowProfessionalPrompt(false);
+              navigate('/settings?tab=profile');
+            }} className="bg-gradient-to-r from-[#0d1f4e] to-[#0f91e0] text-white hover:opacity-95">
+              Complete now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Mobile menu overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden" onClick={closeSidebar}>

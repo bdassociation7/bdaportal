@@ -23,10 +23,6 @@ const INDIVIDUAL_REQUIRED_FIELDS = [
   'email',
   'phone',
   'country_code',
-  'job_title',
-  'company_name',
-  'industry',
-  'preferred_language',
 ] as const;
 
 /**
@@ -54,7 +50,6 @@ const FIELD_LABELS: Record<string, string> = {
   job_title: 'Job Title',
   company_name: 'Company/Organisation',
   industry: 'Industry',
-  preferred_language: 'Preferred Language',
   experience_years: 'Years of Experience',
   timezone: 'Timezone',
 };
