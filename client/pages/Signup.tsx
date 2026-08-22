@@ -108,7 +108,7 @@ export default function Signup() {
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        accessType: 'both',
+        accessType: 'portal-only',
         role: 'individual',
       };
       const result = await UnifiedSignupService.handleSignup(request);
@@ -191,7 +191,7 @@ export default function Signup() {
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        accessType: 'both',
+        accessType: 'portal-only',
         role: 'individual',
         forceUpdate: true,
       };

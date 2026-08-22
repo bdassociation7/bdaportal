@@ -312,15 +312,15 @@ export class UnifiedSignupService {
         const portalAccount = await AuthService.signUp(signupData);
         console.log('✅ [createNewAccounts] AuthService.signUp response:', portalAccount);
 
-        // Send welcome email (fire and forget)
-        this.sendWelcomeEmail(request.email, request.firstName, portalAccount?.user?.id);
+        // Send welcome email without blocking account creation.
+        this.sendWelcomeEmail(request.email, request.firstName, portalAccount?.id);
 
         const result = {
           success: true,
           action: 'created',
           portalAccount,
-          message: 'Portal account created successfully!',
-          nextStep: 'login'
+          message: 'Your account has been created. Please confirm your email address to activate your BDA Portal access.',
+          nextStep: 'verify_email' as const
         };
         console.log('🎉 [createNewAccounts] Portal-only success result:', result);
         return result;
@@ -756,8 +756,8 @@ export class UnifiedSignupService {
       success: true,
       action: 'confirmed_existing',
       portalAccount: portalData,
-      message: 'You already have a Portal account. You can sign in directly.',
-      nextStep: 'login'
+      message: 'An account already exists for this email. Confirm your email address, or use Sign in if you have already confirmed it.',
+      nextStep: 'verify_email'
     };
   }
 

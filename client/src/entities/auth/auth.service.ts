@@ -312,6 +312,7 @@ export class AuthService {
         email: userData.email,
         password: userData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/complete-profile`,
           data: {
             first_name: userData.firstName,
             last_name: userData.lastName,
