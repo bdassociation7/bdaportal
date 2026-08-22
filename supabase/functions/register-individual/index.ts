@@ -6,7 +6,9 @@ const EMAIL_MAX_ATTEMPTS = 5
 const IP_MAX_ATTEMPTS = 20
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': PORTAL_ORIGIN,
+  // This endpoint accepts no cookies or user session. A public CORS response
+  // prevents browser preflight failures during account registration.
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json',
@@ -213,10 +215,28 @@ Deno.serve(async (request) => {
     })
 
     if (linkError) {
-      if (linkError.message.toLowerCase().includes('already registered')) {
-        return response({ code: 'ACCOUNT_EXISTS', error: 'An account already exists with this email address. Please sign in or request a new confirmation link.' }, 409)
+      if (!linkError.message.toLowerCase().includes('already registered')) {
+        throw linkError
       }
-      throw linkError
+
+      // A prior submission may have created an unconfirmed account. Treat the
+      // repeat submission as a safe confirmation resend instead of returning an
+      // unhelpful duplicate-account error.
+      const { data: existingLink, error: existingLinkError } = await admin.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+        options: { redirectTo: `${PORTAL_ORIGIN}/complete-profile` },
+      })
+      if (existingLinkError || !existingLink?.properties?.action_link) {
+        throw existingLinkError || new Error('Unable to generate confirmation link')
+      }
+
+      await sendConfirmationEmail(resendApiKey, email, firstName, existingLink.properties.action_link)
+      return response({
+        success: true,
+        existing: true,
+        message: 'An account already exists for this email. A new secure confirmation link has been sent.',
+      })
     }
 
     if (!linkData?.properties?.action_link) throw new Error('Unable to generate confirmation link')

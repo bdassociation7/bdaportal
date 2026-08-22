@@ -1,5 +1,3 @@
-import { supabase } from '@/shared/config/supabase.config';
-
 interface RegisterIndividualInput {
   email: string;
   password: string;
@@ -10,27 +8,44 @@ interface RegisterIndividualInput {
 interface RegistrationResponse {
   success: boolean;
   message: string;
-  code?: string;
+  existing?: boolean;
 }
 
 export class IndividualRegistrationService {
   private static async invoke(payload: Record<string, string>): Promise<RegistrationResponse> {
-    const { data, error } = await supabase.functions.invoke('register-individual', {
-      body: payload,
-    });
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-    if (error) {
-      const message = typeof data?.error === 'string'
-        ? data.error
-        : 'Unable to create your account. Please try again shortly.';
+    if (!supabaseUrl || !publishableKey) {
+      throw new Error('The registration service is not configured. Please contact BDA Support.');
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(`${supabaseUrl}/functions/v1/register-individual`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: publishableKey,
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      throw new Error('Unable to reach the registration service. Please check your connection and try again.');
+    }
+
+    const data = await response.json().catch(() => null) as { success?: boolean; message?: string; error?: string; existing?: boolean } | null;
+    const message = data?.message || data?.error || 'Unable to create your account. Please try again shortly.';
+
+    if (!response.ok || !data?.success) {
       throw new Error(message);
     }
 
-    if (!data?.success) {
-      throw new Error(typeof data?.error === 'string' ? data.error : 'Unable to create your account. Please try again shortly.');
-    }
-
-    return data as RegistrationResponse;
+    return {
+      success: true,
+      message,
+      existing: Boolean(data.existing),
+    };
   }
 
   static register(input: RegisterIndividualInput) {

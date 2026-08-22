@@ -1,0 +1,32 @@
+# Individual Signup Incident — 22 August 2026
+
+## Evidence
+
+Supabase Auth logs for project `dfsbzsxuursvqwnzruqt` recorded repeated `POST /signup` responses with `429: email rate limit exceeded` and code `over_email_send_rate_limit` on 22 August 2026. These were caused by the project’s built-in Auth email service rather than a WordPress/store link failure.
+
+The official Supabase documentation confirms that `/auth/v1/signup`, `/auth/v1/recover`, and `/auth/v1/user` share the built-in Auth email rate limit; it recommends custom SMTP for production email delivery. Source: [Supabase Production Checklist](https://supabase.com/docs/guides/deployment/going-into-prod).
+
+The official Supabase documentation also confirms that `auth.admin.generateLink` generates sign-up and magic links without sending email, for use with a custom email provider. Source: [Supabase JavaScript auth.admin.generateLink reference](https://supabase.com/docs/reference/javascript/auth-admin-generatelink).
+
+## Implemented route
+
+The public `/signup` page now calls the `register-individual` Edge Function with a plain browser `fetch` request. The function uses the Supabase service role only on the server, generates a confirmation link, and sends it using the project’s existing verified BDA sender and Resend API key. It does not invoke the built-in Auth email sender.
+
+The function applies a per-email and per-IP rolling one-hour rate limit in `public.signup_rate_limits`. It returns an existing account attempt as a fresh secure confirmation link rather than a generic creation failure. It is public by design, accepts no user cookies or session, and returns `Access-Control-Allow-Origin: *` to reliably satisfy the browser’s CORS preflight.
+
+## Validation completed
+
+* The live Edge Function was deployed as `register-individual`.
+* A direct registration test returned HTTP 200 with a confirmation success payload.
+* The test account was created as `individual`, `portal-only`, `created_from=portal`, with `wp_user_id=null` and `wp_sync_status=not_synced`.
+* A resend test returned HTTP 200 with a confirmation-link success payload.
+* A browser-equivalent CORS preflight returned HTTP 200 with `access-control-allow-origin: *`, `access-control-allow-headers: authorization, x-client-info, apikey, content-type`, and `access-control-allow-methods: POST, OPTIONS`.
+* The frontend Vite build passed after the browser fetch/CORS correction.
+
+## Files
+
+* `client/pages/Signup.tsx`
+* `client/pages/auth/VerifyEmail.tsx`
+* `client/src/services/individual-registration.service.ts`
+* `supabase/functions/register-individual/index.ts`
+* `supabase/migrations/20260822183000_add_signup_rate_limits.sql`
