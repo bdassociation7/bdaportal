@@ -116,38 +116,19 @@ export class UsersService {
    */
   static async permanentlyDeleteUser(id: string): Promise<UserResult<{ message: string; wordpress_account_retained: boolean }>> {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      if (!accessToken || !supabaseUrl || !publishableKey) {
-        throw new Error('Your session is no longer valid. Please sign in again.');
-      }
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/delete-portal-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: publishableKey,
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ user_id: id, confirmation: 'DELETE' }),
+      const { data, error } = await supabase.functions.invoke('delete-portal-user', {
+        body: { user_id: id, confirmation: 'DELETE' },
       });
-      const data = await response.json().catch(() => null) as {
-        success?: boolean;
-        error?: string;
-        message?: string;
-        wordpress_account_retained?: boolean;
-      } | null;
 
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.error || 'Unable to permanently delete this account.');
+      if (error) {
+        const response = await error.context?.json().catch(() => null) as { error?: string } | null;
+        throw new Error(response?.error || error.message || 'Unable to permanently delete this account.');
       }
+      if (!data?.success) throw new Error(data?.error || 'Unable to permanently delete this account.');
 
       return {
         data: {
-          message: data.message || 'User permanently deleted.',
+          message: data.message,
           wordpress_account_retained: Boolean(data.wordpress_account_retained),
         },
         error: null,
