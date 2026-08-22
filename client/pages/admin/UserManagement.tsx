@@ -40,6 +40,8 @@ import {
   GraduationCap,
   Upload,
   Eye,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -47,6 +49,7 @@ import {
   useUserStats,
   useUpdateUser,
   useToggleUserStatus,
+  usePermanentDeleteUser,
   useCountryCodes,
 } from '@/entities/users';
 import { useAuthContext } from '@/app/providers/AuthProvider';
@@ -101,6 +104,8 @@ export default function UserManagement() {
   const [search, setSearch] = useState('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   const { data: users, isLoading } = useUsers({ ...filters, search });
   const { data: stats } = useUserStats();
@@ -108,6 +113,7 @@ export default function UserManagement() {
 
   const updateMutation = useUpdateUser();
   const toggleStatusMutation = useToggleUserStatus();
+  const permanentDeleteMutation = usePermanentDeleteUser();
 
   const handleImpersonate = async (targetUser: User) => {
     const confirmed = await confirm({
@@ -177,6 +183,24 @@ export default function UserManagement() {
 
   const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
     await toggleStatusMutation.mutateAsync({ id: userId, is_active: !currentStatus });
+  };
+
+  const canPermanentlyDelete = (user: User) => {
+    const currentRole = currentUser?.profile?.role || '';
+    if (!['admin', 'super_admin'].includes(currentRole) || user.id === currentUser?.id) return false;
+    return currentRole === 'super_admin' || !['admin', 'super_admin'].includes(user.role);
+  };
+
+  const openPermanentDeleteDialog = (user: User) => {
+    setDeletingUser(user);
+    setDeleteConfirmation('');
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!deletingUser || deleteConfirmation !== 'DELETE') return;
+    await permanentDeleteMutation.mutateAsync({ id: deletingUser.id });
+    setDeletingUser(null);
+    setDeleteConfirmation('');
   };
 
   const formatDate = (dateString: string | null) => {
@@ -448,6 +472,17 @@ export default function UserManagement() {
                                 <Eye className="h-4 w-4 text-amber-600" />
                               </Button>
                             )}
+                            {canPermanentlyDelete(user) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openPermanentDeleteDialog(user)}
+                                title="Permanently delete account"
+                                className="hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -619,6 +654,50 @@ export default function UserManagement() {
             <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
               {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {t('form.updateUser')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(deletingUser)} onOpenChange={(open) => {
+        if (!open && !permanentDeleteMutation.isPending) {
+          setDeletingUser(null);
+          setDeleteConfirmation('');
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-red-50">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            </div>
+            <DialogTitle>Permanently delete account?</DialogTitle>
+            <DialogDescription className="leading-6">
+              This action cannot be undone. The portal account for <strong>{deletingUser?.email}</strong>, its access and associated portal data will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="delete-confirmation">Type <strong>DELETE</strong> to confirm</Label>
+            <Input
+              id="delete-confirmation"
+              value={deleteConfirmation}
+              onChange={(event) => setDeleteConfirmation(event.target.value)}
+              placeholder="DELETE"
+              autoComplete="off"
+              disabled={permanentDeleteMutation.isPending}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingUser(null)} disabled={permanentDeleteMutation.isPending}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handlePermanentDelete}
+              disabled={deleteConfirmation !== 'DELETE' || permanentDeleteMutation.isPending}
+              className="gap-2"
+            >
+              {permanentDeleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Permanently delete
             </Button>
           </DialogFooter>
         </DialogContent>
