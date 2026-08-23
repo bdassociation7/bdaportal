@@ -8,11 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useUpdateProfile, useChangePassword } from '@/entities/settings/settings.hooks';
-import { User, Lock, Loader2, Save, Briefcase, MapPin, CreditCard, CheckCircle, XCircle } from 'lucide-react';
+import { User, Lock, Loader2, Save, Briefcase } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CountryDialCodeSelect } from '@/components/ui/country-dial-code-select';
@@ -42,33 +41,17 @@ export function ProfileTab() {
       phone: 'Phone Number',
       phonePlaceholder: '555-123-4567',
       dateOfBirth: 'Date of Birth',
-      nationality: 'Nationality',
-      nationalityPlaceholder: 'e.g., American, British, Emirati',
       // Professional Information
       professionalInfo: 'Professional Information',
       professionalInfoDesc: 'Your professional background and experience',
       jobTitle: 'Job Title',
       jobTitlePlaceholder: 'e.g., Business Development Manager',
-      companyName: 'Company Name',
-      companyPlaceholder: 'Enter your company name',
-      organization: 'Organisation',
-      organizationPlaceholder: 'Organisation or institution',
+      organization: 'Organisation / Company',
+      organizationPlaceholder: 'Organisation or company name',
       industry: 'Industry',
       industryPlaceholder: 'e.g., Technology, Finance, Healthcare',
       yearsExperience: 'Years of Experience',
       yearsExperiencePlaceholder: 'Number of years in business development',
-      // Identity Information
-      identityInfo: 'Identity Information',
-      identityInfoDesc: 'Identity verification details for certification eligibility',
-      identityVerified: 'Identity Verified',
-      verifiedOn: 'Verified on',
-      identityNotVerified: 'Identity Not Verified',
-      identityNotVerifiedDesc: 'Complete identity verification to access certification exams',
-      nationalId: 'National ID Number',
-      nationalIdPlaceholder: 'Enter national ID/SSN',
-      passportNumber: 'Passport Number',
-      passportPlaceholder: 'Enter passport number',
-      identityNote: 'Identity information is used for certification verification and is kept confidential.',
       // Buttons
       saving: 'Saving...',
       saveAllChanges: 'Save All Changes',
@@ -109,33 +92,17 @@ export function ProfileTab() {
       phone: 'رقم الهاتف',
       phonePlaceholder: '555-123-4567',
       dateOfBirth: 'تاريخ الميلاد',
-      nationality: 'الجنسية',
-      nationalityPlaceholder: 'مثال: أمريكي، بريطاني، إماراتي',
       // Professional Information
       professionalInfo: 'المعلومات المهنية',
       professionalInfoDesc: 'خلفيتك المهنية وخبراتك',
       jobTitle: 'المسمى الوظيفي',
       jobTitlePlaceholder: 'مثال: مدير تطوير الأعمال',
-      companyName: 'اسم الشركة',
-      companyPlaceholder: 'أدخل اسم شركتك',
-      organization: 'المنظمة',
-      organizationPlaceholder: 'المنظمة أو المؤسسة',
+      organization: 'المنظمة / الشركة',
+      organizationPlaceholder: 'اسم المنظمة أو الشركة',
       industry: 'الصناعة',
       industryPlaceholder: 'مثال: التكنولوجيا، المالية، الرعاية الصحية',
       yearsExperience: 'سنوات الخبرة',
       yearsExperiencePlaceholder: 'عدد سنوات الخبرة في تطوير الأعمال',
-      // Identity Information
-      identityInfo: 'معلومات الهوية',
-      identityInfoDesc: 'تفاصيل التحقق من الهوية لأهلية الشهادة',
-      identityVerified: 'تم التحقق من الهوية',
-      verifiedOn: 'تم التحقق في',
-      identityNotVerified: 'لم يتم التحقق من الهوية',
-      identityNotVerifiedDesc: 'أكمل التحقق من الهوية للوصول إلى اختبارات الشهادات',
-      nationalId: 'رقم الهوية الوطنية',
-      nationalIdPlaceholder: 'أدخل رقم الهوية الوطنية',
-      passportNumber: 'رقم جواز السفر',
-      passportPlaceholder: 'أدخل رقم جواز السفر',
-      identityNote: 'تُستخدم معلومات الهوية للتحقق من الشهادات وتُحفظ بسرية.',
       // Buttons
       saving: 'جارٍ الحفظ...',
       saveAllChanges: 'حفظ جميع التغييرات',
@@ -171,18 +138,12 @@ export function ProfileTab() {
     phone: '',
     country_code: '',
     date_of_birth: '',
-    nationality: '',
 
     // Professional Information
     job_title: '',
-    company_name: '',
     organization: '',
     industry: '',
     experience_years: 0,
-
-    // Identity Information
-    national_id_number: '',
-    passport_number: '',
   });
 
   // Password form state
@@ -203,14 +164,10 @@ export function ProfileTab() {
         phone: user.profile.phone || '',
         country_code: user.profile.country_code || '',
         date_of_birth: user.profile.date_of_birth || '',
-        nationality: user.profile.nationality || '',
         job_title: user.profile.job_title || '',
-        company_name: user.profile.company_name || '',
         organization: user.profile.organization || '',
         industry: user.profile.industry || '',
         experience_years: user.profile.experience_years || 0,
-        national_id_number: user.profile.national_id_number || '',
-        passport_number: user.profile.passport_number || '',
       });
     }
   }, [user]);
@@ -225,14 +182,10 @@ export function ProfileTab() {
       profileData.phone !== (user.profile.phone || '') ||
       profileData.country_code !== (user.profile.country_code || '') ||
       profileData.date_of_birth !== (user.profile.date_of_birth || '') ||
-      profileData.nationality !== (user.profile.nationality || '') ||
       profileData.job_title !== (user.profile.job_title || '') ||
-      profileData.company_name !== (user.profile.company_name || '') ||
       profileData.organization !== (user.profile.organization || '') ||
       profileData.industry !== (user.profile.industry || '') ||
-      profileData.experience_years !== (user.profile.experience_years || 0) ||
-      profileData.national_id_number !== (user.profile.national_id_number || '') ||
-      profileData.passport_number !== (user.profile.passport_number || '');
+      profileData.experience_years !== (user.profile.experience_years || 0);
 
     setProfileChanged(hasChanges);
   }, [profileData, user]);
@@ -333,37 +286,35 @@ export function ProfileTab() {
             <p className="text-xs text-gray-500">{texts.emailNote}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="country_code">{texts.countryCode}</Label>
-              <CountryDialCodeSelect
-                id="country_code"
-                value={profileData.country_code}
-                onValueChange={(value) =>
-                  setProfileData((prev) => ({ ...prev, country_code: value }))
-                }
-                placeholder={texts.countryCodePlaceholder}
-                searchPlaceholder={texts.countryCodeSearchPlaceholder}
-                emptyText={texts.countryCodeEmpty}
-                ariaLabel={texts.countryCode}
-              />
-            </div>
-
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="phone">{texts.phone}</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={profileData.phone}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, phone: e.target.value }))
-                }
-                placeholder={texts.phonePlaceholder}
-              />
+              <div className="flex overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                <CountryDialCodeSelect
+                  id="country_code"
+                  value={profileData.country_code}
+                  onValueChange={(value) =>
+                    setProfileData((prev) => ({ ...prev, country_code: value }))
+                  }
+                  placeholder={texts.countryCodePlaceholder}
+                  searchPlaceholder={texts.countryCodeSearchPlaceholder}
+                  emptyText={texts.countryCodeEmpty}
+                  ariaLabel={texts.countryCode}
+                  className="h-11 w-[min(17rem,48%)] rounded-none border-0 border-r border-input bg-muted/30 shadow-none hover:bg-muted/50 focus-visible:ring-0"
+                />
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={profileData.phone}
+                  onChange={(e) =>
+                    setProfileData((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                  placeholder={texts.phonePlaceholder}
+                  className="h-11 flex-1 rounded-none border-0 shadow-none focus-visible:ring-0"
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date_of_birth">{texts.dateOfBirth}</Label>
               <Input
@@ -373,18 +324,7 @@ export function ProfileTab() {
                 onChange={(e) =>
                   setProfileData((prev) => ({ ...prev, date_of_birth: e.target.value }))
                 }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="nationality">{texts.nationality}</Label>
-              <Input
-                id="nationality"
-                value={profileData.nationality}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, nationality: e.target.value }))
-                }
-                placeholder={texts.nationalityPlaceholder}
+                className="h-11"
               />
             </div>
           </div>
@@ -401,7 +341,7 @@ export function ProfileTab() {
           <CardDescription>{texts.professionalInfoDesc}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="job_title">{texts.jobTitle}</Label>
               <Input
@@ -415,20 +355,6 @@ export function ProfileTab() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="company_name">{texts.companyName}</Label>
-              <Input
-                id="company_name"
-                value={profileData.company_name}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, company_name: e.target.value }))
-                }
-                placeholder={texts.companyPlaceholder}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
               <Label htmlFor="organisation">{texts.organization}</Label>
               <Input
                 id="organisation"
@@ -439,7 +365,9 @@ export function ProfileTab() {
                 placeholder={texts.organizationPlaceholder}
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="industry">{texts.industry}</Label>
               <Input
@@ -470,77 +398,6 @@ export function ProfileTab() {
               placeholder={texts.yearsExperiencePlaceholder}
             />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Identity Information Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            {texts.identityInfo}
-          </CardTitle>
-          <CardDescription>
-            {texts.identityInfoDesc}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {user?.profile?.identity_verified && (
-            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-green-900">{texts.identityVerified}</p>
-                <p className="text-xs text-green-700">
-                  {texts.verifiedOn}{' '}
-                  {user.profile.identity_verified_at
-                    ? new Date(user.profile.identity_verified_at).toLocaleDateString()
-                    : 'N/A'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {!user?.profile?.identity_verified && (
-            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <XCircle className="h-5 w-5 text-amber-600" />
-              <div>
-                <p className="text-sm font-medium text-amber-900">{texts.identityNotVerified}</p>
-                <p className="text-xs text-amber-700">
-                  {texts.identityNotVerifiedDesc}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="national_id_number">{texts.nationalId}</Label>
-              <Input
-                id="national_id_number"
-                value={profileData.national_id_number}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, national_id_number: e.target.value }))
-                }
-                placeholder={texts.nationalIdPlaceholder}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="passport_number">{texts.passportNumber}</Label>
-              <Input
-                id="passport_number"
-                value={profileData.passport_number}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, passport_number: e.target.value }))
-                }
-                placeholder={texts.passportPlaceholder}
-              />
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-500">
-            {texts.identityNote}
-          </p>
         </CardContent>
       </Card>
 

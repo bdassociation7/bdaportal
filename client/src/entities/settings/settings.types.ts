@@ -31,18 +31,12 @@ export interface UpdateProfileDTO {
   phone?: string;
   country_code?: string;
   date_of_birth?: string;
-  nationality?: string;
 
   // Professional Information
   job_title?: string;
-  company_name?: string;
   industry?: string;
   experience_years?: number;
   organization?: string;
-
-  // Identity Information
-  national_id_number?: string;
-  passport_number?: string;
 }
 
 export interface ChangePasswordDTO {

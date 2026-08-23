@@ -177,7 +177,9 @@ export class SettingsService {
           ...updates,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select('id')
+        .single();
 
       if (error) throw error;
       return { success: true, error: null };
