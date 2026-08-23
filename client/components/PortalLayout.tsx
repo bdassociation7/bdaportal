@@ -110,11 +110,11 @@ export function PortalLayout({ children }: PortalLayoutProps) {
   };
 
   return (
-    <div className={cn("min-h-screen bg-gray-50", isRTL && "font-arabic")}>
+    <div className={cn("min-h-screen bg-background text-foreground", isRTL && "font-arabic")}>
       <Dialog open={showProfessionalPrompt} onOpenChange={setShowProfessionalPrompt}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#0f91e0]">
+            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#0f91e0] dark:bg-[#163654] dark:text-sky-300">
               <BriefcaseBusiness className="h-5 w-5" />
             </div>
             <DialogTitle>Complete your professional profile</DialogTitle>
@@ -143,14 +143,14 @@ export function PortalLayout({ children }: PortalLayoutProps) {
       {/* Mobile menu overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden" onClick={closeSidebar}>
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" />
+          <div className="fixed inset-0 bg-[#0d1f4e]/75" />
         </div>
       )}
 
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+          "fixed inset-y-0 z-50 w-64 bg-sidebar text-sidebar-foreground shadow-xl shadow-[#0d1f4e]/20 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
           isRTL ? "right-0" : "left-0",
           sidebarOpen
             ? "translate-x-0"
@@ -161,7 +161,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
       >
         <div className="flex h-full flex-col">
           {/* Logo area with role indicator */}
-          <div className="flex h-20 shrink-0 items-center justify-between border-b border-gray-200 px-4 bg-gradient-to-r from-sky-500 via-royal-600 to-navy-800">
+          <div className="flex h-20 shrink-0 items-center justify-between border-b border-sidebar-border px-4 bg-gradient-to-r from-sky-500 via-royal-600 to-navy-800">
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-sm">
@@ -196,7 +196,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                   {/* Section Header */}
                   {item.section && (
                     <div className="px-2 pt-4 pb-2 first:pt-0">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <p className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
                         {t(item.section)}
                       </p>
                     </div>
@@ -207,20 +207,20 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                       "group flex w-full items-center rounded-md px-2 py-2 text-sm font-medium transition-colors",
                       isActive
                         ? "bg-gradient-to-r from-sky-500 to-royal-600 text-white"
-                        : "text-gray-700 hover:bg-sky-50 hover:text-royal-700",
-                      item.action === 'logout' && "text-red-600 hover:bg-red-50 hover:text-red-700"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      item.action === 'logout' && "text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
                     )}
                   >
                     <Icon
                       className={cn(
                         "h-5 w-5 shrink-0",
                         isRTL ? "ml-3" : "mr-3",
-                        isActive ? "text-white" : item.action === 'logout' ? "text-red-500" : "text-gray-400"
+                        isActive ? "text-white" : item.action === 'logout' ? "text-red-400" : "text-sidebar-foreground/55"
                       )}
                     />
                     {t(item.label)}
                     {item.external && (
-                      <span className={cn("ml-auto text-xs", isActive ? "text-white" : "text-gray-400")}>
+                      <span className={cn("ml-auto text-xs", isActive ? "text-white" : "text-sidebar-foreground/55")}>
                         ↗
                       </span>
                     )}
@@ -228,7 +228,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                     {item.id === 'distribute-vouchers' && availableVoucherCount >= 2 && (
                       <span className={cn(
                         "ml-auto text-xs px-1.5 py-0.5 rounded-full font-semibold",
-                        isActive ? "bg-white/20 text-white" : "bg-indigo-100 text-indigo-700"
+                        isActive ? "bg-white/20 text-white" : "bg-sky-500/15 text-sky-300"
                       )}>
                         {availableVoucherCount}
                       </span>
@@ -240,7 +240,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
           </nav>
 
           {/* Settings & Logout */}
-          <div className="border-t border-gray-200">
+          <div className="border-t border-sidebar-border">
             {/* Settings Button - Navigate directly to Settings page */}
             <button
               onClick={() => {
@@ -251,14 +251,14 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                 "group flex w-full items-center px-4 py-3 text-sm font-medium transition-colors",
                 location.pathname === '/settings'
                   ? "bg-royal-600 text-white"
-                  : "text-gray-700 hover:bg-gray-50"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
               <Settings
                 className={cn(
                   "h-5 w-5 shrink-0",
                   isRTL ? "ml-3" : "mr-3",
-                  location.pathname === '/settings' ? "text-white" : "text-gray-400"
+                  location.pathname === '/settings' ? "text-white" : "text-sidebar-foreground/55"
                 )}
               />
               {t('common.settings')}
@@ -276,15 +276,15 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                 }
                 closeSidebar();
               }}
-              className="group flex w-full items-center px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+              className="group flex w-full items-center px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
             >
-              <LogOut className={cn("h-5 w-5 shrink-0", isRTL ? "ml-3" : "mr-3", "text-red-500")} />
+              <LogOut className={cn("h-5 w-5 shrink-0", isRTL ? "ml-3" : "mr-3", "text-red-400")} />
               {t('common.logOut')}
             </button>
 
             {/* User Info */}
             <div className="px-4 pb-4">
-              <div className="text-xs text-gray-500 space-y-1">
+              <div className="text-xs text-sidebar-foreground/60 space-y-1">
                 <p className="font-medium truncate">
                   {user?.profile?.first_name && user?.profile?.last_name
                     ? `${user.profile.first_name} ${user.profile.last_name}`
@@ -303,7 +303,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
         isRTL && "lg:pl-0 lg:pr-64"
       )}>
         {/* Top bar — hidden on pages with their own hero section */}
-        {!hideTopBar && <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
+        {!hideTopBar && <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-border bg-card/95 px-4 shadow-sm backdrop-blur sm:gap-x-6 sm:px-6 lg:px-8">
           <Button
             variant="ghost"
             size="sm"
@@ -315,7 +315,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
 
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1 items-center">
-              <h1 className="text-lg font-semibold text-gray-900">
+              <h1 className="text-lg font-semibold text-foreground">
                 {navItems.find(item => item.path === location.pathname)?.label
                   ? t(navItems.find(item => item.path === location.pathname)!.label)
                   : 'BDA Portal'}
@@ -324,7 +324,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
 
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               {/* Language display (read-only) */}
-              <span className="text-sm text-gray-500">EN</span>
+              <span className="text-sm text-muted-foreground">EN</span>
             </div>
           </div>
         </div>}

@@ -90,7 +90,7 @@ export function NotificationsTab() {
     return (
       <Card>
         <CardContent className="p-6">
-          <p className="text-gray-600">{texts.failedToLoad}</p>
+          <p className="text-muted-foreground">{texts.failedToLoad}</p>
         </CardContent>
       </Card>
     );
@@ -153,7 +153,7 @@ export function NotificationsTab() {
                   <Label htmlFor={option.id} className="text-base font-medium">
                     {option.label}
                   </Label>
-                  <p className="text-sm text-gray-500">{option.description}</p>
+                  <p className="text-sm text-muted-foreground">{option.description}</p>
                 </div>
                 <Switch
                   id={option.id}
@@ -171,9 +171,9 @@ export function NotificationsTab() {
       </Card>
 
       {/* Info Card */}
-      <Card className="bg-blue-50 border-blue-200">
+      <Card className="border-blue-200 bg-blue-50 dark:border-[#1c4a8b] dark:bg-[#102a44]">
         <CardContent className="p-4">
-          <p className="text-sm text-blue-800">
+          <p className="text-sm text-blue-800 dark:text-sky-100">
             <strong>{texts.note}</strong> {texts.noteText}
           </p>
         </CardContent>

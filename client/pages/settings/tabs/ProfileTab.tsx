@@ -253,17 +253,17 @@ export function ProfileTab() {
   return (
     <div className="space-y-6">
       {/* Personal Information Card */}
-      <Card className="overflow-hidden border-slate-200 shadow-[0_16px_40px_rgba(13,31,78,0.07)]">
-        <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-[#f0f6ff] via-white to-white px-5 py-5 sm:px-7">
+      <Card className="overflow-hidden border-border shadow-[0_16px_40px_rgba(13,31,78,0.07)] dark:shadow-black/20">
+        <CardHeader className="border-b border-border bg-gradient-to-r from-[#f0f6ff] via-white to-white px-5 py-5 sm:px-7 dark:from-[#102a44] dark:via-[#0f2137] dark:to-[#0f2137]">
           <div className="flex items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#0f91e0] text-white shadow-[0_8px_20px_rgba(15,145,224,0.25)]">
               <User className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <CardTitle className="text-xl font-bold tracking-tight text-[#0d1f4e] sm:text-2xl">
+              <CardTitle className="text-xl font-bold tracking-tight text-[#0d1f4e] dark:text-slate-100 sm:text-2xl">
                 {texts.personalInfo}
               </CardTitle>
-              <CardDescription className="mt-1 text-sm text-slate-600">
+              <CardDescription className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                 {texts.personalInfoDesc}
               </CardDescription>
             </div>
@@ -272,7 +272,7 @@ export function ProfileTab() {
         <CardContent className="space-y-6 p-5 sm:p-7">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="first_name" className="text-sm font-semibold text-slate-800">
+              <Label htmlFor="first_name" className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                 {texts.firstName} <span className="text-[#0f91e0]">*</span>
               </Label>
               <Input
@@ -282,12 +282,12 @@ export function ProfileTab() {
                   setProfileData((prev) => ({ ...prev, first_name: e.target.value }))
                 }
                 placeholder={texts.firstNamePlaceholder}
-                className="h-12 rounded-xl border-slate-200 bg-white px-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                className="h-12 rounded-xl border-input bg-background px-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="last_name" className="text-sm font-semibold text-slate-800">
+              <Label htmlFor="last_name" className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                 {texts.lastName} <span className="text-[#0f91e0]">*</span>
               </Label>
               <Input
@@ -297,44 +297,44 @@ export function ProfileTab() {
                   setProfileData((prev) => ({ ...prev, last_name: e.target.value }))
                 }
                 placeholder={texts.lastNamePlaceholder}
-                className="h-12 rounded-xl border-slate-200 bg-white px-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                className="h-12 rounded-xl border-input bg-background px-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
               />
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3.5">
+          <div className="rounded-xl border border-border bg-muted/60 px-4 py-3.5">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#1c4a8b] shadow-sm">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background text-[#1c4a8b] shadow-sm dark:text-sky-300">
                 <Mail className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <Label htmlFor="email" className="text-sm font-semibold text-slate-800">{texts.email}</Label>
+                <Label htmlFor="email" className="text-sm font-semibold text-slate-800 dark:text-slate-100">{texts.email}</Label>
                 <Input
                   id="email"
                   value={user?.email || ''}
                   disabled
-                  className="mt-1 h-auto border-0 bg-transparent p-0 text-sm text-slate-500 shadow-none disabled:cursor-default disabled:opacity-100"
+                  className="mt-1 h-auto border-0 bg-transparent p-0 text-sm text-slate-500 shadow-none disabled:cursor-default disabled:opacity-100 dark:text-slate-300"
                 />
               </div>
             </div>
-            <p className="mt-2 pl-12 text-xs leading-5 text-slate-500">{texts.emailNote}</p>
+            <p className="mt-2 pl-12 text-xs leading-5 text-slate-500 dark:text-slate-400">{texts.emailNote}</p>
           </div>
 
-          <div className="rounded-2xl border border-[#cfe8fb] bg-[#f7fbff] p-4 sm:p-5">
+          <div className="rounded-2xl border border-[#cfe8fb] bg-[#f7fbff] p-4 sm:p-5 dark:border-[#1c4a8b] dark:bg-[#102a44]/70">
             <div className="mb-4 flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#dbeafe] text-[#0f91e0]">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#dbeafe] text-[#0f91e0] dark:bg-[#1c4a8b]/45 dark:text-sky-300">
                 <Phone className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-sm font-bold text-[#0d1f4e]">{texts.mobileContact}</p>
-                <p className="mt-0.5 text-xs leading-5 text-slate-600">{texts.mobileContactDesc}</p>
+                <p className="text-sm font-bold text-[#0d1f4e] dark:text-slate-100">{texts.mobileContact}</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-300">{texts.mobileContactDesc}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(13rem,0.8fr)]">
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-semibold text-slate-800">{texts.phone}</Label>
-                <div className="flex h-12 overflow-hidden rounded-xl border border-[#bfdbfe] bg-white shadow-sm transition-shadow focus-within:ring-4 focus-within:ring-[#0f91e0]/10">
+                <Label htmlFor="phone" className="text-sm font-semibold text-slate-800 dark:text-slate-100">{texts.phone}</Label>
+                <div className="flex h-12 overflow-hidden rounded-xl border border-[#bfdbfe] bg-white shadow-sm transition-shadow focus-within:ring-4 focus-within:ring-[#0f91e0]/10 dark:border-[#2d5d8f] dark:bg-background">
                   <CountryDialCodeSelect
                     id="country_code"
                     value={profileData.country_code}
@@ -345,7 +345,7 @@ export function ProfileTab() {
                     searchPlaceholder={texts.countryCodeSearchPlaceholder}
                     emptyText={texts.countryCodeEmpty}
                     ariaLabel={texts.countryCode}
-                    className="h-full w-[45%] rounded-none border-0 border-r border-[#bfdbfe] bg-[#f0f6ff] px-3 shadow-none hover:bg-[#e3f1fd] focus-visible:ring-0 sm:w-[42%]"
+                    className="h-full w-[45%] rounded-none border-0 border-r border-[#bfdbfe] bg-[#f0f6ff] px-3 shadow-none hover:bg-[#e3f1fd] focus-visible:ring-0 dark:border-[#2d5d8f] dark:bg-[#163654] dark:text-slate-100 dark:hover:bg-[#1c4a8b] sm:w-[42%]"
                   />
                   <Input
                     id="phone"
@@ -355,13 +355,13 @@ export function ProfileTab() {
                       setProfileData((prev) => ({ ...prev, phone: e.target.value }))
                     }
                     placeholder={texts.phonePlaceholder}
-                    className="h-full flex-1 rounded-none border-0 bg-white px-4 text-base shadow-none focus-visible:ring-0"
+                    className="h-full flex-1 rounded-none border-0 bg-white px-4 text-base shadow-none focus-visible:ring-0 dark:bg-background"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="date_of_birth" className="text-sm font-semibold text-slate-800">{texts.dateOfBirth}</Label>
+                <Label htmlFor="date_of_birth" className="text-sm font-semibold text-slate-800 dark:text-slate-100">{texts.dateOfBirth}</Label>
                 <div className="relative">
                   <CalendarDays className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" />
                   <Input
@@ -371,7 +371,7 @@ export function ProfileTab() {
                     onChange={(e) =>
                       setProfileData((prev) => ({ ...prev, date_of_birth: e.target.value }))
                     }
-                    className="h-12 rounded-xl border-slate-200 bg-white pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                    className="h-12 rounded-xl border-input bg-background pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
                   />
                 </div>
               </div>
@@ -381,17 +381,17 @@ export function ProfileTab() {
       </Card>
 
       {/* Professional Information Card */}
-      <Card className="overflow-hidden border-slate-200 shadow-[0_16px_40px_rgba(13,31,78,0.07)]">
-        <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-white via-white to-[#f0f6ff] px-5 py-5 sm:px-7">
+      <Card className="overflow-hidden border-border shadow-[0_16px_40px_rgba(13,31,78,0.07)] dark:shadow-black/20">
+        <CardHeader className="border-b border-border bg-gradient-to-r from-white via-white to-[#f0f6ff] px-5 py-5 sm:px-7 dark:from-[#0f2137] dark:via-[#0f2137] dark:to-[#102a44]">
           <div className="flex items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1c4a8b] text-white shadow-[0_8px_20px_rgba(28,74,139,0.24)]">
               <BriefcaseBusiness className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <CardTitle className="text-xl font-bold tracking-tight text-[#0d1f4e] sm:text-2xl">
+              <CardTitle className="text-xl font-bold tracking-tight text-[#0d1f4e] dark:text-slate-100 sm:text-2xl">
                 {texts.professionalInfo}
               </CardTitle>
-              <CardDescription className="mt-1 text-sm text-slate-600">
+              <CardDescription className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                 {texts.professionalInfoDesc}
               </CardDescription>
             </div>
@@ -400,7 +400,7 @@ export function ProfileTab() {
         <CardContent className="space-y-6 p-5 sm:p-7">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="job_title" className="text-sm font-semibold text-slate-800">{texts.jobTitle}</Label>
+              <Label htmlFor="job_title" className="text-sm font-semibold text-slate-800 dark:text-slate-100">{texts.jobTitle}</Label>
               <div className="relative">
                 <BriefcaseBusiness className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" />
                 <Input
@@ -410,13 +410,13 @@ export function ProfileTab() {
                     setProfileData((prev) => ({ ...prev, job_title: e.target.value }))
                   }
                   placeholder={texts.jobTitlePlaceholder}
-                  className="h-12 rounded-xl border-slate-200 bg-white pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                  className="h-12 rounded-xl border-input bg-background pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="organisation" className="text-sm font-semibold text-slate-800">{texts.organization}</Label>
+              <Label htmlFor="organisation" className="text-sm font-semibold text-slate-800 dark:text-slate-100">{texts.organization}</Label>
               <div className="relative">
                 <Building2 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" />
                 <Input
@@ -426,7 +426,7 @@ export function ProfileTab() {
                     setProfileData((prev) => ({ ...prev, organization: e.target.value }))
                   }
                   placeholder={texts.organizationPlaceholder}
-                  className="h-12 rounded-xl border-slate-200 bg-white pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                  className="h-12 rounded-xl border-input bg-background pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
                 />
               </div>
             </div>
@@ -434,7 +434,7 @@ export function ProfileTab() {
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(13rem,0.55fr)]">
             <div className="space-y-2">
-              <Label htmlFor="industry" className="text-sm font-semibold text-slate-800">{texts.industry}</Label>
+              <Label htmlFor="industry" className="text-sm font-semibold text-slate-800 dark:text-slate-100">{texts.industry}</Label>
               <div className="relative">
                 <Layers3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" />
                 <Input
@@ -444,13 +444,13 @@ export function ProfileTab() {
                     setProfileData((prev) => ({ ...prev, industry: e.target.value }))
                   }
                   placeholder={texts.industryPlaceholder}
-                  className="h-12 rounded-xl border-slate-200 bg-white pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                  className="h-12 rounded-xl border-input bg-background pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="experience_years" className="text-sm font-semibold text-slate-800">{texts.yearsExperience}</Label>
+              <Label htmlFor="experience_years" className="text-sm font-semibold text-slate-800 dark:text-slate-100">{texts.yearsExperience}</Label>
               <div className="relative">
                 <Clock3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" />
                 <Input
@@ -466,9 +466,9 @@ export function ProfileTab() {
                     }))
                   }
                   placeholder={texts.yearsExperiencePlaceholder}
-                  className="h-12 rounded-xl border-slate-200 bg-white pl-11 pr-16 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                  className="h-12 rounded-xl border-input bg-background pl-11 pr-16 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
                 />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">{texts.yearsExperienceUnit}</span>
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500 dark:text-slate-300">{texts.yearsExperienceUnit}</span>
               </div>
             </div>
           </div>
@@ -476,8 +476,8 @@ export function ProfileTab() {
       </Card>
 
       {/* Save Button for All Profile Changes */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p className="max-w-2xl text-sm leading-6 text-slate-600">{texts.saveHint}</p>
+      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-muted/60 px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">{texts.saveHint}</p>
         <Button
           onClick={handleProfileSave}
           disabled={!profileChanged || updateProfile.isPending}
@@ -537,7 +537,7 @@ export function ProfileTab() {
                 placeholder={texts.newPasswordPlaceholder}
                 autoComplete="new-password"
               />
-              <p className="text-xs text-gray-500">{texts.newPasswordNote}</p>
+              <p className="text-xs text-muted-foreground">{texts.newPasswordNote}</p>
             </div>
 
             <div className="space-y-2">
@@ -574,9 +574,9 @@ export function ProfileTab() {
       </Card>
 
       {/* Security Notice */}
-      <Card className="bg-blue-50 border-blue-200">
+      <Card className="border-blue-200 bg-blue-50 dark:border-[#1c4a8b] dark:bg-[#102a44]">
         <CardContent className="p-4">
-          <p className="text-sm text-blue-800">
+          <p className="text-sm text-blue-800 dark:text-sky-100">
             <strong>{texts.securityNotice}</strong> {texts.securityNoticeText}
           </p>
         </CardContent>

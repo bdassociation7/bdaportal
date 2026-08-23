@@ -144,12 +144,12 @@ export function AppearanceTab() {
                       htmlFor={option.value}
                       className="flex items-start gap-3 flex-1 cursor-pointer"
                     >
-                      <div className="mt-0.5 p-2 bg-gray-100 rounded-md">
-                        <Icon className="h-5 w-5 text-gray-700" />
+                      <div className="mt-0.5 rounded-md bg-muted p-2 text-muted-foreground">
+                        <Icon className="h-5 w-5" />
                       </div>
                       <div className="flex-1">
                         <div className="font-medium">{option.label}</div>
-                        <div className="text-sm text-gray-500">{option.description}</div>
+                        <div className="text-sm text-muted-foreground">{option.description}</div>
                       </div>
                     </Label>
                   </div>
@@ -159,14 +159,14 @@ export function AppearanceTab() {
           </RadioGroup>
 
           {/* Current Theme Preview */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
+          <div className="mt-6 rounded-xl border border-border bg-muted/60 p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">{texts.currentTheme}</span>
+              <span className="text-sm font-medium text-foreground">{texts.currentTheme}</span>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 capitalize">{effectiveTheme}</span>
+                <span className="text-sm capitalize text-muted-foreground">{effectiveTheme}</span>
                 <div
                   className={`h-4 w-4 rounded-full ${
-                    effectiveTheme === 'dark' ? 'bg-gray-800' : 'bg-white border-2 border-gray-300'
+                    effectiveTheme === 'dark' ? 'bg-[#0f91e0]' : 'border-2 border-slate-300 bg-white'
                   }`}
                 />
               </div>
@@ -199,7 +199,7 @@ export function AppearanceTab() {
                 <SelectItem value="ar">{texts.arabic}</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {texts.languageNote}
             </p>
           </div>
@@ -240,7 +240,7 @@ export function AppearanceTab() {
                 <SelectItem value="Australia/Sydney">Sydney (AEDT/AEST)</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {texts.timezoneNote}
             </p>
           </div>
@@ -248,9 +248,9 @@ export function AppearanceTab() {
       </Card>
 
       {/* Info Card */}
-      <Card className="bg-blue-50 border-blue-200">
+      <Card className="border-blue-200 bg-blue-50 dark:border-[#1c4a8b] dark:bg-[#102a44]">
         <CardContent className="p-4">
-          <p className="text-sm text-blue-800">
+          <p className="text-sm text-blue-800 dark:text-sky-100">
             <strong>{texts.note}</strong> {texts.noteText}
           </p>
         </CardContent>

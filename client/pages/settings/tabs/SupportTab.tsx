@@ -184,13 +184,13 @@ export function SupportTab() {
           <CardDescription>{texts.contactSupportDesc}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <Mail className="h-5 w-5 text-blue-600" />
+          <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-[#1c4a8b] dark:bg-[#102a44]">
+            <Mail className="h-5 w-5 text-blue-600 dark:text-sky-300" />
             <div>
-              <p className="text-sm font-medium text-blue-900">{texts.emailSupport}</p>
+              <p className="text-sm font-medium text-blue-900 dark:text-sky-100">{texts.emailSupport}</p>
               <a
                 href="mailto:support@bda-global.org"
-                className="text-sm text-blue-600 hover:underline"
+                className="text-sm text-blue-600 hover:underline dark:text-sky-300"
               >
                 support@bda-global.org
               </a>
@@ -285,18 +285,18 @@ export function SupportTab() {
                 maxLength={5000}
                 rows={6}
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 {texts.descriptionNote}
               </p>
             </div>
 
             <div className="flex justify-between items-center pt-2">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 {texts.forAttachments}{' '}
                 <button
                   type="button"
                   onClick={() => navigate('/support/new')}
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 hover:underline dark:text-sky-300"
                 >
                   {texts.fullTicketForm}
                 </button>
