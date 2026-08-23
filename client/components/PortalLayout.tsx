@@ -150,7 +150,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 z-50 w-64 bg-sidebar text-sidebar-foreground shadow-xl shadow-[#0d1f4e]/20 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+          "fixed inset-y-0 z-50 w-64 bg-white text-gray-900 shadow-lg transition-transform duration-300 ease-in-out dark:bg-sidebar dark:text-sidebar-foreground dark:shadow-[#0d1f4e]/20 lg:translate-x-0",
           isRTL ? "right-0" : "left-0",
           sidebarOpen
             ? "translate-x-0"
@@ -196,7 +196,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                   {/* Section Header */}
                   {item.section && (
                     <div className="px-2 pt-4 pb-2 first:pt-0">
-                      <p className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-sidebar-foreground/50">
                         {t(item.section)}
                       </p>
                     </div>
@@ -207,7 +207,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                       "group flex w-full items-center rounded-md px-2 py-2 text-sm font-medium transition-colors",
                       isActive
                         ? "bg-gradient-to-r from-sky-500 to-royal-600 text-white"
-                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        : "text-gray-700 hover:bg-sky-50 hover:text-royal-700 dark:text-sidebar-foreground/80 dark:hover:bg-sidebar-accent dark:hover:text-sidebar-accent-foreground",
                       item.action === 'logout' && "text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
                     )}
                   >
@@ -215,12 +215,12 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                       className={cn(
                         "h-5 w-5 shrink-0",
                         isRTL ? "ml-3" : "mr-3",
-                        isActive ? "text-white" : item.action === 'logout' ? "text-red-400" : "text-sidebar-foreground/55"
+                        isActive ? "text-white" : item.action === 'logout' ? "text-red-500 dark:text-red-400" : "text-gray-400 dark:text-sidebar-foreground/55"
                       )}
                     />
                     {t(item.label)}
                     {item.external && (
-                      <span className={cn("ml-auto text-xs", isActive ? "text-white" : "text-sidebar-foreground/55")}>
+                      <span className={cn("ml-auto text-xs", isActive ? "text-white" : "text-gray-400 dark:text-sidebar-foreground/55")}>
                         ↗
                       </span>
                     )}
@@ -228,7 +228,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                     {item.id === 'distribute-vouchers' && availableVoucherCount >= 2 && (
                       <span className={cn(
                         "ml-auto text-xs px-1.5 py-0.5 rounded-full font-semibold",
-                        isActive ? "bg-white/20 text-white" : "bg-sky-500/15 text-sky-300"
+                        isActive ? "bg-white/20 text-white" : "bg-indigo-100 text-indigo-700 dark:bg-sky-500/15 dark:text-sky-300"
                       )}>
                         {availableVoucherCount}
                       </span>
@@ -240,7 +240,7 @@ export function PortalLayout({ children }: PortalLayoutProps) {
           </nav>
 
           {/* Settings & Logout */}
-          <div className="border-t border-sidebar-border">
+          <div className="border-t border-gray-200 dark:border-sidebar-border">
             {/* Settings Button - Navigate directly to Settings page */}
             <button
               onClick={() => {
@@ -251,14 +251,14 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                 "group flex w-full items-center px-4 py-3 text-sm font-medium transition-colors",
                 location.pathname === '/settings'
                   ? "bg-royal-600 text-white"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  : "text-gray-700 hover:bg-gray-50 dark:text-sidebar-foreground/80 dark:hover:bg-sidebar-accent dark:hover:text-sidebar-accent-foreground"
               )}
             >
               <Settings
                 className={cn(
                   "h-5 w-5 shrink-0",
                   isRTL ? "ml-3" : "mr-3",
-                  location.pathname === '/settings' ? "text-white" : "text-sidebar-foreground/55"
+                  location.pathname === '/settings' ? "text-white" : "text-gray-400 dark:text-sidebar-foreground/55"
                 )}
               />
               {t('common.settings')}
@@ -276,15 +276,15 @@ export function PortalLayout({ children }: PortalLayoutProps) {
                 }
                 closeSidebar();
               }}
-              className="group flex w-full items-center px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+              className="group flex w-full items-center px-4 py-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
             >
-              <LogOut className={cn("h-5 w-5 shrink-0", isRTL ? "ml-3" : "mr-3", "text-red-400")} />
+              <LogOut className={cn("h-5 w-5 shrink-0", isRTL ? "ml-3" : "mr-3", "text-red-500 dark:text-red-400")} />
               {t('common.logOut')}
             </button>
 
             {/* User Info */}
             <div className="px-4 pb-4">
-              <div className="text-xs text-sidebar-foreground/60 space-y-1">
+              <div className="space-y-1 text-xs text-gray-500 dark:text-sidebar-foreground/60">
                 <p className="font-medium truncate">
                   {user?.profile?.first_name && user?.profile?.last_name
                     ? `${user.profile.first_name} ${user.profile.last_name}`
