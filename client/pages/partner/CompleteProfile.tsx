@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CountryDialCodeSelect } from '@/components/ui/country-dial-code-select';
 import {
   Select,
   SelectContent,
@@ -202,16 +203,14 @@ export default function PartnerCompleteProfile() {
                     <Label htmlFor="country_code">
                       Country <span className="text-red-500">*</span>
                     </Label>
-                    <Input
+                    <CountryDialCodeSelect
                       id="country_code"
                       value={formData.country_code}
-                      onChange={(e) => handleChange('country_code', e.target.value.toUpperCase())}
-                      required
-                      maxLength={2}
-                      placeholder="US"
-                      className="uppercase"
+                      onValueChange={(value) => handleChange('country_code', value)}
+                      placeholder="Select your country"
+                      searchPlaceholder="Search by country, ISO code, or dial code..."
+                      ariaLabel="Country and dialling code"
                     />
-                    <p className="text-xs text-gray-500">2-letter country code (e.g., US, FR, EG)</p>
                   </div>
                 </div>
 

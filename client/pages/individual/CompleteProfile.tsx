@@ -5,18 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { CountryDialCodeSelect } from '@/components/ui/country-dial-code-select';
 import { useToast } from '@/components/ui/use-toast';
 import { AlertCircle, CheckCircle2, User, LogOut } from 'lucide-react';
 import { checkProfileCompletion, getFieldLabel } from '@/services/profile-completion.service';
 import { UsersService } from '@/entities/users';
-import { COUNTRY_OPTIONS, countryDialCode } from '@/constants/countries';
+import { countryDialCode } from '@/constants/countries';
 
 /**
  * Page de completion de profil pour utilisateurs Individual
@@ -216,21 +210,14 @@ export default function CompleteProfile() {
                     <Label htmlFor="country_code">
                       Country <span className="text-red-500">*</span>
                     </Label>
-                    <Select
+                    <CountryDialCodeSelect
+                      id="country_code"
                       value={formData.country_code}
                       onValueChange={(value) => handleChange('country_code', value)}
-                    >
-                      <SelectTrigger id="country_code">
-                        <SelectValue placeholder="Select your country" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-72">
-                        {COUNTRY_OPTIONS.map((country) => (
-                          <SelectItem key={country.code} value={country.code}>
-                            {country.name} ({country.dialCode})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select your country"
+                      searchPlaceholder="Search by country, ISO code, or dial code..."
+                      ariaLabel="Country and dialling code"
+                    />
                   </div>
 
                   <div className="space-y-2">

@@ -15,6 +15,7 @@ import { useUpdateProfile, useChangePassword } from '@/entities/settings/setting
 import { User, Lock, Loader2, Save, Briefcase, MapPin, CreditCard, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { CountryDialCodeSelect } from '@/components/ui/country-dial-code-select';
 
 export function ProfileTab() {
   const { language } = useLanguage();
@@ -34,8 +35,10 @@ export function ProfileTab() {
       lastNamePlaceholder: 'Enter your last name',
       email: 'Email (Read-only)',
       emailNote: 'Email cannot be changed for security reasons',
-      countryCode: 'Country Code',
-      countryCodePlaceholder: '+1, +971, +44, etc.',
+      countryCode: 'Country and Dialling Code',
+      countryCodePlaceholder: 'Select your country',
+      countryCodeSearchPlaceholder: 'Search by country, ISO code, or dial code...',
+      countryCodeEmpty: 'No country found.',
       phone: 'Phone Number',
       phonePlaceholder: '555-123-4567',
       dateOfBirth: 'Date of Birth',
@@ -99,8 +102,10 @@ export function ProfileTab() {
       lastNamePlaceholder: 'أدخل اسم عائلتك',
       email: 'البريد الإلكتروني (للقراءة فقط)',
       emailNote: 'لا يمكن تغيير البريد الإلكتروني لأسباب أمنية',
-      countryCode: 'رمز الدولة',
-      countryCodePlaceholder: '+1، +971، +44، إلخ.',
+      countryCode: 'الدولة ومفتاح الاتصال',
+      countryCodePlaceholder: 'اختر دولتك',
+      countryCodeSearchPlaceholder: 'ابحث باسم الدولة أو الرمز أو مفتاح الاتصال...',
+      countryCodeEmpty: 'لم يتم العثور على دولة.',
       phone: 'رقم الهاتف',
       phonePlaceholder: '555-123-4567',
       dateOfBirth: 'تاريخ الميلاد',
@@ -331,13 +336,16 @@ export function ProfileTab() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="country_code">{texts.countryCode}</Label>
-              <Input
+              <CountryDialCodeSelect
                 id="country_code"
                 value={profileData.country_code}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, country_code: e.target.value }))
+                onValueChange={(value) =>
+                  setProfileData((prev) => ({ ...prev, country_code: value }))
                 }
                 placeholder={texts.countryCodePlaceholder}
+                searchPlaceholder={texts.countryCodeSearchPlaceholder}
+                emptyText={texts.countryCodeEmpty}
+                ariaLabel={texts.countryCode}
               />
             </div>
 
