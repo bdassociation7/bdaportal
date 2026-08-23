@@ -303,8 +303,8 @@ export default function IndividualDashboard() {
       title: t('dashboard.individual.activeCertifications'),
       value: certStats?.active_certifications || 0,
       icon: Award,
-      color: "text-royal-600",
-      bgColor: "bg-royal-100",
+      color: "text-royal-600 dark:text-sky-300",
+      bgColor: "bg-royal-100 dark:bg-[#1c4a8b]/35",
       subtitle: `${certStats?.cp_certifications || 0} BDA-CP, ${certStats?.scp_certifications || 0} BDA-SCP`,
       onClick: () => navigate('/my-certifications')
     },
@@ -312,8 +312,8 @@ export default function IndividualDashboard() {
       title: t('dashboard.individual.pdcCredits'),
       value: pdcStats?.total_approved || 0,
       icon: Clock,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
+      color: "text-sky-600 dark:text-sky-300",
+      bgColor: "bg-sky-100 dark:bg-sky-500/15",
       subtitle: `${pdcRemaining} ${t('dashboard.individual.moreNeeded')}`,
       onClick: () => navigate('/pdcs')
     },
@@ -321,8 +321,8 @@ export default function IndividualDashboard() {
       title: t('dashboard.individual.mockExams'),
       value: mockExamsCount || 0,
       icon: ClipboardCheck,
-      color: "text-sky-600",
-      bgColor: "bg-sky-100",
+      color: "text-sky-600 dark:text-sky-300",
+      bgColor: "bg-sky-100 dark:bg-sky-500/15",
       subtitle: t('dashboard.individual.completed'),
       onClick: () => navigate('/mock-exams')
     },
@@ -330,8 +330,8 @@ export default function IndividualDashboard() {
       title: t('dashboard.individual.myBooks'),
       value: booksCount || 0,
       icon: BookOpen,
-      color: "text-navy-700",
-      bgColor: "bg-navy-100",
+      color: "text-navy-700 dark:text-sky-300",
+      bgColor: "bg-navy-100 dark:bg-[#1c4a8b]/35",
       subtitle: t('dashboard.individual.availableDownloads'),
       onClick: () => navigate('/my-books')
     },
@@ -406,9 +406,9 @@ export default function IndividualDashboard() {
                   <metric.icon className={`h-6 w-6 ${metric.color}`} />
                 </div>
                 <div className="ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
-                  <p className="text-sm font-medium text-gray-600">{metric.title}</p>
-                  <p className="text-xs text-gray-500">{metric.subtitle}</p>
+                  <p className="text-2xl font-bold text-foreground">{metric.value}</p>
+                  <p className="text-sm font-medium text-muted-foreground">{metric.title}</p>
+                  <p className="text-xs text-muted-foreground">{metric.subtitle}</p>
                 </div>
               </div>
             </CardContent>
@@ -430,37 +430,37 @@ export default function IndividualDashboard() {
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium">{t('dashboard.individual.currentCycleProgress')}</span>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-muted-foreground">
                     {pdcStats?.total_approved || 0} / 60 {t('dashboard.individual.credits')}
                   </span>
                 </div>
                 <Progress value={pdcProgress} className="h-3" />
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="mt-2 text-xs text-muted-foreground">
                   {pdcRemaining} {t('dashboard.individual.moreCreditsForRenewal')}
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{t('dashboard.individual.approved')}</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard.individual.approved')}</p>
+                  <p className="text-2xl font-bold text-sky-600 dark:text-sky-300">
                     {pdcStats?.total_approved || 0}
                   </p>
-                  <p className="text-xs text-gray-500">{t('dashboard.individual.credits')}</p>
+                  <p className="text-xs text-muted-foreground">{t('dashboard.individual.credits')}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{t('dashboard.individual.pending')}</p>
-                  <p className="text-2xl font-bold text-orange-600">
+                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard.individual.pending')}</p>
+                  <p className="text-2xl font-bold text-royal-600 dark:text-sky-300">
                     {pdcStats?.total_pending || 0}
                   </p>
-                  <p className="text-xs text-gray-500">{t('dashboard.individual.underReview')}</p>
+                  <p className="text-xs text-muted-foreground">{t('dashboard.individual.underReview')}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{t('dashboard.individual.total')}</p>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-sm font-medium text-muted-foreground">{t('dashboard.individual.total')}</p>
+                  <p className="text-2xl font-bold text-sky-600 dark:text-sky-300">
                     {pdcStats?.total_submissions || 0}
                   </p>
-                  <p className="text-xs text-gray-500">{t('dashboard.individual.submissions')}</p>
+                  <p className="text-xs text-muted-foreground">{t('dashboard.individual.submissions')}</p>
                 </div>
               </div>
 
@@ -496,15 +496,15 @@ export default function IndividualDashboard() {
                   return (
                     <div
                       key={cert.id}
-                      className="flex items-start gap-3 p-3 bg-orange-50 border border-orange-200 rounded-lg cursor-pointer hover:bg-orange-100"
+                      className="flex items-start gap-3 rounded-lg border border-[#bfdbfe] bg-[#f0f6ff] p-3 cursor-pointer hover:bg-[#e0f2fe] dark:border-[#1c4a8b] dark:bg-[#102a44] dark:hover:bg-[#163654]"
                       onClick={() => navigate('/my-certifications')}
                     >
-                      <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                      <AlertCircle className="h-5 w-5 text-[#0f91e0] flex-shrink-0 mt-0.5" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-orange-900">
+                        <p className="text-sm font-medium text-[#0d1f4e] dark:text-sky-100">
                           BDA-{cert.certification_type} {t('dashboard.individual.expiringSoon')}
                         </p>
-                        <p className="text-xs text-orange-700 mt-1">
+                        <p className="mt-1 text-xs text-[#1c4a8b] dark:text-slate-300">
                           {daysUntilExpiry} {t('dashboard.individual.daysRemaining')}
                         </p>
                       </div>
@@ -512,13 +512,13 @@ export default function IndividualDashboard() {
                   );
                 })
               ) : (
-                <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-lg border border-[#bfdbfe] bg-[#f0f6ff] p-3 dark:border-[#1c4a8b] dark:bg-[#102a44]">
+                  <CheckCircle className="h-5 w-5 text-[#0f91e0] flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-green-900">
+                    <p className="text-sm font-medium text-[#0d1f4e] dark:text-sky-100">
                       {t('dashboard.individual.allCertificationsValid')}
                     </p>
-                    <p className="text-xs text-green-700 mt-1">
+                    <p className="mt-1 text-xs text-[#1c4a8b] dark:text-slate-300">
                       {t('dashboard.individual.noUpcomingRenewals')}
                     </p>
                   </div>
@@ -529,15 +529,15 @@ export default function IndividualDashboard() {
               {pdcStats && pdcStats.total_approved >= 60 && activeCerts.length > 0 ? (
                 // PDC Requirement Complete
                 <div
-                  className="flex items-start gap-3 p-3 bg-green-50 border-2 border-green-300 rounded-lg cursor-pointer hover:bg-green-100"
+                  className="flex items-start gap-3 rounded-lg border border-[#bfdbfe] bg-[#f0f6ff] p-3 cursor-pointer hover:bg-[#e0f2fe] dark:border-[#1c4a8b] dark:bg-[#102a44] dark:hover:bg-[#163654]"
                   onClick={() => navigate('/pdcs')}
                 >
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="h-5 w-5 text-[#0f91e0] flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-green-900">
+                    <p className="text-sm font-bold text-[#0d1f4e] dark:text-sky-100">
                       {t('dashboard.individual.pdcRequirementComplete')}
                     </p>
-                    <p className="text-xs text-green-700 mt-1">
+                    <p className="mt-1 text-xs text-[#1c4a8b] dark:text-slate-300">
                       {t('dashboard.individual.autoRenewalReady')}
                     </p>
                   </div>
@@ -545,15 +545,15 @@ export default function IndividualDashboard() {
               ) : pdcStats && pdcStats.total_approved < 60 ? (
                 // PDC Credits Still Needed
                 <div
-                  className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100"
+                  className="flex items-start gap-3 rounded-lg border border-[#bfdbfe] bg-[#f0f6ff] p-3 cursor-pointer hover:bg-[#e0f2fe] dark:border-[#1c4a8b] dark:bg-[#102a44] dark:hover:bg-[#163654]"
                   onClick={() => navigate('/pdcs')}
                 >
-                  <Clock className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <Clock className="h-5 w-5 text-[#0f91e0] flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-900">
+                    <p className="text-sm font-medium text-[#0d1f4e] dark:text-sky-100">
                       {t('dashboard.individual.pdcCreditsRequired')}
                     </p>
-                    <p className="text-xs text-blue-700 mt-1">
+                    <p className="mt-1 text-xs text-[#1c4a8b] dark:text-slate-300">
                       {pdcRemaining} {t('dashboard.individual.moreCreditsNeeded')}
                     </p>
                   </div>
@@ -562,15 +562,15 @@ export default function IndividualDashboard() {
 
               {/* Mock Exams Available */}
               <div
-                className="flex items-start gap-3 p-3 bg-purple-50 border border-purple-200 rounded-lg cursor-pointer hover:bg-purple-100"
+                className="flex items-start gap-3 rounded-lg border border-[#bfdbfe] bg-[#f0f6ff] p-3 cursor-pointer hover:bg-[#e0f2fe] dark:border-[#1c4a8b] dark:bg-[#102a44] dark:hover:bg-[#163654]"
                 onClick={() => navigate('/mock-exams')}
               >
                 <ClipboardCheck className="h-5 w-5 text-royal-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-purple-900">
+                  <p className="text-sm font-medium text-[#0d1f4e] dark:text-sky-100">
                     {t('dashboard.individual.practiceMockExams')}
                   </p>
-                  <p className="text-xs text-purple-700 mt-1">
+                  <p className="mt-1 text-xs text-[#1c4a8b] dark:text-slate-300">
                     {t('dashboard.individual.prepareForCertification')}
                   </p>
                 </div>

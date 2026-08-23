@@ -141,7 +141,7 @@ export default function MyTickets() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-background py-8 text-foreground">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="bg-gradient-to-r from-sky-500 via-royal-600 to-navy-800 rounded-lg p-6 text-white mb-6">
@@ -155,7 +155,7 @@ export default function MyTickets() {
             </div>
             <button
               onClick={() => navigate('/support/new')}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white font-medium text-royal-700 hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-2 rounded-lg bg-background px-4 py-2.5 font-medium text-royal-700 transition-colors hover:bg-muted dark:text-sky-200"
             >
               <Plus className="h-4 w-4" />
               {texts.newTicket}
@@ -164,7 +164,7 @@ export default function MyTickets() {
         </div>
 
         {/* Filters */}
-        <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
+        <div className="mb-6 rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
             <div className="relative">
@@ -174,7 +174,7 @@ export default function MyTickets() {
                 placeholder={texts.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-input bg-background py-2 pl-10 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-[#0f91e0]"
               />
             </div>
 
@@ -184,7 +184,7 @@ export default function MyTickets() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as TicketStatus | 'all')}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                className="w-full appearance-none rounded-lg border border-input bg-background py-2 pl-10 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-[#0f91e0]"
               >
                 <option value="all">{texts.allStatuses}</option>
                 {(Object.keys(texts.statusLabels) as TicketStatus[]).map((status) => (
@@ -201,7 +201,7 @@ export default function MyTickets() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value as TicketCategory | 'all')}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                className="w-full appearance-none rounded-lg border border-input bg-background py-2 pl-10 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-[#0f91e0]"
               >
                 <option value="all">{texts.allCategories}</option>
                 {(Object.keys(texts.categoryLabels) as TicketCategory[]).map((category) => (
@@ -217,19 +217,19 @@ export default function MyTickets() {
         {/* Tickets List */}
         <div className="space-y-4">
           {isLoading ? (
-            <div className="rounded-lg border bg-white p-12 shadow-sm text-center">
+            <div className="rounded-lg border border-border bg-card p-12 text-center shadow-sm">
               <div className="inline-block h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-gray-600">{texts.loading}</p>
+              <p className="text-muted-foreground">{texts.loading}</p>
             </div>
           ) : error ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm">
-              <p className="text-red-800">{texts.errorLoading}</p>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-6 shadow-sm dark:border-red-900/60 dark:bg-red-950/35">
+              <p className="text-red-800 dark:text-red-200">{texts.errorLoading}</p>
             </div>
           ) : tickets.length === 0 ? (
-            <div className="rounded-lg border bg-white p-12 shadow-sm text-center">
-              <Ticket className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{texts.noTicketsFound}</h3>
-              <p className="text-gray-600 mb-4">
+            <div className="rounded-lg border border-border bg-card p-12 text-center shadow-sm">
+              <Ticket className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-semibold text-foreground">{texts.noTicketsFound}</h3>
+              <p className="mb-4 text-muted-foreground">
                 {searchQuery || statusFilter !== 'all' || categoryFilter !== 'all'
                   ? texts.tryAdjustingFilters
                   : texts.noTicketsYet}
@@ -247,13 +247,13 @@ export default function MyTickets() {
               <div
                 key={ticket.id}
                 onClick={() => navigate(`/support/tickets/${ticket.id}`)}
-                className="rounded-lg border bg-white p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-4">
                   {/* Ticket Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <span className="text-sm font-mono text-gray-500">
+                      <span className="text-sm font-mono text-muted-foreground">
                         #{ticket.ticket_number}
                       </span>
                       <StatusBadge variant={getStatusVariant(ticket.status)} size="sm">
@@ -261,15 +261,15 @@ export default function MyTickets() {
                       </StatusBadge>
                     </div>
 
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1 truncate">
+                    <h3 className="mb-1 truncate text-lg font-semibold text-foreground">
                       {ticket.subject}
                     </h3>
 
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                    <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
                       {ticket.description}
                     </p>
 
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
                         <span>
@@ -289,7 +289,7 @@ export default function MyTickets() {
                           <span>{ticket.attachment_count} {texts.attachments}</span>
                         </div>
                       )}
-                      <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
+                      <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
                         {texts.categoryLabels[ticket.category]}
                       </span>
                     </div>
@@ -302,7 +302,7 @@ export default function MyTickets() {
 
         {/* Results Count */}
         {!isLoading && tickets.length > 0 && (
-          <div className="mt-6 text-center text-sm text-gray-600">
+          <div className="mt-6 text-center text-sm text-muted-foreground">
             {texts.showingTickets(tickets.length)}
           </div>
         )}

@@ -241,14 +241,14 @@ export default function MyMembership() {
     switch (status) {
       case 'active':
         return (
-          <Badge className="bg-green-100 text-green-700 border-green-300">
+          <Badge className="border-blue-300 bg-blue-100 text-[#1c4a8b] dark:border-[#1c4a8b] dark:bg-[#163654] dark:text-sky-200">
             <CheckCircle className="h-3 w-3 mr-1" />
             {texts.statusActive}
           </Badge>
         );
       case 'expired':
         return (
-          <Badge className="bg-orange-100 text-orange-700 border-orange-300">
+          <Badge className="border-blue-300 bg-blue-100 text-[#1c4a8b] dark:border-[#1c4a8b] dark:bg-[#163654] dark:text-sky-200">
             <Clock className="h-3 w-3 mr-1" />
             {texts.statusExpired}
           </Badge>
@@ -262,7 +262,7 @@ export default function MyMembership() {
         );
       case 'suspended':
         return (
-          <Badge className="bg-gray-100 text-gray-700 border-gray-300">
+          <Badge className="border-border bg-muted text-muted-foreground">
             <AlertCircle className="h-3 w-3 mr-1" />
             {texts.statusSuspended}
           </Badge>
@@ -308,7 +308,7 @@ export default function MyMembership() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="inline-block h-8 w-8 border-4 border-royal-600 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-gray-600">{texts.loading}</p>
+          <p className="text-muted-foreground">{texts.loading}</p>
         </div>
       </div>
     );
@@ -328,11 +328,11 @@ export default function MyMembership() {
         </div>
 
         {/* Not a Member Yet */}
-        <Card className="border-2 border-dashed border-gray-300">
+        <Card className="border-2 border-dashed border-border">
           <CardContent className="p-12 text-center">
-            <Users className="h-20 w-20 text-gray-300 mx-auto mb-6" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">{texts.notAMember}</h2>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            <Users className="mx-auto mb-6 h-20 w-20 text-muted-foreground/40" />
+            <h2 className="mb-2 text-2xl font-bold text-foreground">{texts.notAMember}</h2>
+            <p className="mx-auto mb-6 max-w-md text-muted-foreground">
               {texts.notAMemberDesc}
             </p>
             <div className="flex justify-center gap-4">
@@ -371,13 +371,13 @@ export default function MyMembership() {
                   {basicBenefits.map((benefit) => (
                     <div
                       key={benefit.id}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-blue-50"
+                      className="flex items-start gap-3 rounded-lg bg-blue-50 p-3 dark:bg-[#102a44]"
                     >
                       <div className="text-blue-600">{getBenefitIcon(benefit.benefit_key)}</div>
                       <div>
-                        <p className="font-medium text-gray-900">{benefit.benefit_name}</p>
+                        <p className="font-medium text-foreground">{benefit.benefit_name}</p>
                         {benefit.benefit_description && (
-                          <p className="text-sm text-gray-600">{benefit.benefit_description}</p>
+                          <p className="text-sm text-muted-foreground">{benefit.benefit_description}</p>
                         )}
                       </div>
                     </div>
@@ -390,13 +390,13 @@ export default function MyMembership() {
                   {professionalBenefits.map((benefit) => (
                     <div
                       key={benefit.id}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-royal-50"
+                      className="flex items-start gap-3 rounded-lg bg-royal-50 p-3 dark:bg-[#102a44]"
                     >
                       <div className="text-royal-600">{getBenefitIcon(benefit.benefit_key)}</div>
                       <div>
-                        <p className="font-medium text-gray-900">{benefit.benefit_name}</p>
+                        <p className="font-medium text-foreground">{benefit.benefit_name}</p>
                         {benefit.benefit_description && (
-                          <p className="text-sm text-gray-600">{benefit.benefit_description}</p>
+                          <p className="text-sm text-muted-foreground">{benefit.benefit_description}</p>
                         )}
                       </div>
                     </div>
@@ -427,7 +427,7 @@ export default function MyMembership() {
 
       {/* Expired Membership Banner */}
       {membershipStatus.isExpired && (
-        <Alert variant="destructive" className="bg-red-50 border-red-200">
+        <Alert variant="destructive" className="border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/35">
           <AlertCircle className="h-5 w-5" />
           <AlertTitle>{texts.membershipExpired}</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
@@ -448,17 +448,17 @@ export default function MyMembership() {
 
       {/* Expiring Soon Warning */}
       {membershipStatus.isExpiringSoon && !membershipStatus.isExpired && (
-        <Alert className="bg-orange-50 border-orange-200">
-          <AlertCircle className="h-5 w-5 text-orange-600" />
-          <AlertTitle className="text-orange-900">{texts.membershipExpiringSoon}</AlertTitle>
-          <AlertDescription className="flex items-center justify-between text-orange-700">
+        <Alert className="border-[#bfdbfe] bg-[#f0f6ff] dark:border-[#1c4a8b] dark:bg-[#102a44]">
+          <AlertCircle className="h-5 w-5 text-[#0f91e0]" />
+          <AlertTitle className="text-[#0d1f4e] dark:text-sky-100">{texts.membershipExpiringSoon}</AlertTitle>
+          <AlertDescription className="flex items-center justify-between text-[#1c4a8b] dark:text-slate-300">
             <span>
               {texts.expiringIn(membershipStatus.daysRemaining)}
             </span>
             <Button
               variant="outline"
               size="sm"
-              className="border-orange-300 text-orange-700 hover:bg-orange-100"
+              className="border-[#1c4a8b] text-[#1c4a8b] hover:bg-[#e0f2fe] dark:border-sky-400/40 dark:text-sky-200 dark:hover:bg-[#163654]"
               onClick={() => window.open('https://bda-global.org/en/memberships/', '_blank')}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -469,22 +469,22 @@ export default function MyMembership() {
       )}
 
       {/* Membership Status Card */}
-      <Card className={isProfessional ? 'border-royal-200 bg-royal-50/30' : 'border-blue-200 bg-blue-50/30'}>
+      <Card className={isProfessional ? 'border-royal-200 bg-royal-50/30 dark:border-[#1c4a8b] dark:bg-[#102a44]' : 'border-blue-200 bg-blue-50/30 dark:border-[#1c4a8b] dark:bg-[#102a44]'}>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             {/* Left: Membership Info */}
             <div className="flex items-start gap-4">
-              <div className={`p-4 rounded-full ${isProfessional ? 'bg-royal-100' : 'bg-blue-100'}`}>
+              <div className={`rounded-full p-4 ${isProfessional ? 'bg-royal-100 dark:bg-[#1c4a8b]/45' : 'bg-blue-100 dark:bg-[#163654]'}`}>
                 {getMembershipIcon(membership.membership_type)}
               </div>
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-2xl font-bold text-foreground">
                     {isProfessional ? texts.professionalMember : texts.basicMember}
                   </h2>
                   {getStatusBadge(membership.status)}
                 </div>
-                <p className="text-sm text-gray-500 font-mono">
+                <p className="font-mono text-sm text-muted-foreground">
                   {texts.membershipId}: {membership.membership_id}
                 </p>
               </div>
@@ -493,15 +493,15 @@ export default function MyMembership() {
             {/* Right: Quick Stats */}
             <div className="flex gap-6">
               <div className="text-center">
-                <p className="text-sm text-gray-500">{texts.startDate}</p>
+                <p className="text-sm text-muted-foreground">{texts.startDate}</p>
                 <p className="font-semibold">{formatDate(membership.start_date)}</p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-500">{texts.expiryDate}</p>
+                <p className="text-sm text-muted-foreground">{texts.expiryDate}</p>
                 <p className="font-semibold">{formatDate(membership.expiry_date)}</p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-500">{texts.daysRemaining}</p>
+                <p className="text-sm text-muted-foreground">{texts.daysRemaining}</p>
                 <p className={`font-bold text-2xl ${
                   membershipStatus.isExpired
                     ? 'text-red-600'
@@ -519,7 +519,7 @@ export default function MyMembership() {
           {!membershipStatus.isExpired && (
             <div className="mt-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600">{texts.membershipValidity}</span>
+                <span className="text-sm text-muted-foreground">{texts.membershipValidity}</span>
                 <span className="text-sm font-semibold">
                   {texts.daysRemainingLabel(membershipStatus.daysRemaining)}
                 </span>
@@ -546,7 +546,7 @@ export default function MyMembership() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row items-center gap-6 p-4 bg-sky-50 rounded-lg border border-sky-100">
+            <div className="flex flex-col items-center gap-6 rounded-lg border border-sky-100 bg-sky-50 p-4 dark:border-[#1c4a8b] dark:bg-[#102a44] sm:flex-row">
               {/* Badge Preview */}
               <div className="flex-shrink-0">
                 <img
@@ -557,8 +557,8 @@ export default function MyMembership() {
               </div>
               {/* Badge Info */}
               <div className="flex-1 text-center sm:text-left">
-                <p className="font-semibold text-gray-900">{texts.digitalBadgeFile}</p>
-                <p className="text-sm text-gray-500 mt-1">{texts.digitalBadgeInfo}</p>
+                <p className="font-semibold text-foreground">{texts.digitalBadgeFile}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{texts.digitalBadgeInfo}</p>
               </div>
               {/* Download Button */}
               <a
@@ -588,9 +588,9 @@ export default function MyMembership() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between rounded-lg bg-muted/60 p-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-royal-100 rounded-lg">
+                <div className="rounded-lg bg-royal-100 p-3 dark:bg-[#1c4a8b]/45">
                   {membership.certificate_url ? (
                     <Download className="h-6 w-6 text-royal-600" />
                   ) : (
@@ -598,8 +598,8 @@ export default function MyMembership() {
                   )}
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">{texts.professionalCertificate}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="font-semibold text-foreground">{texts.professionalCertificate}</p>
+                  <p className="text-sm text-muted-foreground">
                     {texts.certificateInfo}
                   </p>
                 </div>
@@ -667,16 +667,16 @@ export default function MyMembership() {
               <div
                 key={benefit.id}
                 className={`flex items-start gap-3 p-4 rounded-lg ${
-                  isProfessional ? 'bg-royal-50' : 'bg-blue-50'
+                  isProfessional ? 'bg-royal-50 dark:bg-[#102a44]' : 'bg-blue-50 dark:bg-[#102a44]'
                 }`}
               >
                 <div className={isProfessional ? 'text-royal-600' : 'text-blue-600'}>
                   {getBenefitIcon(benefit.benefit_key)}
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900">{benefit.benefit_name}</p>
+                  <p className="font-medium text-foreground">{benefit.benefit_name}</p>
                   {benefit.benefit_description && (
-                    <p className="text-sm text-gray-600 mt-1">{benefit.benefit_description}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{benefit.benefit_description}</p>
                   )}
                 </div>
                 <CheckCircle className={`h-5 w-5 ${isProfessional ? 'text-royal-600' : 'text-blue-600'}`} />
@@ -686,13 +686,13 @@ export default function MyMembership() {
 
           {/* Upgrade CTA for Basic Members */}
           {!isProfessional && membershipStatus.hasActiveMembership && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-royal-50 to-sky-50 rounded-lg border border-royal-200">
+            <div className="mt-6 rounded-lg border border-royal-200 bg-gradient-to-r from-royal-50 to-sky-50 p-4 dark:border-[#1c4a8b] dark:from-[#102a44] dark:to-[#163654]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Crown className="h-8 w-8 text-royal-600" />
                   <div>
-                    <p className="font-semibold text-gray-900">{texts.upgradeToProfessional}</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="font-semibold text-foreground">{texts.upgradeToProfessional}</p>
+                    <p className="text-sm text-muted-foreground">
                       {texts.upgradeDesc}
                     </p>
                   </div>
@@ -716,41 +716,41 @@ export default function MyMembership() {
         {isProfessional && (
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/my-books'}>
             <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <BookOpen className="h-6 w-6 text-green-600" />
+              <div className="rounded-lg bg-sky-100 p-3 dark:bg-[#163654]">
+                <BookOpen className="h-6 w-6 text-sky-600 dark:text-sky-300" />
               </div>
               <div>
-                <p className="font-semibold text-gray-900">{texts.bdaBock}</p>
-                <p className="text-sm text-gray-500">{texts.bdaBockDesc}</p>
+                <p className="font-semibold text-foreground">{texts.bdaBock}</p>
+                <p className="text-sm text-muted-foreground">{texts.bdaBockDesc}</p>
               </div>
-              <ExternalLink className="h-5 w-5 text-gray-400 ml-auto" />
+              <ExternalLink className="ml-auto h-5 w-5 text-muted-foreground" />
             </CardContent>
           </Card>
         )}
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/my-certifications'}>
           <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Shield className="h-6 w-6 text-purple-600" />
+            <div className="rounded-lg bg-royal-100 p-3 dark:bg-[#1c4a8b]/45">
+              <Shield className="h-6 w-6 text-royal-600 dark:text-sky-300" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">{texts.certifications}</p>
-              <p className="text-sm text-gray-500">{texts.certificationsDesc}</p>
+              <p className="font-semibold text-foreground">{texts.certifications}</p>
+              <p className="text-sm text-muted-foreground">{texts.certificationsDesc}</p>
             </div>
-            <ExternalLink className="h-5 w-5 text-gray-400 ml-auto" />
+            <ExternalLink className="ml-auto h-5 w-5 text-muted-foreground" />
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/help-center'}>
           <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-blue-100 rounded-lg">
+            <div className="rounded-lg bg-blue-100 p-3 dark:bg-[#163654]">
               <Users className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">{texts.helpCenter}</p>
-              <p className="text-sm text-gray-500">{texts.helpCenterDesc}</p>
+              <p className="font-semibold text-foreground">{texts.helpCenter}</p>
+              <p className="text-sm text-muted-foreground">{texts.helpCenterDesc}</p>
             </div>
-            <ExternalLink className="h-5 w-5 text-gray-400 ml-auto" />
+            <ExternalLink className="ml-auto h-5 w-5 text-muted-foreground" />
           </CardContent>
         </Card>
       </div>

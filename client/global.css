@@ -111,6 +111,19 @@
     font-family: "Inter", sans-serif;
   }
 
+  /* Native selects are used in several legacy portal filters. */
+  .dark select {
+    background-color: hsl(var(--background));
+    border-color: hsl(var(--input));
+    color: hsl(var(--foreground));
+    color-scheme: dark;
+  }
+
+  .dark select option {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+  }
+
   [dir="rtl"] {
     font-family: "Cairo", sans-serif;
   }

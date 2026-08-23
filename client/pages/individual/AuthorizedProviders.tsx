@@ -264,17 +264,17 @@ export default function AuthorisedProviders() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="text-center pb-4 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">{t.title}</h1>
-        <p className="text-gray-500 text-sm">{t.subtitle}</p>
+      <div className="border-b border-border pb-4 text-center">
+        <h1 className="mb-1 text-2xl font-bold text-foreground">{t.title}</h1>
+        <p className="text-sm text-muted-foreground">{t.subtitle}</p>
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Keyword */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t.keyword}
             </label>
             <div className="relative">
@@ -286,7 +286,7 @@ export default function AuthorisedProviders() {
                 className="pl-9 pr-8"
               />
               {keyword && (
-                <button onClick={() => setKeyword('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <button onClick={() => setKeyword('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   <X className="h-4 w-4" />
                 </button>
               )}
@@ -295,13 +295,13 @@ export default function AuthorisedProviders() {
 
           {/* Country */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t.country}
             </label>
             <select
               value={selectedCountry}
               onChange={(e) => setSelectedCountry(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#0f91e0]"
             >
               <option value="">{t.allCountries}</option>
               {countries.map(([raw, full]) => (
@@ -312,13 +312,13 @@ export default function AuthorisedProviders() {
 
           {/* Partner Type */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t.partnerType}
             </label>
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value as 'all' | 'ecp' | 'pdp')}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#0f91e0]"
             >
               <option value="all">{t.allTypes}</option>
               <option value="ecp">ECP — Endorsed Certification Partner</option>
@@ -338,38 +338,38 @@ export default function AuthorisedProviders() {
 
       {/* Results Count */}
       {!isLoading && (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           {t.showing}{' '}
-          <span className="font-semibold text-gray-700">{filtered.length}</span>{' '}
+          <span className="font-semibold text-foreground">{filtered.length}</span>{' '}
           {filtered.length !== 1 ? t.partners : t.partner}
         </p>
       )}
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         {isLoading ? (
-          <div className="flex items-center justify-center py-16 text-gray-400">
+          <div className="flex items-center justify-center py-16 text-muted-foreground">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3" />
             {t.loading}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
+          <div className="py-16 text-center text-muted-foreground">
             <Building2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
             <p className="font-medium">{t.noPartners}</p>
             <p className="text-sm mt-1">{t.noPartnersDesc}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="border-b border-border bg-muted/60">
               <tr>
                 <th className="text-left px-4 py-3 font-semibold text-blue-700 w-1/2">{t.name}</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">{t.website}</th>
-                <th className="text-center px-4 py-3 font-semibold text-gray-600 w-32">{t.details}</th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t.website}</th>
+                <th className="w-32 px-4 py-3 text-center font-semibold text-muted-foreground">{t.details}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {filtered.map((partner) => (
-                <tr key={partner.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={partner.id} className="transition-colors hover:bg-muted/60">
                   {/* Name column */}
                   <td className="px-4 py-3">
                     <div>
@@ -386,16 +386,16 @@ export default function AuthorisedProviders() {
                           variant="outline"
                           className={`text-xs px-1.5 py-0 ${
                             partner.partner_type === 'ecp'
-                              ? 'border-blue-300 text-blue-700 bg-blue-50'
+                              ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-[#1c4a8b] dark:bg-[#163654] dark:text-sky-200'
                               : partner.partner_type === 'dual_partner'
-                              ? 'border-purple-300 text-purple-700 bg-purple-50'
-                              : 'border-indigo-300 text-indigo-700 bg-indigo-50'
+                              ? 'border-royal-300 bg-royal-50 text-royal-700 dark:border-[#1c4a8b] dark:bg-[#163654] dark:text-sky-200'
+                              : 'border-blue-300 bg-blue-50 text-blue-700 dark:border-[#1c4a8b] dark:bg-[#163654] dark:text-sky-200'
                           }`}
                         >
                           {partner.partner_type === 'dual_partner' ? 'ECP + PDP' : partner.partner_type?.toUpperCase()}
                         </Badge>
                         {(partner.city || partner.country) && (
-                          <span className="text-xs text-gray-400 flex items-center gap-0.5">
+                          <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
                             <MapPin className="h-3 w-3" />
                             {[partner.city, resolveCountry(partner.country)].filter(Boolean).join(', ')}
                           </span>
@@ -418,7 +418,7 @@ export default function AuthorisedProviders() {
                         <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-60" />
                       </a>
                     ) : (
-                      <span className="text-gray-300">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </td>
 
@@ -427,7 +427,7 @@ export default function AuthorisedProviders() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-xs border-gray-300 hover:border-blue-400 hover:text-blue-600"
+                      className="border-border text-xs hover:border-[#0f91e0] hover:text-[#0f91e0]"
                       onClick={() => setDetailPartnerId(partner.id)}
                     >
                       <Eye className="h-3.5 w-3.5 mr-1" />
@@ -442,12 +442,12 @@ export default function AuthorisedProviders() {
       </div>
 
       {/* About section */}
-      <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800">
+      <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800 dark:border-[#1c4a8b] dark:bg-[#102a44] dark:text-sky-100">
         <h3 className="font-semibold mb-2 flex items-center gap-2">
           <Building2 className="h-4 w-4" />
           {t.aboutProviders}
         </h3>
-        <ul className="space-y-1 text-xs text-blue-700">
+        <ul className="space-y-1 text-xs text-blue-700 dark:text-slate-300">
           <li><strong>ECP ({t.ecpFull}):</strong> {t.ecpDesc}</li>
           <li><strong>PDP ({t.pdpFull}):</strong> {t.pdpDesc}</li>
           <li>{t.allVetted}</li>
@@ -461,11 +461,11 @@ export default function AuthorisedProviders() {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setDetailPartnerId(null); }}
         >
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[85vh] overflow-auto shadow-xl">
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-auto rounded-xl bg-card text-card-foreground shadow-xl">
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-5 flex items-start justify-between">
+            <div className="sticky top-0 flex items-start justify-between border-b border-border bg-card/95 p-5 backdrop-blur">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-foreground">
                   {detailLoading ? '...' :
                     language === 'ar' && partnerDetails?.partner?.company_name_ar
                       ? partnerDetails.partner.company_name_ar
@@ -474,23 +474,23 @@ export default function AuthorisedProviders() {
                 {partnerDetails?.partner && (
                   <Badge className={`mt-1 ${
                     partnerDetails.partner.partner_type === 'ecp'
-                      ? 'bg-blue-100 text-blue-800'
+                      ? 'bg-blue-100 text-blue-800 dark:bg-[#163654] dark:text-sky-200'
                       : partnerDetails.partner.partner_type === 'dual_partner'
-                      ? 'bg-purple-100 text-purple-800'
-                      : 'bg-indigo-100 text-indigo-800'
+                      ? 'bg-royal-100 text-royal-800 dark:bg-[#163654] dark:text-sky-200'
+                      : 'bg-blue-100 text-blue-800 dark:bg-[#163654] dark:text-sky-200'
                   }`}>
                     {partnerDetails.partner.partner_type === 'dual_partner' ? 'ECP + PDP' : partnerDetails.partner.partner_type?.toUpperCase()}
                   </Badge>
                 )}
               </div>
-              <button onClick={() => setDetailPartnerId(null)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500">
+              <button onClick={() => setDetailPartnerId(null)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Modal Content */}
             {detailLoading ? (
-              <div className="flex items-center justify-center py-12 text-gray-400">
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2" />
                 Loading details...
               </div>
@@ -499,8 +499,8 @@ export default function AuthorisedProviders() {
                 {/* Description */}
                 {partnerDetails.partner.description && (
                   <div>
-                    <h4 className="font-semibold text-gray-700 mb-1">{t.about}</h4>
-                    <p className="text-gray-600 leading-relaxed">
+                    <h4 className="mb-1 font-semibold text-foreground">{t.about}</h4>
+                    <p className="leading-relaxed text-muted-foreground">
                       {language === 'ar' && partnerDetails.partner.description_ar
                         ? partnerDetails.partner.description_ar
                         : partnerDetails.partner.description}
@@ -510,17 +510,17 @@ export default function AuthorisedProviders() {
 
                 {/* Contact */}
                 <div>
-                  <h4 className="font-semibold text-gray-700 mb-2">{t.contactInfo}</h4>
+                  <h4 className="mb-2 font-semibold text-foreground">{t.contactInfo}</h4>
                   <div className="space-y-1.5">
                     {partnerDetails.partner.contact_person && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Users className="h-4 w-4 text-gray-400" />
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Users className="h-4 w-4 text-muted-foreground" />
                         {partnerDetails.partner.contact_person}
                       </div>
                     )}
                     {partnerDetails.partner.contact_email && (
                       <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-400" />
+                        <Mail className="h-4 w-4 text-muted-foreground" />
                         <a href={`mailto:${partnerDetails.partner.contact_email}`} className="text-blue-600 hover:underline">
                           {partnerDetails.partner.contact_email}
                         </a>
@@ -528,7 +528,7 @@ export default function AuthorisedProviders() {
                     )}
                     {partnerDetails.partner.contact_phone && (
                       <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-400" />
+                        <Phone className="h-4 w-4 text-muted-foreground" />
                         <a href={`tel:${partnerDetails.partner.contact_phone}`} className="text-blue-600 hover:underline">
                           {partnerDetails.partner.contact_phone}
                         </a>
@@ -536,7 +536,7 @@ export default function AuthorisedProviders() {
                     )}
                     {partnerDetails.partner.website && (
                       <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-gray-400" />
+                        <Globe className="h-4 w-4 text-muted-foreground" />
                         <a
                           href={partnerDetails.partner.website.startsWith('http') ? partnerDetails.partner.website : `https://${partnerDetails.partner.website}`}
                           target="_blank" rel="noopener noreferrer"
@@ -553,9 +553,9 @@ export default function AuthorisedProviders() {
                 {/* Location — show full country name */}
                 {(partnerDetails.partner.city || partnerDetails.partner.country) && (
                   <div>
-                    <h4 className="font-semibold text-gray-700 mb-1">{t.location}</h4>
-                    <div className="flex items-center gap-1.5 text-gray-600">
-                      <MapPin className="h-4 w-4 text-gray-400" />
+                    <h4 className="mb-1 font-semibold text-foreground">{t.location}</h4>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
                       {[
                         partnerDetails.partner.address,
                         partnerDetails.partner.city,
@@ -568,16 +568,16 @@ export default function AuthorisedProviders() {
                 {/* PDP Programmes */}
                 {(partnerDetails.partner.partner_type === 'pdp' || partnerDetails.partner.partner_type === 'dual_partner') && (
                   <div>
-                    <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                    <h4 className="mb-2 flex items-center gap-1.5 font-semibold text-foreground">
                       <BookOpen className="h-4 w-4" />
                       {t.approvedProgrammes} ({partnerDetails.programs?.length || 0})
                     </h4>
                     {!partnerDetails.programs || partnerDetails.programs.length === 0 ? (
-                      <p className="text-gray-400 text-xs">{t.noProgrammes}</p>
+                      <p className="text-xs text-muted-foreground">{t.noProgrammes}</p>
                     ) : (
                       <ul className="space-y-1.5">
                         {partnerDetails.programs.map((prog: any) => (
-                          <li key={prog.id} className="flex items-start gap-2 text-gray-600">
+                          <li key={prog.id} className="flex items-start gap-2 text-muted-foreground">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
                             <div>
                               <p className="font-medium">{prog.program_name}</p>
@@ -595,16 +595,16 @@ export default function AuthorisedProviders() {
                 {/* ECP Trainers */}
                 {(partnerDetails.partner.partner_type === 'ecp' || partnerDetails.partner.partner_type === 'dual_partner') && (
                   <div>
-                    <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                    <h4 className="mb-2 flex items-center gap-1.5 font-semibold text-foreground">
                       <Award className="h-4 w-4" />
                       {t.approvedTrainers} ({partnerDetails.trainers?.length || 0})
                     </h4>
                     {!partnerDetails.trainers || partnerDetails.trainers.length === 0 ? (
-                      <p className="text-gray-400 text-xs">{t.noTrainers}</p>
+                      <p className="text-xs text-muted-foreground">{t.noTrainers}</p>
                     ) : (
                       <ul className="space-y-1.5">
                         {partnerDetails.trainers.map((trainer: any) => (
-                          <li key={trainer.id} className="flex items-center gap-2 text-gray-600">
+                          <li key={trainer.id} className="flex items-center gap-2 text-muted-foreground">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" />
                             <div>
                               <p className="font-medium">{trainer.first_name} {trainer.last_name}</p>

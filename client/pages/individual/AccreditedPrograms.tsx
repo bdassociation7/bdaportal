@@ -249,8 +249,8 @@ function MetaBadge({
 }) {
   const styles = {
     blue: 'bg-blue-50 text-[#1c4a8b] border border-blue-200',
-    green: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    gray: 'bg-gray-50 text-gray-600 border border-gray-200',
+    green: 'border border-blue-200 bg-blue-50 text-[#1c4a8b] dark:border-[#1c4a8b] dark:bg-[#163654] dark:text-sky-200',
+    gray: 'border border-border bg-muted/60 text-muted-foreground',
   };
   return (
     <span
@@ -274,14 +274,14 @@ function SidebarSelect({
 }) {
   return (
     <div className="mb-5">
-      <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+      <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
         {label}
       </label>
       <div className="relative">
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 appearance-none focus:outline-none focus:border-[#1c4a8b] focus:ring-1 focus:ring-[#1c4a8b] rounded pr-8 transition"
+          className="w-full appearance-none rounded border border-input bg-background px-3 py-2 pr-8 text-sm text-foreground transition focus:border-[#1c4a8b] focus:outline-none focus:ring-1 focus:ring-[#1c4a8b]"
         >
           <option value="all">All</option>
           {options.map((o) => (
@@ -336,17 +336,17 @@ export default function AccreditedPrograms() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       {/* ── Page Header ── */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-5 mb-4 sm:mb-6">
+      <div className="mb-4 border-b border-border bg-card px-4 py-5 sm:mb-6 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3 mb-1">
             <Award className="h-5 w-5 sm:h-6 sm:w-6 text-[#1c4a8b]" />
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               PDCs from BDA Activities
             </h1>
           </div>
-          <p className="text-sm text-gray-500 ml-8 sm:ml-9">
+          <p className="ml-8 text-sm text-muted-foreground sm:ml-9">
             Browse all BDA-accredited professional development programmes and earn PDC credits.
           </p>
         </div>
@@ -357,7 +357,7 @@ export default function AccreditedPrograms() {
         <div className="md:hidden mb-4">
           <button
             onClick={() => setMobileFiltersOpen(!mobileFiltersOpen)}
-            className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm w-full justify-between"
+            className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-sm"
           >
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-[#1c4a8b]" />
@@ -367,9 +367,9 @@ export default function AccreditedPrograms() {
           </button>
           {/* Mobile filters panel */}
           {mobileFiltersOpen && (
-            <div className="mt-2 bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
-                <span className="text-sm font-bold text-gray-800">Filters</span>
+            <div className="mt-2 rounded-xl border border-border bg-card p-4">
+              <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
+                <span className="text-sm font-bold text-foreground">Filters</span>
                 <button
                   onClick={handleReset}
                   className="flex items-center gap-1 text-xs text-[#1c4a8b] hover:text-[#163d75] font-medium"
@@ -379,23 +379,23 @@ export default function AccreditedPrograms() {
                 </button>
               </div>
               <div className="mb-4">
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Search by Keyword</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Search by Keyword</label>
                 <div className="flex gap-2">
-                  <input type="text" value={keywordInput} onChange={(e) => setKeywordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setSearchQuery(keywordInput)} placeholder="Search…" className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#1c4a8b]" />
+                  <input type="text" value={keywordInput} onChange={(e) => setKeywordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setSearchQuery(keywordInput)} placeholder="Search…" className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-[#1c4a8b] focus:outline-none" />
                   <button onClick={() => setSearchQuery(keywordInput)} className="bg-[#1c4a8b] text-white px-3 py-2 rounded"><Search className="h-4 w-4" /></button>
                 </div>
               </div>
               <div className="mb-4">
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Search by Provider</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Search by Provider</label>
                 <div className="flex gap-2">
-                  <input type="text" value={providerInput} onChange={(e) => setProviderInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setProviderFilter(providerInput)} placeholder="Provider name…" className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#1c4a8b]" />
+                  <input type="text" value={providerInput} onChange={(e) => setProviderInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setProviderFilter(providerInput)} placeholder="Provider name…" className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-[#1c4a8b] focus:outline-none" />
                   <button onClick={() => setProviderFilter(providerInput)} className="bg-[#1c4a8b] text-white px-3 py-2 rounded"><Search className="h-4 w-4" /></button>
                 </div>
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Search by Country</label>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Search by Country</label>
                 <div className="flex gap-2">
-                  <input type="text" value={countryInput} onChange={(e) => setCountryInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setCountryFilter(countryInput)} placeholder="Country name…" className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#1c4a8b]" />
+                  <input type="text" value={countryInput} onChange={(e) => setCountryInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && setCountryFilter(countryInput)} placeholder="Country name…" className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground focus:border-[#1c4a8b] focus:outline-none" />
                   <button onClick={() => setCountryFilter(countryInput)} className="bg-[#1c4a8b] text-white px-3 py-2 rounded"><Search className="h-4 w-4" /></button>
                 </div>
               </div>
@@ -408,9 +408,9 @@ export default function AccreditedPrograms() {
           {/* ── Programme List ── */}
           <div className="flex-1 min-w-0">
             {!isLoading && (
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="mb-4 text-sm text-muted-foreground">
                 Showing{' '}
-                <span className="font-semibold text-gray-700">{programs.length}</span>{' '}
+                <span className="font-semibold text-foreground">{programs.length}</span>{' '}
                 programme{programs.length !== 1 ? 's' : ''}
               </p>
             )}
@@ -418,13 +418,13 @@ export default function AccreditedPrograms() {
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-64 gap-3">
                 <div className="h-9 w-9 border-4 border-[#1c4a8b] border-t-transparent rounded-full animate-spin" />
-                <p className="text-sm text-gray-500">Loading programmes…</p>
+                <p className="text-sm text-muted-foreground">Loading programmes…</p>
               </div>
             ) : programs.length === 0 ? (
-              <div className="bg-white rounded-xl border border-gray-200 p-16 text-center">
-                <Award className="h-14 w-14 mx-auto mb-4 text-gray-200" />
-                <p className="font-semibold text-gray-700 mb-1">No programmes found</p>
-                <p className="text-sm text-gray-400">
+              <div className="rounded-xl border border-border bg-card p-16 text-center">
+                <Award className="mx-auto mb-4 h-14 w-14 text-muted-foreground/50" />
+                <p className="mb-1 font-semibold text-foreground">No programmes found</p>
+                <p className="text-sm text-muted-foreground">
                   Try adjusting your filters or search criteria.
                 </p>
               </div>
@@ -433,7 +433,7 @@ export default function AccreditedPrograms() {
                 {programs.map((program) => (
                   <div
                     key={program.id}
-                    className="bg-white rounded-xl border border-gray-200 hover:border-[#1c4a8b]/30 hover:shadow-md transition-all duration-200 overflow-hidden"
+                    className="overflow-hidden rounded-xl border border-border bg-card transition-all duration-200 hover:border-[#1c4a8b]/50 hover:shadow-md"
                   >
                     {/* Top accent bar */}
                     <div className="h-1 bg-gradient-to-r from-[#1c4a8b] to-[#2563eb]" />
@@ -446,7 +446,7 @@ export default function AccreditedPrograms() {
                       <div className="flex-1 min-w-0">
                         {/* Title row */}
                         <div className="flex items-start justify-between gap-3 mb-2">
-                          <h2 className="text-base font-bold text-gray-900 leading-snug uppercase tracking-wide">
+                          <h2 className="text-base font-bold uppercase leading-snug tracking-wide text-foreground">
                             {getName(program)}
                           </h2>
                           <MetaBadge color="blue">
@@ -456,7 +456,7 @@ export default function AccreditedPrograms() {
                         </div>
 
                         {/* Date range */}
-                        <p className="text-xs text-gray-500 flex items-center gap-1 mb-3">
+                        <p className="mb-3 flex items-center gap-1 text-xs text-muted-foreground">
                           <Clock className="h-3.5 w-3.5 flex-shrink-0" />
                           {program.session_start_date
                             ? program.session_end_date && program.session_end_date !== program.session_start_date
@@ -466,44 +466,44 @@ export default function AccreditedPrograms() {
                         </p>
 
                         {/* Info grid */}
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-gray-600 mb-3">
+                        <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1.5">
-                            <Building2 className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                            <Building2 className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
                             <span className="truncate">
-                              <span className="font-medium text-gray-700">Provider:</span>{' '}
+                              <span className="font-medium text-foreground">Provider:</span>{' '}
                               {program.provider_name}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                            <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
                             <span>
-                              <span className="font-medium text-gray-700">Type:</span>{' '}
+                              <span className="font-medium text-foreground">Type:</span>{' '}
                               {ACTIVITY_LABELS[program.activity_type] || program.activity_type}
                             </span>
                           </div>
                           {program.delivery_format && (
                             <div className="flex items-center gap-1.5">
-                              <Globe className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                              <Globe className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
                               <span>
-                                <span className="font-medium text-gray-700">Format:</span>{' '}
+                                <span className="font-medium text-foreground">Format:</span>{' '}
                                 {DELIVERY_LABELS[program.delivery_format] || program.delivery_format}
                               </span>
                             </div>
                           )}
                           {program.duration_hours && (
                             <div className="flex items-center gap-1.5">
-                              <Clock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                              <Clock className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
                               <span>
-                                <span className="font-medium text-gray-700">Duration:</span>{' '}
+                                <span className="font-medium text-foreground">Duration:</span>{' '}
                                 {program.duration_hours} hrs
                               </span>
                             </div>
                           )}
                           {program.provider_country && (
                             <div className="flex items-center gap-1.5">
-                              <Globe className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                              <Globe className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
                               <span>
-                                <span className="font-medium text-gray-700">Country:</span>{' '}
+                                <span className="font-medium text-foreground">Country:</span>{' '}
                                 {program.provider_country}
                               </span>
                             </div>
@@ -529,7 +529,7 @@ export default function AccreditedPrograms() {
 
                         {/* Description snippet */}
                         {program.description && (
-                          <p className="text-sm text-gray-500 line-clamp-2 mb-4 leading-relaxed">
+                          <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                             {getDesc(program)}
                           </p>
                         )}
@@ -576,13 +576,13 @@ export default function AccreditedPrograms() {
           </div>
 
           {/* ── Sidebar (desktop only) ── */}
-          <div className="hidden md:block w-64 flex-shrink-0 sticky top-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="sticky top-6 hidden w-64 flex-shrink-0 md:block">
+            <div className="rounded-xl border border-border bg-card p-5">
               {/* Header */}
-              <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
+              <div className="mb-5 flex items-center justify-between border-b border-border pb-4">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-[#1c4a8b]" />
-                  <span className="text-sm font-bold text-gray-800">Filters</span>
+                  <span className="text-sm font-bold text-foreground">Filters</span>
                 </div>
                 <button
                   onClick={handleReset}
@@ -595,7 +595,7 @@ export default function AccreditedPrograms() {
 
               {/* Search by Keyword */}
               <div className="mb-5">
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                   Search by Keyword
                 </label>
                 <div className="flex gap-2">
@@ -605,7 +605,7 @@ export default function AccreditedPrograms() {
                     onChange={(e) => setKeywordInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && setSearchQuery(keywordInput)}
                     placeholder="Search…"
-                    className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#1c4a8b] focus:ring-1 focus:ring-[#1c4a8b] transition"
+                    className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground transition focus:border-[#1c4a8b] focus:outline-none focus:ring-1 focus:ring-[#1c4a8b]"
                   />
                   <button
                     onClick={() => setSearchQuery(keywordInput)}
@@ -618,7 +618,7 @@ export default function AccreditedPrograms() {
 
               {/* Search by Provider */}
               <div className="mb-5">
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                   Search by Provider
                 </label>
                 <div className="flex gap-2">
@@ -628,7 +628,7 @@ export default function AccreditedPrograms() {
                     onChange={(e) => setProviderInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && setProviderFilter(providerInput)}
                     placeholder="Provider name…"
-                    className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#1c4a8b] focus:ring-1 focus:ring-[#1c4a8b] transition"
+                    className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground transition focus:border-[#1c4a8b] focus:outline-none focus:ring-1 focus:ring-[#1c4a8b]"
                   />
                   <button
                     onClick={() => setProviderFilter(providerInput)}
@@ -641,7 +641,7 @@ export default function AccreditedPrograms() {
 
               {/* Search by Country */}
               <div className="mb-5">
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                   Search by Country
                 </label>
                 <div className="flex gap-2">
@@ -651,7 +651,7 @@ export default function AccreditedPrograms() {
                     onChange={(e) => setCountryInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && setCountryFilter(countryInput)}
                     placeholder="Country name…"
-                    className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#1c4a8b] focus:ring-1 focus:ring-[#1c4a8b] transition"
+                    className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground transition focus:border-[#1c4a8b] focus:outline-none focus:ring-1 focus:ring-[#1c4a8b]"
                   />
                   <button
                     onClick={() => setCountryFilter(countryInput)}
@@ -669,34 +669,34 @@ export default function AccreditedPrograms() {
       {/* ── Detail Modal ── */}
       {selectedProgram && (
         <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           onClick={() => setSelectedProgram(null)}
         >
           <div
-            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-auto shadow-2xl"
+            className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-2xl bg-card text-card-foreground shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal top bar */}
             <div className="h-1.5 bg-gradient-to-r from-[#1c4a8b] to-[#2563eb] rounded-t-2xl" />
 
             {/* Modal header */}
-            <div className="p-6 border-b border-gray-100">
+            <div className="border-b border-border p-6">
               <div className="flex items-start gap-4">
                 <DateBadge dateString={selectedProgram.session_start_date || selectedProgram.valid_from} />
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-bold text-gray-900 uppercase tracking-wide leading-snug mb-1">
+                  <h2 className="mb-1 text-xl font-bold uppercase leading-snug tracking-wide text-foreground">
                     {getName(selectedProgram)}
                   </h2>
-                  <p className="text-xs text-gray-400 leading-relaxed">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
                     Please feel free to save or share this link to refer back to this offering.
                     For in-depth information or scheduling, please visit the activity site directly.
                   </p>
                 </div>
                 <button
                   onClick={() => setSelectedProgram(null)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                  className="flex-shrink-0 rounded-lg p-2 transition-colors hover:bg-muted"
                 >
-                  <X className="h-5 w-5 text-gray-500" />
+                  <X className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
             </div>
@@ -709,7 +709,7 @@ export default function AccreditedPrograms() {
                   <Award className="h-3.5 w-3.5" />
                   {selectedProgram.max_pdc_credits} PDCs
                 </MetaBadge>
-                <span className="text-xs text-gray-500 flex items-center gap-1">
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" />
                   {selectedProgram.session_start_date
                     ? selectedProgram.session_end_date && selectedProgram.session_end_date !== selectedProgram.session_start_date
@@ -720,27 +720,27 @@ export default function AccreditedPrograms() {
               </div>
 
               {/* Info table */}
-              <div className="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/60 p-4 text-sm text-muted-foreground">
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Provider</p>
-                  <p className="font-medium text-gray-800">{selectedProgram.provider_name}</p>
+                  <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">Provider</p>
+                  <p className="font-medium text-foreground">{selectedProgram.provider_name}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Programme ID</p>
-                  <p className="font-medium text-gray-800 font-mono text-xs">
+                  <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">Programme ID</p>
+                  <p className="font-mono text-xs font-medium text-foreground">
                     {selectedProgram.program_id}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Type</p>
-                  <p className="font-medium text-gray-800">
+                  <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">Type</p>
+                  <p className="font-medium text-foreground">
                     {ACTIVITY_LABELS[selectedProgram.activity_type] || selectedProgram.activity_type}
                   </p>
                 </div>
                 {selectedProgram.delivery_format && (
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Format</p>
-                    <p className="font-medium text-gray-800">
+                    <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">Format</p>
+                    <p className="font-medium text-foreground">
                       {DELIVERY_LABELS[selectedProgram.delivery_format] ||
                         selectedProgram.delivery_format}
                     </p>
@@ -748,21 +748,21 @@ export default function AccreditedPrograms() {
                 )}
                 {selectedProgram.duration_hours && (
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Duration</p>
-                    <p className="font-medium text-gray-800">
+                    <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">Duration</p>
+                    <p className="font-medium text-foreground">
                       {selectedProgram.duration_hours} hours
                     </p>
                   </div>
                 )}
                 {selectedProgram.provider_country && (
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Country</p>
-                    <p className="font-medium text-gray-800">{selectedProgram.provider_country}</p>
+                    <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">Country</p>
+                    <p className="font-medium text-foreground">{selectedProgram.provider_country}</p>
                   </div>
                 )}
                 {selectedProgram.provider_website && (
                   <div className="col-span-2">
-                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">
+                    <p className="mb-0.5 text-xs uppercase tracking-wide text-muted-foreground">
                       Registration URL
                     </p>
                     <a
@@ -778,16 +778,16 @@ export default function AccreditedPrograms() {
               </div>
 
               {/* Tabs */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <div className="flex border-b border-gray-200 bg-gray-50">
+              <div className="overflow-hidden rounded-xl border border-border">
+                <div className="flex border-b border-border bg-muted/60">
                   {(['description', 'competencies'] as const).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setDetailTab(tab)}
                       className={`flex-1 py-2.5 text-sm font-medium capitalize transition-colors ${
                         detailTab === tab
-                          ? 'bg-white text-[#1c4a8b] border-b-2 border-[#1c4a8b]'
-                          : 'text-gray-500 hover:text-gray-700'
+                          ? 'border-b-2 border-[#1c4a8b] bg-background text-[#1c4a8b] dark:text-sky-200'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       {tab}
@@ -797,7 +797,7 @@ export default function AccreditedPrograms() {
                 <div className="p-4">
                   {detailTab === 'description' ? (
                     selectedProgram.description ? (
-                      <p className="text-sm text-gray-700 leading-relaxed">
+                      <p className="leading-relaxed text-muted-foreground">
                         {getDesc(selectedProgram)}
                       </p>
                     ) : (
