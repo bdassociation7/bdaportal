@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useUpdateProfile, useChangePassword } from '@/entities/settings/settings.hooks';
-import { User, Lock, Loader2, Save, Briefcase } from 'lucide-react';
+import { User, Lock, Loader2, Save, BriefcaseBusiness, Building2, CalendarDays, Mail, Phone, Layers3, Clock3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CountryDialCodeSelect } from '@/components/ui/country-dial-code-select';
@@ -40,6 +40,8 @@ export function ProfileTab() {
       countryCodeEmpty: 'No country found.',
       phone: 'Phone Number',
       phonePlaceholder: '555-123-4567',
+      mobileContact: 'Mobile contact',
+      mobileContactDesc: 'Select your country once; its dialling code stays paired with your mobile number.',
       dateOfBirth: 'Date of Birth',
       // Professional Information
       professionalInfo: 'Professional Information',
@@ -52,6 +54,8 @@ export function ProfileTab() {
       industryPlaceholder: 'e.g., Technology, Finance, Healthcare',
       yearsExperience: 'Years of Experience',
       yearsExperiencePlaceholder: 'Number of years in business development',
+      yearsExperienceUnit: 'years',
+      saveHint: 'Review your details, then save them securely to your BDA profile.',
       // Buttons
       saving: 'Saving...',
       saveAllChanges: 'Save All Changes',
@@ -91,6 +95,8 @@ export function ProfileTab() {
       countryCodeEmpty: 'لم يتم العثور على دولة.',
       phone: 'رقم الهاتف',
       phonePlaceholder: '555-123-4567',
+      mobileContact: 'بيانات الجوال',
+      mobileContactDesc: 'اختر دولتك مرة واحدة، وسيبقى مفتاح الاتصال مرتبطاً برقم جوالك.',
       dateOfBirth: 'تاريخ الميلاد',
       // Professional Information
       professionalInfo: 'المعلومات المهنية',
@@ -103,6 +109,8 @@ export function ProfileTab() {
       industryPlaceholder: 'مثال: التكنولوجيا، المالية، الرعاية الصحية',
       yearsExperience: 'سنوات الخبرة',
       yearsExperiencePlaceholder: 'عدد سنوات الخبرة في تطوير الأعمال',
+      yearsExperienceUnit: 'سنوات',
+      saveHint: 'راجع بياناتك ثم احفظها بأمان في ملفك لدى BDA.',
       // Buttons
       saving: 'جارٍ الحفظ...',
       saveAllChanges: 'حفظ جميع التغييرات',
@@ -245,18 +253,28 @@ export function ProfileTab() {
   return (
     <div className="space-y-6">
       {/* Personal Information Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            {texts.personalInfo}
-          </CardTitle>
-          <CardDescription>{texts.personalInfoDesc}</CardDescription>
+      <Card className="overflow-hidden border-slate-200 shadow-[0_16px_40px_rgba(13,31,78,0.07)]">
+        <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-[#f0f6ff] via-white to-white px-5 py-5 sm:px-7">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#0f91e0] text-white shadow-[0_8px_20px_rgba(15,145,224,0.25)]">
+              <User className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle className="text-xl font-bold tracking-tight text-[#0d1f4e] sm:text-2xl">
+                {texts.personalInfo}
+              </CardTitle>
+              <CardDescription className="mt-1 text-sm text-slate-600">
+                {texts.personalInfoDesc}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <CardContent className="space-y-6 p-5 sm:p-7">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="first_name">{texts.firstName} *</Label>
+              <Label htmlFor="first_name" className="text-sm font-semibold text-slate-800">
+                {texts.firstName} <span className="text-[#0f91e0]">*</span>
+              </Label>
               <Input
                 id="first_name"
                 value={profileData.first_name}
@@ -264,11 +282,14 @@ export function ProfileTab() {
                   setProfileData((prev) => ({ ...prev, first_name: e.target.value }))
                 }
                 placeholder={texts.firstNamePlaceholder}
+                className="h-12 rounded-xl border-slate-200 bg-white px-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="last_name">{texts.lastName} *</Label>
+              <Label htmlFor="last_name" className="text-sm font-semibold text-slate-800">
+                {texts.lastName} <span className="text-[#0f91e0]">*</span>
+              </Label>
               <Input
                 id="last_name"
                 value={profileData.last_name}
@@ -276,146 +297,201 @@ export function ProfileTab() {
                   setProfileData((prev) => ({ ...prev, last_name: e.target.value }))
                 }
                 placeholder={texts.lastNamePlaceholder}
+                className="h-12 rounded-xl border-slate-200 bg-white px-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">{texts.email}</Label>
-            <Input id="email" value={user?.email || ''} disabled className="bg-gray-100" />
-            <p className="text-xs text-gray-500">{texts.emailNote}</p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="phone">{texts.phone}</Label>
-              <div className="flex overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-                <CountryDialCodeSelect
-                  id="country_code"
-                  value={profileData.country_code}
-                  onValueChange={(value) =>
-                    setProfileData((prev) => ({ ...prev, country_code: value }))
-                  }
-                  placeholder={texts.countryCodePlaceholder}
-                  searchPlaceholder={texts.countryCodeSearchPlaceholder}
-                  emptyText={texts.countryCodeEmpty}
-                  ariaLabel={texts.countryCode}
-                  className="h-11 w-[min(17rem,48%)] rounded-none border-0 border-r border-input bg-muted/30 shadow-none hover:bg-muted/50 focus-visible:ring-0"
-                />
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-[#1c4a8b] shadow-sm">
+                <Mail className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <Label htmlFor="email" className="text-sm font-semibold text-slate-800">{texts.email}</Label>
                 <Input
-                  id="phone"
-                  type="tel"
-                  value={profileData.phone}
-                  onChange={(e) =>
-                    setProfileData((prev) => ({ ...prev, phone: e.target.value }))
-                  }
-                  placeholder={texts.phonePlaceholder}
-                  className="h-11 flex-1 rounded-none border-0 shadow-none focus-visible:ring-0"
+                  id="email"
+                  value={user?.email || ''}
+                  disabled
+                  className="mt-1 h-auto border-0 bg-transparent p-0 text-sm text-slate-500 shadow-none disabled:cursor-default disabled:opacity-100"
                 />
               </div>
             </div>
+            <p className="mt-2 pl-12 text-xs leading-5 text-slate-500">{texts.emailNote}</p>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="date_of_birth">{texts.dateOfBirth}</Label>
-              <Input
-                id="date_of_birth"
-                type="date"
-                value={profileData.date_of_birth}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, date_of_birth: e.target.value }))
-                }
-                className="h-11"
-              />
+          <div className="rounded-2xl border border-[#cfe8fb] bg-[#f7fbff] p-4 sm:p-5">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#dbeafe] text-[#0f91e0]">
+                <Phone className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#0d1f4e]">{texts.mobileContact}</p>
+                <p className="mt-0.5 text-xs leading-5 text-slate-600">{texts.mobileContactDesc}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(13rem,0.8fr)]">
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-sm font-semibold text-slate-800">{texts.phone}</Label>
+                <div className="flex h-12 overflow-hidden rounded-xl border border-[#bfdbfe] bg-white shadow-sm transition-shadow focus-within:ring-4 focus-within:ring-[#0f91e0]/10">
+                  <CountryDialCodeSelect
+                    id="country_code"
+                    value={profileData.country_code}
+                    onValueChange={(value) =>
+                      setProfileData((prev) => ({ ...prev, country_code: value }))
+                    }
+                    placeholder={texts.countryCodePlaceholder}
+                    searchPlaceholder={texts.countryCodeSearchPlaceholder}
+                    emptyText={texts.countryCodeEmpty}
+                    ariaLabel={texts.countryCode}
+                    className="h-full w-[45%] rounded-none border-0 border-r border-[#bfdbfe] bg-[#f0f6ff] px-3 shadow-none hover:bg-[#e3f1fd] focus-visible:ring-0 sm:w-[42%]"
+                  />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={profileData.phone}
+                    onChange={(e) =>
+                      setProfileData((prev) => ({ ...prev, phone: e.target.value }))
+                    }
+                    placeholder={texts.phonePlaceholder}
+                    className="h-full flex-1 rounded-none border-0 bg-white px-4 text-base shadow-none focus-visible:ring-0"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="date_of_birth" className="text-sm font-semibold text-slate-800">{texts.dateOfBirth}</Label>
+                <div className="relative">
+                  <CalendarDays className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" />
+                  <Input
+                    id="date_of_birth"
+                    type="date"
+                    value={profileData.date_of_birth}
+                    onChange={(e) =>
+                      setProfileData((prev) => ({ ...prev, date_of_birth: e.target.value }))
+                    }
+                    className="h-12 rounded-xl border-slate-200 bg-white pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Professional Information Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Briefcase className="h-5 w-5" />
-            {texts.professionalInfo}
-          </CardTitle>
-          <CardDescription>{texts.professionalInfoDesc}</CardDescription>
+      <Card className="overflow-hidden border-slate-200 shadow-[0_16px_40px_rgba(13,31,78,0.07)]">
+        <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-white via-white to-[#f0f6ff] px-5 py-5 sm:px-7">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1c4a8b] text-white shadow-[0_8px_20px_rgba(28,74,139,0.24)]">
+              <BriefcaseBusiness className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle className="text-xl font-bold tracking-tight text-[#0d1f4e] sm:text-2xl">
+                {texts.professionalInfo}
+              </CardTitle>
+              <CardDescription className="mt-1 text-sm text-slate-600">
+                {texts.professionalInfoDesc}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <CardContent className="space-y-6 p-5 sm:p-7">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="job_title">{texts.jobTitle}</Label>
-              <Input
-                id="job_title"
-                value={profileData.job_title}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, job_title: e.target.value }))
-                }
-                placeholder={texts.jobTitlePlaceholder}
-              />
+              <Label htmlFor="job_title" className="text-sm font-semibold text-slate-800">{texts.jobTitle}</Label>
+              <div className="relative">
+                <BriefcaseBusiness className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" />
+                <Input
+                  id="job_title"
+                  value={profileData.job_title}
+                  onChange={(e) =>
+                    setProfileData((prev) => ({ ...prev, job_title: e.target.value }))
+                  }
+                  placeholder={texts.jobTitlePlaceholder}
+                  className="h-12 rounded-xl border-slate-200 bg-white pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="organisation">{texts.organization}</Label>
-              <Input
-                id="organisation"
-                value={profileData.organization}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, organization: e.target.value }))
-                }
-                placeholder={texts.organizationPlaceholder}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="industry">{texts.industry}</Label>
-              <Input
-                id="industry"
-                value={profileData.industry}
-                onChange={(e) =>
-                  setProfileData((prev) => ({ ...prev, industry: e.target.value }))
-                }
-                placeholder={texts.industryPlaceholder}
-              />
+              <Label htmlFor="organisation" className="text-sm font-semibold text-slate-800">{texts.organization}</Label>
+              <div className="relative">
+                <Building2 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" />
+                <Input
+                  id="organisation"
+                  value={profileData.organization}
+                  onChange={(e) =>
+                    setProfileData((prev) => ({ ...prev, organization: e.target.value }))
+                  }
+                  placeholder={texts.organizationPlaceholder}
+                  className="h-12 rounded-xl border-slate-200 bg-white pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="experience_years">{texts.yearsExperience}</Label>
-            <Input
-              id="experience_years"
-              type="number"
-              min="0"
-              max="50"
-              value={profileData.experience_years || ''}
-              onChange={(e) =>
-                setProfileData((prev) => ({
-                  ...prev,
-                  experience_years: parseInt(e.target.value) || 0,
-                }))
-              }
-              placeholder={texts.yearsExperiencePlaceholder}
-            />
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(13rem,0.55fr)]">
+            <div className="space-y-2">
+              <Label htmlFor="industry" className="text-sm font-semibold text-slate-800">{texts.industry}</Label>
+              <div className="relative">
+                <Layers3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" />
+                <Input
+                  id="industry"
+                  value={profileData.industry}
+                  onChange={(e) =>
+                    setProfileData((prev) => ({ ...prev, industry: e.target.value }))
+                  }
+                  placeholder={texts.industryPlaceholder}
+                  className="h-12 rounded-xl border-slate-200 bg-white pl-11 pr-4 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="experience_years" className="text-sm font-semibold text-slate-800">{texts.yearsExperience}</Label>
+              <div className="relative">
+                <Clock3 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" />
+                <Input
+                  id="experience_years"
+                  type="number"
+                  min="0"
+                  max="50"
+                  value={profileData.experience_years || ''}
+                  onChange={(e) =>
+                    setProfileData((prev) => ({
+                      ...prev,
+                      experience_years: parseInt(e.target.value) || 0,
+                    }))
+                  }
+                  placeholder={texts.yearsExperiencePlaceholder}
+                  className="h-12 rounded-xl border-slate-200 bg-white pl-11 pr-16 shadow-sm transition-colors focus-visible:border-[#0f91e0] focus-visible:ring-[#0f91e0]/20"
+                />
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">{texts.yearsExperienceUnit}</span>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Save Button for All Profile Changes */}
-      <div className="flex justify-end">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <p className="max-w-2xl text-sm leading-6 text-slate-600">{texts.saveHint}</p>
         <Button
           onClick={handleProfileSave}
           disabled={!profileChanged || updateProfile.isPending}
           size="lg"
+          className="h-11 rounded-xl bg-[#0f91e0] px-6 font-semibold shadow-[0_8px_18px_rgba(15,145,224,0.24)] transition-all hover:bg-[#1c4a8b] active:scale-[0.98]"
         >
           {updateProfile.isPending ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               {texts.saving}
             </>
           ) : (
             <>
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="mr-2 h-4 w-4" />
               {texts.saveAllChanges}
             </>
           )}
