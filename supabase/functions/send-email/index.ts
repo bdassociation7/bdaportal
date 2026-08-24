@@ -77,12 +77,6 @@ Deno.serve(async (req) => {
     const type = body.type || body.template_key;
     const data = body.data || body.variables || {};
     const user_id = body.user_id || null;
-    const from = typeof body.from === 'string' && body.from.trim()
-      ? body.from.trim()
-      : FROM_EMAIL;
-    const replyTo = typeof body.reply_to === 'string' && body.reply_to.trim()
-      ? body.reply_to.trim()
-      : undefined;
     let to = body.to;
 
     // If no 'to' email but user_id provided, look up from users table
@@ -104,14 +98,7 @@ Deno.serve(async (req) => {
           'Authorization': 'Bearer ' + resendApiKey,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          from,
-          to: [to],
-          subject: body.subject,
-          html: body.html,
-          ...(typeof body.text === 'string' && body.text ? { text: body.text } : {}),
-          ...(replyTo ? { reply_to: replyTo } : {}),
-        }),
+        body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject: body.subject, html: body.html }),
       });
       const result = await response.json();
       if (!response.ok) {
@@ -135,7 +122,6 @@ Deno.serve(async (req) => {
     // Try to load template from DB
     let subject: string;
     let html: string;
-    let text: string | undefined;
 
     if (supabase) {
       const { data: template } = await supabase
@@ -148,9 +134,6 @@ Deno.serve(async (req) => {
       if (template) {
         subject = renderTemplate(template.subject, data || {});
         html = renderTemplate(template.html_body, data || {});
-        text = template.text_body
-          ? renderTemplate(template.text_body, data || {})
-          : undefined;
       } else {
         // Fallback template
         subject = 'BDA Portal Notification: ' + type;
@@ -158,7 +141,6 @@ Deno.serve(async (req) => {
           '<p>Email type: <strong>' + type + '</strong></p>' +
           '<p>Data:</p>' +
           '<pre>' + JSON.stringify(data || {}, null, 2) + '</pre>';
-        text = subject + '\n\n' + JSON.stringify(data || {}, null, 2);
       }
     } else {
       // No Supabase - use fallback
@@ -181,8 +163,6 @@ Deno.serve(async (req) => {
         to: [to],
         subject: subject,
         html: html,
-        ...(text ? { text } : {}),
-        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
 
