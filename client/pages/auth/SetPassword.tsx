@@ -23,7 +23,43 @@ export default function SetPassword() {
   useEffect(() => {
     const handleAuthToken = async () => {
       try {
-        // ── 1. Check if there's already an active session (PKCE flow) ──
+        const searchParams = new URLSearchParams(window.location.search);
+        const tokenHash = searchParams.get('token_hash');
+        const linkType = searchParams.get('type');
+
+        // ── 1. Process a one-time recovery token before considering any browser session ──
+        if (tokenHash && linkType === 'recovery') {
+          const { data, error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'recovery',
+          });
+          if (verifyError || !data.user) {
+            setError('Your password reset link has expired or is invalid. Please request a new one.');
+            setLoading(false);
+            return;
+          }
+          setUserEmail(data.user.email || null);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setLoading(false);
+          return;
+        }
+
+        // ── 2. Process a PKCE recovery code before considering any browser session ──
+        const code = searchParams.get('code');
+        if (code) {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError || !data.user) {
+            setError('Your password reset link has expired or is invalid. Please request a new one.');
+            setLoading(false);
+            return;
+          }
+          setUserEmail(data.user.email || null);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setLoading(false);
+          return;
+        }
+
+        // ── 3. Check if there's already an active session ──
         const { data: { session: existingSession } } = await supabase.auth.getSession();
         if (existingSession?.user) {
           setUserEmail(existingSession.user.email || null);
@@ -31,24 +67,7 @@ export default function SetPassword() {
           return;
         }
 
-        // ── 2. Check for PKCE ?code= in query string ──
-        const searchParams = new URLSearchParams(window.location.search);
-        const code = searchParams.get('code');
-        if (code) {
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError) {
-            setError('Your password reset link has expired or is invalid. Please request a new one.');
-            setLoading(false);
-            return;
-          }
-          if (data.user) {
-            setUserEmail(data.user.email || null);
-          }
-          setLoading(false);
-          return;
-        }
-
-        // ── 3. Legacy: Check hash fragment for access_token ──
+        // ── 4. Legacy: Check hash fragment for access_token ──
         const hash = window.location.hash.substring(1);
         const params = new URLSearchParams(hash);
 
@@ -131,9 +150,9 @@ export default function SetPassword() {
 
       setSuccess(true);
 
-      // Redirect to dashboard after 2 seconds
+      // The workspace route applies the profile-completion guard before granting partner access.
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/workspace');
       }, 2000);
     } catch (err) {
       console.error('Unexpected error:', err);
@@ -212,7 +231,7 @@ export default function SetPassword() {
           </CardHeader>
           <CardContent className="text-center space-y-3">
             <p className="text-gray-600 text-sm">
-              Your password has been set. Redirecting you to the dashboard...
+              Your password has been set. Continuing to your account setup...
             </p>
             <Loader2 className="h-5 w-5 animate-spin text-blue-600 mx-auto" />
           </CardContent>
