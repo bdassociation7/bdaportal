@@ -48,16 +48,20 @@ import {
   Calendar,
   UserMinus,
   Clock,
+  BookOpen,
+  Send,
+  FileText,
 } from "lucide-react";
 import {
   useVouchers,
   useVoucherStats,
-  useSubmitVoucherRequest,
   useAssignVoucher,
   useUnassignVoucher,
 } from "@/entities/ecp/ecp.hooks";
 import type { Voucher, VoucherStatus, CertificationType } from "@/entities/ecp/ecp.types";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 // ============================================================================
 // Translations
@@ -66,9 +70,21 @@ import { useLanguage } from "@/contexts/LanguageContext";
 const translations = {
   en: {
     // Header
-    title: "Exam Vouchers",
-    subtitle: "Request, assign, and track exam vouchers for your candidates",
-    requestVouchers: "Request Vouchers",
+    title: "Orders & Requests",
+    subtitle: "Request exam vouchers or Learning System seats, then manage your allocated vouchers",
+    requestVouchers: "Request Exam Vouchers",
+    requestLearningAccess: "Request Learning System Access",
+    learningAccessTitle: "Learning System Access",
+    learningAccessDescription: "Request seats for your trainees. Learning System access covers both BDA-CP and BDA-SCP pathways.",
+    ordersTitle: "Request a Product",
+    ordersDescription: "Each request is processed separately and sent to BDA Support for invoicing.",
+    voucherRequestCardTitle: "BDA Exam Vouchers",
+    voucherRequestCardDescription: "Request BDA-CP or BDA-SCP exam vouchers for your candidates.",
+    learningRequestCardTitle: "Learning System Access",
+    learningRequestCardDescription: "Request Learning System seats for your trainees. One learning pathway covers both BDA-CP and BDA-SCP.",
+    supportNotification: "Your request is sent directly to BDA Support for invoicing. Access is allocated only after payment confirmation.",
+    requestSubmitted: "Request submitted",
+    requestSubmittedDescription: (reference: string) => `Request ${reference} has been sent to BDA Support for invoicing.`,
     // Stats
     total: "Total",
     available: "Available",
@@ -121,8 +137,8 @@ const translations = {
     requestVouchersTitle: "Request Exam Vouchers",
     requestVouchersDescription: "Submit a request for additional exam vouchers. You will receive an invoice via email.",
     certificationType: "Certification Type",
-    cpCertified: "CP - Certified Professional",
-    scpCertified: "SCP - Senior Certified Professional",
+    cpCertified: "BDA-CP — Certified Professional",
+    scpCertified: "BDA-SCP — Senior Certified Professional",
     quantity: "Quantity",
     quantityNote: "Minimum order: 1 voucher. Bulk discounts available for 20+ vouchers.",
     pricing: "Pricing",
@@ -132,9 +148,21 @@ const translations = {
   },
   ar: {
     // Header
-    title: "قسائم الامتحان",
-    subtitle: "طلب وتعيين وتتبع قسائم الامتحان للمرشحين",
-    requestVouchers: "طلب قسائم",
+    title: "الطلبات والقسائم",
+    subtitle: "اطلب قسائم الاختبارات أو مقاعد نظام التعلم، ثم أدر القسائم المخصصة",
+    requestVouchers: "طلب قسائم الاختبارات",
+    requestLearningAccess: "طلب مقاعد نظام التعلم",
+    learningAccessTitle: "مقاعد نظام التعلم",
+    learningAccessDescription: "اطلب مقاعد للمتدربين. يشمل نظام التعلم مساري BDA-CP وBDA-SCP.",
+    ordersTitle: "طلب منتج",
+    ordersDescription: "يُعالج كل طلب بشكل منفصل ويصل إلى دعم BDA لإصدار الفاتورة.",
+    voucherRequestCardTitle: "قسائم اختبارات BDA",
+    voucherRequestCardDescription: "اطلب قسائم BDA-CP أو BDA-SCP للمرشحين.",
+    learningRequestCardTitle: "مقاعد نظام التعلم",
+    learningRequestCardDescription: "اطلب مقاعد نظام التعلم للمتدربين. يغطي مسار التعلم الواحد BDA-CP وBDA-SCP.",
+    supportNotification: "يصل طلبك مباشرة إلى دعم BDA لإصدار الفاتورة. لا يُفعّل الوصول إلا بعد تأكيد السداد.",
+    requestSubmitted: "تم إرسال الطلب",
+    requestSubmittedDescription: (reference: string) => `تم إرسال الطلب ${reference} إلى دعم BDA لإصدار الفاتورة.`,
     // Stats
     total: "الإجمالي",
     available: "متاح",
@@ -187,8 +215,8 @@ const translations = {
     requestVouchersTitle: "طلب قسائم امتحان",
     requestVouchersDescription: "قدم طلباً للحصول على قسائم امتحان إضافية. ستتلقى فاتورة عبر البريد الإلكتروني.",
     certificationType: "نوع الشهادة",
-    cpCertified: "CP - محترف معتمد",
-    scpCertified: "SCP - محترف معتمد أول",
+    cpCertified: "BDA-CP — محترف معتمد",
+    scpCertified: "BDA-SCP — محترف معتمد أول",
     quantity: "الكمية",
     quantityNote: "الحد الأدنى للطلب: قسيمة واحدة. خصومات متاحة للطلبات من 20 قسيمة فأكثر.",
     pricing: "التسعير",
@@ -223,11 +251,15 @@ export default function ECPVouchers() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [showLearningRequestDialog, setShowLearningRequestDialog] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [assignEmail, setAssignEmail] = useState("");
   const [assignName, setAssignName] = useState("");
   const [requestQuantity, setRequestQuantity] = useState(10);
   const [requestType, setRequestType] = useState<CertificationType>("CP");
+  const [learningSeatQuantity, setLearningSeatQuantity] = useState(10);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const { toast } = useToast();
 
   // Fetch vouchers
   const { data: vouchers, isLoading: vouchersLoading } = useVouchers();
@@ -236,7 +268,6 @@ export default function ECPVouchers() {
   const { data: stats, isLoading: statsLoading } = useVoucherStats();
 
   // Mutations
-  const submitRequest = useSubmitVoucherRequest();
   const assignVoucher = useAssignVoucher();
   const unassignVoucher = useUnassignVoucher();
 
@@ -284,15 +315,61 @@ export default function ECPVouchers() {
     await unassignVoucher.mutateAsync(voucherId);
   };
 
-  const handleRequestVouchers = async () => {
-    await submitRequest.mutateAsync({
-      certification_type: requestType,
-      quantity: requestQuantity,
-      unit_price: 150.00,
+  const submitProductRequest = async (
+    requestType: 'exam_vouchers' | 'learning_system_access',
+    quantity: number,
+    certificationType?: CertificationType,
+  ) => {
+    const { data, error } = await supabase.functions.invoke('submit-ecp-order-request', {
+      body: {
+        request_type: requestType,
+        quantity,
+        certification_type: certificationType,
+      },
     });
 
-    setShowRequestDialog(false);
-    setRequestQuantity(10);
+    if (error || !data?.success) {
+      throw new Error(data?.error || error?.message || 'Unable to submit your request. Please try again.');
+    }
+
+    toast({
+      title: texts.requestSubmitted,
+      description: texts.requestSubmittedDescription(data.request.request_number),
+    });
+  };
+
+  const handleRequestVouchers = async () => {
+    setIsSubmittingOrder(true);
+    try {
+      await submitProductRequest('exam_vouchers', requestQuantity, requestType);
+      setShowRequestDialog(false);
+      setRequestQuantity(10);
+    } catch (error) {
+      toast({
+        title: 'Unable to submit request',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  const handleRequestLearningAccess = async () => {
+    setIsSubmittingOrder(true);
+    try {
+      await submitProductRequest('learning_system_access', learningSeatQuantity);
+      setShowLearningRequestDialog(false);
+      setLearningSeatQuantity(10);
+    } catch (error) {
+      toast({
+        title: 'Unable to submit request',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingOrder(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -346,20 +423,60 @@ export default function ECPVouchers() {
   return (
     <div className="space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${language === 'ar' ? 'sm:flex-row-reverse' : ''}`}>
-        <div className={language === 'ar' ? 'text-right' : ''}>
-          <h1 className="text-2xl font-bold text-gray-900">{texts.title}</h1>
-          <p className="text-gray-600 mt-1">
-            {texts.subtitle}
-          </p>
-        </div>
-        <Button onClick={() => setShowRequestDialog(true)}>
-          <ShoppingCart className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-          {texts.requestVouchers}
-        </Button>
+      <div className={language === 'ar' ? 'text-right' : ''}>
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#0f91e0]">BDA Partner Workspace</p>
+        <h1 className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{texts.title}</h1>
+        <p className="mt-2 max-w-2xl text-gray-600 dark:text-slate-300">{texts.subtitle}</p>
       </div>
 
-      {/* Stats Cards */}
+      {/* Separate product request paths */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card className="overflow-hidden border-blue-100 bg-gradient-to-br from-[#f0f6ff] via-white to-white shadow-sm dark:border-sky-900/60 dark:from-slate-900 dark:via-slate-950 dark:to-slate-950">
+          <CardContent className="p-6">
+            <div className={`flex gap-4 ${language === 'ar' ? 'flex-row-reverse text-right' : ''}`}>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0d1f4e] text-white shadow-lg shadow-blue-950/20">
+                <Ticket className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#0f91e0]">Examination</p>
+                <h2 className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{texts.voucherRequestCardTitle}</h2>
+                <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-slate-300">{texts.voucherRequestCardDescription}</p>
+                <Button className="mt-5 bg-[#0d1f4e] hover:bg-[#1c4a8b]" onClick={() => setShowRequestDialog(true)}>
+                  <Ticket className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                  {texts.requestVouchers}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden border-sky-200 bg-gradient-to-br from-sky-50 via-white to-white shadow-sm dark:border-sky-900/60 dark:from-slate-900 dark:via-slate-950 dark:to-slate-950">
+          <CardContent className="p-6">
+            <div className={`flex gap-4 ${language === 'ar' ? 'flex-row-reverse text-right' : ''}`}>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0f91e0] text-white shadow-lg shadow-sky-500/20">
+                <BookOpen className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#0f91e0]">Learning</p>
+                <h2 className="mt-1 text-xl font-bold text-gray-900 dark:text-white">{texts.learningRequestCardTitle}</h2>
+                <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-slate-300">{texts.learningRequestCardDescription}</p>
+                <Button className="mt-5 bg-[#0f91e0] hover:bg-[#1c4a8b]" onClick={() => setShowLearningRequestDialog(true)}>
+                  <BookOpen className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                  {texts.requestLearningAccess}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Alert className="border-blue-100 bg-blue-50/70 text-[#0d1f4e] dark:border-sky-900/60 dark:bg-slate-900 dark:text-sky-100">
+        <FileText className="h-4 w-4" />
+        <AlertTitle>{texts.ordersTitle}</AlertTitle>
+        <AlertDescription>{texts.supportNotification}</AlertDescription>
+      </Alert>
+
+      {/* Voucher allocation statistics */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
@@ -725,12 +842,54 @@ export default function ECPVouchers() {
             <Button variant="outline" onClick={() => setShowRequestDialog(false)}>
               {texts.cancel}
             </Button>
-            <Button onClick={handleRequestVouchers} disabled={submitRequest.isPending}>
-              {submitRequest.isPending ? (
+            <Button onClick={handleRequestVouchers} disabled={isSubmittingOrder}>
+              {isSubmittingOrder ? (
                 <Loader2 className={`h-4 w-4 animate-spin ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
               ) : (
                 <ShoppingCart className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
               )}
+              {texts.submitRequest}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Learning System access request */}
+      <Dialog open={showLearningRequestDialog} onOpenChange={setShowLearningRequestDialog}>
+        <DialogContent dir={language === 'ar' ? 'rtl' : 'ltr'} className="sm:max-w-lg">
+          <DialogHeader className={language === 'ar' ? 'text-right' : ''}>
+            <DialogTitle className="flex items-center gap-2 text-[#0d1f4e] dark:text-white">
+              <BookOpen className="h-5 w-5 text-[#0f91e0]" />
+              {texts.learningAccessTitle}
+            </DialogTitle>
+            <DialogDescription>{texts.learningAccessDescription}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            <div className="rounded-xl border border-blue-100 bg-[#f0f6ff] p-4 dark:border-sky-900/60 dark:bg-slate-900">
+              <p className="text-sm leading-6 text-[#0d1f4e] dark:text-sky-100">{texts.supportNotification}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="learningSeats">{texts.quantity} *</Label>
+              <Input
+                id="learningSeats"
+                type="number"
+                min={1}
+                max={5000}
+                value={learningSeatQuantity}
+                onChange={(e) => setLearningSeatQuantity(parseInt(e.target.value) || 1)}
+                className="h-11"
+              />
+              <p className="text-xs text-gray-500 dark:text-slate-400">{texts.learningAccessDescription}</p>
+            </div>
+          </div>
+
+          <DialogFooter className={language === 'ar' ? 'flex-row-reverse' : ''}>
+            <Button variant="outline" onClick={() => setShowLearningRequestDialog(false)} disabled={isSubmittingOrder}>
+              {texts.cancel}
+            </Button>
+            <Button onClick={handleRequestLearningAccess} disabled={isSubmittingOrder} className="bg-[#0f91e0] hover:bg-[#1c4a8b]">
+              {isSubmittingOrder ? <Loader2 className={`h-4 w-4 animate-spin ${language === 'ar' ? 'ml-2' : 'mr-2'}`} /> : <Send className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />}
               {texts.submitRequest}
             </Button>
           </DialogFooter>

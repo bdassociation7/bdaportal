@@ -82,7 +82,6 @@ export const navigationConfig: NavigationConfig = {
     { id: 'trainings', label: 'nav.ecp.trainings', path: '/ecp/trainings', icon: Calendar },
     { id: 'trainers', label: 'nav.ecp.trainers', path: '/ecp/trainers', icon: UserCheck },
     { id: 'ecp-reports', label: 'nav.ecp.reports', path: '/ecp/reports', icon: BarChart3 },
-    { id: 'ecp-license', label: 'nav.ecp.license', path: '/ecp/license', icon: FileText },
     { id: 'ecp-toolkit', label: 'nav.ecp.toolkit', path: '/ecp/toolkit', icon: Palette },
     // PDP Section
     { id: 'pdp-dashboard', label: 'PDP Dashboard', path: '/pdp/dashboard', icon: LayoutDashboard, section: 'PDP — Professional Development Partner' },
@@ -108,7 +107,6 @@ export const navigationConfig: NavigationConfig = {
     { id: 'ecp-reports', label: 'nav.ecp.reports', path: '/ecp/reports', icon: BarChart3 },
     { id: 'learning-system', label: 'nav.ecp.learningSystem', path: '/ecp/learning-system', icon: BookMarked },
     { id: 'mock-exams', label: 'nav.ecp.mockExams', path: '/ecp/mock-exams', icon: ClipboardCheck },
-    { id: 'ecp-license', label: 'nav.ecp.license', path: '/ecp/license', icon: FileText },
     { id: 'ecp-toolkit', label: 'nav.ecp.toolkit', path: '/ecp/toolkit', icon: Palette },
     // PDP Section
     { id: 'pdp-dashboard', label: 'PDP Dashboard', path: '/pdp/dashboard', icon: LayoutDashboard, section: 'PDP — Professional Development Partner' },

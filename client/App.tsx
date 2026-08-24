@@ -184,7 +184,7 @@ import { InstructorPortalShell } from './components/InstructorPortalShell';
 import InstructorAssessmentGate from './components/InstructorAssessmentGate';
 
 // ECP Partner pages
-import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPLicense, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
+import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
 
 // PDP Partner pages
 import { PDPDashboard, PDPPrograms, PDPProgramDetail, PDPProgramEdit, PDPSubmitProgram, PDPAnnualReport, PDPEditProfile, PDPGuidelines, PDPCompetencyMapping, PDPLicense, PDPSupportCenter, PDPToolkit } from "./pages/pdp";
@@ -590,7 +590,7 @@ const App = () => (
                   <Route path="/ecp/mock-exams/:examId" element={<ExamDetail />} />
                   <Route path="/ecp/mock-exams/:examId/take" element={<TakeExam />} />
                   <Route path="/ecp/mock-exams/results/:attemptId" element={<ExamResults />} />
-                  <Route path="/ecp/license" element={<ECPLicense />} />
+                  <Route path="/ecp/license" element={<Navigate to="/ecp/dashboard" replace />} />
                   <Route path="/ecp/toolkit" element={<ECPToolkit />} />
                   <Route path="/ecp/help" element={<ECPHelpCenter />} />
                   <Route path="/ecp/upgrade" element={<UpgradePartnership />} />

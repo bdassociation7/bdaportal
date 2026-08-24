@@ -907,7 +907,7 @@ export const translations = {
     // ============= ECP Navigation =============
     'nav.ecp.dashboard': 'Dashboard',
     'nav.ecp.candidates': 'Candidate Management',
-    'nav.ecp.vouchers': 'Exam Vouchers',
+    'nav.ecp.vouchers': 'Orders & Requests',
     'nav.ecp.trainings': 'Training Deliveries',
     'nav.ecp.trainers': 'Certified Trainers',
     'nav.ecp.reports': 'Performance Reports',
@@ -2005,7 +2005,7 @@ export const translations = {
     // ============= ECP Navigation =============
     'nav.ecp.dashboard': 'لوحة التحكم',
     'nav.ecp.candidates': 'إدارة المرشحين',
-    'nav.ecp.vouchers': 'قسائم الامتحان',
+    'nav.ecp.vouchers': 'الطلبات والقسائم',
     'nav.ecp.trainings': 'التدريبات المقدمة',
     'nav.ecp.trainers': 'المدربون المعتمدون',
     'nav.ecp.reports': 'تقارير الأداء',

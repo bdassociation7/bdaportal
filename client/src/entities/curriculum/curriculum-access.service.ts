@@ -28,6 +28,22 @@ export class CurriculumAccessService {
     certificationType: CertificationType
   ): Promise<ServiceResponse<AccessCheckResult>> {
     try {
+      // ECP is granted the shared Learning System as part of the partner workspace.
+      // This is role-based so access ends automatically if the account is no longer an ECP.
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profile?.role === 'ecp') {
+        return {
+          data: {
+            hasAccess: true,
+          },
+        };
+      }
+
       // 1. Check if user already has access record in Supabase
       // Note: All content is stored under 'CP', but users may have SCP or CP access records.
       // We accept any active access (CP or SCP) since they share the same content.

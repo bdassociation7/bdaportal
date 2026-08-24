@@ -213,40 +213,30 @@ export class MockExamService {
       }
 
       if (isECP) {
-        // Verify the ECP has an active, non-expired licence
-        const { data: ecpLicense } = await supabase
-          .from('ecp_licenses')
-          .select('id, expiry_date')
-          .eq('partner_id', targetUserId)
-          .eq('status', 'active')
-          .gt('expiry_date', new Date().toISOString().split('T')[0])
-          .maybeSingle();
+        // ECP partners receive full Premium Mock Exam access as part of their workspace.
+        // This is role-based, so it is removed automatically if the role changes.
+        const { data: allPremiumExams } = await supabase
+          .from('mock_exams')
+          .select('id')
+          .eq('is_premium', true)
+          .eq('is_active', true);
 
-        if (ecpLicense) {
-          // Fetch all active premium exams and return synthetic access records
-          const { data: allPremiumExams } = await supabase
-            .from('mock_exams')
-            .select('id')
-            .eq('is_premium', true)
-            .eq('is_active', true);
+        const syntheticAccess = (allPremiumExams || []).map(
+          (exam) =>
+            ({
+              id: `ecp-${exam.id}`,
+              user_id: targetUserId,
+              mock_exam_id: exam.id,
+              attempts_allowed: 999,
+              attempts_used: 0,
+              expires_at: null,
+              granted_by: 'ecp_partner',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            } as unknown as MockExamPremiumAccess)
+        );
 
-          const syntheticAccess = (allPremiumExams || []).map(
-            (exam) =>
-              ({
-                id: `ecp-${exam.id}`,
-                user_id: targetUserId,
-                mock_exam_id: exam.id,
-                attempts_allowed: 999,
-                attempts_used: 0,
-                expires_at: null,
-                granted_by: 'ecp_license',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              } as unknown as MockExamPremiumAccess)
-          );
-
-          return { data: syntheticAccess, error: null };
-        }
+        return { data: syntheticAccess, error: null };
       }
 
       // Regular user — fetch actual purchased access records
