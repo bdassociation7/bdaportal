@@ -77,6 +77,9 @@ Deno.serve(async (req) => {
     const type = body.type || body.template_key;
     const data = body.data || body.variables || {};
     const user_id = body.user_id || null;
+    const from = typeof body.from === 'string' && body.from.trim()
+      ? body.from.trim()
+      : FROM_EMAIL;
     const replyTo = typeof body.reply_to === 'string' && body.reply_to.trim()
       ? body.reply_to.trim()
       : undefined;
@@ -102,7 +105,7 @@ Deno.serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: FROM_EMAIL,
+          from,
           to: [to],
           subject: body.subject,
           html: body.html,
