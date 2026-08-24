@@ -340,7 +340,14 @@ export default function ECPManagement() {
       });
 
       if (invokeError) {
-        throw new Error('Unable to contact the secure partner invitation service. Please try again.');
+        const errorResponse = invokeError.context;
+        const errorBody = errorResponse instanceof Response
+          ? await errorResponse.clone().json().catch(() => null)
+          : null;
+        const message = errorBody?.error === 'User already exists' || errorBody?.error === 'User already registered'
+          ? 'An account already exists for this email. Use a new email address or manage the existing account from User Management.'
+          : errorBody?.error || 'Unable to contact the secure partner invitation service. Please try again.';
+        throw new Error(message);
       }
       if (!result?.success) throw new Error(result?.error || 'Unable to create the partner invitation.');
 
