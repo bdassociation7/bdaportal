@@ -132,8 +132,13 @@ export function checkProfileCompletion(user: User | null): ProfileCompletionStat
     ((requiredFields.length - missingFields.length) / requiredFields.length) * 100
   );
 
+  const isPartner = user.role === 'ecp' || user.role === 'pdp' || user.role === 'dual_partner';
+  // A partner invitation must be explicitly confirmed on the partner completion
+  // page, even when an administrator supplied the known contact details.
+  const requiresPartnerConfirmation = isPartner && user.profile_completed !== true;
+
   return {
-    isComplete: missingFields.length === 0,
+    isComplete: missingFields.length === 0 && !requiresPartnerConfirmation,
     missingFields,
     completionPercentage,
     requiredFields: Array.from(requiredFields),

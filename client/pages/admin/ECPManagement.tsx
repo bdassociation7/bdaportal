@@ -351,8 +351,12 @@ export default function ECPManagement() {
             last_name: lastName,
             phone: formData.contact_phone,
             country_code: formData.country,
+            company_name: formData.company_name,
+            organization_name: formData.company_name,
+            preferred_language: 'en',
             role: baseRole,
-            source: 'admin_created',
+            source: 'admin_partner_invite',
+            send_welcome_email: true,
           }),
         }
       );
@@ -361,7 +365,9 @@ export default function ECPManagement() {
       if (!response.ok) throw new Error(result.error || 'Failed to create user');
 
       const userId = result.user_id;
-      if (!userId) throw new Error('Failed to create user');
+      if (!userId || result.invitation_email_sent !== true) {
+        throw new Error('The partner invitation email was not confirmed as sent. No partner record was created.');
+      }
 
       // Update partner record with company info
       const { error: partnerError } = await supabase
@@ -421,7 +427,7 @@ export default function ECPManagement() {
       const typeLabel = data.type === 'dual_partner' ? 'ECP + PDP (Dual Partner)' : data.type === 'pdp' ? 'PDP' : 'ECP';
       toast({
         title: 'Partner Created',
-        description: `${typeLabel} partner has been successfully created. They will receive login credentials via email.`
+        description: `${typeLabel} partner has been created and received a secure Set Your Password email.`
       });
       setAddPartnerDialogOpen(false);
       setNewPartnerForm({

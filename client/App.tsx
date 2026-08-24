@@ -263,11 +263,11 @@ const PDPOnlyWrapper = () => (
   </ProtectedRoute>
 );
 
-// Dual Partner workspace wrapper
+// ECP workspace wrapper (dual_partner remains supported for legacy accounts)
 const DualPartnerWrapper = () => (
   <ProtectedRoute>
     <ProfileCompletionGuard>
-      <RoleGuard allowedRoles={['dual_partner']}>
+      <RoleGuard allowedRoles={['ecp', 'dual_partner']}>
         <PortalLayout>
           <Outlet />
         </PortalLayout>

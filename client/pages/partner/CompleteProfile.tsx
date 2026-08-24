@@ -252,18 +252,7 @@ export default function PartnerCompleteProfile() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-between pt-6 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    const dashboardPath = isECP ? '/ecp/dashboard' : isPDP ? '/pdp/dashboard' : '/dashboard';
-                    navigate(dashboardPath);
-                  }}
-                  disabled={isSubmitting}
-                >
-                  Skip for Now
-                </Button>
+              <div className="flex items-center justify-end border-t pt-6">
                 <Button type="submit" disabled={isSubmitting} className="min-w-[150px]">
                   {isSubmitting ? (
                     <>

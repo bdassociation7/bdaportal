@@ -25,13 +25,21 @@ function renderTemplate(template: string, data: Record<string, unknown>): string
   });
 }
 
+function redactSensitiveTemplateData(data: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [
+      key,
+      /(password|reset|recovery|invite|action_link|set_password)/i.test(key) ? '[redacted]' : value,
+    ]),
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // Security: verify internal secret to prevent unauthorized email sending
-  // Accepts calls from: Edge Functions with x-internal-secret header, or service role key
+  // This function is intentionally callable only by trusted server-side code.
   const internalSecret = Deno.env.get('INTERNAL_EMAIL_SECRET');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (internalSecret) {
@@ -40,10 +48,9 @@ Deno.serve(async (req) => {
     const isInternalCall = providedSecret === internalSecret;
     const isServiceRole = providedAuth === serviceRoleKey;
     if (!isInternalCall && !isServiceRole) {
-      console.warn('[send-email] Unauthorized call blocked from:', req.headers.get('x-forwarded-for') || 'unknown');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Unauthorised' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
   }
@@ -184,7 +191,7 @@ Deno.serve(async (req) => {
             subject: subject,
             status: 'sent',
             resend_id: result.id,
-            template_data: data || {},
+            template_data: redactSensitiveTemplateData(data),
             sent_at: new Date().toISOString(),
           })
           .select('id')
