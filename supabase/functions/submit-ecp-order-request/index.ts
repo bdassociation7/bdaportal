@@ -126,6 +126,7 @@ serve(async (req) => {
     const emailPayload = {
       type: emailType,
       to: 'support@bda-global.org',
+      reply_to: partner.contact_email || profile.email,
       data: {
         request_number: request.request_number,
         partner_name: partnerName,

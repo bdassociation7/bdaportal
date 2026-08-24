@@ -140,7 +140,6 @@ const translations = {
     cpCertified: "BDA-CP — Certified Professional",
     scpCertified: "BDA-SCP — Senior Certified Professional",
     quantity: "Quantity",
-    quantityNote: "Minimum order: 1 voucher. Bulk discounts available for 20+ vouchers.",
     pricing: "Pricing",
     examVoucherPrice: (type: string) => `${type} Exam Voucher: $150 USD each`,
     estimatedTotal: (total: number) => `Estimated Total: $${total} USD`,
@@ -218,7 +217,6 @@ const translations = {
     cpCertified: "BDA-CP — محترف معتمد",
     scpCertified: "BDA-SCP — محترف معتمد أول",
     quantity: "الكمية",
-    quantityNote: "الحد الأدنى للطلب: قسيمة واحدة. خصومات متاحة للطلبات من 20 قسيمة فأكثر.",
     pricing: "التسعير",
     examVoucherPrice: (type: string) => `قسيمة امتحان ${type}: 150 دولار أمريكي لكل قسيمة`,
     estimatedTotal: (total: number) => `الإجمالي التقديري: ${total} دولار أمريكي`,
@@ -832,9 +830,6 @@ export default function ECPVouchers() {
                 value={requestQuantity}
                 onChange={(e) => setRequestQuantity(parseInt(e.target.value) || 1)}
               />
-              <p className="text-xs text-gray-500">
-                {texts.quantityNote}
-              </p>
             </div>
           </div>
 
