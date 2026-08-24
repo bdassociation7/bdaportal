@@ -47,15 +47,14 @@ export class MockExamService {
         return false;
       }
 
-      // ECP partners with active licence have access to all premium exams
+      // ECP access is role-based and does not depend on a separate licence record.
       const { data: userProfile } = await supabase
         .from('users')
         .select('role')
         .eq('id', targetUserId)
         .single();
 
-      const isECP =
-        userProfile?.role === 'ecp' || userProfile?.role === 'dual_partner';
+      const isECP = userProfile?.role === 'ecp';
 
       if (userProfile?.role === 'trainer') {
         const { data: hasTrainerAccess, error: trainerAccessError } = await supabase
@@ -65,16 +64,7 @@ export class MockExamService {
         return false;
       }
 
-      if (isECP) {
-        const { data: ecpLicense } = await supabase
-          .from('ecp_licenses')
-          .select('id')
-          .eq('partner_id', targetUserId)
-          .eq('status', 'active')
-          .gt('expiry_date', new Date().toISOString().split('T')[0])
-          .maybeSingle();
-        if (ecpLicense) return true;
-      }
+      if (isECP) return true;
 
       const { data, error } = await supabase
         .from('mock_exam_premium_access')
@@ -169,15 +159,14 @@ export class MockExamService {
         return { data: [], error: null };
       }
 
-      // Check if user is an ECP partner (ecp or legacy dual_partner)
+      // Check whether the account is an active ECP partner role.
       const { data: userProfile } = await supabase
         .from('users')
         .select('role')
         .eq('id', targetUserId)
         .single();
 
-      const isECP =
-        userProfile?.role === 'ecp' || userProfile?.role === 'dual_partner';
+      const isECP = userProfile?.role === 'ecp';
 
       if (userProfile?.role === 'trainer') {
         const { data: hasTrainerAccess, error: trainerAccessError } = await supabase
