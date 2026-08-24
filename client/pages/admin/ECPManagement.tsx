@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CountryDialCodeSelect } from "@/components/ui/country-dial-code-select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,7 +72,6 @@ import {
   RefreshCw,
   Plus,
   Upload,
-  Layers,
 } from "lucide-react";
 
 // Types
@@ -276,14 +276,8 @@ export default function ECPManagement() {
     country: '',
     city: '',
     address: '',
-    partnership_type: 'ecp' as 'ecp' | 'pdp' | 'dual_partner',
-    pdp_tier: 'standard' as 'standard' | 'advanced' | 'premium',
+    partnership_type: 'ecp' as 'ecp' | 'pdp',
   });
-
-  // Upgrade to Dual Partner dialog state
-  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
-  const [selectedPartnerForUpgrade, setSelectedPartnerForUpgrade] = useState<ECPPartnerWithStats | null>(null);
-  const [upgradePdpTier, setUpgradePdpTier] = useState<'standard' | 'advanced' | 'premium'>('standard');
 
   const [reviewVoucherDialogOpen, setReviewVoucherDialogOpen] = useState(false);
   const [selectedVoucherRequest, setSelectedVoucherRequest] = useState<VoucherRequest | null>(null);
@@ -318,51 +312,37 @@ export default function ECPManagement() {
   });
 
   // Mutations
-  // PDP tier → max_programs mapping
-  const PDP_TIER_PROGRAMS: Record<string, number> = {
-    standard: 5,
-    advanced: 8,
-    premium: 12,
-  };
-
   const createPartnerMutation = useMutation({
     mutationFn: async (formData: typeof newPartnerForm) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
       const nameParts = formData.contact_person.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
+      const firstName = nameParts[0] || 'Partner';
+      const lastName = nameParts.slice(1).join(' ') || 'Contact';
 
-      // Determine base role: if dual, create as ecp first then upgrade
-      const baseRole = formData.partnership_type === 'pdp' ? 'pdp' : 'ecp';
+      const baseRole = formData.partnership_type;
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorisation': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            first_name: firstName,
-            last_name: lastName,
-            phone: formData.contact_phone,
-            country_code: formData.country,
-            company_name: formData.company_name,
-            organization_name: formData.company_name,
-            preferred_language: 'en',
-            role: baseRole,
-            source: 'admin_partner_invite',
-            send_welcome_email: true,
-          }),
-        }
-      );
+      const { data: result, error: invokeError } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: formData.email,
+          first_name: firstName,
+          last_name: lastName,
+          phone: formData.contact_phone,
+          country_code: formData.country,
+          company_name: formData.company_name,
+          organization_name: formData.company_name,
+          preferred_language: 'en',
+          role: baseRole,
+          source: 'admin_partner_invite',
+          send_welcome_email: true,
+        },
+      });
 
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to create user');
+      if (invokeError) {
+        throw new Error('Unable to contact the secure partner invitation service. Please try again.');
+      }
+      if (!result?.success) throw new Error(result?.error || 'Unable to create the partner invitation.');
 
       const userId = result.user_id;
       if (!userId || result.invitation_email_sent !== true) {
@@ -385,46 +365,12 @@ export default function ECPManagement() {
 
       if (partnerError) throw partnerError;
 
-      // If dual_partner: activate PDP partnership on top of ECP
-      if (formData.partnership_type === 'dual_partner') {
-        const maxPrograms = PDP_TIER_PROGRAMS[formData.pdp_tier] || 5;
-        // Create PDP profile
-        await supabase.from('pdp_partner_profiles').upsert({
-          partner_id: userId,
-          organization_name: formData.company_name,
-          legal_name: formData.company_name,
-          primary_contact_name: formData.contact_person,
-          primary_contact_email: formData.email,
-          primary_contact_phone: formData.contact_phone,
-        }, { onConflict: 'partner_id' });
-
-        // Create PDP license
-        const expiryDate = new Date();
-        expiryDate.setMonth(expiryDate.getMonth() + 12);
-        const countryCode = formData.country?.toUpperCase() || 'XX';
-        await supabase.from('pdp_licenses').insert({
-          partner_id: userId,
-          license_number: `PDP-LIC-${Date.now()}`,
-          partner_code: `PDP-${countryCode}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-          status: 'active',
-          issue_date: new Date().toISOString(),
-          expiry_date: expiryDate.toISOString(),
-          max_programs: maxPrograms,
-          programs_used: 0,
-          program_submission_enabled: true,
-        });
-
-        // Update user role and partner_type to dual_partner
-        await supabase.from('users').update({ role: 'dual_partner' }).eq('id', userId);
-        await supabase.from('partners').update({ partner_type: 'dual_partner' }).eq('id', userId);
-      }
-
       return { id: userId, type: formData.partnership_type };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-partners'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'pdp-partners'] });
-      const typeLabel = data.type === 'dual_partner' ? 'ECP + PDP (Dual Partner)' : data.type === 'pdp' ? 'PDP' : 'ECP';
+      const typeLabel = data.type === 'pdp' ? 'PDP' : 'ECP';
       toast({
         title: 'Partner Created',
         description: `${typeLabel} partner has been created and received a secure Set Your Password email.`
@@ -439,7 +385,6 @@ export default function ECPManagement() {
         city: '',
         address: '',
         partnership_type: 'ecp',
-        pdp_tier: 'standard',
       });
     },
     onError: (error: Error) => {
@@ -652,67 +597,6 @@ export default function ECPManagement() {
         description: error.message,
         variant: 'destructive'
       });
-    },
-  });
-
-  // ── Upgrade ECP → Dual Partner mutation ──────────────────────────────────
-  const upgradePartnerMutation = useMutation({
-    mutationFn: async ({ partnerId, tier }: { partnerId: string; tier: 'standard' | 'advanced' | 'premium' }) => {
-      const maxPrograms = PDP_TIER_PROGRAMS[tier] || 5;
-
-      // 1. Get partner info
-      const { data: partnerData } = await supabase
-        .from('partners')
-        .select('company_name, contact_person, contact_email, contact_phone, country')
-        .eq('id', partnerId)
-        .single();
-
-      if (!partnerData) throw new Error('Partner not found');
-
-      // 2. Create PDP partner profile
-      await supabase.from('pdp_partner_profiles').upsert({
-        partner_id: partnerId,
-        organization_name: partnerData.company_name,
-        legal_name: partnerData.company_name,
-        primary_contact_name: partnerData.contact_person,
-        primary_contact_email: partnerData.contact_email,
-        primary_contact_phone: partnerData.contact_phone,
-      }, { onConflict: 'partner_id' });
-
-      // 3. Create PDP license
-      const expiryDate = new Date();
-      expiryDate.setMonth(expiryDate.getMonth() + 12);
-      const countryCode = partnerData.country?.toUpperCase() || 'XX';
-      const { error: licErr } = await supabase.from('pdp_licenses').insert({
-        partner_id: partnerId,
-        license_number: `PDP-LIC-${Date.now()}`,
-        partner_code: `PDP-${countryCode}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-        status: 'active',
-        issue_date: new Date().toISOString(),
-        expiry_date: expiryDate.toISOString(),
-        max_programs: maxPrograms,
-        programs_used: 0,
-        program_submission_enabled: true,
-      });
-      if (licErr) throw licErr;
-
-      // 4. Update user role and partner_type
-      await supabase.from('users').update({ role: 'dual_partner' }).eq('id', partnerId);
-      const { error: ptErr } = await supabase.from('partners').update({ partner_type: 'dual_partner' }).eq('id', partnerId);
-      if (ptErr) throw ptErr;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'ecp-partners'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'pdp-partners'] });
-      toast({
-        title: 'Partnership Upgraded',
-        description: 'Partner now has both ECP and PDP partnerships. They will see a Workspace Switcher on next login.',
-      });
-      setUpgradeDialogOpen(false);
-      setSelectedPartnerForUpgrade(null);
-    },
-    onError: (error: Error) => {
-      toast({ title: 'Upgrade Failed', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -992,23 +876,6 @@ export default function ECPManagement() {
                                     >
                                       <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
                                       Create License
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                                {/* Upgrade to Dual Partner — only for pure ECP partners */}
-                                {partner.partner_type === 'ecp' && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setSelectedPartnerForUpgrade(partner);
-                                        setUpgradePdpTier('standard');
-                                        setUpgradeDialogOpen(true);
-                                      }}
-                                      className="text-[#0d2b5e] font-medium"
-                                    >
-                                      <Layers className="h-4 w-4 mr-2 text-[#0d2b5e]" />
-                                      Add PDP Partnership
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -1461,227 +1328,141 @@ export default function ECPManagement() {
             city: '',
             address: '',
             partnership_type: 'ecp',
-            pdp_tier: 'standard',
           });
         }
         setAddPartnerDialogOpen(open);
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Partner</DialogTitle>
-            <DialogDescription>
-              Create a new partner account. You can assign ECP, PDP, or both partnerships at once.
+        <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto border border-[#bfdbfe] bg-white p-0 dark:border-[#1d4b78] dark:bg-[#0d1f4e]">
+          <DialogHeader className="border-b border-[#bfdbfe] bg-gradient-to-r from-[#0f91e0] via-[#1c4a8b] to-[#0d1f4e] px-6 py-6 text-left dark:border-[#2b5b89]">
+            <DialogTitle className="text-2xl font-bold text-white">Create Partner Account</DialogTitle>
+            <DialogDescription className="max-w-xl text-sm leading-6 text-blue-50">
+              Create an ECP or PDP account and send a secure, one-time Set Your Password invitation.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-5 px-6 py-6 sm:grid-cols-2">
             {/* Partnership Type Selector */}
             <div className="col-span-2">
-              <Label>Partnership Type *</Label>
-              <div className="grid grid-cols-3 gap-2 mt-1">
-                {(['ecp', 'pdp', 'dual_partner'] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setNewPartnerForm({ ...newPartnerForm, partnership_type: type })}
-                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                      newPartnerForm.partnership_type === type
-                        ? 'border-[#0d2b5e] bg-[#0d2b5e] text-white'
-                        : 'border-gray-200 text-gray-600 hover:border-[#0d2b5e]'
-                    }`}
-                  >
-                    {type === 'ecp' ? 'ECP Only' : type === 'pdp' ? 'PDP Only' : 'ECP + PDP (Dual)'}
-                  </button>
-                ))}
+              <div className="mb-3">
+                <Label className="text-[#0d1f4e] dark:text-blue-50">Partnership type *</Label>
+                <p className="mt-1 text-sm text-slate-500 dark:text-blue-100">ECP includes PDP Standard access. Select the partnership that matches the organisation’s approved access.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {([
+                  { key: 'ecp', title: 'ECP Partnership', detail: 'Includes PDP Standard access.' },
+                  { key: 'pdp', title: 'PDP Partnership', detail: 'Dedicated professional development access.' },
+                ] as const).map((type) => {
+                  const selected = newPartnerForm.partnership_type === type.key;
+                  return (
+                    <button
+                      key={type.key}
+                      type="button"
+                      onClick={() => setNewPartnerForm({ ...newPartnerForm, partnership_type: type.key })}
+                      className={`rounded-xl border p-4 text-left transition-all ${
+                        selected
+                          ? 'border-[#0f91e0] bg-[#0d1f4e] text-white shadow-md'
+                          : 'border-[#bfdbfe] bg-white text-[#0d1f4e] hover:border-[#0f91e0] dark:border-[#2b5b89] dark:bg-[#0d1f4e] dark:text-blue-50'
+                      }`}
+                    >
+                      <span className="block text-sm font-bold">{type.title}</span>
+                      <span className={`mt-1 block text-xs leading-5 ${selected ? 'text-blue-100' : 'text-slate-500 dark:text-blue-200'}`}>{type.detail}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* PDP Tier — shown only when PDP or Dual */}
-            {(newPartnerForm.partnership_type === 'pdp' || newPartnerForm.partnership_type === 'dual_partner') && (
-              <div className="col-span-2">
-                <Label>PDP Package *</Label>
-                <div className="grid grid-cols-3 gap-2 mt-1">
-                  {([
-                    { key: 'standard', label: 'Standard', programs: 5 },
-                    { key: 'advanced', label: 'Advanced', programs: 8 },
-                    { key: 'premium', label: 'Premium', programs: 12 },
-                  ] as const).map((tier) => (
-                    <button
-                      key={tier.key}
-                      type="button"
-                      onClick={() => setNewPartnerForm({ ...newPartnerForm, pdp_tier: tier.key })}
-                      className={`p-3 rounded-lg border-2 text-sm transition-all ${
-                        newPartnerForm.pdp_tier === tier.key
-                          ? 'border-[#0d2b5e] bg-blue-50 text-[#0d2b5e]'
-                          : 'border-gray-200 text-gray-600 hover:border-[#0d2b5e]'
-                      }`}
-                    >
-                      <div className="font-semibold">{tier.label}</div>
-                      <div className="text-xs text-gray-500">{tier.programs} Programs</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="col-span-2">
-              <Label htmlFor="email">{t('common.email')} *</Label>
+              <Label htmlFor="email" className="text-[#0d1f4e] dark:text-blue-50">Invitation email *</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="partner@example.com"
                 value={newPartnerForm.email}
                 onChange={(e) => setNewPartnerForm({ ...newPartnerForm, email: e.target.value })}
+                className="h-12 border-[#bfdbfe] bg-white dark:border-[#2b5b89] dark:bg-[#0d1f4e]"
                 required
               />
             </div>
             <div className="col-span-2">
-              <Label htmlFor="company_name">{t('ecp.companyName')} *</Label>
+              <Label htmlFor="company_name" className="text-[#0d1f4e] dark:text-blue-50">Organisation / Company *</Label>
               <Input
                 id="company_name"
                 placeholder="Acme Training Center"
                 value={newPartnerForm.company_name}
                 onChange={(e) => setNewPartnerForm({ ...newPartnerForm, company_name: e.target.value })}
+                className="h-12 border-[#bfdbfe] bg-white dark:border-[#2b5b89] dark:bg-[#0d1f4e]"
                 required
               />
             </div>
             <div className="col-span-2">
-              <Label htmlFor="contact_person">{t('ecp.contactPerson')} *</Label>
+              <Label htmlFor="contact_person" className="text-[#0d1f4e] dark:text-blue-50">Primary contact *</Label>
               <Input
                 id="contact_person"
                 placeholder="John Smith"
                 value={newPartnerForm.contact_person}
                 onChange={(e) => setNewPartnerForm({ ...newPartnerForm, contact_person: e.target.value })}
+                className="h-12 border-[#bfdbfe] bg-white dark:border-[#2b5b89] dark:bg-[#0d1f4e]"
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="contact_phone">{t('ecp.phoneNumber')}</Label>
-              <Input
-                id="contact_phone"
-                placeholder="+1234567890"
-                value={newPartnerForm.contact_phone}
-                onChange={(e) => setNewPartnerForm({ ...newPartnerForm, contact_phone: e.target.value })}
-              />
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="contact_phone" className="text-[#0d1f4e] dark:text-blue-50">Mobile number *</Label>
+              <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1.35fr)] overflow-hidden rounded-xl border border-[#bfdbfe] bg-white focus-within:ring-2 focus-within:ring-[#0f91e0] dark:border-[#2b5b89] dark:bg-[#0d1f4e]">
+                <CountryDialCodeSelect
+                  id="country"
+                  value={newPartnerForm.country}
+                  onValueChange={(country) => setNewPartnerForm({ ...newPartnerForm, country })}
+                  className="h-12 rounded-none border-0 border-r border-[#bfdbfe] bg-transparent dark:border-[#2b5b89] dark:bg-transparent"
+                  placeholder="Country & code"
+                  ariaLabel="Partner country and dial code"
+                />
+                <Input
+                  id="contact_phone"
+                  inputMode="tel"
+                  placeholder="Mobile number"
+                  value={newPartnerForm.contact_phone}
+                  onChange={(e) => setNewPartnerForm({ ...newPartnerForm, contact_phone: e.target.value })}
+                  className="h-12 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="country">{t('ecp.countryCode')}</Label>
-              <Input
-                id="country"
-                placeholder="US"
-                maxLength={2}
-                value={newPartnerForm.country}
-                onChange={(e) => setNewPartnerForm({ ...newPartnerForm, country: e.target.value.toUpperCase() })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="city">{t('ecp.city')}</Label>
+            <div className="space-y-2">
+              <Label htmlFor="city" className="text-[#0d1f4e] dark:text-blue-50">City</Label>
               <Input
                 id="city"
                 placeholder="New York"
                 value={newPartnerForm.city}
                 onChange={(e) => setNewPartnerForm({ ...newPartnerForm, city: e.target.value })}
+                className="h-12 border-[#bfdbfe] bg-white dark:border-[#2b5b89] dark:bg-[#0d1f4e]"
               />
             </div>
-            <div>
-              <Label htmlFor="address">{t('ecp.address')}</Label>
+            <div className="space-y-2">
+              <Label htmlFor="address" className="text-[#0d1f4e] dark:text-blue-50">Address</Label>
               <Input
                 id="address"
                 placeholder="123 Main St"
                 value={newPartnerForm.address}
                 onChange={(e) => setNewPartnerForm({ ...newPartnerForm, address: e.target.value })}
+                className="h-12 border-[#bfdbfe] bg-white dark:border-[#2b5b89] dark:bg-[#0d1f4e]"
               />
             </div>
           </div>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              {t('ecp.accountCreationNote')}
-            </AlertDescription>
-          </Alert>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setAddPartnerDialogOpen(false)}
-              disabled={createPartnerMutation.isPending}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              className="bg-[#0d2b5e] hover:bg-[#1a3d7c]"
-              onClick={() => createPartnerMutation.mutate(newPartnerForm)}
-              disabled={
-                !newPartnerForm.email ||
-                !newPartnerForm.company_name ||
-                !newPartnerForm.contact_person ||
-                createPartnerMutation.isPending
-              }
-            >
-              {createPartnerMutation.isPending && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              )}
-              <Plus className="h-4 w-4 mr-2" />
-              Create Partner
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Upgrade to Dual Partner Dialog */}
-      <Dialog open={upgradeDialogOpen} onOpenChange={(open) => {
-        if (!open) setSelectedPartnerForUpgrade(null);
-        setUpgradeDialogOpen(open);
-      }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add PDP Partnership</DialogTitle>
-            <DialogDescription>
-              Upgrade <strong>{selectedPartnerForUpgrade?.company_name || selectedPartnerForUpgrade?.email}</strong> to a Dual Partner by adding a PDP partnership.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label className="mb-2 block">Select PDP Package</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {([
-                  { key: 'standard', label: 'Standard', programs: 5 },
-                  { key: 'advanced', label: 'Advanced', programs: 8 },
-                  { key: 'premium', label: 'Premium', programs: 12 },
-                ] as const).map((tier) => (
-                  <button
-                    key={tier.key}
-                    type="button"
-                    onClick={() => setUpgradePdpTier(tier.key)}
-                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
-                      upgradePdpTier === tier.key
-                        ? 'border-[#0d2b5e] bg-blue-50 text-[#0d2b5e]'
-                        : 'border-gray-200 text-gray-600 hover:border-[#0d2b5e]'
-                    }`}
-                  >
-                    <div className="font-semibold">{tier.label}</div>
-                    <div className="text-xs text-gray-500">{tier.programs} Programs</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                The partner will receive a PDP license with {upgradePdpTier === 'standard' ? 5 : upgradePdpTier === 'advanced' ? 8 : 12} program slots. Their role will be upgraded to Dual Partner and they will see a Workspace Switcher on next login.
-              </AlertDescription>
-            </Alert>
+          <div className="mx-6 mb-6 flex gap-3 rounded-xl border border-[#bfdbfe] bg-[#f0f6ff] p-4 dark:border-[#275277] dark:bg-[#102a52]">
+            <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#0f91e0]" />
+            <p className="text-sm leading-6 text-slate-700 dark:text-blue-50">
+              <strong className="text-[#0d1f4e] dark:text-white">Secure account activation.</strong> BDA will send a one-time <strong>Set Your Password</strong> email. No temporary password is generated or shared. The partner must complete their profile before accessing their workspace.
+            </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)} disabled={upgradePartnerMutation.isPending}>
-              Cancel
-            </Button>
+          <DialogFooter className="border-t border-[#dbeafe] bg-slate-50 px-6 py-4 dark:border-[#275277] dark:bg-[#0b1b3d]">
+            <Button variant="outline" onClick={() => setAddPartnerDialogOpen(false)} disabled={createPartnerMutation.isPending}>Cancel</Button>
             <Button
-              className="bg-[#0d2b5e] hover:bg-[#1a3d7c]"
-              onClick={() => upgradePartnerMutation.mutate({ partnerId: selectedPartnerForUpgrade!.id, tier: upgradePdpTier })}
-              disabled={upgradePartnerMutation.isPending}
+              className="bg-[#0f91e0] px-5 text-white hover:bg-[#087cbd]"
+              onClick={() => createPartnerMutation.mutate(newPartnerForm)}
+              disabled={!newPartnerForm.email || !newPartnerForm.company_name || !newPartnerForm.contact_person || !newPartnerForm.contact_phone || !newPartnerForm.country || createPartnerMutation.isPending}
             >
-              {upgradePartnerMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              <Layers className="h-4 w-4 mr-2" />
-              Upgrade to Dual Partner
+              {createPartnerMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Send secure invitation
             </Button>
           </DialogFooter>
         </DialogContent>
