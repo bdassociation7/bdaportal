@@ -164,11 +164,13 @@ function ExamCard({
   onClick,
   onViewResults,
   texts,
+  premiumAccessLabel,
 }: {
   exam: MockExamWithStats;
   onClick: () => void;
   onViewResults: () => void;
   texts: typeof translations.en;
+  premiumAccessLabel?: string;
 }) {
   const getDifficultyVariant = (
     difficulty: ExamDifficulty
@@ -224,7 +226,7 @@ function ExamCard({
                 )}
               >
                 <Crown className="h-3 w-3" />
-                {exam.has_premium_access ? texts.premiumOwned : texts.premium}
+                {exam.has_premium_access ? premiumAccessLabel || texts.premiumOwned : texts.premium}
               </span>
             )}
           </div>
@@ -602,6 +604,7 @@ export default function MockExamList() {
                       key={exam.id}
                       exam={exam}
                       texts={texts}
+                      premiumAccessLabel={isECP ? 'Included with ECP partnership' : undefined}
                       onClick={() => navigate(`${basePath}/${exam.id}`)}
                       onViewResults={() => exam.last_attempt_id && navigate(`${basePath}/results/${exam.last_attempt_id}`)}
                     />
@@ -615,7 +618,7 @@ export default function MockExamList() {
               <div>
                 <SectionHeader
                   title={texts.premiumMockExams}
-                  subtitle={texts.premiumSubtitle}
+                  subtitle={isECP ? 'Included with your ECP partnership' : texts.premiumSubtitle}
                   icon={Crown}
                   iconColor="bg-[#0d1f4e]"
                   count={premiumExams.length}
@@ -626,14 +629,15 @@ export default function MockExamList() {
                       key={exam.id}
                       exam={exam}
                       texts={texts}
+                      premiumAccessLabel={isECP ? 'Included with ECP partnership' : undefined}
                       onClick={() => navigate(`${basePath}/${exam.id}`)}
                       onViewResults={() => exam.last_attempt_id && navigate(`${basePath}/results/${exam.last_attempt_id}`)}
                     />
                   ))}
                 </div>
 
-                {/* Store Link for Premium Exams - BDA blue instead of amber */}
-                <div className="mt-4 rounded-lg border border-[#0f91e0]/20 bg-[#0f91e0]/5 p-4 dark:border-sky-400/25 dark:bg-[#163654]">
+                {/* Store link is relevant only for users without ECP partnership access. */}
+                {!isECP && <div className="mt-4 rounded-lg border border-[#0f91e0]/20 bg-[#0f91e0]/5 p-4 dark:border-sky-400/25 dark:bg-[#163654]">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-[#0d1f4e] dark:text-sky-100">
@@ -653,7 +657,7 @@ export default function MockExamList() {
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   </div>
-                </div>
+                </div>}
               </div>
             )}
           </div>
@@ -667,8 +671,8 @@ export default function MockExamList() {
           </div>
         )}
 
-        {/* Premium Purchase CTA - BDA blue instead of amber/orange */}
-        <div className="mt-8 rounded-xl border border-[#0f91e0]/20 bg-[#0f91e0]/5 p-6 text-center dark:border-sky-400/25 dark:bg-[#163654]">
+        {/* Premium purchase CTA is not shown to ECP partners because access is included. */}
+        {!isECP && <div className="mt-8 rounded-xl border border-[#0f91e0]/20 bg-[#0f91e0]/5 p-6 text-center dark:border-sky-400/25 dark:bg-[#163654]">
           <div className="flex flex-col items-center gap-3">
             <div className="p-3 bg-[#0f91e0]/10 rounded-full">
               <ShoppingBag className="h-6 w-6 text-[#0f91e0]" />
@@ -686,7 +690,7 @@ export default function MockExamList() {
               <ExternalLink className="h-4 w-4" />
             </a>
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );
