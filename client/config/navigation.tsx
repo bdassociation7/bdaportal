@@ -18,6 +18,7 @@ import {
   CalendarCheck,
   UserCheck,
   UserPlus,
+  BarChart3,
   Palette,
   PlusCircle,
   Edit,

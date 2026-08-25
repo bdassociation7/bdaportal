@@ -34,6 +34,9 @@ interface TrainerFormProps {
 }
 
 const expertiseOptions = [
+  'Business Development',
+  'Marketing',
+  'Sales',
   'Business Analysis',
   'Strategic Planning',
   'Stakeholder Engagement',
@@ -298,7 +301,7 @@ export function TrainerForm({ initialData, onSubmit, onCancel, isSubmitting, sho
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="country_code">Primary professional country <span className="text-red-600">*</span></Label>
-              <div className="relative"><MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" /><Input id="country_code" value={formData.country_code} onChange={(event) => handleInputChange('country_code', event.target.value)} placeholder="e.g. Saudi Arabia" className="h-11 pl-10" /></div>
+              <div className="relative"><MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" /><Input id="country_code" value={formData.country_code} onChange={(event) => handleInputChange('country_code', event.target.value)} placeholder="Enter country" className="h-11 pl-10" /></div>
               {validationErrors.country_code && <p className={fieldErrorClass}><AlertCircle className="h-3.5 w-3.5" />{validationErrors.country_code}</p>}
             </div>
             <div className="space-y-2">
