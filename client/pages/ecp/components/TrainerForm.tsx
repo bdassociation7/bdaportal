@@ -11,8 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UserCheck, AlertCircle, Award, Mail, Phone, Linkedin, FileText, Send } from 'lucide-react';
-import type { CreateTrainerDTO, Trainer, CertificationType } from '@/entities/ecp';
+import { UserCheck, AlertCircle, Mail, Phone, Linkedin, FileText, Send } from 'lucide-react';
+import type { CreateTrainerDTO, Trainer } from '@/entities/ecp';
 
 interface TrainerFormProps {
   initialData?: Trainer;
@@ -45,15 +45,6 @@ export function TrainerForm({ initialData, onSubmit, onCancel, isSubmitting, sho
     }
   };
 
-  const toggleCertification = (cert: CertificationType) => {
-    const certs = formData.certifications || [];
-    if (certs.includes(cert)) {
-      setFormData({ ...formData, certifications: certs.filter(c => c !== cert) });
-    } else {
-      setFormData({ ...formData, certifications: [...certs, cert] });
-    }
-  };
-
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
@@ -69,14 +60,6 @@ export function TrainerForm({ initialData, onSubmit, onCancel, isSubmitting, sho
       errors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.email = 'Invalid email format';
-    }
-
-    if (formData.trainer_certification_date && formData.trainer_certification_expiry) {
-      const certDate = new Date(formData.trainer_certification_date);
-      const expiryDate = new Date(formData.trainer_certification_expiry);
-      if (expiryDate <= certDate) {
-        errors.trainer_certification_expiry = 'Expiry date must be after certification date';
-      }
     }
 
     if (formData.linkedin_url && formData.linkedin_url.trim()) {
@@ -234,96 +217,6 @@ export function TrainerForm({ initialData, onSubmit, onCancel, isSubmitting, sho
               rows={4}
             />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Certifications */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5" />
-            Certifications
-          </CardTitle>
-          <CardDescription>Trainer certification details</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Certification Types */}
-          <div className="space-y-2">
-            <Label>Certifications Held</Label>
-            <div className="flex gap-6">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="cp"
-                  checked={formData.certifications?.includes('CP')}
-                  onCheckedChange={() => toggleCertification('CP')}
-                />
-                <label htmlFor="cp" className="text-sm cursor-pointer">
-                  CP (Certified Professional)
-                </label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="scp"
-                  checked={formData.certifications?.includes('SCP')}
-                  onCheckedChange={() => toggleCertification('SCP')}
-                />
-                <label htmlFor="scp" className="text-sm cursor-pointer">
-                  SCP (Senior Certified Professional)
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Certification Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="trainer_certification_date">Trainer Certification Date</Label>
-              <Input
-                id="trainer_certification_date"
-                type="date"
-                value={formData.trainer_certification_date}
-                onChange={e => handleInputChange('trainer_certification_date', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="trainer_certification_expiry">Certification Expiry Date</Label>
-              <Input
-                id="trainer_certification_expiry"
-                type="date"
-                value={formData.trainer_certification_expiry}
-                onChange={e => handleInputChange('trainer_certification_expiry', e.target.value)}
-              />
-              {validationErrors.trainer_certification_expiry && (
-                <p className="text-sm text-red-500 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  {validationErrors.trainer_certification_expiry}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {formData.trainer_certification_expiry && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {new Date(formData.trainer_certification_expiry) < new Date() ? (
-                  <span className="text-red-600">
-                    This trainer's certification has expired.
-                  </span>
-                ) : new Date(formData.trainer_certification_expiry).getTime() - Date.now() <
-                  90 * 24 * 60 * 60 * 1000 ? (
-                  <span className="text-orange-600">
-                    This trainer's certification will expire soon. Consider renewal.
-                  </span>
-                ) : (
-                  <span className="text-green-600">
-                    Certification is valid until{' '}
-                    {new Date(formData.trainer_certification_expiry).toLocaleDateString()}
-                  </span>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
         </CardContent>
       </Card>
 

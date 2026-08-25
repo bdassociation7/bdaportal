@@ -339,46 +339,43 @@ export default function SubmitProgram() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/pdp/programs")}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
+    <div className="mx-auto max-w-5xl space-y-7 pb-12">
+      <section className="rounded-2xl bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] px-7 py-8 text-white shadow-sm sm:px-10">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/pdp/programs")} className="-ml-2 text-blue-50 hover:bg-white/10 hover:text-white">
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Programs
         </Button>
-      </div>
-
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Submit New Program</h1>
-        <p className="text-gray-600 mt-1">
-          Submit a professional development program for BDA accreditation
+        <p className="mt-5 text-xs font-bold tracking-[0.18em] text-blue-100">BDA PDP PROGRAMME ACCREDITATION</p>
+        <h1 className="mt-3 text-3xl font-bold">Submit New Program</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
+          Provide your programme details, map its BoCK competencies, and submit it for BDA accreditation.
         </p>
-      </div>
+      </section>
 
-      {/* Slot Status Banner */}
       {slotStatus && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Program Slots</AlertTitle>
+        <Alert className="border-blue-100 bg-[#f0f6ff] text-[#0d1f4e] dark:border-sky-900/60 dark:bg-slate-900 dark:text-sky-100">
+          <Info className="h-4 w-4 text-[#0f91e0]" />
+          <AlertTitle className="font-semibold">PDP Standard capacity</AlertTitle>
           <AlertDescription>
-            You have {slotStatus.remaining_slots} of {slotStatus.max_programs} program slots available.
+            You have {slotStatus.remaining_slots} of {slotStatus.max_programs} programme slots available.
             {slotStatus.remaining_slots <= 2 && slotStatus.remaining_slots > 0 && (
-              <span className="text-orange-600 ml-1">Consider requesting more slots soon.</span>
+              <span className="ml-1 font-medium text-[#0f91e0]">Contact BDA when you are ready to upgrade your capacity.</span>
             )}
           </AlertDescription>
         </Alert>
       )}
 
       {/* Progress Steps */}
-      <div className="flex items-center justify-between">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex items-center justify-between">
         {[1, 2, 3].map((step) => (
           <div key={step} className="flex items-center flex-1">
             <div
               className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
                 step < currentStep
-                  ? "bg-green-600 border-green-600 text-white"
+                  ? "border-[#0d1f4e] bg-[#0d1f4e] text-white"
                   : step === currentStep
-                  ? "bg-blue-600 border-blue-600 text-white"
+                  ? "border-[#0f91e0] bg-[#0f91e0] text-white"
                   : "border-gray-300 text-gray-400"
               }`}
             >
@@ -402,27 +399,26 @@ export default function SubmitProgram() {
             {step < 3 && (
               <div
                 className={`h-0.5 flex-1 ${
-                  step < currentStep ? "bg-green-600" : "bg-gray-200"
+                  step < currentStep ? "bg-[#0f91e0]" : "bg-slate-200"
                 }`}
               />
             )}
           </div>
         ))}
+        </div>
       </div>
 
       {/* Step 1: Program Details */}
       {currentStep === 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-primary" />
+        <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-700">
+          <CardHeader className="border-b border-blue-100 bg-[#f0f6ff]/70 dark:border-slate-700 dark:bg-slate-900">
+            <CardTitle className="flex items-center gap-2 text-[#0d1f4e] dark:text-blue-200">
+              <BookOpen className="h-5 w-5 text-[#0f91e0]" />
               Program Details
             </CardTitle>
-            <CardDescription>
-              Provide basic information about your program
-            </CardDescription>
+            <CardDescription>Provide the information BDA needs to review your programme.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 p-6 sm:p-8">
             {/* Program Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -665,17 +661,17 @@ export default function SubmitProgram() {
 
       {/* Step 2: BoCK Alignment */}
       {currentStep === 2 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
+        <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-700">
+          <CardHeader className="border-b border-blue-100 bg-[#f0f6ff]/70 dark:border-slate-700 dark:bg-slate-900">
+            <CardTitle className="flex items-center gap-2 text-[#0d1f4e] dark:text-blue-200">
+              <Target className="h-5 w-5 text-[#0f91e0]" />
               BoCK Competency Alignment
             </CardTitle>
             <CardDescription>
               Select the BDA BoCK® competencies that your program addresses
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 p-6 sm:p-8">
             <Alert>
               <Info className="h-4 w-4" />
               <AlertTitle>Competency Levels</AlertTitle>
@@ -782,10 +778,10 @@ export default function SubmitProgram() {
                         key={sel.id}
                         className={
                           sel.level === "primary"
-                            ? "bg-blue-600"
+                            ? "bg-[#0d1f4e]"
                             : sel.level === "secondary"
-                            ? "bg-purple-600"
-                            : "bg-gray-600"
+                            ? "bg-[#1c4a8b]"
+                            : "bg-[#0f91e0]"
                         }
                       >
                         {comp.code} - {sel.level}
@@ -801,17 +797,17 @@ export default function SubmitProgram() {
 
       {/* Step 3: Review & Activate */}
       {currentStep === 3 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-primary" />
+        <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-700">
+          <CardHeader className="border-b border-blue-100 bg-[#f0f6ff]/70 dark:border-slate-700 dark:bg-slate-900">
+            <CardTitle className="flex items-center gap-2 text-[#0d1f4e] dark:text-blue-200">
+              <CheckCircle className="h-5 w-5 text-[#0f91e0]" />
               Review & Activate
             </CardTitle>
             <CardDescription>
               Review your program details before activation
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 p-6 sm:p-8">
             {/* Program Summary */}
             <div className="border rounded-lg p-4 space-y-4">
               <h3 className="font-semibold text-lg">{formData.program_name}</h3>
@@ -825,17 +821,17 @@ export default function SubmitProgram() {
                   </p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <Award className="h-6 w-6 mx-auto mb-1 text-purple-600" />
+                  <Award className="h-6 w-6 mx-auto mb-1 text-[#1c4a8b]" />
                   <p className="text-sm text-gray-600">PDCs</p>
                   <p className="font-medium">{formData.max_pdc_credits}</p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <Clock className="h-6 w-6 mx-auto mb-1 text-orange-600" />
+                  <Clock className="h-6 w-6 mx-auto mb-1 text-[#0f91e0]" />
                   <p className="text-sm text-gray-600">Duration</p>
                   <p className="font-medium">{formData.duration_hours} hours</p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <Target className="h-6 w-6 mx-auto mb-1 text-green-600" />
+                  <Target className="h-6 w-6 mx-auto mb-1 text-[#0d1f4e]" />
                   <p className="text-sm text-gray-600">Competencies</p>
                   <p className="font-medium">{selectedCompetencies.length}</p>
                 </div>
