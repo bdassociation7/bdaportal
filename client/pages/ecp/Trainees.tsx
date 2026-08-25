@@ -351,29 +351,15 @@ export default function ECPTrainees() {
   const { data: trainees, isLoading } = useTrainees({ ...filters, search });
   const { data: batches } = useBatches({});
 
-  // When URL has batch_id, set the certification_type from the batch
+  // A training batch is a unified delivery record and does not determine a trainee's certification path.
   useEffect(() => {
-    if (urlBatchId && batches) {
-      const batch = batches.find(b => b.id === urlBatchId);
-      if (batch) {
-        setFormData(prev => ({
-          ...prev,
-          batch_id: urlBatchId,
-          certification_type: batch.certification_type as 'CP' | 'SCP',
-        }));
-        // Also set for bulk upload
-        setUploadBatchId(urlBatchId);
-        setUploadCertType(batch.certification_type as 'CP' | 'SCP');
-      }
+    if (urlBatchId) {
+      setFormData(prev => ({ ...prev, batch_id: urlBatchId }));
+      setUploadBatchId(urlBatchId);
     }
-  }, [urlBatchId, batches]);
+  }, [urlBatchId]);
 
-  // Filter batches by certification type for form
-  const filteredBatches = useMemo(() => {
-    if (!batches) return [];
-    if (!formData.certification_type) return batches;
-    return batches.filter(b => b.certification_type === formData.certification_type);
-  }, [batches, formData.certification_type]);
+  const filteredBatches = useMemo(() => batches || [], [batches]);
 
   // Sort and paginate trainees
   const sortedAndPaginatedTrainees = useMemo(() => {

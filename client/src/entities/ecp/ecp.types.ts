@@ -21,13 +21,12 @@ export interface TrainingBatch {
   batch_name: string;
   batch_name_ar?: string;
   description?: string;
-  certification_type: CertificationType;
   trainer_id?: string;
   trainer?: Trainer;
-  training_start_date: string;
-  training_end_date: string;
-  exam_date?: string;
+  training_start_date?: string;
+  training_end_date?: string;
   training_location?: string;
+  delivery_platform?: string;
   training_mode: TrainingMode;
   max_capacity: number;
   status: BatchStatus;
@@ -38,15 +37,14 @@ export interface TrainingBatch {
 }
 
 export interface CreateBatchDTO {
-  batch_name: string;
+  batch_name?: string;
   batch_name_ar?: string;
   description?: string;
-  certification_type: CertificationType;
   trainer_id?: string | null;
-  training_start_date: string;
-  training_end_date: string;
-  exam_date?: string | null;
+  training_start_date?: string;
+  training_end_date?: string;
   training_location?: string;
+  delivery_platform?: string;
   training_mode: TrainingMode;
   max_capacity: number;
 }
@@ -254,7 +252,6 @@ export interface ECPDashboardStats {
 
 export interface BatchFilters {
   status?: BatchStatus;
-  certification_type?: CertificationType;
   trainer_id?: string;
   search?: string;
 }

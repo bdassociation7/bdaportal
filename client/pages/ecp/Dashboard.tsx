@@ -347,12 +347,11 @@ export default function ECPDashboard() {
                     <div>
                       <p className="text-sm font-medium">{batch.batch_name}</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(batch.training_start_date).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}
+                        {batch.training_start_date
+                          ? new Date(batch.training_start_date).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-GB')
+                          : 'Schedule to be confirmed'}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          BDA-{batch.certification_type}
-                        </Badge>
+                      <div className="mt-1">
                         <span className="text-xs text-blue-600">
                           {batch.trainee_count || 0} {texts.enroled}
                         </span>

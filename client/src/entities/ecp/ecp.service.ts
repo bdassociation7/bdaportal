@@ -92,9 +92,6 @@ export class ECPService {
       if (filters.status) {
         query = query.eq('status', filters.status);
       }
-      if (filters.certification_type) {
-        query = query.eq('certification_type', filters.certification_type);
-      }
       if (filters.trainer_id) {
         query = query.eq('trainer_id', filters.trainer_id);
       }
@@ -154,18 +151,22 @@ export class ECPService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Generate batch code
-      const { data: codeData } = await supabase.rpc('generate_batch_code', {
+      // Generate an operational batch code independent of any certification or exam.
+      const { data: codeData, error: codeError } = await supabase.rpc('generate_batch_code', {
         p_partner_id: user.id,
-        p_certification_type: dto.certification_type,
       });
+      if (codeError) throw codeError;
 
+      const batchCode = codeData || `TRN-${Date.now()}`;
       const { data, error } = await supabase
         .from('ecp_training_batches')
         .insert({
           ...dto,
           partner_id: user.id,
-          batch_code: codeData || `BATCH-${Date.now()}`,
+          batch_code: batchCode,
+          batch_name: dto.batch_name?.trim() || `Training delivery ${batchCode}`,
+          training_start_date: dto.training_start_date || null,
+          training_end_date: dto.training_end_date || null,
         })
         .select()
         .single();
@@ -347,7 +348,7 @@ export class ECPService {
         .from('ecp_trainees')
         .select(`
           *,
-          batch:ecp_training_batches(id, batch_code, batch_name, certification_type)
+          batch:ecp_training_batches(id, batch_code, batch_name)
         `)
         .eq('partner_id', user.id)
         .order('created_at', { ascending: false });

@@ -64,7 +64,7 @@ const translations = {
   en: {
     // Header
     title: 'Training Batches',
-    subtitle: 'Manage your training cohorts and schedule certification programs',
+    subtitle: 'Manage your operational training deliveries for the unified BDA curriculum',
     createBatch: 'Create Batch',
     // Stats
     totalBatches: 'Total Batches',
@@ -80,7 +80,6 @@ const translations = {
     // Filters
     searchPlaceholder: 'Search batches...',
     allStatus: 'All Status',
-    allTypes: 'All Types',
     // Training modes
     modeInPerson: 'In Person',
     modeOnline: 'Online',
@@ -89,14 +88,12 @@ const translations = {
     allBatches: 'All Batches',
     viewAndManage: 'View and manage training batches',
     batch: 'Batch',
-    certification: 'Certification',
     dates: 'Dates',
     trainer: 'Trainer',
     enrollment: 'Enrolment',
     status: 'Status',
     actions: 'Actions',
     to: 'to',
-    exam: 'Exam',
     notAssigned: 'Not assigned',
     // Actions
     viewDetails: 'View Details',
@@ -124,7 +121,7 @@ const translations = {
   ar: {
     // Header
     title: 'دفعات التدريب',
-    subtitle: 'إدارة مجموعات التدريب وجدولة برامج الشهادات',
+    subtitle: 'إدارة عمليات تقديم المنهج الموحد من BDA',
     createBatch: 'إنشاء دفعة',
     // Stats
     totalBatches: 'إجمالي الدفعات',
@@ -140,7 +137,6 @@ const translations = {
     // Filters
     searchPlaceholder: 'البحث في الدفعات...',
     allStatus: 'جميع الحالات',
-    allTypes: 'جميع الأنواع',
     // Training modes
     modeInPerson: 'حضوري',
     modeOnline: 'عن بُعد',
@@ -149,14 +145,12 @@ const translations = {
     allBatches: 'جميع الدفعات',
     viewAndManage: 'عرض وإدارة دفعات التدريب',
     batch: 'الدفعة',
-    certification: 'الشهادة',
     dates: 'التواريخ',
     trainer: 'المدرب',
     enrollment: 'التسجيل',
     status: 'الحالة',
     actions: 'الإجراءات',
     to: 'إلى',
-    exam: 'الامتحان',
     notAssigned: 'غير معين',
     // Actions
     viewDetails: 'عرض التفاصيل',
@@ -243,8 +237,9 @@ export default function ECPTrainingBatches() {
     });
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return language === 'ar' ? 'لم يُحدد بعد' : 'Not recorded yet';
+    return new Date(dateString).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-GB', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -399,11 +394,6 @@ export default function ECPTrainingBatches() {
                         <div className={`text-sm ${language === 'ar' ? 'text-right' : ''}`}>
                           <div>{formatDate(batch.training_start_date)}</div>
                           <div className="text-gray-500">{texts.to} {formatDate(batch.training_end_date)}</div>
-                          {batch.exam_date && (
-                            <div className="text-xs text-blue-600 mt-1">
-                              {texts.exam}: {formatDate(batch.exam_date)}
-                            </div>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>

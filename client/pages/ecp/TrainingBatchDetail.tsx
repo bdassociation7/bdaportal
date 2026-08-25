@@ -72,9 +72,10 @@ export default function ECPTrainingBatchDetail() {
     });
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'long',
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Not recorded';
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
@@ -185,19 +186,6 @@ export default function ECPTrainingBatchDetail() {
                   {batch.status}
                 </Badge>
               </div>
-              <div>
-                <div className="text-sm text-gray-500 mb-1">Certification Type</div>
-                <Badge
-                  variant="outline"
-                  className={`text-base ${
-                    batch.certification_type === 'CP'
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-purple-50 text-purple-700'
-                  }`}
-                >
-                  BDA-{batch.certification_type}
-                </Badge>
-              </div>
             </div>
 
             {/* Status Actions */}
@@ -298,13 +286,6 @@ export default function ECPTrainingBatchDetail() {
               <div className="text-gray-500">to {formatDate(batch.training_end_date)}</div>
             </div>
 
-            {batch.exam_date && (
-              <div>
-                <div className="text-sm text-gray-500 mb-1">Exam Date</div>
-                <div className="font-medium text-blue-600">{formatDate(batch.exam_date)}</div>
-              </div>
-            )}
-
             <div>
               <div className="text-sm text-gray-500 mb-1">Training Mode</div>
               <div className="flex items-center gap-2">
@@ -319,6 +300,13 @@ export default function ECPTrainingBatchDetail() {
               <div>
                 <div className="text-sm text-gray-500 mb-1">Location</div>
                 <div className="font-medium">{batch.training_location}</div>
+              </div>
+            )}
+
+            {batch.delivery_platform && (
+              <div>
+                <div className="text-sm text-gray-500 mb-1">Online delivery platform</div>
+                <div className="font-medium">{batch.delivery_platform}</div>
               </div>
             )}
           </CardContent>
