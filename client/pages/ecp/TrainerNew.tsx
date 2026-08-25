@@ -1,6 +1,6 @@
 /**
  * ECP Trainer New Page
- * Register a new certified trainer — with optional immediate portal invite
+ * Register a new trainer profile with an optional immediate portal invite
  */
 
 import { useNavigate } from 'react-router-dom';
@@ -44,18 +44,18 @@ export default function ECPTrainerNew() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/ecp/trainers')}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
+    <div className="mx-auto max-w-6xl space-y-7 pb-12">
+      <section className="rounded-2xl bg-gradient-to-r from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] px-7 py-8 text-white shadow-sm sm:px-10">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/ecp/trainers')} className="-ml-2 text-blue-50 hover:bg-white/10 hover:text-white">
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Trainers
         </Button>
-      </div>
-
-      <div>
-        <h1 className="text-3xl font-bold">Add New Trainer</h1>
-        <p className="text-gray-600 mt-2">Register a new certified trainer for your ECP partner</p>
-      </div>
+        <p className="mt-5 text-xs font-bold tracking-[0.18em] text-blue-100">BDA ECP TRAINER REGISTER</p>
+        <h1 className="mt-3 text-3xl font-bold">Add Trainer Profile</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-50 sm:text-base">
+          Record the trainer’s professional profile and delivery capabilities, then invite them to activate Instructor View when ready.
+        </p>
+      </section>
 
       <TrainerForm
         onSubmit={handleSubmit}

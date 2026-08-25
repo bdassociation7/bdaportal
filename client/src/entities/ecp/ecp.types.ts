@@ -72,6 +72,13 @@ export interface Trainer {
   trainer_certification_expiry?: string;
   is_active: boolean;
   status: TrainerStatus;
+  job_title?: string;
+  organisation?: string;
+  country_code?: string;
+  professional_experience_years?: number;
+  training_experience_years?: number;
+  expertise_areas?: string[];
+  delivery_languages?: string[];
   bio?: string;
   photo_url?: string;
   linkedin_url?: string;
@@ -90,6 +97,13 @@ export interface CreateTrainerDTO {
   certifications: CertificationType[];
   trainer_certification_date?: string;
   trainer_certification_expiry?: string;
+  job_title?: string;
+  organisation?: string;
+  country_code?: string;
+  professional_experience_years?: number;
+  training_experience_years?: number;
+  expertise_areas?: string[];
+  delivery_languages?: string[];
   bio?: string;
   photo_url?: string;
   linkedin_url?: string;
