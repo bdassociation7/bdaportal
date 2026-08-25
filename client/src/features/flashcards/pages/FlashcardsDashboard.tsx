@@ -287,9 +287,11 @@ export function FlashcardsDashboard() {
         introduction.push(deck);
         return;
       }
-      if (deck.competency && deck.sub_unit) {
+      if (deck.competency) {
         const competencyId = deck.competency.id;
-        const subUnitId = deck.sub_unit.id;
+        // Match Question Bank behaviour: a deck without a sub-unit remains under
+        // its main competency rather than falling into an unrelated standalone list.
+        const subUnitId = deck.sub_unit?.id || '__no_sub__';
         const target = deck.section_type === 'knowledge' ? knowledge : behavioural;
         if (!target[competencyId]) target[competencyId] = {};
         if (!target[competencyId][subUnitId]) target[competencyId][subUnitId] = [];

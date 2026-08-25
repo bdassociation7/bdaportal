@@ -136,7 +136,7 @@ function InstructorAnswerKey({ question, isVisible, onToggle }: InstructorAnswer
           </div>
           <div className="text-left">
             <p className="text-sm font-bold text-amber-800">Instructor Answer Key</p>
-            <p className="text-xs text-amber-600">Visible to instructors only — not shown to candidates</p>
+            <p className="text-xs text-amber-600">Visible to ECP partners and instructors — not shown to trainees</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 text-amber-700 text-xs font-semibold">
@@ -204,7 +204,7 @@ function QuestionView({ question, selectedAnswer, isAnswered, onSelectAnswer, on
 
   return (
     <div>
-      {/* Instructor Answer Key — shown only in the instructor learning experience. */}
+      {/* Instructor Answer Key — shown to ECP partners and instructors. */}
       {isInstructorMode && onToggleAnswerKey !== undefined && (
         <InstructorAnswerKey
           question={question}
@@ -313,12 +313,12 @@ export function PracticeSession() {
     return '/learning-system';
   }, [location.pathname]);
 
-  // ECP follows the same learning experience as individual candidates.
-  // Answer keys remain exclusive to the dedicated instructor learning routes.
+  // ECP partners use the instructor learning experience for answer keys and rationales.
+  // The candidate query parameter remains available for supervised trainee demonstrations.
   const searchParams = new URLSearchParams(location.search);
   const isCandidateMode = searchParams.get('mode') === 'candidate';
   const isInstructorMode = useMemo(() => {
-    const isInstructorPath = location.pathname.startsWith('/instructor/');
+    const isInstructorPath = location.pathname.startsWith('/ecp/') || location.pathname.startsWith('/instructor/');
     return isInstructorPath && !isCandidateMode;
   }, [location.pathname, isCandidateMode]);
 
