@@ -313,14 +313,15 @@ export function PracticeSession() {
     return '/learning-system';
   }, [location.pathname]);
 
-  // ECP partners use the instructor learning experience for answer keys and rationales.
-  // The candidate query parameter remains available for supervised trainee demonstrations.
+  // ECP is always an instructor-facing learning route. The candidate override is
+  // reserved for the dedicated instructor portal and cannot suppress ECP feedback.
   const searchParams = new URLSearchParams(location.search);
+  const isEcpPath = location.pathname.startsWith('/ecp/');
   const isCandidateMode = searchParams.get('mode') === 'candidate';
   const isInstructorMode = useMemo(() => {
-    const isInstructorPath = location.pathname.startsWith('/ecp/') || location.pathname.startsWith('/instructor/');
-    return isInstructorPath && !isCandidateMode;
-  }, [location.pathname, isCandidateMode]);
+    if (isEcpPath) return true;
+    return location.pathname.startsWith('/instructor/') && !isCandidateMode;
+  }, [isEcpPath, location.pathname, isCandidateMode]);
 
   // Presentation Mode: instructor mode but answer keys hidden (safe to share screen)
   const [isPresentationMode, setIsPresentationMode] = useState(
@@ -596,7 +597,9 @@ export function PracticeSession() {
             onSelectAnswer={handleSelectAnswer}
             onSubmitAnswer={handleSubmitAnswer}
             isInstructorMode={isInstructorMode && !isPresentationMode}
-            isAnswerKeyVisible={answerKeyVisible[currentQuestion.id] ?? false}
+            isAnswerKeyVisible={
+              answerKeyVisible[currentQuestion.id] ?? (isEcpPath && !isPresentationMode)
+            }
             onToggleAnswerKey={() => toggleAnswerKey(currentQuestion.id)}
           />
         )}

@@ -61,7 +61,7 @@ function CompetencyCard({
   return (
     <button
       type="button"
-      onClick={() => navigate(`${basePath}/module/${module.id}`)}
+      onClick={() => navigate(`${basePath}/training-kits/module/${module.id}`)}
       className="group min-w-[290px] snap-start overflow-hidden rounded-2xl border border-[#dbeafe] bg-white text-left shadow-[0_7px_20px_rgba(13,31,78,0.07)] transition-all duration-200 hover:-translate-y-1 hover:border-[#0f91e0] hover:shadow-[0_16px_30px_rgba(15,145,224,0.16)] sm:min-w-[316px]"
     >
       <div className="relative h-36 overflow-hidden bg-[#0d1f4e]">
