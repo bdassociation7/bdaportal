@@ -96,7 +96,7 @@ export function BatchForm({ initialData, onSubmit, onCancel, isSubmitting }: Bat
         <div className="space-y-5 p-5">
           <div className="space-y-2">
             <Label htmlFor="batch_name" className="font-semibold text-[#0d1f4e] dark:text-sky-100">Batch label <span className="font-normal text-slate-400">(optional)</span></Label>
-            <Input id="batch_name" value={formData.batch_name || ''} onChange={(event) => updateField('batch_name', event.target.value)} placeholder="e.g. April 2026 Partner Delivery" className={fieldClass} />
+            <Input id="batch_name" value={formData.batch_name || ''} onChange={(event) => updateField('batch_name', event.target.value)} placeholder="e.g. Partner training delivery" className={fieldClass} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="description" className="font-semibold text-[#0d1f4e] dark:text-sky-100">Internal description <span className="font-normal text-slate-400">(optional)</span></Label>
