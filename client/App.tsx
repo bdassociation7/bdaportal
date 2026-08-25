@@ -184,10 +184,10 @@ import { InstructorPortalShell } from './components/InstructorPortalShell';
 import InstructorAssessmentGate from './components/InstructorAssessmentGate';
 
 // ECP Partner pages
-import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPReports, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
+import { ECPDashboard, ECPTrainees, ECPTrainingBatches, ECPTrainingBatchNew, ECPTrainingBatchEdit, ECPTrainingBatchDetail, ECPTrainers, ECPTrainerNew, ECPTrainerDetail, ECPTrainerEdit, ECPVouchers, ECPToolkit, ECPHelpCenter } from "./pages/ecp";
 
 // PDP Partner pages
-import { PDPDashboard, PDPPrograms, PDPProgramDetail, PDPProgramEdit, PDPSubmitProgram, PDPAnnualReport, PDPEditProfile, PDPGuidelines, PDPCompetencyMapping, PDPLicense, PDPSupportCenter, PDPToolkit } from "./pages/pdp";
+import { PDPDashboard, PDPPrograms, PDPProgramDetail, PDPProgramEdit, PDPSubmitProgram, PDPAnnualReport, PDPEditProfile, PDPCompetencyMapping, PDPLicense, PDPSupportCenter, PDPToolkit } from "./pages/pdp";
 
 const queryClient = new QueryClient();
 
@@ -584,7 +584,6 @@ const App = () => (
                   <Route path="/ecp/trainers/:id" element={<ECPTrainerDetail />} />
                   <Route path="/ecp/trainers/:id/edit" element={<ECPTrainerEdit />} />
                   <Route path="/ecp/vouchers" element={<ECPVouchers />} />
-                  <Route path="/ecp/reports" element={<ECPReports />} />
                   {/* ECP Mock Exams routes */}
                   <Route path="/ecp/mock-exams" element={<MockExamList />} />
                   <Route path="/ecp/mock-exams/:examId" element={<ExamDetail />} />
@@ -605,7 +604,6 @@ const App = () => (
                   <Route path="/pdp/submit-program" element={<PDPSubmitProgram />} />
                   <Route path="/pdp/annual-report" element={<PDPAnnualReport />} />
                   <Route path="/pdp/profile" element={<PDPEditProfile />} />
-                  <Route path="/pdp/guidelines" element={<PDPGuidelines />} />
                   <Route path="/pdp/competency-mapping" element={<PDPCompetencyMapping />} />
                   <Route path="/pdp/license" element={<PDPLicense />} />
                   <Route path="/pdp/toolkit" element={<PDPToolkit />} />

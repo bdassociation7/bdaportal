@@ -13,7 +13,6 @@ export { default as ECPTrainerNew } from './TrainerNew';
 export { default as ECPTrainerDetail } from './TrainerDetail';
 export { default as ECPTrainerEdit } from './TrainerEdit';
 export { default as ECPVouchers } from './Vouchers';
-export { default as ECPReports } from './Reports';
 export { default as ECPLicense } from './License';
 export { default as ECPToolkit } from './Toolkit';
 export { default as ECPHelpCenter } from './HelpCenter';

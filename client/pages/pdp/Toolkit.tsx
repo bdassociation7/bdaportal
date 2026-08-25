@@ -383,12 +383,6 @@ export default function PDPToolkit() {
               {texts.guideline5}
             </li>
           </ul>
-          <Button variant="outline" className="mt-4" asChild>
-            <a href="/pdp/guidelines" className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
-              <ExternalLink className="h-4 w-4" />
-              {texts.viewFullGuidelines}
-            </a>
-          </Button>
         </CardContent>
       </Card>
     </div>

@@ -69,20 +69,14 @@ export default function ECPTrainerDetail() {
     setInviteLoading(true);
     setInviteMessage(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/trainers/invite', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ trainer_id: id }),
+      const { data, error } = await supabase.functions.invoke('send-trainer-invite', {
+        body: { trainer_id: id },
       });
-      const json = await res.json();
-      if (json.success) {
-        setInviteMessage(json.already_active ? 'Trainer already has an active account.' : `Invitation sent to ${trainer.email}`);
+
+      if (error || !data?.success) {
+        setInviteMessage(`Error: ${data?.error || error?.message || 'Unable to send the invitation.'}`);
       } else {
-        setInviteMessage(`Error: ${json.error}`);
+        setInviteMessage(data.already_active ? 'Trainer already has an active account.' : `Invitation sent to ${trainer.email}`);
       }
     } catch (err: any) {
       setInviteMessage('Failed to send invitation. Please try again.');
@@ -220,7 +214,7 @@ export default function ECPTrainerDetail() {
               size="sm"
               onClick={handleSendInvite}
               disabled={inviteLoading || !!(trainer as any).user_id}
-              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              className="border-blue-200 text-[#1c4a8b] hover:bg-[#f0f6ff]"
             >
               {(trainer as any).user_id
                 ? <><KeyRound className="h-4 w-4 mr-2" />Account Active</>

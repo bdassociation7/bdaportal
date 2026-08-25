@@ -653,18 +653,6 @@ export default function ECPHelpCenter() {
             </a>
 
             <a
-              href="/ecp/reports"
-              className={`flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors ${language === 'ar' ? 'flex-row-reverse' : ''}`}
-            >
-              <FileText className="h-5 w-5 text-indigo-600" />
-              <div className={language === 'ar' ? 'text-right' : ''}>
-                <p className="font-medium">{texts.performanceReports}</p>
-                <p className="text-sm text-gray-500">{texts.generateExportReports}</p>
-              </div>
-              <ExternalLink className={`h-4 w-4 text-gray-400 ${language === 'ar' ? 'mr-auto' : 'ml-auto'}`} />
-            </a>
-
-            <a
               href="/ecp/vouchers"
               className={`flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 transition-colors ${language === 'ar' ? 'flex-row-reverse' : ''}`}
             >

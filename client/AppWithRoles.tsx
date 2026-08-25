@@ -41,7 +41,6 @@ import TicketDetail from "./pages/support/TicketDetail";
 // import ECPVouchers from "./pages/ecp/Vouchers"; // TODO: Implement
 // import ECPTrainings from "./pages/ecp/Trainings"; // TODO: Implement
 // import ECPTrainers from "./pages/ecp/Trainers"; // TODO: Implement
-// import ECPReports from "./pages/ecp/Reports"; // TODO: Implement
 // import ECPLicense from "./pages/ecp/License"; // TODO: Implement
 // import ECPToolkit from "./pages/ecp/Toolkit"; // TODO: Implement
 // import ECPHelp from "./pages/ecp/Help"; // TODO: Implement
@@ -50,7 +49,6 @@ import TicketDetail from "./pages/support/TicketDetail";
 // import PDPPrograms from "./pages/pdp/Programs"; // TODO: Implement
 // import PDPSubmitProgram from "./pages/pdp/SubmitProgram"; // TODO: Implement
 // import PDPProfile from "./pages/pdp/Profile"; // TODO: Implement
-// import PDPGuidelines from "./pages/pdp/Guidelines"; // TODO: Implement
 // import PDPAnnualReport from "./pages/pdp/AnnualReport"; // TODO: Implement
 // import PDPSupport from "./pages/pdp/Support"; // TODO: Implement
 
@@ -144,7 +142,6 @@ const App = () => (
                 {/* <Route path="/ecp/vouchers" element={<ECPVouchers />} /> */}
                 {/* <Route path="/ecp/trainings" element={<ECPTrainings />} /> */}
                 {/* <Route path="/ecp/trainers" element={<ECPTrainers />} /> */}
-                {/* <Route path="/ecp/reports" element={<ECPReports />} /> */}
                 {/* <Route path="/ecp/license" element={<ECPLicense />} /> */}
                 {/* <Route path="/ecp/toolkit" element={<ECPToolkit />} /> */}
                 {/* <Route path="/ecp/help" element={<ECPHelp />} /> */}
@@ -154,7 +151,6 @@ const App = () => (
                 {/* <Route path="/pdp/programs" element={<PDPPrograms />} /> */}
                 {/* <Route path="/pdp/submit-program" element={<PDPSubmitProgram />} /> */}
                 {/* <Route path="/pdp/profile" element={<PDPProfile />} /> */}
-                {/* <Route path="/pdp/guidelines" element={<PDPGuidelines />} /> */}
                 {/* <Route path="/pdp/annual-report" element={<PDPAnnualReport />} /> */}
                 {/* <Route path="/pdp/support" element={<PDPSupport />} /> */}
 

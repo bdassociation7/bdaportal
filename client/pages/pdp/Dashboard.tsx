@@ -291,13 +291,6 @@ export default function PDPDashboard() {
             <Plus className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
             {texts.submitNewProgram}
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate("/pdp/guidelines")}
-          >
-            {texts.viewGuidelines}
-          </Button>
         </div>
       </div>
 

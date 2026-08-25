@@ -4,6 +4,7 @@
  */
 
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TrainerForm } from './components/TrainerForm';
@@ -13,6 +14,7 @@ import { supabase } from '@/shared/config/supabase.config';
 
 export default function ECPTrainerNew() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const createMutation = useCreateTrainer();
 
   const handleSubmit = async (data: CreateTrainerDTO, sendInvite: boolean) => {
@@ -22,25 +24,30 @@ export default function ECPTrainerNew() {
 
     const trainerId = result.data.id;
 
-    // 2. Send invite if requested
+    // 2. Send invitation through the production Edge Function.
+    // A trainer record is never reported as invited unless the email provider accepts delivery.
     if (sendInvite) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        await fetch('/api/trainers/invite', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session?.access_token}`,
-          },
-          body: JSON.stringify({ trainer_id: trainerId }),
+      const { data: inviteData, error: inviteError } = await supabase.functions.invoke('send-trainer-invite', {
+        body: { trainer_id: trainerId },
+      });
+
+      if (inviteError || !inviteData?.success) {
+        toast({
+          title: 'Trainer profile saved',
+          description: inviteData?.error || inviteError?.message || 'The invitation was not sent. Please use Send Invite from the trainer profile to try again.',
+          variant: 'destructive',
         });
-      } catch (err) {
-        // Invite failure is non-blocking — trainer is still created
-        console.warn('Invite send failed:', err);
+        navigate(`/ecp/trainers/${trainerId}`);
+        return;
       }
+
+      toast({
+        title: 'Trainer added and invited',
+        description: inviteData.already_active ? 'The trainer already has an active account.' : `An activation email was sent to ${data.email}.`,
+      });
     }
 
-    navigate('/ecp/trainers');
+    navigate(`/ecp/trainers/${trainerId}`);
   };
 
   return (

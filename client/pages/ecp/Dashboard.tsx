@@ -221,14 +221,6 @@ export default function ECPDashboard() {
             <UserPlus className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
             {texts.addTrainee}
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/ecp/reports')}
-          >
-            <TrendingUp className={`h-4 w-4 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-            {texts.viewReports}
-          </Button>
         </div>
       </div>
 
@@ -312,9 +304,6 @@ export default function ECPDashboard() {
                 </div>
               </div>
 
-              <Button className="w-full" size="sm" onClick={() => navigate('/ecp/reports')}>
-                {texts.viewDetailedReports}
-              </Button>
             </div>
           </CardContent>
         </Card>

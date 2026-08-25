@@ -12,7 +12,6 @@ import {
 import { handleGenerateCertificate } from "./routes/certificate-generate";
 import { handleCredentialOG } from "./routes/credential-og";
 import { handleImportDocxQuestions } from "./routes/import-docx-questions";
-import { handleTrainerInvite } from "./routes/trainer-invite";
 import { handleCreateInstructor } from "./routes/create-instructor";
 
 export function createServer() {
@@ -52,9 +51,6 @@ export function createServer() {
 
   // DOCX question import — parses Word file and returns structured questions
   app.post("/api/exam-questions/import-docx", handleImportDocxQuestions);
-
-  // Trainer invite — sends magic link to trainer email
-  app.post("/api/trainers/invite", handleTrainerInvite);
 
   // Create independent instructor — creates account + cert + sends invite in one step
   app.post("/api/instructors/create", handleCreateInstructor);
