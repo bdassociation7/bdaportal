@@ -37,9 +37,29 @@ export class CurriculumAccessService {
         .maybeSingle();
 
       if (profile?.role === 'ecp') {
+        // The curriculum dashboard still expects an access object for expiry/status
+        // presentation. ECP entitlement is role-based, so return a synthetic,
+        // non-persisted record rather than requiring a purchase or licence row.
+        const now = new Date().toISOString();
+        const access: UserCurriculumAccess = {
+          id: `ecp-role-${userId}`,
+          user_id: userId,
+          certification_type: 'CP',
+          is_active: true,
+          purchased_at: now,
+          expires_at: '9999-12-31T23:59:59.999Z',
+          woocommerce_order_id: null,
+          woocommerce_product_id: null,
+          last_checked_at: now,
+          created_at: now,
+          updated_at: now,
+        };
+
         return {
           data: {
             hasAccess: true,
+            access,
+            expiresAt: access.expires_at,
           },
         };
       }
