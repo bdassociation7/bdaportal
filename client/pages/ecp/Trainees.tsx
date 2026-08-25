@@ -1079,17 +1079,17 @@ export default function ECPTrainees() {
           resetForm();
         }
       }}>
-        <DialogContent className="max-w-3xl overflow-hidden border border-blue-100 bg-white p-0 shadow-2xl dark:border-sky-900/70 dark:bg-slate-950" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-          <DialogHeader className={`relative overflow-hidden bg-gradient-to-br from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] px-6 py-7 text-white sm:px-8 ${language === 'ar' ? 'text-right' : ''}`}>
-            <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-white/10" />
-            <div className="pointer-events-none absolute bottom-[-76px] left-1/3 h-40 w-40 rounded-full bg-white/10" />
+        <DialogContent className="grid max-h-[calc(100vh-2rem)] max-w-2xl grid-rows-[auto_1fr_auto] overflow-hidden border border-blue-100 bg-white p-0 shadow-2xl dark:border-sky-900/70 dark:bg-slate-950" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+          <DialogHeader className={`relative overflow-hidden bg-gradient-to-br from-[#0d1f4e] via-[#1c4a8b] to-[#0f91e0] px-5 py-5 text-white sm:px-6 ${language === 'ar' ? 'text-right' : ''}`}>
+            <div className="pointer-events-none absolute -right-12 -top-16 h-32 w-32 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute bottom-[-64px] left-1/3 h-28 w-28 rounded-full bg-white/10" />
             <div className={`relative flex items-start gap-4 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/25 bg-white/15 shadow-lg">
-                <Users className="h-6 w-6" />
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/25 bg-white/15 shadow-lg">
+                <Users className="h-5 w-5" />
               </span>
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/65">ECP candidate register</p>
-                <DialogTitle className="text-2xl font-bold tracking-tight text-white">
+                <DialogTitle className="text-xl font-bold tracking-tight text-white">
                   {editingTrainee ? texts.editTrainee : texts.addNewTrainee}
                 </DialogTitle>
                 <DialogDescription className="max-w-xl text-sm leading-6 text-white/75">
@@ -1099,61 +1099,61 @@ export default function ECPTrainees() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-6 px-6 py-6 sm:px-8 sm:py-7">
-            <div className={`flex flex-col gap-1 rounded-xl border border-[#0f91e0]/15 bg-[#f0f6ff] px-4 py-3 text-sm text-[#1c4a8b] sm:flex-row sm:items-center sm:justify-between dark:border-sky-900/70 dark:bg-slate-900 dark:text-sky-200 ${language === 'ar' ? 'sm:flex-row-reverse' : ''}`}>
+          <div className="space-y-4 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
+            <div className={`flex flex-col gap-1 rounded-xl border border-[#0f91e0]/15 bg-[#f0f6ff] px-3.5 py-2.5 text-xs text-[#1c4a8b] sm:flex-row sm:items-center sm:justify-between dark:border-sky-900/70 dark:bg-slate-900 dark:text-sky-200 ${language === 'ar' ? 'sm:flex-row-reverse' : ''}`}>
               <span>Start with the candidate’s contact details, then add any optional professional context.</span>
               <span className="shrink-0 font-semibold text-[#0d1f4e] dark:text-sky-100">* Required</span>
             </div>
 
-            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-              <div className={`flex items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-3.5 dark:border-slate-800 dark:bg-slate-900/70 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+              <div className={`flex items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900/70 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0f91e0]/10 text-[#0f91e0]"><Users className="h-4 w-4" /></span>
                 <div>
                   <h3 className="text-sm font-bold text-[#0d1f4e] dark:text-sky-100">Candidate identity</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Information used to identify and contact the trainee.</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-5 p-5 sm:grid-cols-2">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-3.5 p-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="first_name" className="font-semibold text-[#0d1f4e] dark:text-sky-100">{texts.firstName} <span className="text-red-600">*</span></Label>
-                  <Input id="first_name" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} placeholder="e.g. John" className="h-11 border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
+                  <Input id="first_name" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} placeholder="e.g. John" className="h-10 border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="last_name" className="font-semibold text-[#0d1f4e] dark:text-sky-100">{texts.lastName} <span className="text-red-600">*</span></Label>
-                  <Input id="last_name" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} placeholder="e.g. Doe" className="h-11 border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
+                  <Input id="last_name" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} placeholder="e.g. Doe" className="h-10 border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="email" className="font-semibold text-[#0d1f4e] dark:text-sky-100">{texts.email} <span className="text-red-600">*</span></Label>
-                  <div className="relative"><Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" /><Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="name@organisation.com" className="h-11 border-slate-200 bg-white pl-10 shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" /></div>
+                  <div className="relative"><Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f91e0]" /><Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="name@organisation.com" className="h-10 border-slate-200 bg-white pl-10 shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" /></div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="phone" className="font-semibold text-[#0d1f4e] dark:text-sky-100">{texts.phone} <span className="font-normal text-slate-400">(optional)</span></Label>
-                  <Input id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="e.g. +44 20 1234 5678" className="h-11 border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
+                  <Input id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="e.g. +44 20 1234 5678" className="h-10 border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
                 </div>
               </div>
             </section>
 
-            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-              <div className={`flex items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-3.5 dark:border-slate-800 dark:bg-slate-900/70 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+              <div className={`flex items-center gap-3 border-b border-slate-100 bg-slate-50/80 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900/70 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1c4a8b]/10 text-[#1c4a8b]"><Award className="h-4 w-4" /></span>
                 <div>
                   <h3 className="text-sm font-bold text-[#0d1f4e] dark:text-sky-100">Professional context</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Optional information to keep the partner register useful and complete.</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-5 p-5 sm:grid-cols-2">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-3.5 p-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="company" className="font-semibold text-[#0d1f4e] dark:text-sky-100">{texts.company}</Label>
-                  <Input id="company" value={formData.company_name} onChange={(e) => setFormData({ ...formData, company_name: e.target.value })} placeholder="Organisation or company" className="h-11 border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
+                  <Input id="company" value={formData.company_name} onChange={(e) => setFormData({ ...formData, company_name: e.target.value })} placeholder="Organisation or company" className="h-10 border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="job_title" className="font-semibold text-[#0d1f4e] dark:text-sky-100">{texts.jobTitle}</Label>
-                  <Input id="job_title" value={formData.job_title} onChange={(e) => setFormData({ ...formData, job_title: e.target.value })} placeholder="Professional title" className="h-11 border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
+                  <Input id="job_title" value={formData.job_title} onChange={(e) => setFormData({ ...formData, job_title: e.target.value })} placeholder="Professional title" className="h-10 border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
                 </div>
               </div>
             </section>
 
-            <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2"><section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
               <div className={`flex items-center gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0d1f4e]/10 text-[#0d1f4e] dark:text-sky-100"><Award className="h-4 w-4" /></span>
                 <div>
@@ -1161,28 +1161,28 @@ export default function ECPTrainees() {
                   <p className="text-xs text-slate-500 dark:text-slate-400">You can link the trainee to a batch now or complete this later.</p>
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="batch" className="font-semibold text-[#0d1f4e] dark:text-sky-100">{texts.trainingBatch}</Label>
                 <Select value={formData.batch_id || 'none'} onValueChange={(value) => setFormData({ ...formData, batch_id: value === 'none' ? '' : value })}>
-                  <SelectTrigger className="h-11 border-slate-200 bg-white shadow-sm focus:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900"><SelectValue placeholder={texts.selectBatch} /></SelectTrigger>
+                  <SelectTrigger className="h-10 border-slate-200 bg-white shadow-sm focus:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900"><SelectValue placeholder={texts.selectBatch} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{texts.noBatchAssigned}</SelectItem>
                     {batches?.map((batch) => <SelectItem key={batch.id} value={batch.id}>{batch.batch_code} — {batch.batch_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="notes" className="font-semibold text-[#0d1f4e] dark:text-sky-100">{texts.notes} <span className="font-normal text-slate-400">(optional)</span></Label>
                 <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder={texts.anyAdditionalNotes} rows={3} className="resize-none border-slate-200 bg-white shadow-sm focus-visible:ring-[#0f91e0] dark:border-slate-700 dark:bg-slate-900" />
               </div>
-            </section>
+            </section></div>
           </div>
 
-          <DialogFooter className={`border-t border-blue-100 bg-[#f0f6ff]/80 px-6 py-4 sm:px-8 dark:border-sky-900/60 dark:bg-slate-900 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
-            <Button variant="outline" className="h-11 border-blue-200 bg-white px-5 text-[#1c4a8b] hover:bg-blue-50 hover:text-[#0d1f4e] dark:border-slate-700 dark:bg-slate-950 dark:text-sky-200" onClick={() => { setIsAddOpen(false); setIsEditOpen(false); resetForm(); }}>
+          <DialogFooter className={`border-t border-blue-100 bg-[#f0f6ff]/80 px-5 py-3 sm:px-6 dark:border-sky-900/60 dark:bg-slate-900 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+            <Button variant="outline" className="h-10 border-blue-200 bg-white px-5 text-[#1c4a8b] hover:bg-blue-50 hover:text-[#0d1f4e] dark:border-slate-700 dark:bg-slate-950 dark:text-sky-200" onClick={() => { setIsAddOpen(false); setIsEditOpen(false); resetForm(); }}>
               {texts.cancel}
             </Button>
-            <Button className="h-11 bg-[#0f91e0] px-5 font-semibold text-white shadow-sm hover:bg-[#0d7bc4]" onClick={editingTrainee ? handleEdit : handleAdd} disabled={createMutation.isPending || updateMutation.isPending || !formData.first_name || !formData.last_name || !formData.email}>
+            <Button className="h-10 bg-[#0f91e0] px-5 font-semibold text-white shadow-sm hover:bg-[#0d7bc4]" onClick={editingTrainee ? handleEdit : handleAdd} disabled={createMutation.isPending || updateMutation.isPending || !formData.first_name || !formData.last_name || !formData.email}>
               {(createMutation.isPending || updateMutation.isPending) && <Loader2 className={`h-4 w-4 animate-spin ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />}
               {editingTrainee ? texts.updateTrainee : texts.addTrainee}
             </Button>
@@ -1303,7 +1303,7 @@ export default function ECPTrainees() {
               </AlertDescription>
             </Alert>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {uploadErrors.map((error, index) => (
                 <div
                   key={index}
