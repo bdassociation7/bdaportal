@@ -75,7 +75,7 @@ export const navigationConfig: NavigationConfig = {
   dual_partner: [
     { id: 'workspace', label: 'Workspace', path: '/workspace', icon: ArrowLeftRight },
     // ECP Section
-    { id: 'ecp-dashboard', label: 'ECP Dashboard', path: '/ecp/dashboard', icon: LayoutDashboard, section: 'ECP — Endorsed Certification Partner' },
+    { id: 'ecp-dashboard', label: 'ECP Dashboard', path: '/ecp/dashboard', icon: LayoutDashboard, section: 'ECP — Education & Certification Partner' },
     { id: 'candidates', label: 'nav.ecp.candidates', path: '/ecp/candidates', icon: Users },
     { id: 'vouchers', label: 'nav.ecp.vouchers', path: '/ecp/vouchers', icon: Ticket },
     { id: 'trainings', label: 'nav.ecp.trainings', path: '/ecp/trainings', icon: Calendar },
@@ -96,11 +96,11 @@ export const navigationConfig: NavigationConfig = {
   ecp: [
     { id: 'workspace', label: 'Workspace', path: '/workspace', icon: ArrowLeftRight },
     // ECP Section
-    { id: 'ecp-dashboard', label: 'ECP Dashboard', path: '/ecp/dashboard', icon: LayoutDashboard, section: 'ECP — Endorsed Certification Partner' },
-    { id: 'candidates', label: 'nav.ecp.candidates', path: '/ecp/candidates', icon: Users },
-    { id: 'vouchers', label: 'nav.ecp.vouchers', path: '/ecp/vouchers', icon: Ticket },
+    { id: 'ecp-dashboard', label: 'ECP Dashboard', path: '/ecp/dashboard', icon: LayoutDashboard, section: 'ECP — Education & Certification Partner' },
     { id: 'trainings', label: 'nav.ecp.trainings', path: '/ecp/trainings', icon: Calendar },
+    { id: 'candidates', label: 'nav.ecp.candidates', path: '/ecp/candidates', icon: Users },
     { id: 'trainers', label: 'nav.ecp.trainers', path: '/ecp/trainers', icon: UserCheck },
+    { id: 'vouchers', label: 'nav.ecp.vouchers', path: '/ecp/vouchers', icon: Ticket },
     { id: 'learning-system', label: 'nav.ecp.learningSystem', path: '/ecp/learning-system', icon: BookMarked },
     { id: 'mock-exams', label: 'nav.ecp.mockExams', path: '/ecp/mock-exams', icon: ClipboardCheck },
     { id: 'ecp-toolkit', label: 'nav.ecp.toolkit', path: '/ecp/toolkit', icon: Palette },
