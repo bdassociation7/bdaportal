@@ -351,24 +351,31 @@ export class CertificationExamService {
         return { data: null, error };
       }
 
-      // Enrichir avec question count et stats utilisateur
+      // Candidates do not have direct read access to the official question bank.
+      // Read the draw-safe count through a dedicated server-side summary instead.
+      const quizIds = (data || []).map((exam) => exam.id);
+      const { data: countRows, error: countError } = await supabase.rpc(
+        'get_certification_exam_question_counts',
+        { p_quiz_ids: quizIds }
+      );
+      if (countError) {
+        console.error('Error fetching official exam question counts:', countError);
+        return { data: null, error: countError };
+      }
+
+      const questionCounts = new Map(
+        (countRows || []).map((row: { quiz_id: string; question_count: number }) => [row.quiz_id, row.question_count])
+      );
+
       const examsWithStats = await Promise.all(
         (data || []).map(async (exam) => {
-          // Get question count
-          const { data: questions } = await supabase
-            .from('certification_question_bank')
-            .select('points')
-            .eq('certification_type', exam.certification_type)
-            .eq('exam_language', exam.exam_language)
-            .eq('is_active', true);
-
-          // Get user stats
+          const questionCount = questionCounts.get(exam.id) || 0;
           const stats = await this.getUserExamStats(exam.id);
 
           return {
             ...exam,
-            question_count: questions?.length || 0,
-            total_points: questions?.reduce((sum, q) => sum + (q.points || 1), 0) || 0,
+            question_count: questionCount,
+            total_points: questionCount,
             ...stats,
           };
         })
