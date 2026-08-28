@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -31,6 +32,50 @@ interface SelectedUser {
   email: string;
   firstName: string | null;
   lastName: string | null;
+}
+
+interface MultipleAccessReview {
+  foundEmails: string[];
+  missingEmails: string[];
+  invalidEntries: string[];
+  duplicateEmails: string[];
+}
+
+interface MultipleAccessGrantResult {
+  grantedEmails: string[];
+  failedGrants: { email: string; error: string }[];
+}
+
+function parseEmailList(value: string): {
+  validEmails: string[];
+  invalidEntries: string[];
+  duplicateEmails: string[];
+} {
+  const entries = value
+    .split(/[\s,;]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const validEmails: string[] = [];
+  const invalidEntries: string[] = [];
+  const duplicateEmails: string[] = [];
+  const seen = new Set<string>();
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  for (const entry of entries) {
+    const email = entry.toLowerCase();
+    if (!emailPattern.test(email)) {
+      invalidEntries.push(entry);
+      continue;
+    }
+    if (seen.has(email)) {
+      duplicateEmails.push(email);
+      continue;
+    }
+    seen.add(email);
+    validEmails.push(email);
+  }
+
+  return { validEmails, invalidEntries, duplicateEmails };
 }
 
 /**
@@ -58,6 +103,10 @@ export function AccessManagement() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<SelectedUser[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [multipleEmails, setMultipleEmails] = useState('');
+  const [multipleAccessReview, setMultipleAccessReview] = useState<MultipleAccessReview | null>(null);
+  const [multipleGrantResult, setMultipleGrantResult] = useState<MultipleAccessGrantResult | null>(null);
+  const [isReviewingMultipleEmails, setIsReviewingMultipleEmails] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -295,6 +344,56 @@ export function AccessManagement() {
     setSelectedUsers(prev => prev.filter(u => u.id !== userId));
   }, []);
 
+  const reviewMultipleEmails = async () => {
+    const { validEmails, invalidEntries, duplicateEmails } = parseEmailList(multipleEmails);
+    setMultipleGrantResult(null);
+
+    if (validEmails.length === 0) {
+      setMultipleAccessReview({
+        foundEmails: [],
+        missingEmails: [],
+        invalidEntries,
+        duplicateEmails,
+      });
+      return;
+    }
+
+    setIsReviewingMultipleEmails(true);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name')
+        .in('email', validEmails)
+        .limit(500);
+
+      if (error) throw error;
+
+      const matchedUsers = (data || []) as SelectedUser[];
+      const foundEmailSet = new Set(matchedUsers.map((user) => user.email.toLowerCase()));
+      const missingEmails = validEmails.filter((email) => !foundEmailSet.has(email));
+
+      setSelectedUsers((current) => {
+        const existingIds = new Set(current.map((user) => user.id));
+        return [
+          ...current,
+          ...matchedUsers.filter((user) => !existingIds.has(user.id)),
+        ];
+      });
+      setMultipleAccessReview({
+        foundEmails: matchedUsers.map((user) => user.email.toLowerCase()),
+        missingEmails,
+        invalidEntries,
+        duplicateEmails,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to check the supplied email addresses';
+      toast.error(message);
+    } finally {
+      setIsReviewingMultipleEmails(false);
+    }
+  };
+
   // Toggle access active status
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ userId, certType, examLanguage, isActive }: {
@@ -408,29 +507,30 @@ export function AccessManagement() {
         throw new Error(texts.noUsersSelected);
       }
 
-      // Grant access to each selected user using the admin RPC function
-      const results = await Promise.all(
-        selectedUsers.map(async (user) => {
-          const { data, error } = await supabase.rpc('admin_grant_curriculum_access', {
-            p_user_email: user.email,
-            p_certification_type: grantFormData.certificationType.toLowerCase(),
-            p_exam_language: grantFormData.examLanguage,
-            p_duration_months: grantFormData.durationMonths,
-          });
+      // Grant sequentially to keep large pasted lists within safe database request limits.
+      const results: { email: string; success: boolean; error: string | null }[] = [];
+      for (const user of selectedUsers) {
+        const { data, error } = await supabase.rpc('admin_grant_curriculum_access', {
+          p_user_email: user.email,
+          p_certification_type: grantFormData.certificationType.toLowerCase(),
+          p_exam_language: grantFormData.examLanguage,
+          p_duration_months: grantFormData.durationMonths,
+        });
 
-          if (error) {
-            console.error(`Error granting access to ${user.email}:`, error);
-            return { email: user.email, success: false, error: error.message };
-          }
+        if (error) {
+          console.error(`Error granting access to ${user.email}:`, error);
+          results.push({ email: user.email, success: false, error: error.message });
+          continue;
+        }
 
-          // The RPC returns a JSONB object with success status
-          if (data && typeof data === 'object' && 'success' in data) {
-            return { email: user.email, success: data.success, error: data.error || null };
-          }
+        // The RPC returns a JSONB object with success status.
+        if (data && typeof data === 'object' && 'success' in data) {
+          results.push({ email: user.email, success: Boolean(data.success), error: data.error || null });
+          continue;
+        }
 
-          return { email: user.email, success: true, error: null };
-        })
-      );
+        results.push({ email: user.email, success: true, error: null });
+      }
 
       const successCount = results.filter((r) => r.success).length;
       const failedEmails = results.filter((r) => !r.success).map((r) => r.email);
@@ -438,6 +538,10 @@ export function AccessManagement() {
       return {
         grantedCount: successCount,
         totalUsers: selectedUsers.length,
+        grantedEmails: results.filter((result) => result.success).map((result) => result.email),
+        failedGrants: results
+          .filter((result) => !result.success)
+          .map((result) => ({ email: result.email, error: result.error || 'Access could not be granted' })),
         failedEmails,
       };
     },
@@ -459,9 +563,14 @@ export function AccessManagement() {
         );
       }
       queryClient.invalidateQueries({ queryKey: ['curriculum-access'] });
-      setShowGrantModal(false);
+      setMultipleGrantResult({
+        grantedEmails: result.grantedEmails,
+        failedGrants: result.failedGrants,
+      });
       setSelectedUsers([]);
       setUserSearchQuery('');
+      setMultipleEmails('');
+      setMultipleAccessReview(null);
       setGrantFormData({
         certificationType: 'CP', // Always CP — all content is under CP
         examLanguage: 'en',
@@ -781,6 +890,9 @@ export function AccessManagement() {
         if (!open) {
           setSelectedUsers([]);
           setUserSearchQuery('');
+          setMultipleEmails('');
+          setMultipleAccessReview(null);
+          setMultipleGrantResult(null);
         }
       }}>
         <DialogContent className="max-w-2xl">
@@ -867,9 +979,66 @@ export function AccessManagement() {
               </div>
             </div>
 
+            <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-[#0f91e0]" />
+                <div>
+                  <Label className="text-[#0d1f4e]">Multiple access</Label>
+                  <p className="text-xs text-slate-500 mt-0.5">Paste email addresses separated by a new line, comma, semicolon, or space. Only existing portal accounts will be selected.</p>
+                </div>
+              </div>
+              <Textarea
+                value={multipleEmails}
+                onChange={(event) => {
+                  setMultipleEmails(event.target.value);
+                  setMultipleAccessReview(null);
+                  setMultipleGrantResult(null);
+                }}
+                placeholder={'learner.one@example.com\nlearner.two@example.com\nlearner.three@example.com'}
+                rows={4}
+                className="resize-y bg-white font-mono text-sm"
+              />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-slate-500">This action checks accounts only. It does not create users or send invitations.</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={reviewMultipleEmails}
+                  disabled={isReviewingMultipleEmails || !multipleEmails.trim()}
+                  className="border-[#0f91e0] text-[#0d1f4e] hover:bg-blue-100"
+                >
+                  {isReviewingMultipleEmails ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                  Check email list
+                </Button>
+              </div>
+
+              {multipleAccessReview && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <p className="text-sm font-semibold text-emerald-800 flex items-center gap-2"><CheckCircle className="h-4 w-4" /> {multipleAccessReview.foundEmails.length} account{multipleAccessReview.foundEmails.length === 1 ? '' : 's'} found</p>
+                    {multipleAccessReview.foundEmails.length > 0 && <p className="mt-1 text-xs text-emerald-700">Added to the selected users list below.</p>}
+                  </div>
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+                    <p className="text-sm font-semibold text-rose-800 flex items-center gap-2"><XCircle className="h-4 w-4" /> {multipleAccessReview.missingEmails.length} account{multipleAccessReview.missingEmails.length === 1 ? '' : 's'} not found</p>
+                    {multipleAccessReview.missingEmails.length > 0 && <p className="mt-1 max-h-20 overflow-y-auto break-words text-xs text-rose-700">{multipleAccessReview.missingEmails.join(', ')}</p>}
+                  </div>
+                  {(multipleAccessReview.invalidEntries.length > 0 || multipleAccessReview.duplicateEmails.length > 0) && (
+                    <div className="sm:col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                      {multipleAccessReview.invalidEntries.length > 0 && <p><strong>Invalid entries:</strong> {multipleAccessReview.invalidEntries.join(', ')}</p>}
+                      {multipleAccessReview.duplicateEmails.length > 0 && <p className={multipleAccessReview.invalidEntries.length > 0 ? 'mt-1' : ''}><strong>Duplicates ignored:</strong> {multipleAccessReview.duplicateEmails.join(', ')}</p>}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Selected Users Chips */}
             <div>
-              <Label className="text-gray-600">{texts.selectedUsers}</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-gray-600">{texts.selectedUsers}</Label>
+                {selectedUsers.length > 0 && <span className="text-xs font-medium text-[#1c4a8b]">{selectedUsers.length} selected</span>}
+              </div>
               <div className="mt-2 min-h-[60px] max-h-[200px] overflow-y-auto p-3 bg-gray-50 rounded-lg border border-gray-200">
                 {selectedUsers.length > 0 ? (
                   <div className="flex flex-col gap-2">
@@ -903,6 +1072,26 @@ export function AccessManagement() {
                 )}
               </div>
             </div>
+
+            {multipleGrantResult && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-3">
+                <p className="font-semibold text-[#0d1f4e]">Multiple access result</p>
+                {multipleGrantResult.grantedEmails.length > 0 && (
+                  <div className="text-sm text-emerald-800">
+                    <p className="font-medium flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Access granted to {multipleGrantResult.grantedEmails.length} account{multipleGrantResult.grantedEmails.length === 1 ? '' : 's'}</p>
+                    <p className="mt-1 max-h-24 overflow-y-auto break-words text-xs text-emerald-700">{multipleGrantResult.grantedEmails.join(', ')}</p>
+                  </div>
+                )}
+                {multipleGrantResult.failedGrants.length > 0 && (
+                  <div className="text-sm text-rose-800">
+                    <p className="font-medium flex items-center gap-2"><XCircle className="h-4 w-4" /> Access not granted to {multipleGrantResult.failedGrants.length} account{multipleGrantResult.failedGrants.length === 1 ? '' : 's'}</p>
+                    <div className="mt-1 max-h-24 overflow-y-auto text-xs text-rose-700 space-y-1">
+                      {multipleGrantResult.failedGrants.map((failure) => <p key={failure.email}><strong>{failure.email}</strong>: {failure.error}</p>)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Access Settings */}
             <div className="grid grid-cols-2 gap-4">
@@ -951,6 +1140,9 @@ export function AccessManagement() {
                 setShowGrantModal(false);
                 setSelectedUsers([]);
                 setUserSearchQuery('');
+                setMultipleEmails('');
+                setMultipleAccessReview(null);
+                setMultipleGrantResult(null);
               }}
               disabled={grantAccessMutation.isPending}
             >
