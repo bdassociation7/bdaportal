@@ -217,7 +217,7 @@ export function LessonContent({ content, tocItems = [] }: LessonContentProps) {
 
       case 'tableHeader':
         return (
-          <th key={key} className="bg-[#1a2e4a] text-white font-semibold px-4 py-3 border border-gray-300 text-left">
+          <th key={key} className="bg-[#1a2e4a] text-white font-semibold px-4 py-3 border border-gray-300 text-left [&_*]:!text-white">
             {node.content?.map((child, i) => renderNode(child, i))}
           </th>
         );
