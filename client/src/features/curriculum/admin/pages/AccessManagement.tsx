@@ -112,6 +112,7 @@ export function AccessManagement() {
 
   const [grantFormData, setGrantFormData] = useState({
     certificationType: 'CP' as CertificationType,
+    // Kept as a technical access attribute; the label shown to administrators is Learning content language.
     examLanguage: 'en' as 'en' | 'ar',
     durationMonths: 12,
   });
@@ -158,7 +159,7 @@ export function AccessManagement() {
       noResultsFound: 'No users found',
       typeToSearch: 'Type to search users...',
       durationMonths: 'Duration (months)',
-      examLanguage: 'Exam Language',
+      examLanguage: 'Learning content language',
       languageEnglish: 'English',
       languageArabic: 'Arabic',
       language: 'Language',
@@ -222,7 +223,7 @@ export function AccessManagement() {
       noResultsFound: 'لم يتم العثور على مستخدمين',
       typeToSearch: 'اكتب للبحث عن المستخدمين...',
       durationMonths: 'المدة (بالأشهر)',
-      examLanguage: 'لغة الامتحان',
+      examLanguage: 'لغة محتوى التعلم',
       languageEnglish: 'الإنجليزية',
       languageArabic: 'العربية',
       language: 'اللغة',
