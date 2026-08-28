@@ -895,8 +895,8 @@ export function AccessManagement() {
           setMultipleGrantResult(null);
         }
       }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-h-[calc(100dvh-3rem)]">
+          <DialogHeader className="shrink-0 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5" />
               {texts.grantAccessTitle}
@@ -906,7 +906,7 @@ export function AccessManagement() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 sm:px-6">
             {/* User Search Section */}
             <div>
               <Label>{texts.searchUsersLabel}</Label>
@@ -995,7 +995,7 @@ export function AccessManagement() {
                   setMultipleGrantResult(null);
                 }}
                 placeholder={'learner.one@example.com\nlearner.two@example.com\nlearner.three@example.com'}
-                rows={4}
+                rows={3}
                 className="resize-y bg-white font-mono text-sm"
               />
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1039,7 +1039,7 @@ export function AccessManagement() {
                 <Label className="text-gray-600">{texts.selectedUsers}</Label>
                 {selectedUsers.length > 0 && <span className="text-xs font-medium text-[#1c4a8b]">{selectedUsers.length} selected</span>}
               </div>
-              <div className="mt-2 min-h-[60px] max-h-[200px] overflow-y-auto p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="mt-2 min-h-[52px] max-h-[132px] overflow-y-auto p-2.5 bg-gray-50 rounded-lg border border-gray-200">
                 {selectedUsers.length > 0 ? (
                   <div className="flex flex-col gap-2">
                     {selectedUsers.map((user) => (
@@ -1133,7 +1133,7 @@ export function AccessManagement() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 sm:px-6">
             <Button
               variant="outline"
               onClick={() => {
