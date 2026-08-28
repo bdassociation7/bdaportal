@@ -229,7 +229,7 @@ function renderNode(node: ContentNode, index: number): React.ReactNode {
           key={index}
           colSpan={node.attrs?.colspan ?? 1}
           rowSpan={node.attrs?.rowspan ?? 1}
-          className="px-4 py-3 font-semibold text-white text-sm border-r border-blue-800 last:border-r-0"
+          className="px-4 py-3 font-semibold text-white text-sm border-r border-blue-800 last:border-r-0 [&_*]:!text-white"
         >
           {node.content?.map((child, i) => {
             if (child.type === 'paragraph') {
