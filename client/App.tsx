@@ -3,7 +3,7 @@ import "./global.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +20,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { ProfileCompletionGuard } from "@/components/guards/ProfileCompletionGuard";
 import { RoleGuard } from "@/components/guards/RoleGuard";
 import { DashboardRouter } from "@/components/DashboardRouter";
+import { usePublicPageSeo } from '@/features/seo/publicSeo';
 
 // Existing pages to keep
 import Login from "./pages/Login";
@@ -369,6 +370,24 @@ const HealthCheckMonitor = () => {
   return null;
 };
 
+const PORTAL_HOME_SEO_FALLBACK = {
+  title: 'BDA Portal | Business Development Association',
+  description: 'Secure portal for BDA professional learning, certification, membership, and partner services.',
+  keywords: 'BDA Portal, Business Development Association, professional learning, certification',
+  canonicalUrl: 'https://portal.bda-global.org/',
+  robotsDirective: 'index, follow' as const,
+  schemaType: 'Organization' as const,
+};
+
+function PortalHomeSeo() {
+  const location = useLocation();
+  const portalHomePaths = new Set([
+    '/', '/login', '/dashboard', '/individual/dashboard', '/ecp/dashboard', '/pdp/dashboard', '/admin/dashboard', '/trainer/dashboard',
+  ]);
+  usePublicPageSeo(portalHomePaths.has(location.pathname) ? 'portal-home' : undefined, 'en', PORTAL_HOME_SEO_FALLBACK);
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -378,6 +397,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <PortalHomeSeo />
               <SessionExpiryMonitor />
               <HealthCheckMonitor />
               <ImpersonationBanner />

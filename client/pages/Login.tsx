@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUnifiedAuth } from '@/shared/hooks/useUnifiedAuth';
 import { useToast } from "@/hooks/use-toast";
-import { usePublicPageSeo } from '@/features/seo/publicSeo';
 import { AuthStorageService } from "@/shared/utils/auth-storage";
 import { Mail, Lock } from "lucide-react";
 
@@ -15,15 +14,6 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-
-  usePublicPageSeo('portal-home', 'en', {
-    title: 'BDA Portal | Business Development Association',
-    description: 'Secure portal for BDA professional learning, certification, membership, and partner services.',
-    keywords: 'BDA Portal, Business Development Association, professional learning, certification',
-    canonicalUrl: 'https://portal.bda-global.org/',
-    robotsDirective: 'index, follow',
-    schemaType: 'Organization',
-  });
 
   // Redirect if already authenticated
   React.useEffect(() => {
