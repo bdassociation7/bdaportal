@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://portal.bda-global.org/sitemap.xml
+Sitemap: https://portal.bda-global.org/sitemap.php
 
 # Specific crawlers
 User-agent: Googlebot
