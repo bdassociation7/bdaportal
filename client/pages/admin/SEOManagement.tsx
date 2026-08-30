@@ -77,50 +77,24 @@ function CharacterCount({ value, target }: { value: string | null | undefined; t
   return <span className={`text-xs ${length > target ? 'text-rose-600' : 'text-slate-500'}`}>{length}/{target}</span>;
 }
 
-function LanguageFields({ draft, onChange }: { draft: SeoDraft | ProgrammeSeoDraft; onChange: (patch: Partial<SeoDraft>) => void }) {
+function SeoTextFields({ draft, onChange }: { draft: SeoDraft | ProgrammeSeoDraft; onChange: (patch: Partial<SeoDraft>) => void }) {
   return (
-    <Tabs defaultValue="en" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 bg-blue-50">
-        <TabsTrigger value="en">English</TabsTrigger>
-        <TabsTrigger value="ar">Arabic</TabsTrigger>
-      </TabsList>
-      <TabsContent value="en" className="mt-5 space-y-4">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between"><Label>SEO title</Label><CharacterCount value={draft.title_en} target={60} /></div>
-          <Input value={draft.title_en || ''} onChange={(event) => onChange({ title_en: event.target.value })} placeholder="Clear title for search results" maxLength={100} />
-        </div>
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between"><Label>Meta description</Label><CharacterCount value={draft.description_en} target={160} /></div>
-          <Textarea value={draft.description_en || ''} onChange={(event) => onChange({ description_en: event.target.value })} placeholder="A concise, accurate description of this public page" rows={3} maxLength={320} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Focus key phrases</Label>
-          <Input value={draft.keywords_en || ''} onChange={(event) => onChange({ keywords_en: event.target.value })} placeholder="Separate phrases with commas" />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Social sharing title</Label><Input value={draft.social_title_en || ''} onChange={(event) => onChange({ social_title_en: event.target.value })} placeholder="Optional — uses SEO title when blank" /></div>
-          <div className="space-y-1.5"><Label>Social sharing description</Label><Input value={draft.social_description_en || ''} onChange={(event) => onChange({ social_description_en: event.target.value })} placeholder="Optional — uses meta description when blank" /></div>
-        </div>
-      </TabsContent>
-      <TabsContent value="ar" className="mt-5 space-y-4" dir="rtl">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between"><Label>عنوان SEO</Label><CharacterCount value={draft.title_ar} target={60} /></div>
-          <Input value={draft.title_ar || ''} onChange={(event) => onChange({ title_ar: event.target.value })} placeholder="عنوان واضح لنتائج البحث" maxLength={100} />
-        </div>
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between"><Label>وصف Meta</Label><CharacterCount value={draft.description_ar} target={160} /></div>
-          <Textarea value={draft.description_ar || ''} onChange={(event) => onChange({ description_ar: event.target.value })} placeholder="وصف دقيق وموجز للصفحة العامة" rows={3} maxLength={320} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>عبارات التركيز</Label>
-          <Input value={draft.keywords_ar || ''} onChange={(event) => onChange({ keywords_ar: event.target.value })} placeholder="افصل العبارات بفواصل" />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>عنوان المشاركة</Label><Input value={draft.social_title_ar || ''} onChange={(event) => onChange({ social_title_ar: event.target.value })} placeholder="اختياري — يستخدم عنوان SEO عند تركه فارغاً" /></div>
-          <div className="space-y-1.5"><Label>وصف المشاركة</Label><Input value={draft.social_description_ar || ''} onChange={(event) => onChange({ social_description_ar: event.target.value })} placeholder="اختياري — يستخدم وصف Meta عند تركه فارغاً" /></div>
-        </div>
-      </TabsContent>
-    </Tabs>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2 text-sm text-[#1c4a8b]"><span className="font-medium">English search metadata</span><span>Used across all public search results</span></div>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between"><Label>SEO title</Label><CharacterCount value={draft.title_en} target={60} /></div>
+        <Input value={draft.title_en || ''} onChange={(event) => onChange({ title_en: event.target.value })} placeholder="Clear title for search results" maxLength={100} />
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between"><Label>Meta description</Label><CharacterCount value={draft.description_en} target={160} /></div>
+        <Textarea value={draft.description_en || ''} onChange={(event) => onChange({ description_en: event.target.value })} placeholder="A concise, accurate description of this public page" rows={3} maxLength={320} />
+      </div>
+      <div className="space-y-1.5"><Label>Focus key phrases</Label><Input value={draft.keywords_en || ''} onChange={(event) => onChange({ keywords_en: event.target.value })} placeholder="Separate phrases with commas" /></div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5"><Label>Social sharing title</Label><Input value={draft.social_title_en || ''} onChange={(event) => onChange({ social_title_en: event.target.value })} placeholder="Optional — uses SEO title when blank" /></div>
+        <div className="space-y-1.5"><Label>Social sharing description</Label><Input value={draft.social_description_en || ''} onChange={(event) => onChange({ social_description_en: event.target.value })} placeholder="Optional — uses meta description when blank" /></div>
+      </div>
+    </div>
   );
 }
 
@@ -151,7 +125,7 @@ function SearchPreview({ draft, pathLabel }: { draft: SeoDraft | ProgrammeSeoDra
 export default function SEOManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedPageKey, setSelectedPageKey] = useState('public-programmes');
+  const [selectedPageKey, setSelectedPageKey] = useState('portal-home');
   const [pageDraft, setPageDraft] = useState<SeoDraft | null>(null);
   const [selectedProgrammeId, setSelectedProgrammeId] = useState('');
   const [programmeDraft, setProgrammeDraft] = useState<ProgrammeSeoDraft | null>(null);
@@ -226,12 +200,12 @@ export default function SEOManagement() {
       <TabsList className="grid w-full max-w-md grid-cols-2 bg-blue-50"><TabsTrigger value="pages">Public pages</TabsTrigger><TabsTrigger value="programmes">Programme overrides</TabsTrigger></TabsList>
       <TabsContent value="pages" className="space-y-6">
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <Card className="border-blue-100 shadow-sm"><CardHeader><CardTitle className="text-lg text-[#0d1f4e]">Public page records</CardTitle><CardDescription>Select a page to edit its published metadata.</CardDescription></CardHeader><CardContent className="space-y-2">{pagesQuery.data?.filter((page) => page.page_key !== 'portal-home').map((page) => <button key={page.page_key} onClick={() => setSelectedPageKey(page.page_key)} className={`w-full rounded-lg border p-3 text-left transition-colors ${selectedPageKey === page.page_key ? 'border-[#0f91e0] bg-blue-50 text-[#0d1f4e]' : 'border-slate-200 hover:border-blue-200 hover:bg-blue-50/50'}`}><p className="font-semibold text-sm">{page.page_label}</p><p className="mt-1 truncate text-xs text-slate-500">{page.route_pattern}</p></button>)}</CardContent></Card>
-          {pageDraft && <div className="space-y-6"><Card className="border-blue-100 shadow-sm"><CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-xl text-[#0d1f4e]"><FileText className="h-5 w-5 text-[#0f91e0]" />{pageDraft.page_label}</CardTitle><CardDescription className="mt-1 font-mono">{pageDraft.route_pattern}</CardDescription></div><a href={pageDraft.route_pattern === '/verify' ? '/verify' : pageDraft.route_pattern} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-[#1c4a8b] hover:underline">Open public page <ExternalLink className="h-3.5 w-3.5" /></a></div></CardHeader><CardContent><LanguageFields draft={pageDraft} onChange={(patch) => setPageDraft((current) => current ? { ...current, ...patch } : current)} /></CardContent></Card><PublicationControls draft={pageDraft} onChange={(patch) => setPageDraft((current) => current ? { ...current, ...patch } : current)} /><div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"><SearchPreview draft={pageDraft} pathLabel={pageDraft.route_pattern} /><Card className="border-blue-100 shadow-sm"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg text-[#0d1f4e]"><Sparkles className="h-5 w-5 text-[#0f91e0]" />Publication checks</CardTitle></CardHeader><CardContent className="space-y-2 text-sm text-slate-600"><p>{pageDraft.title_en?.length || 0} title characters</p><p>{pageDraft.description_en?.length || 0} description characters</p><p className={pageDraft.robots_directive === 'index, follow' ? 'text-[#1c4a8b]' : 'text-[#0d1f4e]'}>{pageDraft.robots_directive === 'index, follow' ? 'Search indexing enabled' : 'Search indexing disabled'}</p></CardContent></Card></div><div className="flex justify-end"><Button onClick={savePage} disabled={saving} className="gap-2 bg-[#0f91e0] hover:bg-[#1c4a8b]"><Save className="h-4 w-4" />{saving ? 'Saving…' : 'Save public page SEO'}</Button></div></div>}
+          <Card className="border-blue-100 shadow-sm"><CardHeader><CardTitle className="text-lg text-[#0d1f4e]">Public page records</CardTitle><CardDescription>Select a page to edit its published metadata.</CardDescription></CardHeader><CardContent className="space-y-2">{pagesQuery.data?.map((page) => <button key={page.page_key} onClick={() => setSelectedPageKey(page.page_key)} className={`w-full rounded-lg border p-3 text-left transition-colors ${selectedPageKey === page.page_key ? 'border-[#0f91e0] bg-blue-50 text-[#0d1f4e]' : 'border-slate-200 hover:border-blue-200 hover:bg-blue-50/50'}`}><p className="font-semibold text-sm">{page.page_label}</p><p className="mt-1 truncate text-xs text-slate-500">{page.route_pattern}</p></button>)}</CardContent></Card>
+          {pageDraft && <div className="space-y-6"><Card className="border-blue-100 shadow-sm"><CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle className="flex items-center gap-2 text-xl text-[#0d1f4e]"><FileText className="h-5 w-5 text-[#0f91e0]" />{pageDraft.page_label}</CardTitle><CardDescription className="mt-1 font-mono">{pageDraft.route_pattern}</CardDescription></div><a href={pageDraft.route_pattern === '/verify' ? '/verify' : pageDraft.route_pattern} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-[#1c4a8b] hover:underline">Open public page <ExternalLink className="h-3.5 w-3.5" /></a></div></CardHeader><CardContent><SeoTextFields draft={pageDraft} onChange={(patch) => setPageDraft((current) => current ? { ...current, ...patch } : current)} /></CardContent></Card><PublicationControls draft={pageDraft} onChange={(patch) => setPageDraft((current) => current ? { ...current, ...patch } : current)} /><div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"><SearchPreview draft={pageDraft} pathLabel={pageDraft.route_pattern} /><Card className="border-blue-100 shadow-sm"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg text-[#0d1f4e]"><Sparkles className="h-5 w-5 text-[#0f91e0]" />Publication checks</CardTitle></CardHeader><CardContent className="space-y-2 text-sm text-slate-600"><p>{pageDraft.title_en?.length || 0} title characters</p><p>{pageDraft.description_en?.length || 0} description characters</p><p className={pageDraft.robots_directive === 'index, follow' ? 'text-[#1c4a8b]' : 'text-[#0d1f4e]'}>{pageDraft.robots_directive === 'index, follow' ? 'Search indexing enabled' : 'Search indexing disabled'}</p></CardContent></Card></div><div className="flex justify-end"><Button onClick={savePage} disabled={saving} className="gap-2 bg-[#0f91e0] hover:bg-[#1c4a8b]"><Save className="h-4 w-4" />{saving ? 'Saving…' : 'Save public page SEO'}</Button></div></div>}
         </div>
       </TabsContent>
       <TabsContent value="programmes" className="space-y-6">
-        <Card className="border-blue-100 shadow-sm"><CardHeader><CardTitle className="text-xl text-[#0d1f4e]">Programme-level SEO overrides</CardTitle><CardDescription>Leave fields blank to retain the programme’s automatic SEO generated from its approved public record.</CardDescription></CardHeader><CardContent className="space-y-5"><div className="max-w-2xl space-y-1.5"><Label>Approved programme</Label><Select value={selectedProgrammeId} onValueChange={setSelectedProgrammeId}><SelectTrigger><SelectValue placeholder="Select a programme" /></SelectTrigger><SelectContent>{programmesQuery.data?.filter((programme) => programme.status === 'approved' && programme.is_active).map((programme) => <SelectItem key={programme.id} value={programme.id}>{programme.program_name}</SelectItem>)}</SelectContent></Select></div>{selectedProgramme && programmeDraft && <div className="space-y-6 border-t border-slate-200 pt-6"><div className="rounded-lg bg-blue-50 p-4"><p className="font-semibold text-[#0d1f4e]">{selectedProgramme.program_name}</p><p className="mt-1 text-sm text-slate-600">Public URL: /public/programs/{selectedProgramme.slug || 'programme-slug'}</p></div><LanguageFields draft={programmeDraft} onChange={(patch) => setProgrammeDraft((current) => current ? { ...current, ...patch } : current)} /><PublicationControls draft={programmeDraft} onChange={(patch) => setProgrammeDraft((current) => current ? { ...current, ...patch } : current)} showSchema={false} /><div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"><SearchPreview draft={programmeDraft} pathLabel={`/public/programs/${selectedProgramme.slug || ''}`} /><Card className="border-blue-100 shadow-sm"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg text-[#0d1f4e]"><ImageIcon className="h-5 w-5 text-[#0f91e0]" />Automatic fallback</CardTitle></CardHeader><CardContent className="text-sm text-slate-600">Any blank field continues to use the approved programme name, description, provider, and BDA Course schema already used on the public programme page.</CardContent></Card></div><div className="flex justify-end"><Button onClick={saveProgramme} disabled={saving} className="gap-2 bg-[#0f91e0] hover:bg-[#1c4a8b]"><Save className="h-4 w-4" />{saving ? 'Saving…' : 'Save programme SEO'}</Button></div></div>}</CardContent></Card>
+        <Card className="border-blue-100 shadow-sm"><CardHeader><CardTitle className="text-xl text-[#0d1f4e]">Programme-level SEO overrides</CardTitle><CardDescription>Leave fields blank to retain the programme’s automatic SEO generated from its approved public record.</CardDescription></CardHeader><CardContent className="space-y-5"><div className="max-w-2xl space-y-1.5"><Label>Approved programme</Label><Select value={selectedProgrammeId} onValueChange={setSelectedProgrammeId}><SelectTrigger><SelectValue placeholder="Select a programme" /></SelectTrigger><SelectContent>{programmesQuery.data?.filter((programme) => programme.status === 'approved' && programme.is_active).map((programme) => <SelectItem key={programme.id} value={programme.id}>{programme.program_name}</SelectItem>)}</SelectContent></Select></div>{selectedProgramme && programmeDraft && <div className="space-y-6 border-t border-slate-200 pt-6"><div className="rounded-lg bg-blue-50 p-4"><p className="font-semibold text-[#0d1f4e]">{selectedProgramme.program_name}</p><p className="mt-1 text-sm text-slate-600">Public URL: /public/programs/{selectedProgramme.slug || 'programme-slug'}</p></div><SeoTextFields draft={programmeDraft} onChange={(patch) => setProgrammeDraft((current) => current ? { ...current, ...patch } : current)} /><PublicationControls draft={programmeDraft} onChange={(patch) => setProgrammeDraft((current) => current ? { ...current, ...patch } : current)} showSchema={false} /><div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"><SearchPreview draft={programmeDraft} pathLabel={`/public/programs/${selectedProgramme.slug || ''}`} /><Card className="border-blue-100 shadow-sm"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg text-[#0d1f4e]"><ImageIcon className="h-5 w-5 text-[#0f91e0]" />Automatic fallback</CardTitle></CardHeader><CardContent className="text-sm text-slate-600">Any blank field continues to use the approved programme name, description, provider, and BDA Course schema already used on the public programme page.</CardContent></Card></div><div className="flex justify-end"><Button onClick={saveProgramme} disabled={saving} className="gap-2 bg-[#0f91e0] hover:bg-[#1c4a8b]"><Save className="h-4 w-4" />{saving ? 'Saving…' : 'Save programme SEO'}</Button></div></div>}</CardContent></Card>
       </TabsContent>
     </Tabs>
   </div>;

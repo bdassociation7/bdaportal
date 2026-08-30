@@ -223,21 +223,21 @@ export default function ProgramDetail() {
   useEffect(() => {
     if (!program) return;
 
-    const programmeName = language === 'ar' && program.program_name_ar ? program.program_name_ar : program.program_name;
-    const programmeDescription = language === 'ar' && program.description_ar ? program.description_ar : program.description;
+    const programmeName = program.program_name;
+    const programmeDescription = program.description;
     const fallbackTitle = `${programmeName} | BDA Accredited Programme`;
     const fallbackDescription = programmeDescription
       ? programmeDescription.slice(0, 160).replace(/\s+/g, ' ').trim() + '…'
       : `${programmeName} — ${program.max_pdc_credits} PDCs | Accredited by the Business Development Association (BDA). Provider: ${program.provider_name}.`;
     const fallbackCanonicalUrl = `https://portal.bda-global.org/public/programs/${program.slug}`;
-    const metadata = resolveSeo(seoOverride, language === 'ar' ? 'ar' : 'en', {
+    const metadata = resolveSeo(seoOverride, 'en', {
       title: fallbackTitle,
       description: fallbackDescription,
       keywords: `BDA, accredited programme, PDC, ${program.program_name}, ${program.provider_name}, professional development, certification`,
       canonicalUrl: fallbackCanonicalUrl,
       schemaType: 'Course',
     });
-    applySeoMetadata(metadata, language === 'ar' ? 'ar' : 'en', false);
+    applySeoMetadata(metadata, 'en', false);
     const title = metadata.title;
     const description = metadata.description;
     const canonicalUrl = metadata.canonicalUrl;

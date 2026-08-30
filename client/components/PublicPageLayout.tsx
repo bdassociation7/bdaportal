@@ -70,7 +70,7 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
 
   const path = location.pathname.replace(/\/$/, '');
   const pageSeo = PUBLIC_PAGE_SEO[path];
-  usePublicPageSeo(pageSeo?.key, language === 'ar' ? 'ar' : 'en', pageSeo?.fallback || DEFAULT_PUBLIC_SEO);
+  usePublicPageSeo(pageSeo?.key, 'en', pageSeo?.fallback || DEFAULT_PUBLIC_SEO);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" dir={language === 'ar' ? 'rtl' : 'ltr'}>
