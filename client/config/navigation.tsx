@@ -254,6 +254,7 @@ export const navigationConfig: NavigationConfig = {
     // Operations Section
     { id: 'support', label: 'nav.admin.supportTickets', path: '/admin/support', icon: MessageCircle, section: 'nav.admin.section.operations' },
     { id: 'help-center-management', label: 'Help Center', path: '/admin/help-center', icon: HelpCircle },
+    { id: 'seo-management', label: 'SEO & Public Pages', path: '/admin/seo', icon: Globe, section: 'SEO & Publishing' },
     { id: 'pdcs', label: 'nav.admin.pdcValidation', path: '/admin/pdcs', icon: CheckSquare },
     { id: 'content', label: 'nav.admin.contentResources', path: '/admin/content', icon: FolderOpen },
     { id: 'toolkit', label: 'nav.admin.toolkit', path: '/admin/toolkit', icon: Package },

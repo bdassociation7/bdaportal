@@ -6,7 +6,7 @@
  * - Nav bar: Activities | Certificant Directory | Recertification Provider Directory
  */
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -16,17 +16,45 @@ import {
   X
 } from 'lucide-react';
 import { useState } from 'react';
+import { SeoFallback, usePublicPageSeo } from '@/features/seo/publicSeo';
 
 interface PublicPageLayoutProps {
   children: ReactNode;
 }
 
-// Page titles for dynamic SEO
-const PAGE_TITLES: Record<string, string> = {
-  '/public/programs':  'BDA Approved Programmes | Accredited Professional Development Programmes',
-  '/public/providers': 'BDA Partners Directory | PDP and ECP Partners Worldwide',
-  '/public/verify':    'Verify BDA Certification | Credential Verification',
-  '/verify':           'Verify BDA Certification | Credential Verification',
+const DEFAULT_PUBLIC_SEO: SeoFallback = {
+  title: 'BDA Certification | Business Development Association',
+  description: 'Explore BDA professional certification, accredited programmes, and credential verification services.',
+  canonicalUrl: 'https://portal.bda-global.org/',
+};
+
+const PUBLIC_PAGE_SEO: Record<string, { key: string; fallback: SeoFallback }> = {
+  '/public/programs': {
+    key: 'public-programmes',
+    fallback: {
+      title: 'BDA Approved Programmes | Accredited Professional Development Programmes',
+      description: 'Explore BDA-approved professional development programmes and accredited learning activities.',
+      canonicalUrl: 'https://portal.bda-global.org/public/programs',
+      schemaType: 'CollectionPage',
+    },
+  },
+  '/public/providers': {
+    key: 'public-providers',
+    fallback: {
+      title: 'BDA Partners Directory | PDP and ECP Partners Worldwide',
+      description: 'Find BDA Education and Certification Partners and Professional Development Partners worldwide.',
+      canonicalUrl: 'https://portal.bda-global.org/public/providers',
+      schemaType: 'CollectionPage',
+    },
+  },
+  '/public/verify': {
+    key: 'credential-verification',
+    fallback: {
+      title: 'Verify BDA Certification | Credential Verification',
+      description: 'Verify BDA professional certification credentials through the official Business Development Association directory.',
+      canonicalUrl: 'https://portal.bda-global.org/verify',
+    },
+  },
 };
 
 const navLinks = [
@@ -40,14 +68,9 @@ export function PublicPageLayout({ children }: PublicPageLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  // Update document title on route change
-  useEffect(() => {
-    const path = location.pathname.replace(/\/$/, '');
-    const title = PAGE_TITLES[path];
-    if (title) {
-      document.title = title;
-    }
-  }, [location.pathname]);
+  const path = location.pathname.replace(/\/$/, '');
+  const pageSeo = PUBLIC_PAGE_SEO[path];
+  usePublicPageSeo(pageSeo?.key, language === 'ar' ? 'ar' : 'en', pageSeo?.fallback || DEFAULT_PUBLIC_SEO);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" dir={language === 'ar' ? 'rtl' : 'ltr'}>

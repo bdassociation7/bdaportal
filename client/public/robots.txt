@@ -1,0 +1,17 @@
+# BDA Portal - Professional Development Platform
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://portal.bda-global.org/sitemap.xml
+
+# Specific crawlers
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Block sensitive areas
+Disallow: /api/
+Disallow: *.json

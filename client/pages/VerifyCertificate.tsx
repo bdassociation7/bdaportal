@@ -30,6 +30,7 @@ import {
   type CertificateVerification,
 } from '@/entities/certificate';
 import { supabase } from '@/shared/config/supabase.config';
+import { usePublicPageSeo } from '@/features/seo/publicSeo';
 
 // ============================================================================
 // Country code → full name map (ISO 3166-1 alpha-2)
@@ -189,6 +190,11 @@ export default function VerifyCertificate() {
   // Detect if we're under /public/verify or /verify
   const isPublicRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/public/');
   const BASE_PATH = isPublicRoute ? '/public/verify' : '/verify';
+  usePublicPageSeo('credential-verification', 'en', {
+    title: 'Verify BDA Certification | Credential Verification',
+    description: 'Verify BDA professional certification credentials through the official Business Development Association directory.',
+    canonicalUrl: 'https://portal.bda-global.org/verify',
+  });
 
   // Search form state
   const [holderName, setHolderName]     = useState('');
@@ -206,10 +212,6 @@ export default function VerifyCertificate() {
   const [isVerifying, setIsVerifying]       = useState(false);
   const [verification, setVerification]     = useState<CertificateVerification | null>(null);
   const [copied, setCopied]                 = useState(false);
-
-  useEffect(() => {
-    document.title = 'BDA® Certified Directory | Credential Verification';
-  }, []);
 
   useEffect(() => {
     if (urlCredentialId && !verification) {

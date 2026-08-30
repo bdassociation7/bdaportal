@@ -161,6 +161,7 @@ import ExamECOBlueprintManager from "./pages/admin/ExamECOBlueprintManager";
 import VoucherTrackingAdmin from "./pages/admin/VoucherTrackingAdmin";
 import CountryAnalytics from "./pages/admin/CountryAnalytics";
 import HelpCenterManagement from "./pages/admin/HelpCenterManagement";
+import SEOManagement from "./pages/admin/SEOManagement";
 
 // Profile Completion pages
 import IndividualCompleteProfile from "./pages/individual/CompleteProfile";
@@ -648,6 +649,7 @@ const App = () => (
                   <Route path="/admin/support" element={<SupportTickets />} />
                   <Route path="/admin/support/:id" element={<SupportTicketDetail />} />
                   <Route path="/admin/help-center" element={<HelpCenterManagement />} />
+                  <Route path="/admin/seo" element={<RoleGuard allowedRoles={['super_admin']}><SEOManagement /></RoleGuard>} />
                   <Route path="/admin/pdcs" element={<PDCValidation />} />
                   <Route path="/admin/trainers" element={<TrainerManagement />} />
                   {/* Trainer Gate — Trainer Learning Centre admin */}

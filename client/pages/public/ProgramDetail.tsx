@@ -9,6 +9,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { applySeoMetadata, resolveSeo, SeoRecord } from '@/features/seo/publicSeo';
 import {
   Award,
   Clock,
@@ -198,6 +199,20 @@ export default function ProgramDetail() {
   const { slug } = useParams<{ slug: string }>();
   const { language } = useLanguage();
   const { data: program, isLoading } = useProgramDetail(slug || '');
+  const { data: seoOverride } = useQuery({
+    queryKey: ['public-programme-seo', program?.id],
+    enabled: Boolean(program?.id),
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('seo_program_overrides')
+        .select('*')
+        .eq('program_id', program!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as SeoRecord | null;
+    },
+  });
 
   const getName = (p: ProgramDetail) =>
     language === 'ar' && p.program_name_ar ? p.program_name_ar : p.program_name;
@@ -208,30 +223,24 @@ export default function ProgramDetail() {
   useEffect(() => {
     if (!program) return;
 
-    const title = `${program.program_name} | BDA Accredited Programme`;
-    const description =
-      program.description
-        ? program.description.slice(0, 160).replace(/\s+/g, ' ').trim() + '…'
-        : `${program.program_name} — ${program.max_pdc_credits} PDCs | Accredited by the Business Development Association (BDA). Provider: ${program.provider_name}.`;
-    const canonicalUrl = `https://portal.bda-global.org/public/programs/${program.slug}`;
-
-    // Basic SEO
-    document.title = title;
-    setMeta('description', description);
-    setMeta('keywords', `BDA, accredited programme, PDC, ${program.program_name}, ${program.provider_name}, professional development, certification`);
-    setCanonical(canonicalUrl);
-
-    // Open Graph
-    setMeta('og:title', title, true);
-    setMeta('og:description', description, true);
-    setMeta('og:url', canonicalUrl, true);
-    setMeta('og:type', 'website', true);
-    setMeta('og:site_name', 'BDA Portal', true);
-
-    // Twitter Card
-    setMeta('twitter:card', 'summary');
-    setMeta('twitter:title', title);
-    setMeta('twitter:description', description);
+    const programmeName = language === 'ar' && program.program_name_ar ? program.program_name_ar : program.program_name;
+    const programmeDescription = language === 'ar' && program.description_ar ? program.description_ar : program.description;
+    const fallbackTitle = `${programmeName} | BDA Accredited Programme`;
+    const fallbackDescription = programmeDescription
+      ? programmeDescription.slice(0, 160).replace(/\s+/g, ' ').trim() + '…'
+      : `${programmeName} — ${program.max_pdc_credits} PDCs | Accredited by the Business Development Association (BDA). Provider: ${program.provider_name}.`;
+    const fallbackCanonicalUrl = `https://portal.bda-global.org/public/programs/${program.slug}`;
+    const metadata = resolveSeo(seoOverride, language === 'ar' ? 'ar' : 'en', {
+      title: fallbackTitle,
+      description: fallbackDescription,
+      keywords: `BDA, accredited programme, PDC, ${program.program_name}, ${program.provider_name}, professional development, certification`,
+      canonicalUrl: fallbackCanonicalUrl,
+      schemaType: 'Course',
+    });
+    applySeoMetadata(metadata, language === 'ar' ? 'ar' : 'en', false);
+    const title = metadata.title;
+    const description = metadata.description;
+    const canonicalUrl = metadata.canonicalUrl;
 
     // JSON-LD — Course schema (no internal IDs)
     injectJsonLd({
@@ -266,7 +275,7 @@ export default function ProgramDetail() {
       const jsonLd = document.getElementById('program-jsonld');
       if (jsonLd) jsonLd.remove();
     };
-  }, [program]);
+  }, [program, seoOverride, language]);
 
   // ── Loading state ──
   if (isLoading) {
