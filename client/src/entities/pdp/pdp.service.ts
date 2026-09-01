@@ -189,6 +189,16 @@ export class PDPService {
 
       const { competency_ids, ...programData } = dto;
 
+      // PDP Standard partners may submit programmes without a legacy partner
+      // license row. The database still requires a validity window, so retain
+      // a partnership period when present and otherwise use a safe default.
+      const today = new Date().toISOString().split('T')[0];
+      const defaultValidUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
+      const validFrom = partnerData?.license_valid_from || programData.valid_from || today;
+      const validUntil = partnerData?.license_valid_until || programData.valid_until || defaultValidUntil;
+
       // Fallback ID generation if RPC fails
       const fallbackId = `ID-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
@@ -201,9 +211,8 @@ export class PDPService {
           program_id: programIdData || fallbackId,
           created_by: user.id,
           status: 'draft',
-          // Override valid dates with partnership period automatically
-          valid_from: partnerData?.license_valid_from || programData.valid_from,
-          valid_until: partnerData?.license_valid_until || programData.valid_until,
+          valid_from: validFrom,
+          valid_until: validUntil,
         })
         .select()
         .single();
