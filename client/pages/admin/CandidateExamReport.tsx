@@ -198,6 +198,19 @@ export default function CandidateExamReport() {
   ) || [];
 
   const candidateName = [candidate.first_name, candidate.last_name].filter(Boolean).join(' ') || candidate.email;
+  const isArabicExam = exam.exam_language?.toLowerCase() === 'ar';
+
+  const questionDisplayText = (question: ExamReport['question_details'][number]) => {
+    const preferred = isArabicExam ? question.question_text_ar : question.question_text;
+    const fallback = isArabicExam ? question.question_text : question.question_text_ar;
+    return preferred?.trim() || fallback?.trim() || 'Question text is unavailable.';
+  };
+
+  const answerDisplayText = (answer: NonNullable<ExamReport['question_details'][number]['answers']>[number]) => {
+    const preferred = isArabicExam ? answer.answer_text_ar : answer.answer_text;
+    const fallback = isArabicExam ? answer.answer_text : answer.answer_text_ar;
+    return preferred?.trim() || fallback?.trim() || 'Answer text is unavailable.';
+  };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-6 px-4">
@@ -426,7 +439,12 @@ export default function CandidateExamReport() {
                           )}
                           <span className="text-xs text-gray-400 ml-auto">{q.points_earned ?? 0}/{q.points} pts</span>
                         </div>
-                        <p className="text-sm text-gray-800 line-clamp-2">{q.question_text}</p>
+                        <p
+                          dir={isArabicExam ? 'rtl' : 'ltr'}
+                          className={cn('text-sm text-gray-800 line-clamp-2', isArabicExam && 'text-right')}
+                        >
+                          {questionDisplayText(q)}
+                        </p>
                       </div>
                       <div className="flex-shrink-0 ml-2">
                         {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
@@ -435,7 +453,12 @@ export default function CandidateExamReport() {
 
                     {isExpanded && q.answers && (
                       <div className="p-4 border-t bg-white space-y-2">
-                        <p className="text-sm font-medium text-gray-700 mb-3">{q.question_text}</p>
+                        <p
+                          dir={isArabicExam ? 'rtl' : 'ltr'}
+                          className={cn('text-sm font-medium text-gray-700 mb-3', isArabicExam && 'text-right')}
+                        >
+                          {questionDisplayText(q)}
+                        </p>
                         {q.answers.map((answer) => {
                           const wasSelected = q.selected_answer_ids?.includes(answer.id);
                           const isCorrectAnswer = answer.is_correct;
@@ -459,8 +482,14 @@ export default function CandidateExamReport() {
                                   <div className="w-4 h-4 rounded-full border border-gray-300" />
                                 )}
                               </div>
-                              <span className={cn(isCorrectAnswer ? 'text-green-800 font-medium' : wasSelected ? 'text-red-800' : 'text-gray-700')}>
-                                {answer.answer_text}
+                              <span
+                                dir={isArabicExam ? 'rtl' : 'ltr'}
+                                className={cn(
+                                  isCorrectAnswer ? 'text-green-800 font-medium' : wasSelected ? 'text-red-800' : 'text-gray-700',
+                                  isArabicExam && 'text-right flex-1'
+                                )}
+                              >
+                                {answerDisplayText(answer)}
                                 {wasSelected && !isCorrectAnswer && <span className="ml-2 text-xs text-red-500">(Candidate's answer)</span>}
                                 {isCorrectAnswer && <span className="ml-2 text-xs text-green-600">(Correct answer)</span>}
                               </span>
