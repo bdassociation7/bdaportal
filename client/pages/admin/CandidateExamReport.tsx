@@ -26,6 +26,9 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/shared/utils/cn';
 import { supabase } from '@/shared/config/supabase.config';
+import { generateExamResultPdf } from '@/features/certification-exam/examResultPdf';
+import { type ExamResultReportData } from '@/features/certification-exam/examResultReportModel';
+import { toast } from 'sonner';
 
 /**
  * CandidateExamReport - Admin view
@@ -125,6 +128,7 @@ export default function CandidateExamReport() {
   const navigate = useNavigate();
   const [showQuestions, setShowQuestions] = useState(false);
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
+  const [downloadingDocument, setDownloadingDocument] = useState(false);
 
   const { data: report, isLoading, error } = useQuery({
     queryKey: ['admin-exam-report', attemptId],
@@ -212,12 +216,59 @@ export default function CandidateExamReport() {
     return preferred?.trim() || fallback?.trim() || 'Answer text is unavailable.';
   };
 
+  const handleDownloadCandidateDocument = async () => {
+    const reportData: ExamResultReportData = {
+      attempt: {
+        id: attempt.id,
+        score: attempt.score,
+        passed: attempt.passed,
+        total_points_earned: attempt.total_points_earned,
+        total_points_possible: attempt.total_points_possible,
+        time_spent_minutes: attempt.time_spent_minutes,
+        started_at: attempt.started_at,
+        completed_at: attempt.completed_at,
+        passing_score_percentage: attempt.passing_score_percentage,
+      },
+      candidate,
+      exam: {
+        title: exam.title,
+        certification_type: exam.certification_type,
+        exam_language: exam.exam_language,
+      },
+      domain_performance: domain_performance || [],
+      competency_performance: competency_performance || [],
+    };
+
+    setDownloadingDocument(true);
+    try {
+      const result = await generateExamResultPdf(reportData);
+      toast.success(result.kind === 'success' ? 'Candidate examination result downloaded.' : 'Candidate development report downloaded.');
+    } catch (downloadError) {
+      console.error('Unable to generate candidate examination document:', downloadError);
+      toast.error('Unable to generate the candidate document. Please try again.');
+    } finally {
+      setDownloadingDocument(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-6 px-4">
-      {/* Back Button */}
-      <Button variant="outline" size="sm" onClick={() => navigate('/admin/exam-scheduling')}>
-        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Exam Scheduling
-      </Button>
+      {/* Administrative actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button variant="outline" size="sm" onClick={() => navigate('/admin/exam-scheduling')}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Exam Scheduling
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleDownloadCandidateDocument}
+          disabled={downloadingDocument}
+          className="border-[#0d1f4e] text-[#0d1f4e] hover:bg-[#f0f6ff]"
+        >
+          {downloadingDocument ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+          {passed ? 'Download candidate result' : 'Download development report'}
+        </Button>
+      </div>
 
       {/* Header */}
       <div className={cn('rounded-xl p-6 text-white', passed ? 'bg-gradient-to-r from-green-600 to-green-700' : 'bg-gradient-to-r from-red-600 to-red-700')}>
@@ -509,12 +560,7 @@ export default function CandidateExamReport() {
         </Card>
       )}
 
-      {/* Actions */}
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={() => navigate('/admin/exam-scheduling')}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Exam Scheduling
-        </Button>
-      </div>
+
     </div>
   );
 }

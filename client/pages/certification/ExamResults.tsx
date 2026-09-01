@@ -17,6 +17,7 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +27,8 @@ import { cn } from '@/shared/utils/cn';
 import { supabase } from '@/shared/config/supabase.config';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { toast } from 'sonner';
+import { generateExamResultPdf } from '@/features/certification-exam/examResultPdf';
+import { isResultDocumentAvailable, type ExamResultReportData } from '@/features/certification-exam/examResultReportModel';
 
 /**
  * ExamResults Page
@@ -89,6 +92,11 @@ interface ExamReport {
     total_incorrect: number;
     total_unanswered: number;
   };
+  exam?: {
+    title: string;
+    certification_type: string;
+    exam_language: string | null;
+  };
 }
 
 const PERFORMANCE_CONFIG = {
@@ -110,6 +118,7 @@ export default function ExamResults() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [downloadingDocument, setDownloadingDocument] = useState(false);
 
   // Fetch attempt with quiz info
   const { data: attempt, isLoading: attemptLoading, error: attemptError } = useQuery({
@@ -204,6 +213,58 @@ export default function ExamResults() {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
     });
+  };
+
+  const handleDownloadResultDocument = async () => {
+    if (!attempt || !report || !user) {
+      toast.error('Your examination document is not available yet.');
+      return;
+    }
+
+    if (!isResultDocumentAvailable(attempt.integrity_review_status)) {
+      toast.error('Your examination document will be available after the integrity review is completed.');
+      return;
+    }
+
+    const candidate = {
+      email: user.email || user.profile?.email || 'Candidate',
+      first_name: user.profile?.first_name ?? null,
+      last_name: user.profile?.last_name ?? null,
+    };
+
+    const reportData: ExamResultReportData = {
+      attempt: {
+        id: attempt.id,
+        score: attempt.score,
+        passed: attempt.passed,
+        total_points_earned: attempt.total_points_earned,
+        total_points_possible: attempt.total_points_possible,
+        time_spent_minutes: attempt.time_spent_minutes,
+        started_at: attempt.started_at,
+        completed_at: attempt.completed_at,
+        passing_score_percentage: attempt.quiz?.passing_score_percentage ?? 70,
+        integrity_review_status: attempt.integrity_review_status,
+      },
+      candidate,
+      exam: {
+        title: report.exam?.title || attempt.quiz?.title || 'Certification Examination',
+        certification_type: report.exam?.certification_type || attempt.quiz?.certification_type || 'CP',
+        exam_language: report.exam?.exam_language || 'English',
+      },
+      domain_performance: report.domain_performance || [],
+      competency_performance: report.competency_performance || [],
+    };
+
+    setDownloadingDocument(true);
+    try {
+      const result = await generateExamResultPdf(reportData);
+      toast.success(result.kind === 'success' ? 'Your examination result has been downloaded.' : 'Your development report has been downloaded.');
+    } catch (error) {
+      console.error('Unable to generate examination document:', error);
+      toast.error('Unable to generate your examination document. Please try again.');
+    } finally {
+      setDownloadingDocument(false);
+    }
   };
 
   // Loading state
@@ -354,6 +415,39 @@ export default function ExamResults() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Candidate document */}
+      <Card className="border-slate-200">
+        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <FileText className="mt-0.5 h-5 w-5 shrink-0 text-[#0d1f4e]" />
+            <div>
+              <h2 className="font-semibold text-slate-900">Your examination document</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+                {underIntegrityReview
+                  ? 'Your examination document will be available when the routine integrity review is complete.'
+                  : passed
+                    ? 'Download your official one-page examination result for your records.'
+                    : 'Download your personalised development report with preparation priorities for a future attempt.'}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleDownloadResultDocument}
+            disabled={downloadingDocument || underIntegrityReview || !report}
+            className="shrink-0 border-[#0d1f4e] text-[#0d1f4e] hover:bg-[#f0f6ff]"
+          >
+            {downloadingDocument ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            {underIntegrityReview
+              ? 'Document pending review'
+              : passed
+                ? 'Download examination result'
+                : 'Download development report'}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Exam Details */}
       <Card>
