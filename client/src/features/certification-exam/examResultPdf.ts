@@ -126,9 +126,14 @@ function writeWrappedText(
   doc.setFontSize(fontSize);
   doc.setFont(arabic ? 'NotoArabic' : 'helvetica', arabic ? 'normal' : style);
   const lines = doc.splitTextToSize(arabic ? doc.processArabic(value) : value, maxWidth) as string[];
+  // jsPDF expects a unitless multiplier based on font points, while this
+  // report uses millimetres for layout. Convert the requested millimetre
+  // line height before passing it to jsPDF; dividing by fontSize alone made
+  // multi-line paragraphs overlap vertically.
+  const lineHeightFactor = Math.max(1.15, (lineHeight * doc.internal.scaleFactor) / fontSize);
   doc.setTextColor(...color);
   doc.setR2L(arabic);
-  doc.text(lines, x, y, { align: arabic ? 'right' : align, lineHeightFactor: lineHeight / fontSize });
+  doc.text(lines, x, y, { align: arabic ? 'right' : align, lineHeightFactor });
   doc.setR2L(false);
   return lines.length * lineHeight;
 }
