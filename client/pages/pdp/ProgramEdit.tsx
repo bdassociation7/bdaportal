@@ -105,7 +105,7 @@ export default function PDPProgramEdit() {
         <h1 className="text-3xl font-bold">Edit Program</h1>
         <p className="text-gray-600 mt-2">
           {isLimitedEdit
-            ? 'You can update all programme details. The programme name is locked after approval.'
+            ? 'The accredited programme name is locked after approval. You may update its public directory title and all other programme details.'
             : 'Update your program details'}
         </p>
       </div>

@@ -78,6 +78,8 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
   const [formData, setFormData] = useState<CreateProgramDTO>({
     program_name: initialData?.program_name || '',
     program_name_ar: initialData?.program_name_ar || '',
+    public_display_name: initialData?.public_display_name || '',
+    public_display_name_ar: initialData?.public_display_name_ar || '',
     description: initialData?.description || '',
     description_ar: initialData?.description_ar || '',
     max_pdc_credits: initialData?.max_pdc_credits || 1,
@@ -230,6 +232,8 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
     const cleanedData: CreateProgramDTO = {
       ...formData,
       program_name_ar: formData.program_name_ar?.trim() || undefined,
+      public_display_name: formData.public_display_name?.trim() || null,
+      public_display_name_ar: formData.public_display_name_ar?.trim() || null,
       description: formData.description?.trim() || undefined,
       description_ar: formData.description_ar?.trim() || undefined,
       target_audience: formData.target_audience?.trim() || undefined,
@@ -261,7 +265,7 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
           </CardTitle>
           <CardDescription>
             {limitedEdit
-              ? 'Program name is locked after approval. You may update all other details freely.'
+              ? 'The accredited programme name is locked after approval. You may update its public directory title and other details.'
               : 'Provide basic information about your program'}
           </CardDescription>
         </CardHeader>
@@ -309,6 +313,38 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
               />
             </div>
           </div>
+
+          {initialData && (
+            <div className="rounded-lg border border-[#bfdbfe] bg-[#f0f6ff] p-4 space-y-4">
+              <div>
+                <p className="font-medium text-[#0d1f4e]">Public Directory Display</p>
+                <p className="mt-1 text-sm text-[#1c4a8b]">
+                  This title appears only on the public programmes directory. It does not change the approved programme name, programme ID, URL, or detail page.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="public_display_name">Public Display Name (English)</Label>
+                  <Input
+                    id="public_display_name"
+                    value={formData.public_display_name || ''}
+                    onChange={e => handleInputChange('public_display_name', e.target.value)}
+                    placeholder={initialData.program_name}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="public_display_name_ar">Public Display Name (Arabic)</Label>
+                  <Input
+                    id="public_display_name_ar"
+                    value={formData.public_display_name_ar || ''}
+                    onChange={e => handleInputChange('public_display_name_ar', e.target.value)}
+                    placeholder={initialData.program_name_ar || 'اسم العرض العام'}
+                    dir="rtl"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Descriptions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

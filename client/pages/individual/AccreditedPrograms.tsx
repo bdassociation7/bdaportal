@@ -34,6 +34,8 @@ interface AccreditedProgram {
   slug?: string;
   program_name: string;
   program_name_ar?: string;
+  public_display_name?: string | null;
+  public_display_name_ar?: string | null;
   description?: string;
   description_ar?: string;
   activity_type: string;
@@ -88,7 +90,7 @@ function useAccreditedPrograms(filters: {
 
       if (filters.search)
         query = query.or(
-          `program_name.ilike.%${filters.search}%,provider_name.ilike.%${filters.search}%`
+          `program_name.ilike.%${filters.search}%,public_display_name.ilike.%${filters.search}%,provider_name.ilike.%${filters.search}%`
         );
 
       if (filters.providerName)
@@ -319,7 +321,13 @@ export default function AccreditedPrograms() {
     country: countryFilter,
   });
 
-  const getName = (p: AccreditedProgram) =>
+  const getDirectoryName = (p: AccreditedProgram) => {
+    if (language === 'ar') {
+      return p.public_display_name_ar || p.program_name_ar || p.public_display_name || p.program_name;
+    }
+    return p.public_display_name || p.program_name;
+  };
+  const getAccreditedName = (p: AccreditedProgram) =>
     language === 'ar' && p.program_name_ar ? p.program_name_ar : p.program_name;
   const getDesc = (p: AccreditedProgram) =>
     language === 'ar' && p.description_ar ? p.description_ar : p.description;
@@ -447,7 +455,25 @@ export default function AccreditedPrograms() {
                         {/* Title row */}
                         <div className="flex items-start justify-between gap-3 mb-2">
                           <h2 className="text-base font-bold uppercase leading-snug tracking-wide text-foreground">
-                            {getName(program)}
+                            {program.slug ? (
+                              <Link
+                                to={`/public/programs/${program.slug}`}
+                                className="transition-colors hover:text-[#0f91e0]"
+                              >
+                                {getDirectoryName(program)}
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedProgram(program);
+                                  setDetailTab('description');
+                                }}
+                                className="text-left transition-colors hover:text-[#0f91e0]"
+                              >
+                                {getDirectoryName(program)}
+                              </button>
+                            )}
                           </h2>
                           <MetaBadge color="blue">
                             <Award className="h-3 w-3" />
@@ -685,7 +711,7 @@ export default function AccreditedPrograms() {
                 <DateBadge dateString={selectedProgram.session_start_date || selectedProgram.valid_from} />
                 <div className="flex-1 min-w-0">
                   <h2 className="mb-1 text-xl font-bold uppercase leading-snug tracking-wide text-foreground">
-                    {getName(selectedProgram)}
+                    {getAccreditedName(selectedProgram)}
                   </h2>
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     Please feel free to save or share this link to refer back to this offering.

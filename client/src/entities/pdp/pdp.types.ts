@@ -33,6 +33,9 @@ export interface PDPProgram {
   program_id: string; // Public program ID
   program_name: string;
   program_name_ar?: string;
+  /** Optional title shown in the public programmes directory only. */
+  public_display_name?: string | null;
+  public_display_name_ar?: string | null;
   description?: string;
   description_ar?: string;
   provider_id: string;
@@ -81,6 +84,9 @@ export interface ProgramCompetency {
 export interface CreateProgramDTO {
   program_name: string;
   program_name_ar?: string;
+  /** Optional title shown in the public programmes directory only. */
+  public_display_name?: string | null;
+  public_display_name_ar?: string | null;
   description?: string;
   description_ar?: string;
   max_pdc_credits: number;

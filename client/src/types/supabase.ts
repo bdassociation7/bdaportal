@@ -1064,6 +1064,8 @@ export type Database = {
           program_id: string
           program_name: string
           program_name_ar: string | null
+          public_display_name: string | null
+          public_display_name_ar: string | null
           provider_id: string | null
           provider_name: string
           updated_at: string
@@ -1083,6 +1085,8 @@ export type Database = {
           program_id: string
           program_name: string
           program_name_ar?: string | null
+          public_display_name?: string | null
+          public_display_name_ar?: string | null
           provider_id?: string | null
           provider_name: string
           updated_at?: string
@@ -1102,6 +1106,8 @@ export type Database = {
           program_id?: string
           program_name?: string
           program_name_ar?: string | null
+          public_display_name?: string | null
+          public_display_name_ar?: string | null
           provider_id?: string | null
           provider_name?: string
           updated_at?: string
