@@ -625,7 +625,7 @@ export default function ExamResults() {
               <p className="text-sm text-blue-700 mt-1">
                 To maintain exam integrity and validity, detailed question-level feedback,
                 correct answers, and explanations are not provided for official certification exams.
-                This policy aligns with international certification best practices (PMI, SHRM, ISACA).
+                This approach protects the fairness, validity, and security of BDA certification assessments.
               </p>
             </div>
           </div>
