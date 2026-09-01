@@ -15,7 +15,7 @@ export interface UserCertification {
   expiry_date: string;
   status: CertificationStatus;
   certificate_url?: string;
-  certificate_available_date?: string; // Date when PDF download becomes available (14 days after issue)
+  certificate_available_date?: string; // Date when PDF download becomes available, no later than 7 days after approval
   certificate_holder_name?: string; // Name locked on first PDF download — cannot be changed after
   renewal_count: number;
   last_renewed_at?: string;

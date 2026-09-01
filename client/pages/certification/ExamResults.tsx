@@ -190,10 +190,10 @@ export default function ExamResults() {
             header_label: isPassed ? '🎉 Passed' : 'Not Passed',
             score_color: isPassed ? '#059669' : '#dc2626',
             result_message: isPassed
-              ? `Congratulations! You have successfully passed the BDA-${certType} certification exam with a score of ${score}%. Your certification has been issued and will be available for download within 14 days.`
+              ? `Congratulations! You have successfully passed the BDA-${certType} certification exam with a score of ${score}%. Your certificate will be available within 7 days of approval.`
               : `Thank you for taking the BDA-${certType} certification exam. Your score of ${score}% did not meet the passing requirement of ${passingScore}%. We encourage you to review the competency areas and retake when ready.`,
             next_steps: isPassed
-              ? 'Your digital certificate will be available in your portal within 14 days. You will also receive a separate certificate issuance confirmation email.'
+              ? 'Your certificate will be available in your portal within 7 days of approval. You will also receive a separate certificate issuance confirmation email.'
               : 'You can access study materials and mock exams through the BDA Learning System to prepare for your next attempt.',
           },
         },

@@ -61,8 +61,7 @@ const translations = {
     // Actions
     downloadCertificate: 'Download Certificate',
     certificatePending: 'Certificate Pending',
-    certificateAvailableIn: (days: number) => `Certificate available in ${days} day${days > 1 ? 's' : ''}`,
-    certificateAvailableOn: (date: string) => `Available for download on ${date}`,
+    certificateAvailabilityNotice: 'Your certificate will be available within 7 days of approval.',
     verify: 'Verify',
     renewNow: 'Renew Now',
     // Revocation
@@ -106,8 +105,7 @@ const translations = {
     // Actions
     downloadCertificate: 'تحميل الشهادة',
     certificatePending: 'الشهادة قيد الإعداد',
-    certificateAvailableIn: (days: number) => `الشهادة متاحة خلال ${days} ${days > 1 ? 'أيام' : 'يوم'}`,
-    certificateAvailableOn: (date: string) => `متاحة للتحميل في ${date}`,
+    certificateAvailabilityNotice: 'ستكون شهادتك متاحة خلال 7 أيام من تاريخ الاعتماد.',
     verify: 'تحقق',
     renewNow: 'جدد الآن',
     // Revocation
@@ -123,7 +121,7 @@ export default function MyCertifications() {
   const { language } = useLanguage();
   const texts = translations[language];
 
-  // Admin bypass: impersonation mode OR admin role → skip 14-day wait
+  // Admin bypass: impersonation mode OR admin role can preview a certificate before it is released.
   const isAdminBypass =
     impersonationService.isImpersonating() ||
     ['admin', 'super_admin'].includes((user as any)?.profile?.role || '');
@@ -465,7 +463,7 @@ export default function MyCertifications() {
                   {isAdminBypass && cert.certificate_available_date && new Date(cert.certificate_available_date) > new Date() && (
                     <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1">
                       <ShieldCheck className="h-3 w-3 flex-shrink-0" />
-                      Admin preview — bypass 14-day hold
+                      Admin preview — availability restriction bypassed
                     </div>
                   )}
 
@@ -479,7 +477,6 @@ export default function MyCertifications() {
                       const isAvailable = isAdminBypass || !availableDate || availableDate <= now;
 
                       if (!isAvailable && availableDate) {
-                        const daysLeft = Math.ceil((availableDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                         return (
                           <div className="flex-1">
                             <Button
@@ -487,11 +484,11 @@ export default function MyCertifications() {
                               variant="outline"
                               disabled
                             >
-                              <Clock className="h-4 w-4 mr-2" />
-                              {texts.certificateAvailableIn(daysLeft)}
+                              <Clock className="mr-2 h-4 w-4" />
+                              {texts.certificatePending}
                             </Button>
-                            <p className="text-xs text-gray-500 mt-1 text-center">
-                              {texts.certificateAvailableOn(formatDate(cert.certificate_available_date!))}
+                            <p className="mt-1 text-center text-xs text-gray-500">
+                              {texts.certificateAvailabilityNotice}
                             </p>
                           </div>
                         );

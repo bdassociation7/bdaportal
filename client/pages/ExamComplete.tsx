@@ -165,7 +165,7 @@ export default function ExamComplete() {
             <h1 className="text-5xl font-bold text-gray-900 mb-4">Congratulations!</h1>
             <p className="text-2xl text-gray-700">You have passed the exam!</p>
             <p className="text-base text-gray-500 mt-2">
-              Your digital certificate will be available for download after 14 days.
+              Your certificate will be available within 7 days of approval.
             </p>
           </div>
 
@@ -221,12 +221,6 @@ export default function ExamComplete() {
               : null;
             const now = new Date();
             const isDownloadAvailable = !availableDate || availableDate <= now;
-            const daysLeft = availableDate
-              ? Math.ceil((availableDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-              : 0;
-            const formattedAvailableDate = availableDate
-              ? availableDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-              : '';
 
             return (
               <Card className="mb-6 border-2 border-blue-200">
@@ -249,16 +243,13 @@ export default function ExamComplete() {
                   </Alert>
 
                   {!isDownloadAvailable && (
-                    <Alert className="bg-amber-50 border-amber-200">
-                      <Clock className="h-4 w-4 text-amber-600" />
-                      <AlertTitle className="text-amber-900">
+                    <Alert className="border-[#bfdbfe] bg-[#f0f6ff]">
+                      <Clock className="h-4 w-4 text-[#1c4a8b]" />
+                      <AlertTitle className="text-[#0d1f4e]">
                         Certificate Download Available Soon
                       </AlertTitle>
-                      <AlertDescription className="text-amber-800">
-                        Congratulations on passing the exam! Your digital certificate will be
-                        available for download on{' '}
-                        <strong>{formattedAvailableDate}</strong> ({daysLeft} day{daysLeft > 1 ? 's' : ''} remaining).
-                        Your certification is already active and verifiable.
+                      <AlertDescription className="text-[#1c4a8b]">
+                        Your certificate will be available within 7 days of approval. Your certification is already active and verifiable.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -302,7 +293,7 @@ export default function ExamComplete() {
                         disabled
                       >
                         <Clock className="mr-2 h-5 w-5" />
-                        Available in {daysLeft} day{daysLeft > 1 ? 's' : ''}
+                        Certificate Pending
                       </Button>
                     )}
                   </div>
@@ -324,7 +315,7 @@ export default function ExamComplete() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-1">Your Certificate Is Being Prepared</h4>
                   <p className="text-sm text-gray-600">
-                    Your digital certificate will be available for download in 14 days.
+                    Your certificate will be available within 7 days of approval.
                     You will find it in your My Certifications page.
                   </p>
                 </div>

@@ -53,6 +53,7 @@ import Resources from "./pages/individual/Resources";
 import PDCs from "./pages/individual/PDCs";
 import MyBooks from "./pages/individual/MyBooks";
 import MyCertifications from "./pages/individual/MyCertifications";
+import MyExamResults from "./pages/individual/MyExamResults";
 import MyMembership from "./pages/individual/MyMembership";
 import AuthorizedProviders from "./pages/individual/AuthorizedProviders";
 import AccreditedPrograms from "./pages/individual/AccreditedPrograms";
@@ -530,6 +531,7 @@ const App = () => (
                   <Route path="/individual/dashboard" element={<IndividualDashboard />} />
                   <Route path="/my-books" element={<MyBooks />} />
                   <Route path="/my-certifications" element={<MyCertifications />} />
+                  <Route path="/my-exam-results" element={<MyExamResults />} />
                   <Route path="/my-membership" element={<MyMembership />} />
                   <Route path="/my-recognitions" element={<PlaceholderPage title="My Recognitions" />} />
                   <Route path="/pdcs" element={<PDCs />} />

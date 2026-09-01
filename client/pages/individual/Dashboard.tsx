@@ -284,7 +284,7 @@ export default function IndividualDashboard() {
   const pdcProgress = pdcStats ? Math.min(100, (pdcStats.total_approved / 60) * 100) : 0;
   const pdcRemaining = pdcStats ? Math.max(0, 60 - pdcStats.total_approved) : 60;
 
-  // Find certifications pending download (within 14-day window)
+  // Find certificates that are still within their controlled availability window.
   const pendingCerts = activeCerts.filter(cert => {
     if (!cert.certificate_available_date) return false;
     return new Date(cert.certificate_available_date) > new Date();
@@ -360,37 +360,30 @@ export default function IndividualDashboard() {
       )}
 
       {/* Certificate Pending Banner */}
-      {pendingCerts.map(cert => {
-        const availDate = new Date(cert.certificate_available_date!);
-        const daysLeft = Math.ceil((availDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        const formattedDate = availDate.toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', {
-          year: 'numeric', month: 'long', day: 'numeric',
-        });
-        return (
-          <div
-            key={cert.id}
-            className="flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-lg p-4 cursor-pointer hover:bg-amber-100 transition-colors"
-            onClick={() => navigate('/my-certifications')}
-          >
-            <div className="p-2 bg-amber-100 rounded-lg flex-shrink-0">
-              <Award className="h-6 w-6 text-amber-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-amber-900">
-                {language === 'ar'
-                  ? `🎉 تهانينا! شهادة BDA-${cert.certification_type} قيد الإعداد`
-                  : `🎉 Congratulations! Your BDA-${cert.certification_type} certificate is being prepared`}
-              </p>
-              <p className="text-sm text-amber-700 mt-0.5">
-                {language === 'ar'
-                  ? `ستكون متاحة للتحميل في ${formattedDate} (خلال ${daysLeft} ${daysLeft === 1 ? 'يوم' : 'أيام'})`
-                  : `Available for download on ${formattedDate} — ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining`}
-              </p>
-            </div>
-            <ArrowRight className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+      {pendingCerts.map(cert => (
+        <div
+          key={cert.id}
+          className="flex cursor-pointer items-start gap-4 rounded-lg border border-[#bfdbfe] bg-[#f0f6ff] p-4 transition-colors hover:bg-[#dbeafe] dark:border-[#1c4a8b] dark:bg-[#102a44] dark:hover:bg-[#163654]"
+          onClick={() => navigate('/my-certifications')}
+        >
+          <div className="flex-shrink-0 rounded-lg bg-[#dbeafe] p-2 dark:bg-[#1c4a8b]">
+            <Award className="h-6 w-6 text-[#1c4a8b] dark:text-sky-200" />
           </div>
-        );
-      })}
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-[#0d1f4e] dark:text-sky-100">
+              {language === 'ar'
+                ? `شهادة BDA-${cert.certification_type} قيد الإعداد`
+                : `Your BDA-${cert.certification_type} certificate is being prepared`}
+            </p>
+            <p className="mt-0.5 text-sm text-[#1c4a8b] dark:text-slate-300">
+              {language === 'ar'
+                ? 'ستكون شهادتك متاحة خلال 7 أيام من تاريخ الاعتماد.'
+                : 'Your certificate will be available within 7 days of approval.'}
+            </p>
+          </div>
+          <ArrowRight className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#1c4a8b] dark:text-sky-200" />
+        </div>
+      ))}
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -586,7 +579,15 @@ export default function IndividualDashboard() {
           <CardTitle>{t('dashboard.individual.quickActions')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <Button
+              variant="outline"
+              className="justify-start border-[#0d1f4e] text-[#0d1f4e] hover:bg-[#f0f6ff]"
+              onClick={() => navigate('/my-exam-results')}
+            >
+              <ClipboardCheck className="mr-2 h-4 w-4" />
+              My Examination Results
+            </Button>
             <Button
               variant="outline"
               className="justify-start"
