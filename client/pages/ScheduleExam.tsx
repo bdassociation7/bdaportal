@@ -50,7 +50,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/shared/config/supabase.config';
 import { getUserFriendlyError } from '@/lib/error-handler';
-import { format, addDays, isWithinInterval, startOfDay, isBefore, isAfter, differenceInHours } from 'date-fns';
+import { format, addDays, startOfDay, isBefore, isAfter, differenceInHours } from 'date-fns';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 
 // Time slots (24h availability - online exam, any timezone)
@@ -162,13 +162,13 @@ export default function ScheduleExam() {
 
     if (schedulableWindows.length > 0) {
       // Min date: earliest window start (but not before 2 days from now)
-      const earliestStart = startOfDay(new Date(schedulableWindows[0].start_date));
+      const earliestStart = startOfDay(new Date(`${schedulableWindows[0].start_date}T00:00:00`));
       if (isAfter(earliestStart, minDate)) {
         minDate = earliestStart;
       }
 
       // Max date: latest window end
-      const latestEnd = startOfDay(new Date(schedulableWindows[schedulableWindows.length - 1].end_date));
+      const latestEnd = startOfDay(new Date(`${schedulableWindows[schedulableWindows.length - 1].end_date}T00:00:00`));
       maxDate = latestEnd;
     }
 
@@ -193,12 +193,21 @@ export default function ScheduleExam() {
 
     let currentDate = startDate;
     while (dates.length < 5 && !isAfter(currentDate, dateConstraints.maxDate)) {
-      dates.push(currentDate);
+      const dateKey = format(currentDate, 'yyyy-MM-dd');
+      const isWithinAnActiveWindow = schedulableWindows.some(
+        (window) => dateKey >= window.start_date && dateKey <= window.end_date
+      );
+
+      // Never offer gap dates between windows. Quick Select must enforce the
+      // same calendar-date rule as the main calendar.
+      if (isWithinAnActiveWindow) {
+        dates.push(currentDate);
+      }
       currentDate = addDays(currentDate, 1);
     }
 
     return dates;
-  }, [dateConstraints, selectedDate]);
+  }, [dateConstraints, schedulableWindows, selectedDate]);
 
   // Check if a date is disabled: must be within at least one schedulable window
   const isDateDisabled = (date: Date) => {
@@ -209,17 +218,15 @@ export default function ScheduleExam() {
     // Must not exceed maxDate
     if (isAfter(dayStart, dateConstraints.maxDate)) return true;
 
-    // If we have windows, date must fall within at least one
-    if (schedulableWindows.length > 0) {
-      const inAnyWindow = schedulableWindows.some((w) => {
-        const wStart = startOfDay(new Date(w.start_date));
-        const wEnd = startOfDay(new Date(w.end_date));
-        return isWithinInterval(dayStart, { start: wStart, end: wEnd });
-      });
-      return !inAnyWindow;
-    }
+    // Fail closed until an active window is loaded. The database also enforces
+    // this rule, so a request cannot bypass it through the client.
+    if (schedulableWindows.length === 0) return true;
 
-    return false;
+    const dateKey = format(dayStart, 'yyyy-MM-dd');
+    const inAnyWindow = schedulableWindows.some(
+      (window) => dateKey >= window.start_date && dateKey <= window.end_date
+    );
+    return !inAnyWindow;
   };
 
   // Detect user's timezone (never falls back to UTC silently)
@@ -433,6 +440,14 @@ export default function ScheduleExam() {
       toast({ title: 'Incomplete Selection', description: 'Please select a new date and time.', variant: 'destructive' });
       return;
     }
+    if (isDateDisabled(rescheduleDate)) {
+      toast({
+        title: 'Unavailable Date',
+        description: 'Please choose a date within an active BDA exam window.',
+        variant: 'destructive',
+      });
+      return;
+    }
     // Re-check 2-hour rule at submit time
     const hoursLeft = differenceInHours(new Date(existingBooking.scheduled_start_time), new Date());
     if (hoursLeft < 2) {
@@ -518,6 +533,15 @@ export default function ScheduleExam() {
       toast({
         title: 'Invalid Voucher',
         description: 'Cannot schedule exam with an invalid voucher.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (isDateDisabled(selectedDate)) {
+      toast({
+        title: 'Unavailable Date',
+        description: 'Please choose a date within an active BDA exam window.',
         variant: 'destructive',
       });
       return;
@@ -1229,23 +1253,27 @@ export default function ScheduleExam() {
                   <Sparkles className="h-4 w-4 text-blue-600" />
                   Quick Select
                 </CardTitle>
-                <CardDescription>Choose from the next available dates</CardDescription>
+                <CardDescription>Choose from available BDA exam-window dates</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {quickSelectDates.map((date, index) => (
-                    <Button
-                      key={index}
-                      variant={selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd') ? 'default' : 'outline'}
-                      className="flex flex-col h-auto py-3"
-                      onClick={() => setSelectedDate(date)}
-                    >
-                      <span className="text-xs opacity-70">{format(date, 'EEE')}</span>
-                      <span className="text-lg font-bold">{format(date, 'd')}</span>
-                      <span className="text-xs opacity-70">{format(date, 'MMM')}</span>
-                    </Button>
-                  ))}
-                </div>
+                {quickSelectDates.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {quickSelectDates.map((date, index) => (
+                      <Button
+                        key={index}
+                        variant={selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd') ? 'default' : 'outline'}
+                        className="flex flex-col h-auto py-3"
+                        onClick={() => setSelectedDate(date)}
+                      >
+                        <span className="text-xs opacity-70">{format(date, 'EEE')}</span>
+                        <span className="text-lg font-bold">{format(date, 'd')}</span>
+                        <span className="text-xs opacity-70">{format(date, 'MMM')}</span>
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No active exam-window dates are currently available.</p>
+                )}
               </CardContent>
             </Card>
 

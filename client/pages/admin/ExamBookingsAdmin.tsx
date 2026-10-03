@@ -179,6 +179,40 @@ function BookExamModal({ open, onClose, onSuccess }: BookExamModalProps) {
     enabled: !!selectedUser,
   });
 
+  const { data: schedulableWindows = [], isFetching: loadingExamWindows } = useQuery({
+    queryKey: ['admin-bookable-exam-windows', selectedVoucher?.quiz?.certification_type],
+    queryFn: async () => {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      let query = (supabase as any)
+        .from('certification_exam_windows')
+        .select('id, name, start_date, end_date, certification_type')
+        .eq('is_active', true)
+        .gte('end_date', today)
+        .order('start_date', { ascending: true });
+
+      if (selectedVoucher?.quiz?.certification_type) {
+        query = query.or(
+          `certification_type.is.null,certification_type.ilike.${selectedVoucher.quiz.certification_type}`
+        );
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedVoucher?.quiz?.certification_type,
+  });
+
+  const isBookingDateDisabled = (date: Date) => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const minimumDate = format(addDays(new Date(), 2), 'yyyy-MM-dd');
+
+    if (dateKey < minimumDate) return true;
+    return !schedulableWindows.some((window: any) =>
+      dateKey >= window.start_date && dateKey <= window.end_date
+    );
+  };
+
   const handleSelectUser = (user: any) => {
     setSelectedUser(user);
     setSelectedVoucher(null);
@@ -188,6 +222,14 @@ function BookExamModal({ open, onClose, onSuccess }: BookExamModalProps) {
   const handleSubmit = async () => {
     if (!selectedUser || !selectedVoucher || !selectedDate) {
       toast({ title: 'Missing fields', description: 'Please select candidate, voucher, and exam date.', variant: 'destructive' });
+      return;
+    }
+    if (isBookingDateDisabled(selectedDate)) {
+      toast({
+        title: 'Unavailable Date',
+        description: 'Choose a date within an active BDA exam window.',
+        variant: 'destructive',
+      });
       return;
     }
     setIsSubmitting(true);
@@ -355,7 +397,7 @@ function BookExamModal({ open, onClose, onSuccess }: BookExamModalProps) {
                     mode="single"
                     selected={selectedDate}
                     onSelect={setSelectedDate}
-                    disabled={(date) => date < new Date()}
+                    disabled={isBookingDateDisabled}
                     className="rounded-md border"
                   />
                 </div>
@@ -411,7 +453,7 @@ function BookExamModal({ open, onClose, onSuccess }: BookExamModalProps) {
           <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || !selectedUser || !selectedVoucher || !selectedDate}
+            disabled={loadingExamWindows || isSubmitting || !selectedUser || !selectedVoucher || !selectedDate}
             className="bg-blue-600 hover:bg-blue-700"
           >
             {isSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Booking...</> : <><CalendarCheck className="h-4 w-4 mr-2" /> Confirm Booking</>}

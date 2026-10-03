@@ -268,6 +268,30 @@ export default function ExamBookingDetail() {
     enabled: !!id,
   });
 
+  const { data: schedulableWindows = [], isLoading: windowsLoading } = useQuery({
+    queryKey: ['admin-schedulable-exam-windows', booking?.quiz?.certification_type],
+    queryFn: async () => {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      let query = (supabase as any)
+        .from('certification_exam_windows')
+        .select('id, name, start_date, end_date, certification_type')
+        .eq('is_active', true)
+        .gte('end_date', today)
+        .order('start_date', { ascending: true });
+
+      if (booking?.quiz?.certification_type) {
+        query = query.or(
+          `certification_type.is.null,certification_type.ilike.${booking.quiz.certification_type}`
+        );
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!booking?.quiz?.certification_type,
+  });
+
   // ============================================================================
   // Mutations
   // ============================================================================
@@ -275,6 +299,14 @@ export default function ExamBookingDetail() {
   const rescheduleMutation = useMutation({
     mutationFn: async () => {
       if (!booking || !rescheduleDate) throw new Error('Missing required data');
+
+      const requestedDate = format(rescheduleDate, 'yyyy-MM-dd');
+      const isWithinWindow = schedulableWindows.some((window: any) =>
+        requestedDate >= window.start_date && requestedDate <= window.end_date
+      );
+      if (!isWithinWindow) {
+        throw new Error('Choose a date within an active BDA exam window.');
+      }
 
       // Convert admin-selected date+time directly to UTC using the candidate's timezone
       const dateTimeStr = `${format(rescheduleDate, 'yyyy-MM-dd')}T${rescheduleTime}:00`;
@@ -492,11 +524,24 @@ export default function ExamBookingDetail() {
   const dateConstraints = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const minDate = addDays(today, 2);
+    const latestWindowEnd = schedulableWindows.length > 0
+      ? new Date(`${schedulableWindows[schedulableWindows.length - 1].end_date}T00:00:00`)
+      : minDate;
+
     return {
-      minDate: addDays(today, 1),
-      maxDate: addDays(today, 90),
+      minDate,
+      maxDate: latestWindowEnd,
     };
-  }, []);
+  }, [schedulableWindows]);
+
+  const isRescheduleDateDisabled = (date: Date) => {
+    if (date < dateConstraints.minDate || date > dateConstraints.maxDate) return true;
+    const dateKey = format(date, 'yyyy-MM-dd');
+    return !schedulableWindows.some((window: any) =>
+      dateKey >= window.start_date && dateKey <= window.end_date
+    );
+  };
 
   // Parse audit trail from booking_notes
   const auditTrail = useMemo(() => {
@@ -790,7 +835,7 @@ export default function ExamBookingDetail() {
                         <AlertTitle className="text-blue-800">Candidate's Timezone</AlertTitle>
                         <AlertDescription className="text-blue-700">
                           {getTimezoneLabel(booking.timezone || 'UTC')}
-                          <span className="block text-xs mt-1">The date and time you select below will be interpreted in the candidate's timezone.</span>
+                          <span className="block text-xs mt-1">The date and time you select below will be interpreted in the candidate's timezone and must fall within an active BDA exam window.</span>
                         </AlertDescription>
                       </Alert>
 
@@ -801,9 +846,7 @@ export default function ExamBookingDetail() {
                             mode="single"
                             selected={rescheduleDate}
                             onSelect={setRescheduleDate}
-                            disabled={(date) =>
-                              date < dateConstraints.minDate || date > dateConstraints.maxDate
-                            }
+                            disabled={isRescheduleDateDisabled}
                             className="rounded-md border"
                           />
                         </div>
@@ -863,7 +906,7 @@ export default function ExamBookingDetail() {
 
                       <Button
                         onClick={() => rescheduleMutation.mutate()}
-                        disabled={!rescheduleDate || !rescheduleReason || rescheduleMutation.isPending}
+                        disabled={windowsLoading || !rescheduleDate || !rescheduleReason || rescheduleMutation.isPending}
                         className="w-full"
                       >
                         {rescheduleMutation.isPending ? (
