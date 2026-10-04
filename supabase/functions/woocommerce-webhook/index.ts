@@ -108,6 +108,152 @@ async function markOrderResolved(supabase: any, orderId: number): Promise<void> 
   }
 }
 
+// Provision the individual portal account once per valid store order, before
+// entitlement processing. A purchase must never be denied a portal account
+// merely because its product mapping is awaiting configuration.
+async function ensurePortalUser(
+  supabase: any,
+  order: WooCommerceOrderWebhook,
+  email: string
+): Promise<string> {
+  const normalizedEmail = email.trim().toLowerCase()
+
+  const { data: existingUser, error: existingUserError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', normalizedEmail)
+    .maybeSingle()
+
+  if (existingUserError) {
+    throw new Error(`Unable to look up portal account: ${existingUserError.message}`)
+  }
+
+  if (existingUser?.id) {
+    return existingUser.id
+  }
+
+  let userId: string | null = null
+  try {
+    const { data: authUser } = await supabase
+      .rpc('get_auth_user_by_email', { p_email: normalizedEmail })
+      .maybeSingle()
+    userId = authUser?.id || null
+  } catch (_lookupError) {
+    // A missing lookup RPC must not be treated as proof that Auth has no user.
+    // createUser below handles the duplicate-user race and recovers safely.
+  }
+
+  let createdAuthUser = false
+  if (!userId) {
+    const temporaryPassword = crypto.randomUUID() + crypto.randomUUID()
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: normalizedEmail,
+      password: temporaryPassword,
+      email_confirm: true,
+      user_metadata: {
+        first_name: order.billing.first_name || '',
+        last_name: order.billing.last_name || '',
+        created_from: 'woocommerce_webhook',
+      },
+    })
+
+    if (authError) {
+      const duplicateAuthUser =
+        authError.status === 422 ||
+        authError.message?.toLowerCase().includes('already been registered') ||
+        authError.message?.toLowerCase().includes('already registered')
+
+      if (!duplicateAuthUser) {
+        throw new Error(`Unable to create portal authentication account: ${authError.message}`)
+      }
+
+      const { data: recoveredAuthUser, error: recoveryError } = await supabase
+        .rpc('get_auth_user_by_email', { p_email: normalizedEmail })
+        .maybeSingle()
+
+      if (recoveryError || !recoveredAuthUser?.id) {
+        throw new Error(`Unable to recover existing portal account: ${recoveryError?.message || authError.message}`)
+      }
+
+      userId = recoveredAuthUser.id
+    } else {
+      userId = authData.user.id
+      createdAuthUser = true
+      console.log(`Created portal account for store order #${order.id}: ${userId}`)
+    }
+  }
+
+  const { error: profileError } = await supabase.from('users').upsert({
+    id: userId,
+    email: normalizedEmail,
+    first_name: order.billing.first_name || '',
+    last_name: order.billing.last_name || '',
+    phone: order.billing.phone || null,
+    country_code: order.billing.country || null,
+    role: 'individual',
+    is_active: true,
+    profile_completed: false,
+    created_from: 'store',
+  }, { onConflict: 'id', ignoreDuplicates: true })
+
+  if (profileError) {
+    throw new Error(`Unable to create portal profile: ${profileError.message}`)
+  }
+
+  if (createdAuthUser) {
+    const portalUrl = Deno.env.get('PORTAL_URL') || 'https://portal.bda-global.org'
+    let setPasswordUrl: string | undefined
+
+    try {
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: normalizedEmail,
+        options: { redirectTo: `${portalUrl}/auth/set-password` },
+      })
+      if (!linkError && linkData?.properties?.action_link) {
+        setPasswordUrl = linkData.properties.action_link
+      }
+    } catch (linkError: any) {
+      console.warn(`Could not create set-password link for ${normalizedEmail}: ${linkError.message}`)
+    }
+
+    if (!setPasswordUrl) {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${portalUrl}/auth/set-password`,
+      })
+      if (resetError) {
+        throw new Error(`Portal account created but password setup email failed: ${resetError.message}`)
+      }
+    }
+
+    const welcomeData = {
+      firstName: order.billing.first_name || 'User',
+      email: normalizedEmail,
+      loginUrl: `${portalUrl}/login`,
+      setPasswordUrl: setPasswordUrl || `${portalUrl}/auth/forgot-password`,
+    }
+
+    await queueEmailWithTemplate({
+      supabase,
+      recipientEmail: normalizedEmail,
+      recipientName: order.billing.first_name,
+      templateName: 'welcome',
+      subject: `Welcome to BDA Portal — Set Your Password, ${welcomeData.firstName}!`,
+      htmlBody: welcomeEmailHtml(welcomeData),
+      textBody: welcomeEmailText(welcomeData),
+      priority: 1,
+      relatedEntityType: 'woocommerce_order',
+      relatedEntityId: order.id.toString(),
+    })
+  }
+
+  if (!userId) {
+    throw new Error('Portal account provisioning completed without a user ID')
+  }
+
+  return userId
+}
+
 // Core order processing logic — used by both webhook and retry endpoint
 async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Promise<{ success: boolean; error?: string }> {
   const email = order.billing?.email?.toLowerCase()
@@ -115,28 +261,43 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
     return { success: false, error: 'No email in order' }
   }
 
-  // Get product mappings
-  const [membershipMappings, learningProducts, partnershipProducts, certificationProducts, bookProductsResult] = await Promise.all([
+  // Read every entitlement map before evaluating order line items.
+  const [membershipMappings, learningProducts, partnershipProducts, certificationProducts, mockExamProducts, bookProductsResult] = await Promise.all([
     supabase.from('membership_product_mapping').select('*').eq('is_active', true),
     supabase.from('learning_system_products').select('*').eq('is_active', true),
     supabase.from('partnership_product_mapping').select('*').eq('is_active', true),
     supabase.from('certification_products').select('*').eq('is_active', true),
+    supabase.from('mock_exam_products').select('*').eq('is_active', true),
     supabase.from('book_products').select('*').eq('is_active', true),
   ])
 
-  const membershipMap = new Map(
+  const mappingError =
+    membershipMappings.error ||
+    learningProducts.error ||
+    partnershipProducts.error ||
+    certificationProducts.error ||
+    mockExamProducts.error ||
+    bookProductsResult.error
+  if (mappingError) {
+    return { success: false, error: `Unable to load product mappings: ${mappingError.message}` }
+  }
+
+  const membershipMap = new Map<string, any>(
     (membershipMappings.data || []).map((p: any) => [p.woocommerce_product_id.toString(), p])
   )
-  const learningMap = new Map(
+  const learningMap = new Map<string, any>(
     (learningProducts.data || []).map((p: any) => [p.woocommerce_product_id.toString(), p])
   )
-  const partnershipMap = new Map(
+  const partnershipMap = new Map<string, any>(
     (partnershipProducts.data || []).map((p: any) => [p.woocommerce_product_id.toString(), p])
   )
-  const certificationMap = new Map(
+  const certificationMap = new Map<string, any>(
     (certificationProducts.data || []).map((p: any) => [p.woocommerce_product_id.toString(), p])
   )
-  const bookProductsMap = new Map(
+  const mockExamMap = new Map<string, any>(
+    (mockExamProducts.data || []).map((p: any) => [p.woocommerce_product_id.toString(), p])
+  )
+  const bookProductsMap = new Map<string, any>(
     (bookProductsResult.data || []).map((p: any) => [p.woocommerce_product_id.toString(), p])
   )
   const categoryToGroupMap: Record<string, string> = {
@@ -145,6 +306,7 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
     'study-guide': 'study-guide',
   }
 
+  const userId = await ensurePortalUser(supabase, order, email)
   let anyProductMatched = false
 
   // Process each line item
@@ -153,188 +315,17 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
     const learningProduct = learningMap.get(item.product_id.toString())
     const partnershipProduct = partnershipMap.get(item.product_id.toString())
     const certificationProduct = certificationMap.get(item.product_id.toString())
+    const mockExamProduct = mockExamMap.get(item.product_id.toString())
     const bookProduct = bookProductsMap.get(item.product_id.toString())
 
-    // Skip if no product type matches
-    if (!membershipProduct && !learningProduct && !partnershipProduct && !certificationProduct && !bookProduct) {
+    // Unmapped products still create the Individual account, but are recorded
+    // for operational review instead of being silently ignored.
+    if (!membershipProduct && !learningProduct && !partnershipProduct && !certificationProduct && !mockExamProduct && !bookProduct) {
+      console.warn(`Order #${order.id}: product ${item.product_id} has no entitlement mapping`)
       continue
     }
 
     anyProductMatched = true
-
-    // -------------------------------------------------------
-    // FIX #1: Find user by direct DB lookup instead of listUsers()
-    // listUsers() has pagination issues and may miss users
-    // -------------------------------------------------------
-    let userId: string
-    let isNewUser = false
-
-    // Check users table first (most reliable)
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle()
-
-    if (existingUser) {
-      userId = existingUser.id
-      console.log(`Found existing user: ${userId}`)
-    } else {
-      // FIX #1: Use direct SQL lookup instead of listUsers() to avoid pagination
-      const { data: authUserRows } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .limit(1)
-
-      // Also check auth.users directly via RPC (more reliable than listUsers)
-      let authUserData = null
-      try {
-        const { data: rpcResult } = await supabase.rpc('get_auth_user_by_email', { p_email: email }).maybeSingle()
-        authUserData = rpcResult
-      } catch (_rpcErr) {
-        authUserData = null
-      }
-
-      if (authUserData?.id) {
-        userId = authUserData.id
-        console.log(`Found auth user via RPC: ${userId}`)
-        // Ensure users table record exists
-        await supabase.from('users').upsert({
-          id: userId,
-          email: email,
-          first_name: order.billing.first_name || '',
-          last_name: order.billing.last_name || '',
-          phone: order.billing.phone || null,
-          country_code: order.billing.country || null,
-          role: 'individual',
-          is_active: true,
-          profile_completed: false,
-          created_from: 'store',
-        }, { onConflict: 'id', ignoreDuplicates: true })
-      } else {
-        // Create new auth user
-        console.log(`Creating new user for email: ${email}`)
-        isNewUser = true
-
-        const tempPassword = crypto.randomUUID() + crypto.randomUUID()
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: email,
-          password: tempPassword,
-          email_confirm: true,
-          user_metadata: {
-            first_name: order.billing.first_name || '',
-            last_name: order.billing.last_name || '',
-            created_from: 'woocommerce_webhook',
-          },
-        })
-
-        if (authError) {
-          // RACE CONDITION FIX: If auth user already exists (e.g. user registered
-          // independently, or WooCommerce sent a duplicate webhook), fall back to
-          // fetching the existing user instead of failing the whole order.
-          const alreadyExists =
-            authError.message?.toLowerCase().includes('already been registered') ||
-            authError.message?.toLowerCase().includes('already registered') ||
-            authError.status === 422
-          if (alreadyExists) {
-            console.warn(`Auth user already exists for ${email} — recovering via RPC`)
-            try {
-              const { data: existingAuthUser } = await supabase.rpc('get_auth_user_by_email', { p_email: email })
-              if (existingAuthUser?.id) {
-                userId = existingAuthUser.id
-                isNewUser = false
-                console.log(`Recovered existing auth user: ${userId}`)
-                await supabase.from('users').upsert({
-                  id: userId, email, first_name: order.billing.first_name || '',
-                  last_name: order.billing.last_name || '', phone: order.billing.phone || null,
-                  country_code: order.billing.country || null, role: 'individual',
-                  is_active: true, profile_completed: false, created_from: 'store',
-                }, { onConflict: 'id', ignoreDuplicates: true })
-              } else {
-                console.error('Could not recover existing auth user for:', email)
-                return { success: false, error: `Failed to create auth user: ${authError.message}` }
-              }
-            } catch (recoverErr: any) {
-              console.error('Error recovering existing auth user:', recoverErr)
-              return { success: false, error: `Failed to create auth user: ${authError.message}` }
-            }
-          } else {
-            console.error('Error creating auth user:', authError)
-            return { success: false, error: `Failed to create auth user: ${authError.message}` }
-          }
-        } else {
-          userId = authData.user.id
-          console.log(`Created auth user with ID: ${userId}`)
-        }
-
-        // Create users table record
-        const { error: createError } = await supabase.from('users').insert({
-          id: userId,
-          email: email,
-          first_name: order.billing.first_name || '',
-          last_name: order.billing.last_name || '',
-          phone: order.billing.phone || null,
-          country_code: order.billing.country || null,
-          role: 'individual',
-          is_active: true,
-          profile_completed: false,
-          created_from: 'store',
-        })
-
-        if (createError) {
-          console.error('Error creating user record:', createError)
-        }
-
-        // Send welcome email with set password link
-        const portalUrl = Deno.env.get('PORTAL_URL') || 'https://portal.bda-global.org'
-        let setPasswordUrl: string | undefined
-
-        try {
-          const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-            type: 'recovery',
-            email: email,
-            options: { redirectTo: `${portalUrl}/auth/set-password` }
-          })
-          if (!linkError && linkData?.properties?.action_link) {
-            setPasswordUrl = linkData.properties.action_link
-          } else if (linkError) {
-            console.warn('generateLink failed:', linkError.message)
-          }
-        } catch (genErr: any) {
-          console.warn('generateLink exception:', genErr.message)
-        }
-
-        if (!setPasswordUrl) {
-          const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${portalUrl}/auth/set-password`,
-          })
-          if (resetErr) {
-            console.error('resetPasswordForEmail failed:', resetErr.message)
-          }
-        }
-
-        const welcomeData = {
-          firstName: order.billing.first_name || 'User',
-          email: email,
-          loginUrl: `${portalUrl}/login`,
-          setPasswordUrl: setPasswordUrl || `${portalUrl}/auth/forgot-password`,
-        }
-
-        await queueEmailWithTemplate({
-          supabase,
-          recipientEmail: email,
-          recipientName: order.billing.first_name,
-          templateName: 'welcome',
-          subject: `Welcome to BDA Portal — Set Your Password, ${welcomeData.firstName}!`,
-          htmlBody: welcomeEmailHtml(welcomeData),
-          textBody: welcomeEmailText(welcomeData),
-          priority: 1,
-          relatedEntityType: 'woocommerce_order',
-          relatedEntityId: order.id.toString(),
-        })
-      }
-    }
 
     // Process membership activation
     if (membershipProduct) {
@@ -352,6 +343,7 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
         )
         if (activationError) {
           console.error('Error activating membership:', activationError)
+          return { success: false, error: `Unable to activate membership: ${activationError.message}` }
         } else {
           console.log(`Activated ${membershipProduct.membership_type} membership, ID: ${membershipId}`)
           await supabase.from('membership_activation_logs').insert({
@@ -365,6 +357,7 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
         }
       } catch (error: any) {
         console.error('Membership activation error:', error)
+        return { success: false, error: `Membership activation failed: ${error.message || 'Unknown error'}` }
       }
     }
 
@@ -384,11 +377,13 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
         })
         if (accessError) {
           console.error('Error granting learning access:', accessError)
+          return { success: false, error: `Unable to grant Learning System access: ${accessError.message}` }
         } else {
           console.log(`Granted learning system access (${learningProduct.language})`)
         }
       } catch (error: any) {
         console.error('Learning system error:', error)
+        return { success: false, error: `Learning System activation failed: ${error.message || 'Unknown error'}` }
       }
     }
 
@@ -411,6 +406,7 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
         )
         if (partnershipError) {
           console.error('Error activating partnership:', partnershipError)
+          return { success: false, error: `Unable to activate partnership: ${partnershipError.message}` }
         } else {
           console.log(`Activated ${partnershipProduct.partnership_type} partnership, license: ${licenseId}`)
           const portalUrl = Deno.env.get('PORTAL_URL') || 'https://portal.bda-global.org'
@@ -442,6 +438,7 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
         }
       } catch (error: any) {
         console.error('Partnership activation error:', error)
+        return { success: false, error: `Partnership activation failed: ${error.message || 'Unknown error'}` }
       }
     }
 
@@ -462,6 +459,7 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
         if (voucherError) {
           console.error('Error creating exam voucher:', voucherError)
           await logVoucherError(supabase, userId, order.id, item.product_id, certificationProduct.id, voucherError.message)
+          return { success: false, error: `Unable to create exam voucher: ${voucherError.message}` }
         } else {
           const results = voucherResults || []
           const successCount = results.filter((r: any) => r.success).length
@@ -483,12 +481,51 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
           for (const failedResult of results.filter((r: any) => !r.success)) {
             if (failedResult.error_message && !failedResult.error_message.includes('already exist')) {
               await logVoucherError(supabase, userId, order.id, item.product_id, certificationProduct.id, failedResult.error_message)
+              return { success: false, error: `Exam voucher creation failed: ${failedResult.error_message}` }
             }
           }
         }
       } catch (error: any) {
         console.error('Certification voucher creation error:', error)
         await logVoucherError(supabase, userId, order.id, item.product_id, certificationProduct.id, error.message || 'Unknown error')
+        return { success: false, error: `Exam voucher creation failed: ${error.message || 'Unknown error'}` }
+      }
+    }
+
+    // Process Mock Exams entitlement. grant_mock_exam_access is idempotent by
+    // user, order, and product, so a WooCommerce retry cannot duplicate access.
+    if (mockExamProduct) {
+      console.log(`Processing Mock Exams product ${item.product_id} for ${email}`)
+      try {
+        const { data: grantResult, error: grantError } = await supabase.rpc(
+          'grant_mock_exam_access',
+          {
+            p_user_id: userId,
+            p_woocommerce_order_id: order.id,
+            p_woocommerce_product_id: item.product_id,
+            p_quantity: item.quantity || 1,
+          }
+        )
+
+        if (grantError) {
+          return { success: false, error: `Unable to grant Mock Exams: ${grantError.message}` }
+        }
+        if (!grantResult?.success) {
+          return { success: false, error: `Unable to grant Mock Exams: ${grantResult?.error || 'Unknown grant failure'}` }
+        }
+
+        console.log(
+          `Mock Exams granted for order #${order.id}: ${grantResult.exams_granted ?? grantResult.exams_remaining ?? 0}`
+        )
+        await supabase.from('membership_activation_logs').insert({
+          user_id: userId,
+          action: 'mock_exam_granted',
+          triggered_by: 'webhook',
+          woocommerce_order_id: order.id,
+          notes: `Mock Exams product ${mockExamProduct.product_name}; granted: ${grantResult.exams_granted ?? 0}; remaining: ${grantResult.exams_remaining ?? 0}`,
+        })
+      } catch (error: any) {
+        return { success: false, error: `Mock Exams processing failed: ${error.message || 'Unknown error'}` }
       }
     }
 
@@ -507,7 +544,7 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
   }
 
   if (!anyProductMatched) {
-    console.log(`Order #${order.id}: no recognized products, skipping`)
+    return { success: false, error: 'No entitlement mapping exists for any product in this order' }
   }
 
   return { success: true }
