@@ -51,7 +51,7 @@ async function hashIdentifier(value: string) {
 }
 
 async function allowAttempt(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   identifier: string,
   maximumAttempts: number,
 ) {
@@ -131,17 +131,56 @@ async function sendConfirmationEmail(
 }
 
 async function resolveExistingAccount(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   resendApiKey: string,
   email: string,
 ): Promise<Response | null> {
-  const { data: profile, error: profileError } = await admin
+  let { data: profile, error: profileError }: { data: any; error: any } = await admin
     .from('users')
     .select('id, first_name')
     .eq('email', email)
     .maybeSingle()
 
   if (profileError) throw profileError
+
+  // A historic integration can create an Auth account without its public.users
+  // profile. Restore that profile before deciding this is a new registration,
+  // so the candidate is directed to sign in rather than consuming confirmation
+  // email rate-limit attempts for an account that already exists.
+  if (!profile) {
+    const { data: authLookup, error: authLookupError } = await admin
+      .rpc('get_auth_user_by_email', { p_email: email })
+      .maybeSingle()
+    if (authLookupError) throw authLookupError
+    if (!authLookup?.id) return null
+
+    const { data: authRecord, error: authRecordError } = await admin.auth.admin.getUserById(authLookup.id)
+    if (authRecordError || !authRecord.user) {
+      throw authRecordError || new Error('Unable to look up the existing account')
+    }
+
+    const metadata = authRecord.user.user_metadata || {}
+    const { data: restoredProfile, error: restoreError } = await admin
+      .from('users')
+      .upsert({
+        id: authRecord.user.id,
+        email: authRecord.user.email || email,
+        first_name: metadata.first_name || metadata.firstName || '',
+        last_name: metadata.last_name || metadata.lastName || '',
+        role: 'individual',
+        created_from: 'woocommerce_webhook',
+        is_active: true,
+        profile_completed: false,
+      }, { onConflict: 'id' })
+      .select('id, first_name')
+      .single()
+    if (restoreError || !restoredProfile) {
+      throw restoreError || new Error('Unable to restore the existing portal profile')
+    }
+
+    profile = restoredProfile
+  }
+
   if (!profile) return null
 
   const { data: authData, error: authError } = await admin.auth.admin.getUserById(profile.id)
