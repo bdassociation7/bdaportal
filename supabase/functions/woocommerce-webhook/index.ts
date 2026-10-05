@@ -391,6 +391,26 @@ async function processOrder(supabase: any, order: WooCommerceOrderWebhook): Prom
     if (partnershipProduct) {
       console.log(`Processing partnership: ${partnershipProduct.partnership_type} for ${email}`)
       try {
+        // PDP/ECP licences reference partners.id. Prepare the parent record
+        // before calling the activation RPC so a first partnership purchase
+        // cannot fail its foreign-key check and leave the paid order pending.
+        const partnerName = `${order.billing.first_name || ''} ${order.billing.last_name || ''}`.trim() || email
+        const { error: partnerRecordError } = await supabase
+          .from('partners')
+          .upsert({
+            id: userId,
+            partner_type: partnershipProduct.partnership_type,
+            company_name: partnerName,
+            contact_person: partnerName,
+            contact_email: email,
+            contact_phone: order.billing.phone || null,
+            country: order.billing.country || null,
+            is_active: true,
+          }, { onConflict: 'id', ignoreDuplicates: true })
+        if (partnerRecordError) {
+          return { success: false, error: `Unable to prepare partner record: ${partnerRecordError.message}` }
+        }
+
         const { data: licenseId, error: partnershipError } = await supabase.rpc(
           'activate_partnership',
           {
