@@ -455,7 +455,7 @@ export default function EditProfile() {
   useEffect(() => {
     if (profile) {
       setFormData({
-        organisation_name: profile.organisation_name || "",
+        organisation_name: profile.organization_name || "",
         legal_name: profile.legal_name || "",
         registration_number: profile.registration_number || "",
         tax_id: profile.tax_id || "",
@@ -475,7 +475,7 @@ export default function EditProfile() {
         billing_contact_name: profile.billing_contact_name || "",
         billing_contact_email: profile.billing_contact_email || "",
         billing_contact_phone: profile.billing_contact_phone || "",
-        specialisations: profile.specialisations || [],
+        specialisations: profile.specializations || [],
         delivery_methods: profile.delivery_methods || [],
         target_audiences: profile.target_audiences || [],
         linkedin_url: profile.linkedin_url || "",
@@ -559,7 +559,7 @@ export default function EditProfile() {
   const handleSubmit = async () => {
     // Build the update DTO
     const dto: UpdatePDPPartnerProfileDTO = {
-      organisation_name: formData.organisation_name || undefined,
+      organization_name: formData.organisation_name || undefined,
       legal_name: formData.legal_name || undefined,
       registration_number: formData.registration_number || undefined,
       tax_id: formData.tax_id || undefined,
@@ -579,7 +579,7 @@ export default function EditProfile() {
       billing_contact_name: formData.billing_contact_name || undefined,
       billing_contact_email: formData.billing_contact_email || undefined,
       billing_contact_phone: formData.billing_contact_phone || undefined,
-      specialisations: formData.specialisations,
+      specializations: formData.specialisations,
       delivery_methods: formData.delivery_methods,
       target_audiences: formData.target_audiences,
       linkedin_url: formData.linkedin_url || undefined,
@@ -1045,14 +1045,14 @@ export default function EditProfile() {
                     key={spec.id}
                     onClick={() => handleSpecialisationToggle(spec.id)}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                      formData.specializations.includes(spec.id)
+                      formData.specialisations.includes(spec.id)
                         ? "border-primary bg-primary/5"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <div className={`flex items-center gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                       <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                        formData.specializations.includes(spec.id)
+                        formData.specialisations.includes(spec.id)
                           ? "bg-primary border-primary"
                           : "border-gray-300"
                       }`}>
