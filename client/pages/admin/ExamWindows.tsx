@@ -72,6 +72,16 @@ interface ExamWindowFormData {
   is_active: boolean;
 }
 
+interface CurrentExamWindowStatus {
+  is_open: boolean;
+  can_schedule: boolean;
+  current_window_name: string | null;
+  current_window_end: string | null;
+  next_window_date: string | null;
+  next_window_name: string | null;
+  message: string;
+}
+
 const initialFormData: ExamWindowFormData = {
   name: '',
   description: '',
@@ -120,14 +130,14 @@ export default function ExamWindows() {
   });
 
   // Check current window status
-  const { data: currentWindowStatus } = useQuery({
+  const { data: currentWindowStatus } = useQuery<CurrentExamWindowStatus | undefined>({
     queryKey: ['current-exam-window-status'],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('check_exam_window_open', {
         p_certification_type: null,
       });
       if (error) throw error;
-      return data?.[0];
+      return data?.[0] as CurrentExamWindowStatus | undefined;
     },
   });
 
@@ -329,10 +339,10 @@ export default function ExamWindows() {
               <XCircle className="h-8 w-8 text-orange-600" />
               <div>
                 <p className="font-semibold text-orange-900">Exam Window is CLOSED</p>
-                {currentWindowStatus?.next_window_start ? (
+                {currentWindowStatus?.next_window_date ? (
                   <p className="text-sm text-orange-700">
                     Next window: {currentWindowStatus.next_window_name} - Opens{' '}
-                    {format(new Date(currentWindowStatus.next_window_start), 'MMMM d, yyyy')}
+                    {format(new Date(currentWindowStatus.next_window_date), 'MMMM d, yyyy')}
                   </p>
                 ) : (
                   <p className="text-sm text-orange-700">No upcoming windows scheduled</p>

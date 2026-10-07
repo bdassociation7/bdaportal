@@ -108,7 +108,6 @@ function RescheduleModal({ open, onClose, booking, examTitle, certType, onSucces
       .select('id, name, start_date, end_date')
       .eq('is_active', true)
       .gte('end_date', today)
-      .lte('start_date', new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0]) // All windows within the year
       .order('start_date', { ascending: true });
     if (certType) {
       query = query.or(`certification_type.is.null,certification_type.ilike.${certType}`);

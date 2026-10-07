@@ -273,17 +273,15 @@ export default function ScheduleExam() {
         setExamWindowStatus(result as ExamWindowStatus);
       }
 
-      // Fetch all upcoming exam windows within the current year
-      // Candidates can reschedule to any available window during the year
+      // Fetch every future active BDA window. The database remains authoritative
+      // and only accepts dates inside an active certification exam window.
       const today = new Date().toISOString().split('T')[0];
-      const yearEnd = new Date(new Date().getFullYear(), 11, 31).toISOString().split('T')[0];
 
       let windowsQuery = supabase
         .from('certification_exam_windows')
         .select('id, name, start_date, end_date')
         .eq('is_active', true)
         .gte('end_date', today) // Window must not have ended
-        .lte('start_date', yearEnd) // Within the current year
         .order('start_date', { ascending: true });
 
       if (exam?.certification_type) {
