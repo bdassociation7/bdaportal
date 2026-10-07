@@ -269,6 +269,19 @@ export default function PDPLicense() {
     });
   };
 
+  // Licence dates are date-only values. Format them in a fixed LTR form so
+  // browser locale and RTL rendering cannot reorder the date components.
+  const formatLicenseDate = (dateString: string) => {
+    const [year, month, day] = dateString.slice(0, 10).split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+    }).format(date);
+  };
+
   // Check if there's a pending renewal request
   const hasPendingRenewal = pendingRequests.some(
     r => r.request_type === 'renewal' && ['pending', 'under_review'].includes(r.status)
@@ -395,11 +408,11 @@ export default function PDPLicense() {
             <div className="space-y-4">
               <div className={isRTL ? "text-right" : ""}>
                 <p className="text-sm text-gray-500">{texts.issueDate}</p>
-                <p className="font-medium">{formatDate(license.issue_date)}</p>
+                <p className="font-medium" dir="ltr">{formatLicenseDate(license.issue_date)}</p>
               </div>
               <div className={isRTL ? "text-right" : ""}>
                 <p className="text-sm text-gray-500">{texts.expiryDate}</p>
-                <p className="font-medium">{formatDate(license.expiry_date)}</p>
+                <p className="font-medium" dir="ltr">{formatLicenseDate(license.expiry_date)}</p>
               </div>
               <div className={isRTL ? "text-right" : ""}>
                 <p className="text-sm text-gray-500 mb-2">{texts.timeRemaining}</p>
@@ -616,7 +629,7 @@ export default function PDPLicense() {
           <div className="space-y-4 py-4">
             <div className={`p-4 bg-gray-50 rounded-lg ${isRTL ? "text-right" : ""}`}>
               <p className="text-sm text-gray-600">{texts.currentLicenseExpiry}</p>
-              <p className="font-semibold">{formatDate(license.expiry_date)}</p>
+              <p className="font-semibold" dir="ltr">{formatLicenseDate(license.expiry_date)}</p>
             </div>
             <div className={`space-y-2 ${isRTL ? "text-right" : ""}`}>
               <Label>{texts.additionalNotes}</Label>

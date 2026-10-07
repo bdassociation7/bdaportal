@@ -63,7 +63,7 @@ export default function PDPProgramEdit() {
     );
   }
 
-  // In limitedEdit mode the program name is locked; all other fields remain editable.
+  // In limitedEdit mode the approved accreditation facts remain locked.
   const isLimitedEdit = program.status === 'approved';
 
   // Block editing for submitted, under_review, and expired programs
@@ -105,7 +105,7 @@ export default function PDPProgramEdit() {
         <h1 className="text-3xl font-bold">Edit Program</h1>
         <p className="text-gray-600 mt-2">
           {isLimitedEdit
-            ? 'The accredited programme name is locked after approval. You may update its public directory title and all other programme details.'
+            ? 'The accredited programme identity, duration and PDC credits are locked after approval. You may update its public directory title and other programme details.'
             : 'Update your program details'}
         </p>
       </div>

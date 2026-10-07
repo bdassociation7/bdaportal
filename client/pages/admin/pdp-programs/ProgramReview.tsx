@@ -103,7 +103,7 @@ export default function ProgramReview() {
         reviewed_at: new Date().toISOString(),
       };
 
-      if (pdc_credits !== undefined) {
+      if (pdc_credits !== undefined && program?.status !== 'approved') {
         updateData.max_pdc_credits = pdc_credits;
       }
 
@@ -249,19 +249,25 @@ export default function ProgramReview() {
                 <Label className="text-gray-500">PDC Credits Requested</Label>
                 <p className="text-2xl font-bold">{program.max_pdc_credits}</p>
               </div>
-              <div className="text-right">
-                <Label htmlFor="pdcAdjustment">Adjust PDCs (optional)</Label>
-                <Input
-                  id="pdcAdjustment"
-                  type="number"
-                  className="w-24"
-                  placeholder={program.max_pdc_credits.toString()}
-                  min={1}
-                  max={program.max_pdc_credits}
-                  value={pdcAdjustment || ''}
-                  onChange={(e) => setPdcAdjustment(e.target.value ? parseInt(e.target.value) : null)}
-                />
-              </div>
+              {program.status === 'approved' ? (
+                <div className="max-w-sm text-right text-sm text-gray-500">
+                  PDC credits are locked because this programme is already an approved accreditation record.
+                </div>
+              ) : (
+                <div className="text-right">
+                  <Label htmlFor="pdcAdjustment">Adjust PDCs (optional)</Label>
+                  <Input
+                    id="pdcAdjustment"
+                    type="number"
+                    className="w-24"
+                    placeholder={program.max_pdc_credits.toString()}
+                    min={1}
+                    max={program.max_pdc_credits}
+                    value={pdcAdjustment || ''}
+                    onChange={(e) => setPdcAdjustment(e.target.value ? parseInt(e.target.value) : null)}
+                  />
+                </div>
+              )}
             </div>
             {pdcAdjustment && pdcAdjustment < program.max_pdc_credits && (
               <Alert>

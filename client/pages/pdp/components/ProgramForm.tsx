@@ -1,7 +1,7 @@
 /**
  * ProgramForm Component
  * Reusable form for creating and editing PDP programs
- * - In limitedEdit mode: program name is locked, everything else is editable
+ * - In limitedEdit mode: accreditation identity, duration, and PDCs are locked
  * - Supports session_start_date / session_end_date for public display
  * - Supports agenda PDF upload / replacement
  */
@@ -265,7 +265,7 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
           </CardTitle>
           <CardDescription>
             {limitedEdit
-              ? 'The accredited programme name is locked after approval. You may update its public directory title and other details.'
+              ? 'The accredited programme identity, duration and PDC credits are locked after approval. You may update its public directory title and other details.'
               : 'Provide basic information about your program'}
           </CardDescription>
         </CardHeader>
@@ -431,7 +431,14 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
                 max={1000}
                 value={formData.duration_hours}
                 onChange={e => handleInputChange('duration_hours', parseFloat(e.target.value))}
+                disabled={limitedEdit}
+                className={limitedEdit ? 'opacity-60 bg-gray-50' : ''}
               />
+              {limitedEdit && (
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Duration cannot be changed after approval
+                </p>
+              )}
               {validationErrors.duration_hours && (
                 <p className="text-sm text-red-500 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
@@ -450,8 +457,14 @@ export function ProgramForm({ initialData, onSubmit, onCancel, isSubmitting, lim
                 max={40}
                 value={formData.max_pdc_credits}
                 onChange={e => handleInputChange('max_pdc_credits', parseInt(e.target.value))}
+                disabled={limitedEdit}
+                className={limitedEdit ? 'opacity-60 bg-gray-50' : ''}
               />
-              <p className="text-xs text-gray-500">Maximum PDC credits that can be earned (1-40)</p>
+              <p className="text-xs text-gray-500">
+                {limitedEdit
+                  ? 'PDC credits are fixed after approval to protect the programme accreditation record.'
+                  : 'Maximum PDC credits that can be earned (1-40)'}
+              </p>
               {validationErrors.max_pdc_credits && (
                 <p className="text-sm text-red-500 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />

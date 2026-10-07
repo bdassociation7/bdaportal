@@ -37,6 +37,16 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
+const formatLicenceDate = (dateString: string) => {
+  const [year, month, day] = dateString.slice(0, 10).split('-').map(Number);
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+};
+
 export default function PDPDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -388,13 +398,13 @@ export default function PDPDetails() {
                     <div>
                       <Label className="text-gray-500">Issue Date</Label>
                       <p className="font-medium mt-1">
-                        {new Date(license.issue_date).toLocaleDateString()}
+                        <span dir="ltr">{formatLicenceDate(license.issue_date)}</span>
                       </p>
                     </div>
                     <div>
                       <Label className="text-gray-500">Expiry Date</Label>
                       <p className="font-medium mt-1">
-                        {new Date(license.expiry_date).toLocaleDateString()}
+                        <span dir="ltr">{formatLicenceDate(license.expiry_date)}</span>
                       </p>
                     </div>
                     <div>
@@ -471,7 +481,7 @@ export default function PDPDetails() {
                         <Calendar className="h-5 w-5 text-gray-500" />
                         <div>
                           <p className="text-sm text-gray-500">Issued</p>
-                          <p className="font-medium">{new Date(license.issue_date).toLocaleDateString()}</p>
+                          <p className="font-medium" dir="ltr">{formatLicenceDate(license.issue_date)}</p>
                         </div>
                       </div>
                       <div className="text-center px-4">
@@ -484,7 +494,7 @@ export default function PDPDetails() {
                         <Calendar className="h-5 w-5 text-gray-500" />
                         <div>
                           <p className="text-sm text-gray-500">Expires</p>
-                          <p className="font-medium">{new Date(license.expiry_date).toLocaleDateString()}</p>
+                          <p className="font-medium" dir="ltr">{formatLicenceDate(license.expiry_date)}</p>
                         </div>
                       </div>
                     </div>
