@@ -82,6 +82,10 @@ export interface Trainer {
   linkedin_url?: string;
   created_at: string;
   updated_at: string;
+  user_id?: string | null;
+  invite_status?: 'not_invited' | 'invited' | 'accepted' | null;
+  invited_at?: string | null;
+  accepted_at?: string | null;
   // Computed
   full_name?: string;
   batches_count?: number;

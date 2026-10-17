@@ -1,6 +1,6 @@
 /**
  * ECP Trainer New Page
- * Register a new trainer profile with an optional immediate portal invite
+ * Register a new trainer profile and provision its portal invitation.
  */
 
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +17,7 @@ export default function ECPTrainerNew() {
   const { toast } = useToast();
   const createMutation = useCreateTrainer();
 
-  const handleSubmit = async (data: CreateTrainerDTO, sendInvite: boolean) => {
+  const handleSubmit = async (data: CreateTrainerDTO, _sendInvite: boolean) => {
     // 1. Create trainer record
     const result = await createMutation.mutateAsync(data);
     if (result.error || !result.data) return;
@@ -26,26 +26,26 @@ export default function ECPTrainerNew() {
 
     // 2. Send invitation through the production Edge Function.
     // A trainer record is never reported as invited unless the email provider accepts delivery.
-    if (sendInvite) {
-      const { data: inviteData, error: inviteError } = await supabase.functions.invoke('send-trainer-invite', {
-        body: { trainer_id: trainerId },
-      });
+    const { data: inviteData, error: inviteError } = await supabase.functions.invoke('send-trainer-invite', {
+      body: { trainer_id: trainerId },
+    });
 
-      if (inviteError || !inviteData?.success) {
-        toast({
-          title: 'Trainer profile saved',
-          description: inviteData?.error || inviteError?.message || 'The invitation was not sent. Please use Send Invite from the trainer profile to try again.',
-          variant: 'destructive',
-        });
-        navigate(`/ecp/trainers/${trainerId}`);
-        return;
-      }
-
+    if (inviteError || !inviteData?.success) {
       toast({
-        title: 'Trainer added and invited',
-        description: inviteData.already_active ? 'The trainer already has an active account.' : `An activation email was sent to ${data.email}.`,
+        title: 'Trainer profile saved',
+        description: inviteData?.error || inviteError?.message || 'The portal invitation was not sent. Open the trainer profile and use Send Invite after correcting the account details.',
+        variant: 'destructive',
       });
+      navigate(`/ecp/trainers/${trainerId}`);
+      return;
     }
+
+    toast({
+      title: 'Trainer added and invited',
+      description: inviteData.account_state === 'new'
+        ? `A Set Your Password email was sent to ${data.email}.`
+        : `An activation email was sent to ${data.email}.`,
+    });
 
     navigate(`/ecp/trainers/${trainerId}`);
   };
@@ -68,7 +68,7 @@ export default function ECPTrainerNew() {
         onSubmit={handleSubmit}
         onCancel={() => navigate('/ecp/trainers')}
         isSubmitting={createMutation.isPending}
-        showInviteOption={true}
+        showInviteOption={false}
       />
     </div>
   );

@@ -11,10 +11,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/shared/config/supabase.config';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { useAuthContext } from '@/app/providers/AuthProvider';
 
 export default function TrainerAcceptInvite() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { checkAuth } = useAuthContext();
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [message, setMessage] = useState('Activating your trainer account...');
 
@@ -58,8 +60,9 @@ export default function TrainerAcceptInvite() {
         setStatus('success');
         setMessage('Your trainer account is ready!');
 
-        // Refresh session to pick up new role
-        await supabase.auth.refreshSession();
+        // The portal role is stored in public.users, not in the JWT. Reload
+        // the profile before opening a route guarded by the trainer role.
+        await checkAuth();
 
         // Redirect to trainer dashboard after 2 seconds
         setTimeout(() => navigate('/instructor/dashboard', { replace: true }), 2000);
@@ -70,7 +73,7 @@ export default function TrainerAcceptInvite() {
     }
 
     acceptInvite();
-  }, []);
+  }, [checkAuth, navigate, searchParams]);
 
   return (
     <div className="min-h-screen bg-[#f0f6ff] flex items-center justify-center p-6">

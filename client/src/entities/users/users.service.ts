@@ -130,6 +130,7 @@ export class UsersService {
         active_users: users.filter((u) => u.is_active).length,
         by_role: {
           individual: users.filter((u) => u.role === 'individual').length,
+          trainer: users.filter((u) => u.role === 'trainer').length,
           ecp: users.filter((u) => u.role === 'ecp').length,
           pdp: users.filter((u) => u.role === 'pdp').length,
           admin: users.filter((u) => u.role === 'admin').length,

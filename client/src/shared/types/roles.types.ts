@@ -7,7 +7,7 @@
 
 // Type pour les rôles utilisateur (correspond à l'ENUM Supabase)
 // dual_partner kept for backward compatibility with DB enum, but treated as ecp
-export type UserRole = 'individual' | 'ecp' | 'pdp' | 'dual_partner' | 'admin' | 'super_admin';
+export type UserRole = 'individual' | 'trainer' | 'ecp' | 'pdp' | 'dual_partner' | 'admin' | 'super_admin';
 
 // Informations d'affichage pour chaque rôle
 export interface RoleInfo {
@@ -66,6 +66,20 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleInfo> = {
       'take_quiz',
       'submit_pdc',
       'create_support_ticket',
+      'view_resources',
+    ] as const,
+  },
+  trainer: {
+    id: 'trainer',
+    label: 'BDA Certified Instructor',
+    labelAr: 'مدرب BDA معتمد',
+    description: 'Approved instructor account for delivery and instructor resources',
+    descriptionAr: 'حساب مدرب معتمد لتقديم البرامج وموارد المدربين',
+    color: 'text-cyan-700',
+    bgColor: 'bg-cyan-50',
+    permissions: [
+      'view_profile',
+      'edit_profile',
       'view_resources',
     ] as const,
   },
@@ -212,6 +226,7 @@ export type Permission = typeof ALL_PERMISSIONS[number] | '*';
  */
 export const ROLE_HOME_ROUTES: Record<UserRole, string> = {
   individual: '/individual/dashboard',
+  trainer: '/instructor/dashboard',
   ecp: '/workspace',
   pdp: '/pdp/dashboard',
   dual_partner: '/workspace', // legacy — treated as ecp

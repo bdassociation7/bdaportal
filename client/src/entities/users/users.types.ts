@@ -3,7 +3,7 @@
  * Admin user management for BDA Portal (Supabase users, not WooCommerce)
  */
 
-export type UserRole = 'individual' | 'ecp' | 'pdp' | 'admin' | 'super_admin';
+export type UserRole = 'individual' | 'trainer' | 'ecp' | 'pdp' | 'admin' | 'super_admin';
 
 export interface User {
   id: string;

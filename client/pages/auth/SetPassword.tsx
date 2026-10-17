@@ -7,9 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { useAuthContext } from '@/app/providers/AuthProvider';
 
 export default function SetPassword() {
   const navigate = useNavigate();
+  const { checkAuth } = useAuthContext();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -24,14 +26,18 @@ export default function SetPassword() {
     const handleAuthToken = async () => {
       try {
         const searchParams = new URLSearchParams(window.location.search);
+        const trainerInvitation = searchParams.get('trainer_invitation');
+        if (trainerInvitation) {
+          sessionStorage.setItem('bda_trainer_invitation', trainerInvitation);
+        }
         const tokenHash = searchParams.get('token_hash');
         const linkType = searchParams.get('type');
 
         // ── 1. Process a one-time recovery token before considering any browser session ──
-        if (tokenHash && linkType === 'recovery') {
+        if (tokenHash && (linkType === 'recovery' || linkType === 'invite')) {
           const { data, error: verifyError } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
-            type: 'recovery',
+            type: linkType,
           });
           if (verifyError || !data.user) {
             setError('Your password reset link has expired or is invalid. Please request a new one.');
@@ -145,6 +151,30 @@ export default function SetPassword() {
       if (updateError) {
         console.error('Password update error:', updateError);
         setError('Failed to update password. Please try again or request a new link.');
+        return;
+      }
+
+      const trainerInvitation = sessionStorage.getItem('bda_trainer_invitation');
+      if (trainerInvitation) {
+        const { data: authData, error: userError } = await supabase.auth.getUser();
+        if (userError || !authData.user) {
+          setError('Your account session could not be verified. Please open the invitation link again.');
+          return;
+        }
+
+        const { data: activation, error: activationError } = await supabase.rpc('accept_trainer_invite', {
+          p_token: trainerInvitation,
+          p_user_id: authData.user.id,
+        });
+        if (activationError || !activation?.success) {
+          setError(activation?.error || activationError?.message || 'Your password was saved, but Instructor View could not be activated. Please contact support.');
+          return;
+        }
+
+        sessionStorage.removeItem('bda_trainer_invitation');
+        await checkAuth();
+        setSuccess(true);
+        setTimeout(() => navigate('/instructor/dashboard', { replace: true }), 1200);
         return;
       }
 

@@ -76,7 +76,11 @@ export default function ECPTrainerDetail() {
       if (error || !data?.success) {
         setInviteMessage(`Error: ${data?.error || error?.message || 'Unable to send the invitation.'}`);
       } else {
-        setInviteMessage(data.already_active ? 'Trainer already has an active account.' : `Invitation sent to ${trainer.email}`);
+        setInviteMessage(data.already_active
+          ? 'Trainer already has an active account.'
+          : data.account_state === 'new'
+            ? `A Set Your Password email was sent to ${trainer.email}.`
+            : `An activation email was sent to ${trainer.email}.`);
       }
     } catch (err: any) {
       setInviteMessage('Failed to send invitation. Please try again.');
@@ -213,10 +217,10 @@ export default function ECPTrainerDetail() {
               variant="outline"
               size="sm"
               onClick={handleSendInvite}
-              disabled={inviteLoading || !!(trainer as any).user_id}
+              disabled={inviteLoading || !!trainer.user_id}
               className="border-blue-200 text-[#1c4a8b] hover:bg-[#f0f6ff]"
             >
-              {(trainer as any).user_id
+              {trainer.user_id
                 ? <><KeyRound className="h-4 w-4 mr-2" />Account Active</>
                 : <><Send className="h-4 w-4 mr-2" />{inviteLoading ? 'Sending...' : 'Send Invite'}</>
               }
@@ -272,16 +276,16 @@ export default function ECPTrainerDetail() {
                   <div className="text-sm text-gray-500 mb-1">Portal Account</div>
                   <Badge
                     className={`text-base ${
-                      (trainer as any).user_id
+                      trainer.user_id
                         ? 'bg-emerald-100 text-emerald-700'
-                        : (trainer as any).invite_status === 'invited'
+                        : trainer.invite_status === 'invited'
                           ? 'bg-amber-100 text-amber-700'
                           : 'bg-gray-100 text-gray-500'
                     }`}
                   >
-                    {(trainer as any).user_id
+                    {trainer.user_id
                       ? 'Active Account'
-                      : (trainer as any).invite_status === 'invited'
+                      : trainer.invite_status === 'invited'
                         ? 'Invite Sent'
                         : 'No Account'
                     }

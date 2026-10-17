@@ -62,6 +62,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const ROLE_ICONS: Record<string, any> = {
   individual: UserCheck,
+  trainer: UserCheck,
   ecp: Building2,
   pdp: GraduationCap,
   pdp_partner: GraduationCap, // Legacy role name
@@ -71,6 +72,7 @@ const ROLE_ICONS: Record<string, any> = {
 
 const ROLE_COLORS: Record<string, string> = {
   individual: 'blue',
+  trainer: 'cyan',
   ecp: 'purple',
   pdp: 'green',
   pdp_partner: 'green', // Legacy role name
