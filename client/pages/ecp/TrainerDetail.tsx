@@ -78,7 +78,7 @@ export default function ECPTrainerDetail() {
       } else {
         setInviteMessage(data.already_active
           ? 'Trainer already has an active account.'
-          : data.account_state === 'new'
+          : data.needs_password || data.account_state === 'new'
             ? `A Set Your Password email was sent to ${trainer.email}.`
             : `An activation email was sent to ${trainer.email}.`);
       }
@@ -180,6 +180,7 @@ export default function ECPTrainerDetail() {
   const isExpired = trainer.trainer_certification_expiry && new Date(trainer.trainer_certification_expiry) < new Date();
   const isExpiringSoon = trainer.trainer_certification_expiry &&
     new Date(trainer.trainer_certification_expiry).getTime() - Date.now() < 90 * 24 * 60 * 60 * 1000;
+  const invitationAccepted = !!trainer.user_id && trainer.invite_status === 'accepted';
 
   return (
     <div className="space-y-6">
@@ -217,10 +218,10 @@ export default function ECPTrainerDetail() {
               variant="outline"
               size="sm"
               onClick={handleSendInvite}
-              disabled={inviteLoading || !!trainer.user_id}
+              disabled={inviteLoading || invitationAccepted || !trainer.is_active || trainer.status !== 'approved'}
               className="border-blue-200 text-[#1c4a8b] hover:bg-[#f0f6ff]"
             >
-              {trainer.user_id
+              {invitationAccepted
                 ? <><KeyRound className="h-4 w-4 mr-2" />Account Active</>
                 : <><Send className="h-4 w-4 mr-2" />{inviteLoading ? 'Sending...' : 'Send Invite'}</>
               }
@@ -276,18 +277,18 @@ export default function ECPTrainerDetail() {
                   <div className="text-sm text-gray-500 mb-1">Portal Account</div>
                   <Badge
                     className={`text-base ${
-                      trainer.user_id
+                      invitationAccepted
                         ? 'bg-emerald-100 text-emerald-700'
                         : trainer.invite_status === 'invited'
                           ? 'bg-amber-100 text-amber-700'
                           : 'bg-gray-100 text-gray-500'
                     }`}
                   >
-                    {trainer.user_id
+                    {invitationAccepted
                       ? 'Active Account'
                       : trainer.invite_status === 'invited'
                         ? 'Invite Sent'
-                        : 'No Account'
+                        : trainer.user_id ? 'Trainer Account Linked' : 'No Account'
                     }
                   </Badge>
                 </div>

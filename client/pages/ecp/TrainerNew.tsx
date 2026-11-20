@@ -41,10 +41,12 @@ export default function ECPTrainerNew() {
     }
 
     toast({
-      title: 'Trainer added and invited',
-      description: inviteData.account_state === 'new'
-        ? `A Set Your Password email was sent to ${data.email}.`
-        : `An activation email was sent to ${data.email}.`,
+      title: inviteData.already_active ? 'Trainer account linked' : 'Trainer added and invited',
+      description: inviteData.already_active
+        ? 'This trainer already has an active portal account.'
+        : inviteData.needs_password || inviteData.account_state === 'new'
+          ? `A Set Your Password email was sent to ${data.email}.`
+          : `An activation email was sent to ${data.email}.`,
     });
 
     navigate(`/ecp/trainers/${trainerId}`);

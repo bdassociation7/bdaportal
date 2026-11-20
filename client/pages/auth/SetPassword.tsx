@@ -178,11 +178,14 @@ export default function SetPassword() {
         return;
       }
 
+      // Reload the authoritative role even when a general recovery link was used.
+      // DashboardRouter sends registered trainers to Instructor View and retains
+      // the existing destination for partners and individual accounts.
+      await checkAuth();
       setSuccess(true);
 
-      // The workspace route applies the profile-completion guard before granting partner access.
       setTimeout(() => {
-        navigate('/workspace');
+        navigate('/dashboard', { replace: true });
       }, 2000);
     } catch (err) {
       console.error('Unexpected error:', err);

@@ -132,7 +132,7 @@ serve(async (request) => {
 
     const { data: trainer, error: trainerError } = await admin
       .from('ecp_trainers')
-      .select('id, email, first_name, last_name, partner_id, user_id, is_active, status')
+      .select('id, email, first_name, last_name, partner_id, user_id, is_active, status, invite_status')
       .eq('id', trainerId)
       .single()
 
@@ -142,9 +142,6 @@ serve(async (request) => {
     }
     if (!trainer.is_active || trainer.status !== 'approved') {
       return response({ error: 'Only active approved trainers can receive a portal invitation' }, 409)
-    }
-    if (trainer.user_id) {
-      return response({ success: true, already_active: true, message: 'Trainer already has an active account' })
     }
 
     const normalizedEmail = trainer.email.trim().toLowerCase()
@@ -206,7 +203,7 @@ serve(async (request) => {
           email: authRecord.user.email || normalizedEmail,
           first_name: metadata.first_name || metadata.firstName || trainer.first_name,
           last_name: metadata.last_name || metadata.lastName || trainer.last_name,
-          role: 'individual',
+          role: 'trainer',
           created_from: 'portal',
           updated_at: new Date().toISOString(),
         }, { onConflict: 'id' })
@@ -237,6 +234,24 @@ serve(async (request) => {
       }
     }
 
+    if (trainer.user_id && trainer.user_id !== resolvedProfile?.id) {
+      return response({ error: 'This trainer record is linked to another portal account.', code: 'trainer_account_mismatch' }, 409)
+    }
+    // Role/link provisioning now happens at registration. A linked account alone
+    // does not mean the invitation was accepted or its password was configured.
+    if (trainer.user_id && trainer.invite_status === 'accepted' && resolvedProfile?.role === 'trainer') {
+      return response({ success: true, already_active: true, message: 'Trainer already has an active account' })
+    }
+
+    const isNewAccount = !resolvedProfile && !authLookup?.id
+    let needsPassword = isNewAccount
+    if (!isNewAccount && authLookup?.id) {
+      const { data: passwordRequired, error: passwordStateError } = await admin
+        .rpc('trainer_account_requires_password', { p_user_id: authLookup.id })
+      if (passwordStateError) throw passwordStateError
+      needsPassword = passwordRequired === true
+    }
+
     // Replace any pending invitation only after all account eligibility checks
     // have passed. Failed validation cannot invalidate a previous valid invite.
     const now = new Date().toISOString()
@@ -254,27 +269,30 @@ serve(async (request) => {
       .single()
     if (inviteError || !inviteRecord) throw inviteError || new Error('Unable to create invitation token')
 
-    const isNewAccount = !resolvedProfile && !authLookup?.id
-    const redirectTo = isNewAccount
+    const redirectTo = needsPassword
       ? `${PORTAL_ORIGIN}/auth/set-password?trainer_invitation=${encodeURIComponent(inviteRecord.token)}`
       : `${PORTAL_ORIGIN}/instructor/accept-invite?token=${encodeURIComponent(inviteRecord.token)}`
 
-    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-      type: isNewAccount ? 'invite' : 'magiclink',
-      email: normalizedEmail,
-      options: {
-        redirectTo,
-        data: {
-          first_name: resolvedProfile?.first_name || trainer.first_name,
-          last_name: resolvedProfile?.last_name || trainer.last_name,
-          // Do not make a new account a trainer before it has completed its
-          // invitation. The acceptance RPC performs that atomic transition.
-          role: isNewAccount ? 'individual' : resolvedProfile?.role || 'individual',
-          bda_role: isNewAccount ? 'individual' : resolvedProfile?.role || 'individual',
-          created_from: 'portal',
+    const linkRequest = isNewAccount
+      ? {
+        type: 'invite' as const,
+        email: normalizedEmail,
+        options: {
+          redirectTo,
+          // The validated registration, not the completion link, determines role.
+          data: {
+            first_name: trainer.first_name,
+            last_name: trainer.last_name,
+            role: 'trainer',
+            bda_role: 'trainer',
+            created_from: 'portal',
+          },
         },
-      },
-    })
+      }
+      : needsPassword
+        ? { type: 'recovery' as const, email: normalizedEmail, options: { redirectTo } }
+        : { type: 'magiclink' as const, email: normalizedEmail, options: { redirectTo } }
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink(linkRequest)
 
     const actionLink = linkData?.properties?.action_link
     if (linkError || !actionLink) {
@@ -302,6 +320,10 @@ serve(async (request) => {
       await admin.from('trainer_invite_tokens').update({ used_at: new Date().toISOString() }).eq('id', inviteRecord.id)
       return response({ error: 'A partner account cannot be converted into a trainer.', code: 'partner_email_cannot_be_trainer' }, 409)
     }
+    if (postProfile.role !== 'trainer') {
+      await admin.from('trainer_invite_tokens').update({ used_at: new Date().toISOString() }).eq('id', inviteRecord.id)
+      throw new Error('The registered trainer role could not be verified before delivery')
+    }
 
     try {
       const resendId = await sendTrainerInviteEmail(
@@ -309,19 +331,20 @@ serve(async (request) => {
         normalizedEmail,
         trainer.first_name,
         actionLink,
-        isNewAccount,
+        needsPassword,
       )
       await admin.from('email_logs').insert({
         email_type: 'trainer_invitation',
         recipient_email: normalizedEmail,
         recipient_user_id: postProfile.id,
-        subject: isNewAccount ? 'Set your password for BDA Instructor View' : 'Activate your BDA Instructor View account',
+        subject: needsPassword ? 'Set your password for BDA Instructor View' : 'Activate your BDA Instructor View account',
         status: 'sent',
         resend_id: resendId,
         template_data: {
           trainer_id: trainer.id,
           invitation_id: inviteRecord.id,
-          account_state: isNewAccount ? 'new' : 'existing_individual',
+          account_state: isNewAccount ? 'new' : 'existing_trainer',
+          needs_password: needsPassword,
         },
         sent_at: new Date().toISOString(),
       })
@@ -338,7 +361,8 @@ serve(async (request) => {
 
     return response({
       success: true,
-      account_state: isNewAccount ? 'new' : 'existing_individual',
+      account_state: isNewAccount ? 'new' : 'existing_trainer',
+      needs_password: needsPassword,
       message: `Invitation sent to ${normalizedEmail}`,
     })
   } catch (error) {
